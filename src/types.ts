@@ -1,4 +1,6 @@
 
+export type NavItem = 'Home' | 'Discover' | 'Messages' | 'Tribes' | 'Notifications' | 'Profile' | 'Chuk' | 'TribeDetail' | 'Settings';
+
 export interface User {
   id: string;
   name: string;

@@ -3,10 +3,10 @@ import React, { createContext, useContext, useEffect, useState, ReactNode, useCa
 import { io, Socket } from 'socket.io-client';
 import { useAuth } from './AuthContext';
 import { Notification, Message, TribeMessage, User } from '../types';
-import { toast } from '../components-prev/common/Toast';
+import { toast } from '../components/common/Toast';
 import { API_BASE_URL } from '../config';
 
-// Use the centralized configuration. Socket.IO typically needs the same base URL as the API.
+// Use the centralized configuration.
 const SOCKET_URL = API_BASE_URL;
 
 interface ServerToClientEvents {

@@ -1,57 +1,68 @@
+
 import React, { useState, useEffect, useCallback } from 'react';
-import ReactDOM from 'react-dom';
+import { createPortal } from 'react-dom';
 
-type ToastType = 'info' | 'success' | 'error';
+export type ToastType = 'info' | 'success' | 'error';
 
-interface ToastMessage {
+export interface ToastMessage {
   id: number;
   message: string;
   type: ToastType;
 }
 
 let toastId = 0;
-const listeners: Array<(toasts: ToastMessage[]) => void> = [];
 let toasts: ToastMessage[] = [];
+const listeners: Array<(toasts: ToastMessage[]) => void> = [];
 
-// Fix: Added success and error methods to the toast object.
-const toast = {
+const notifyListeners = () => {
+    listeners.forEach(listener => listener(toasts));
+};
+
+export const toast = {
   info: (message: string) => {
     toastId += 1;
     toasts = [...toasts, { id: toastId, message, type: 'info' }];
-    listeners.forEach(listener => listener(toasts));
+    notifyListeners();
   },
   success: (message: string) => {
     toastId += 1;
     toasts = [...toasts, { id: toastId, message, type: 'success' }];
-    listeners.forEach(listener => listener(toasts));
+    notifyListeners();
   },
   error: (message: string) => {
     toastId += 1;
     toasts = [...toasts, { id: toastId, message, type: 'error' }];
-    listeners.forEach(listener => listener(toasts));
+    notifyListeners();
   },
 };
 
-const Toast: React.FC<ToastMessage> = ({ message, type, id }) => {
+const ToastItem: React.FC<ToastMessage> = ({ message, type, id }) => {
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
-    setVisible(true);
-    const timer = setTimeout(() => {
+    // Small delay to allow enter animation
+    const enterTimer = setTimeout(() => setVisible(true), 10);
+    
+    // Auto-dismiss timer
+    const exitTimer = setTimeout(() => {
       setVisible(false);
+      // Wait for exit animation to finish before removing from array
       setTimeout(() => {
         toasts = toasts.filter(t => t.id !== id);
-        listeners.forEach(listener => listener(toasts));
+        notifyListeners();
       }, 300);
     }, 3000);
-    return () => clearTimeout(timer);
+
+    return () => {
+        clearTimeout(enterTimer);
+        clearTimeout(exitTimer);
+    }
   }, [id]);
 
   const bgColor = type === 'info' ? 'bg-accent text-accent-text' : 
                   type === 'success' ? 'bg-green-500 text-white' : 
                   'bg-red-500 text-white';
   
-  // Fix: Display different icons based on toast type for better UX.
   const icon =
     type === 'success' ? (
       <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
@@ -75,7 +86,7 @@ const Toast: React.FC<ToastMessage> = ({ message, type, id }) => {
   );
 };
 
-const Toaster: React.FC = () => {
+export const Toaster: React.FC = () => {
   const [currentToasts, setCurrentToasts] = useState<ToastMessage[]>(toasts);
 
   const listener = useCallback((newToasts: ToastMessage[]) => {
@@ -95,14 +106,14 @@ const Toaster: React.FC = () => {
   const portalRoot = document.getElementById('root');
   if (!portalRoot) return null;
 
-  return ReactDOM.createPortal(
-    <div className="fixed top-20 right-4 z-[100] space-y-2">
+  return createPortal(
+    <div className="fixed top-20 right-4 z-[100] space-y-2 pointer-events-none">
       {currentToasts.map(t => (
-        <Toast key={t.id} {...t} />
+        <div key={t.id} className="pointer-events-auto">
+            <ToastItem {...t} />
+        </div>
       ))}
     </div>,
     portalRoot
   );
 };
-
-export { Toaster, toast };

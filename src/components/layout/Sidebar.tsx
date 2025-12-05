@@ -1,7 +1,7 @@
+
 import React from 'react';
 import { useTheme } from '../../contexts/ThemeContext';
-import { User } from '../../types';
-import type { NavItem } from '../../App';
+import { User, NavItem } from '../../types';
 import UserAvatar from '../common/UserAvatar';
 
 interface SidebarProps {
@@ -29,7 +29,7 @@ const NavBadge: React.FC<{ count: number }> = ({ count }) => {
 const Sidebar: React.FC<SidebarProps> = ({ activeItem, onSelectItem, currentUser, unreadMessageCount, unreadTribeCount, unreadNotificationCount }) => {
   const { theme, toggleTheme } = useTheme();
 
-  const mainNavItems: { name: Exclude<NavItem, 'Profile' | 'TribeDetail' | 'Chuk'>; icon: React.ReactElement<IconProps>; unreadCount: number; }[] = [
+  const mainNavItems: { name: Exclude<NavItem, 'Profile' | 'TribeDetail' | 'Chuk' | 'Settings'>; icon: React.ReactElement<IconProps>; unreadCount: number; }[] = [
     { name: 'Home', icon: <HomeIcon />, unreadCount: 0 },
     { name: 'Discover', icon: <DiscoverIcon />, unreadCount: 0 },
     { name: 'Messages', icon: <MessagesIcon />, unreadCount: unreadMessageCount },

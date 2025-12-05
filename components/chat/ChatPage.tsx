@@ -3,7 +3,7 @@ import { Conversation, User, Message, Post } from '../../types';
 import ConversationList from './ConversationList';
 import { MessageArea } from './MessageArea';
 import NewMessageModal from './NewMessageModal';
-import * as api from '../../api.ts';
+import * as api from '../../api';
 import { useSocket } from '../../contexts/SocketContext';
 
 interface ChatPageProps {
@@ -23,7 +23,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ currentUser, allUsers, chukUser, in
   const [isMessageAreaVisible, setMessageAreaVisible] = useState(false);
   const [isNewMessageModalOpen, setNewMessageModalOpen] = useState(false);
   const [isSending, setIsSending] = useState(false);
-  const { socket, onlineUsers, clearUnreadMessages, unreadCounts } = useSocket();
+  const { socket, clearUnreadMessages, unreadCounts } = useSocket();
 
   const userMap = useMemo(() => {
       const map = new Map(allUsers.map(user => [user.id, user]));
@@ -187,23 +187,23 @@ const ChatPage: React.FC<ChatPageProps> = ({ currentUser, allUsers, chukUser, in
   };
   
   return (
-    <div className="h-full bg-surface md:rounded-2xl md:border md:border-border md:shadow-lg flex overflow-hidden">
-      {/* Conversation List Pane */}
+    <div className="h-full bg-surface md:rounded-2xl md:border md:border-border md:shadow-lg flex overflow-hidden w-full">
+      {/* Conversation List Pane - Hidden on mobile when message area is visible */}
       <div 
-        className={`w-full md:w-[320px] lg:w-[380px] flex-shrink-0 md:border-r md:border-border bg-surface ${isMessageAreaVisible ? 'hidden' : 'flex'} md:flex flex-col`}
+        className={`w-full md:w-[320px] lg:w-[380px] flex-shrink-0 md:border-r md:border-border bg-surface ${isMessageAreaVisible ? 'hidden md:flex' : 'flex'} flex-col h-full`}
       >
         <ConversationList conversations={conversations} currentUser={currentUser} chukUser={chukUser} userMap={userMap} activeConversationId={activeConversation?.id} onSelectConversation={handleSelectConversation} onNewMessage={() => setNewMessageModalOpen(true)} unreadCounts={unreadCounts.messages} />
       </div>
       
-      {/* Message Area Pane */}
+      {/* Message Area Pane - Hidden on mobile when conversation list is visible */}
       <div 
-        className={`w-full flex-1 bg-background ${isMessageAreaVisible ? 'flex' : 'hidden'} md:flex flex-col`}
+        className={`w-full flex-1 bg-background ${isMessageAreaVisible ? 'flex' : 'hidden md:flex'} flex-col h-full`}
       >
         {activeConversation ? (
             <MessageArea key={activeConversation.id} conversation={activeConversation} messages={messages} isLoading={isLoadingMessages} currentUser={currentUser} userMap={userMap} isSending={isSending} onSendMessage={handleSendMessage} onBack={handleBackToList} onViewProfile={onViewProfile} />
         ) : (
             <div className="hidden md:flex w-full h-full flex-col items-center justify-center text-center p-8">
-                <div className="w-24 h-24 text-secondary mb-4">
+                <div className="w-24 h-24 text-secondary mb-4 opacity-50">
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1}><path strokeLinecap="round" strokeLinejoin="round" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" /></svg>
                 </div>
                 <h2 className="text-2xl font-bold text-primary font-display">Your Messages</h2>
