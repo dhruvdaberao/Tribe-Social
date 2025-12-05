@@ -5,7 +5,7 @@ import { Notification, Message, TribeMessage, User } from '../types';
 import { toast } from '../components/common/Toast';
 
 // Hardcoded the backend URL to remove the dependency on the problematic config file.
-const SOCKET_URL = 'https://tribes-backend.vercel.app';
+const SOCKET_URL = 'https://tribe-social-backend.onrender.com';
 
 // FIX: Added typed interfaces for socket events to resolve '.on' and '.off' errors.
 // FIX: Added 'connect' to ServerToClientEvents to handle the socket connection event.
