@@ -145,10 +145,7 @@ const startServer = async () => {
     const allowedOrigins = [
       'https://tribe-social2.vercel.app',
       'https://tribe-social.vercel.app',
-      'https://tribe-social-psi.vercel.app',
-      'https://tribe-8i1h.vercel.app',
-      'https://tribals.vercel.app',
-      'https://tribe-social2-silk.vercel.app', // Added your new frontend URL
+   // Added your new frontend URL
       'http://localhost:5173',
       'http://localhost:3000'
     ];
