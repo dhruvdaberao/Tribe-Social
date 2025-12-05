@@ -67,7 +67,7 @@ import axios from 'axios';
 
 // The backend URL is now hardcoded here to prevent module loading failures
 // that were causing a blank screen. This makes the API layer more robust.
-const API_URL = 'https://tribe-social2.onrender.com';
+const API_URL = 'https://tribe-social-backend.onrender.com';
 
 const API = axios.create({ baseURL: `${API_URL}/api` });
 

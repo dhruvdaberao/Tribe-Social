@@ -9,4 +9,4 @@
 // 4. COMMIT and PUSH to deploy your frontend.
 
 // ⚠️ NOTE: Do NOT add a trailing slash (e.g., use '...com', not '...com/')
-export const API_BASE_URL = 'https://tribe-social2.onrender.com'; 
+export const API_BASE_URL = 'https://tribe-social-backend.onrender.com'; 
