@@ -1,30 +1,10 @@
+
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { Post, User, Tribe, Comment } from '../../types';
 import UserAvatar from '../common/UserAvatar';
 import ShareModal from '../common/ShareModal';
 import ShareButton from '../common/ShareButton';
-
-const timeAgo = (dateString: string) => {
-    if (!dateString) return '';
-    const date = new Date(dateString);
-    const now = new Date();
-    const seconds = Math.round((now.getTime() - date.getTime()) / 1000);
-    
-    if (seconds < 5) return 'just now';
-    if (seconds < 60) return `${seconds}s ago`;
-    
-    const minutes = Math.round(seconds / 60);
-    if (minutes < 60) return `${minutes}m ago`;
-    
-    const hours = Math.round(minutes / 60);
-    if (hours < 24) return `${hours}h ago`;
-    
-    const days = Math.round(hours / 24);
-    if (days < 7) return `${days}d ago`;
-    
-    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-};
-
+import { timeAgo } from '../../utils/dateUtils';
 
 interface PostCardProps {
   post: Post;
@@ -179,8 +159,8 @@ const PostCard: React.FC<PostCardProps> = (props) => {
         </div>
       )}
       {post.imageUrl && (
-        <div className="bg-background max-h-[75vh]">
-          <img src={post.imageUrl} alt="Post content" className="w-full h-full object-cover object-center" />
+        <div className="aspect-[4/5] bg-background overflow-hidden">
+          <img src={post.imageUrl} alt="Post content" className="w-full h-full object-cover" />
         </div>
       )}
 

@@ -1,10 +1,8 @@
+
 import axios from 'axios';
+import { API_BASE_URL } from './config';
 
-// The backend URL is now hardcoded here to prevent module loading failures
-// that were causing a blank screen. This makes the API layer more robust.
-const API_URL = 'https://tribe-social2.onrender.com';
-
-const API = axios.create({ baseURL: `${API_URL}/api` });
+const API = axios.create({ baseURL: `${API_BASE_URL}/api` });
 
 API.interceptors.request.use((req) => {
   const token = localStorage.getItem('token');
@@ -28,8 +26,8 @@ export const deleteAccount = () => API.delete('/users/profile');
 
 // Posts
 export const fetchPost = (id: string) => API.get(`/posts/${id}`);
-export const fetchPosts = () => API.get('/posts');
-export const fetchFeedPosts = () => API.get('/posts/feed');
+export const fetchPosts = (page = 1, limit = 20) => API.get('/posts', { params: { page, limit } });
+export const fetchFeedPosts = (page = 1, limit = 20) => API.get('/posts/feed', { params: { page, limit } });
 export const createPost = (newPost: any) => API.post('/posts', newPost);
 export const deletePost = (id: string) => API.delete(`/posts/${id}`);
 export const likePost = (id: string) => API.put(`/posts/${id}/like`);
@@ -39,7 +37,7 @@ export const deleteComment = (postId: string, commentId: string) => API.delete(`
 // Conversations & Messages
 export const fetchConversations = () => API.get('/messages/conversations');
 export const fetchMessages = (otherUserId: string) => API.get(`/messages/${otherUserId}`);
-export const sendMessage = (receiverId: string, messageData: any) => API.post(`/messages/send/${receiverId}`, messageData);
+export const sendMessage = (receiverId: string, messageData: { message: string, imageUrl?: string }) => API.post(`/messages/send/${receiverId}`, messageData);
 
 // Tribes
 export const fetchTribes = () => API.get('/tribes');
@@ -48,7 +46,7 @@ export const updateTribe = (id: string, tribeData: any) => API.put(`/tribes/${id
 export const deleteTribe = (id: string) => API.delete(`/tribes/${id}`);
 export const joinTribe = (id: string) => API.put(`/tribes/${id}/join`);
 export const fetchTribeMessages = (id: string) => API.get(`/tribes/${id}/messages`);
-export const sendTribeMessage = (id: string, messageData: any) => API.post(`/tribes/${id}/messages`, messageData);
+export const sendTribeMessage = (id: string, messageData: { text: string, imageUrl?: string }) => API.post(`/tribes/${id}/messages`, messageData);
 export const deleteTribeMessage = (tribeId: string, messageId: string) => API.delete(`/tribes/${tribeId}/messages/${messageId}`);
 
 // AI Chat

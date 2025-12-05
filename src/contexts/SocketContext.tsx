@@ -1,15 +1,14 @@
+
 import React, { createContext, useContext, useEffect, useState, ReactNode, useCallback } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { useAuth } from './AuthContext';
 import { Notification, Message, TribeMessage, User } from '../types';
-import { toast } from '../components/common/Toast';
+import { toast } from '../components-prev/common/Toast';
+import { API_BASE_URL } from '../config';
 
-// Hardcoded the backend URL to remove the dependency on the problematic config file.
-const SOCKET_URL = 'https://tribe-social2.onrender.com';
+// Use the centralized configuration. Socket.IO typically needs the same base URL as the API.
+const SOCKET_URL = API_BASE_URL;
 
-// FIX: Added typed interfaces for socket events to resolve '.on' and '.off' errors.
-// FIX: Added 'connect' to ServerToClientEvents to handle the socket connection event.
-// FIX: Added a string index signature to satisfy the Socket type constraint.
 interface ServerToClientEvents {
   [key: string]: (...args: any[]) => void;
   connect: () => void;
@@ -27,7 +26,6 @@ interface ServerToClientEvents {
   userStoppedTyping: (data: { userName: string; userId: string }) => void;
 }
 
-// FIX: Added a string index signature to satisfy the Socket type constraint.
 interface ClientToServerEvents {
   [key: string]: (...args: any[]) => void;
   joinRoom: (roomName: string) => void;
@@ -63,7 +61,6 @@ export const useSocket = (): SocketContextType => {
   return context;
 };
 
-// FIX: Refactored from a function declaration to a const component with React.FC to explicitly define props and children, resolving TypeScript errors.
 export const SocketProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const { currentUser } = useAuth();
   const [socket, setSocket] = useState<Socket<ServerToClientEvents, ClientToServerEvents> | null>(null);
@@ -77,7 +74,6 @@ export const SocketProvider: React.FC<{ children: ReactNode }> = ({ children }) 
 
   useEffect(() => {
     if (currentUser) {
-      // FIX: Explicitly typed the socket instance to resolve a TypeScript generic inference issue.
       const newSocket: Socket<ServerToClientEvents, ClientToServerEvents> = io(SOCKET_URL, {
         auth: { userId: currentUser.id },
         withCredentials: true,

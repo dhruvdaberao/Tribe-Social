@@ -1,7 +1,9 @@
+
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { Tribe, User, TribeMessage } from '../../types';
 import UserAvatar from '../common/UserAvatar';
 import { useSocket } from '../../contexts/SocketContext';
+import { formatMessageTime } from '../../utils/dateUtils';
 
 interface TribeDetailPageProps {
   tribe: Tribe;
@@ -186,7 +188,7 @@ const TribeDetailPage: React.FC<TribeDetailPageProps> = (props) => {
                             )}
                             <p className="leading-relaxed whitespace-pre-wrap">{message.text}</p>
                         </div>
-                        <p className="text-xs text-secondary mt-1.5 px-1">{new Date(message.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
+                        <p className="text-xs text-secondary mt-1.5 px-1">{formatMessageTime(message.timestamp)}</p>
                     </div>
                   </div>
                 );

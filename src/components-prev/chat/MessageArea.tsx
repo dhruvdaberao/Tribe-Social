@@ -1,7 +1,9 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import { Conversation, User, Message } from '../../types';
 import UserAvatar from '../common/UserAvatar';
 import { useSocket } from '../../contexts/SocketContext';
+import { formatMessageTime } from '../../utils/dateUtils';
 
 interface MessageAreaProps {
   conversation: Conversation;
@@ -137,7 +139,6 @@ export const MessageArea: React.FC<MessageAreaProps> = ({ conversation, messages
             {messages.map(message => {
                 const isCurrentUser = message.senderId === currentUser.id;
                 const sender = isCurrentUser ? currentUser : userMap.get(message.senderId);
-                const sentAt = new Date(message.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
                 return (
                 <div key={message.id} className={`flex items-end gap-2.5 ${isCurrentUser ? 'justify-end' : 'justify-start'}`}>
                     {!isCurrentUser && (
@@ -150,7 +151,7 @@ export const MessageArea: React.FC<MessageAreaProps> = ({ conversation, messages
                             {message.imageUrl && <img src={message.imageUrl} alt="Shared content" className="mb-2 rounded-lg w-full" />}
                             <p className="text-sm leading-relaxed whitespace-pre-wrap">{message.text}</p>
                         </div>
-                        <p className="text-xs text-secondary mt-1.5 px-1">{sentAt}</p>
+                        <p className="text-xs text-secondary mt-1.5 px-1">{formatMessageTime(message.timestamp)}</p>
                     </div>
                 </div>
                 );

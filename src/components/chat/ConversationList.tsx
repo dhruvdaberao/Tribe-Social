@@ -1,8 +1,6 @@
-
 import React from 'react';
 import { Conversation, User } from '../../types';
 import UserAvatar from '../common/UserAvatar';
-import { timeAgo } from '../../utils/dateUtils';
 
 interface ConversationListProps {
   conversations: Conversation[];
@@ -98,14 +96,11 @@ const ConversationItem: React.FC<ConversationItemProps> = ({ conversation, other
       <div className="flex-1 overflow-hidden">
         <div className="flex justify-between items-center">
             <p className={`font-semibold text-primary truncate ${unreadCount > 0 ? 'font-bold' : ''}`}>{otherParticipant.name}</p>
-            <div className="flex items-center space-x-2">
-                <span className="text-xs text-secondary whitespace-nowrap">{timeAgo(conversation.timestamp)}</span>
-                {unreadCount > 0 && (
-                    <span className="bg-accent text-accent-text text-xs font-bold rounded-full h-5 min-w-[1.25rem] px-1 flex items-center justify-center">
-                        {unreadCount > 9 ? '9+' : unreadCount}
-                    </span>
-                )}
-            </div>
+            {unreadCount > 0 && (
+                <span className="bg-accent text-accent-text text-xs font-bold rounded-full h-5 min-w-[1.25rem] px-1 flex items-center justify-center">
+                    {unreadCount > 9 ? '9+' : unreadCount}
+                </span>
+            )}
         </div>
         <p className={`text-sm truncate ${unreadCount > 0 ? 'text-primary font-semibold' : 'text-secondary'}`}>{conversation.lastMessage}</p>
       </div>

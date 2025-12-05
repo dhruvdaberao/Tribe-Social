@@ -1,8 +1,10 @@
+
 import React, { useEffect, useCallback } from 'react';
-import { Notification, User } from '../../types.ts';
-import UserAvatar from '../common/UserAvatar.tsx';
-import * as api from '../../api.ts';
-import { useSocket } from '../../contexts/SocketContext.tsx';
+import { Notification, User } from '../../types';
+import UserAvatar from '../common/UserAvatar';
+import * as api from '../../api';
+import { useSocket } from '../../contexts/SocketContext';
+import { timeAgo } from '../../utils/dateUtils';
 
 interface NotificationsPageProps {
   notifications: Notification[];
@@ -10,22 +12,6 @@ interface NotificationsPageProps {
   onViewMessage: (user: User) => void;
   onViewPost: (postId: string) => void;
 }
-
-const timeAgo = (dateString: string) => {
-    if (!dateString) return '...';
-    const date = new Date(dateString);
-    const now = new Date();
-    const seconds = Math.round((now.getTime() - date.getTime()) / 1000);
-    const minutes = Math.round(seconds / 60);
-    const hours = Math.round(minutes / 60);
-    const days = Math.round(hours / 24);
-
-    if (seconds < 60) return `${seconds}s ago`;
-    if (minutes < 60) return `${minutes}m ago`;
-    if (hours < 24) return `${hours}h ago`;
-    if (days < 7) return `${days}d ago`;
-    return date.toLocaleDateString();
-};
 
 const NotificationItem: React.FC<{ notification: Notification; onViewProfile: (user: User) => void; onViewMessage: (user: User) => void; onViewPost: (postId: string) => void; }> = ({ notification, onViewProfile, onViewMessage, onViewPost }) => {
   const { sender, type, timestamp } = notification;
