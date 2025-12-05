@@ -9,8 +9,7 @@ interface ThemeContextType {
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
-// FIX: Refactored from a function declaration to a const component with React.FC to explicitly define props and children, resolving TypeScript errors.
-export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+export function ThemeProvider({ children }: { children: ReactNode }) {
   const [theme, setTheme] = useState<Theme>('light');
 
   // Initialize theme from localStorage or system preference

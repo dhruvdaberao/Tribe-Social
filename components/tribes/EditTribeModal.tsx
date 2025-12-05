@@ -53,61 +53,59 @@ const EditTribeModal: React.FC<EditTribeModalProps> = ({ tribe, onClose, onSave,
 
     return (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" onClick={onClose}>
-            <div className="bg-surface rounded-2xl shadow-xl w-full max-w-md border border-border flex flex-col" onClick={e => e.stopPropagation()}>
+            <div className="bg-surface rounded-2xl shadow-xl w-full max-w-md border border-border" onClick={e => e.stopPropagation()}>
                 <div className="p-4 flex justify-between items-center border-b border-border">
                     <h2 className="text-xl font-bold text-primary">Edit Tribe</h2>
                     <button onClick={onClose} className="text-secondary hover:text-primary text-2xl leading-none">&times;</button>
                 </div>
                 
-                <form onSubmit={handleSubmit}>
-                    <div className="p-6">
-                        <div className="flex flex-col items-center mb-6">
-                            <div className="w-24 h-24 rounded-full bg-background border border-border flex items-center justify-center relative group">
-                               {avatarPreview ? (
-                                    <img 
-                                        src={avatarPreview} 
-                                        alt="Tribe avatar preview" 
-                                        className="w-full h-full rounded-full object-cover"
-                                    />
-                                ) : (
-                                    <TribePlaceholderIcon />
-                                )}
-                                <button type="button" onClick={() => avatarInputRef.current?.click()} className="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity" aria-label="Upload tribe avatar">
-                                    <CameraIcon />
-                                </button>
-                            </div>
-                            <input type="file" ref={avatarInputRef} onChange={handleFileChange} accept="image/*" className="hidden" />
+                <form onSubmit={handleSubmit} className="p-6">
+                    <div className="flex flex-col items-center mb-6">
+                        <div className="w-24 h-24 rounded-full bg-background border border-border flex items-center justify-center relative group">
+                           {avatarPreview ? (
+                                <img 
+                                    src={avatarPreview} 
+                                    alt="Tribe avatar preview" 
+                                    className="w-full h-full rounded-full object-cover"
+                                />
+                            ) : (
+                                <TribePlaceholderIcon />
+                            )}
+                            <button type="button" onClick={() => avatarInputRef.current?.click()} className="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity" aria-label="Upload tribe avatar">
+                                <CameraIcon />
+                            </button>
                         </div>
+                        <input type="file" ref={avatarInputRef} onChange={handleFileChange} accept="image/*" className="hidden" />
+                    </div>
 
-                        <div className="space-y-4">
-                            <div>
-                                <label htmlFor="tribe-name-edit" className="text-sm font-semibold text-secondary">Tribe Name</label>
-                                <input
-                                    id="tribe-name-edit"
-                                    type="text"
-                                    value={name}
-                                    onChange={(e) => setName(e.target.value)}
-                                    className="w-full mt-1 p-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-accent text-primary"
-                                    maxLength={50}
-                                    required
-                                />
-                            </div>
-                            <div>
-                                <label htmlFor="tribe-description-edit" className="text-sm font-semibold text-secondary">Description</label>
-                                <textarea
-                                    id="tribe-description-edit"
-                                    value={description}
-                                    onChange={(e) => setDescription(e.target.value)}
-                                    rows={3}
-                                    className="w-full mt-1 p-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-accent text-primary resize-none"
-                                    maxLength={200}
-                                    required
-                                />
-                            </div>
+                    <div className="space-y-4">
+                        <div>
+                            <label htmlFor="tribe-name-edit" className="text-sm font-semibold text-secondary">Tribe Name</label>
+                            <input
+                                id="tribe-name-edit"
+                                type="text"
+                                value={name}
+                                onChange={(e) => setName(e.target.value)}
+                                className="w-full mt-1 p-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-accent text-primary"
+                                maxLength={50}
+                                required
+                            />
+                        </div>
+                        <div>
+                            <label htmlFor="tribe-description-edit" className="text-sm font-semibold text-secondary">Description</label>
+                            <textarea
+                                id="tribe-description-edit"
+                                value={description}
+                                onChange={(e) => setDescription(e.target.value)}
+                                rows={3}
+                                className="w-full mt-1 p-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-accent text-primary resize-none"
+                                maxLength={200}
+                                required
+                            />
                         </div>
                     </div>
-                    
-                    <div className="p-4 bg-background border-t border-border mt-auto flex justify-between items-center">
+
+                    <div className="flex justify-between items-center pt-6">
                         <button 
                             type="button" 
                             onClick={handleDelete}
@@ -115,9 +113,9 @@ const EditTribeModal: React.FC<EditTribeModalProps> = ({ tribe, onClose, onSave,
                         >
                             Delete Tribe
                         </button>
-                        <div className="space-x-2">
-                            <button type="button" onClick={onClose} className="text-secondary font-semibold px-4 py-2 rounded-lg hover:bg-surface">Cancel</button>
-                            <button type="submit" className="bg-accent text-accent-text font-semibold px-6 py-2 rounded-lg hover:bg-accent-hover transition-colors disabled:opacity-50" disabled={!name.trim() || !description.trim()}>Save Changes</button>
+                        <div>
+                            <button type="button" onClick={onClose} className="text-secondary font-semibold px-4 py-2 rounded-lg hover:bg-background">Cancel</button>
+                            <button type="submit" className="bg-accent text-accent-text font-semibold px-6 py-2 rounded-lg hover:bg-accent-hover transition-colors disabled:opacity-50 ml-2" disabled={!name.trim() || !description.trim()}>Save Changes</button>
                         </div>
                     </div>
                 </form>

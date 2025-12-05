@@ -1,4 +1,3 @@
-
 # Tribe Full-Stack Application - Developer Guide
 
 Hello! Congratulations on the major upgrade to your Tribe application. This guide contains everything you need to get the new, feature-rich, full-stack version of the app up and running, and to continue its development.
@@ -181,24 +180,5 @@ Deploying a MERN app involves two main parts:
     *   **Important:** You will need to update the API base URL in your frontend's API service (`src/api/index.ts`) to point to your live backend URL from Render (`https://your-app-name.onrender.com/api`).
     *   Deploy. Your application is now live!
 
----
-### **Update Log (v1.1)**
----
-
-**Fixes & Improvements Implemented:**
-
-1.  **Centralized Date Handling:**
-    *   Created `src/utils/dateUtils.ts` to standardize all date formatting across the app.
-    *   This utility now powers timestamps in `PostCard`, `NotificationsPage`, `MessageArea`, `TribeDetailPage`, and `ConversationList`.
-
-2.  **Corrected Relative Time Logic:**
-    *   The new `timeAgo` function gracefully handles "future dates" caused by slight differences between the client's clock and the server's clock (clock skew). Instead of showing negative numbers or errors, it defaults to "just now".
-    *   Improved readability of timestamps (e.g., "2m ago" instead of raw date strings).
-
-3.  **Conversation List Enhancement:**
-    *   Added timestamp display to the Conversation List in `ChatPage`, so users can see when the last message was sent at a glance.
-
-4.  **Code Cleanup:**
-    *   Removed duplicate date formatting logic from individual components to improve maintainability.
-
-Your application is now more robust and user-friendly!
+You have successfully transitioned the Tribe prototype into a real, data-driven, full-stack application. Good luck!
+   hi

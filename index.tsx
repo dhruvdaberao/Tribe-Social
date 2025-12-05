@@ -4,7 +4,6 @@ import App from './App';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { AuthProvider } from './contexts/AuthContext';
 import { SocketProvider } from './contexts/SocketContext';
-import './index.css';
 
 const rootElement = document.getElementById('root');
 if (!rootElement) {
