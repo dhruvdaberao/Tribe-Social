@@ -8,7 +8,7 @@ import * as api from './api';
 // Components
 import Sidebar from './components/layout/Sidebar';
 import FeedPage from './components/feed/FeedPage';
-import { ProfilePage } from './components/profile/ProfilePage';
+import ProfilePage from './components/profile/ProfilePage';
 import ChatPage from './components/chat/ChatPage';
 import DiscoverPage from './components/discover/DiscoverPage';
 import LoginPage from './components/auth/LoginPage';
@@ -692,24 +692,16 @@ const App: React.FC = () => {
     const isFullHeightPage = ['Messages', 'TribeDetail', 'Settings'].includes(activeNavItem);
     const isWidePage = ['Discover', 'Tribes', 'Profile'].includes(activeNavItem);
     
-    // Layout Logic Fix
-    // We use h-[100dvh] to respect mobile browser toolbars.
-    // 'pt-16' accounts for the fixed header (Sidebar).
-    // For full height pages (chat), we use 'overflow-hidden' on main to prevent double scrollbars and let inner containers scroll.
-    // For feed pages, we use standard overflow.
     const mainClasses = `pt-16 transition-all duration-300 ${
         isFullHeightPage 
-            ? 'h-[100dvh] overflow-hidden flex flex-col md:pb-0 pb-16' // Chat: fixed viewport, no body scroll
-            : 'min-h-[100dvh] pb-20 md:pb-0' // Feed: standard scroll
+            ? 'h-[100dvh] overflow-hidden flex flex-col md:pb-0 pb-16' 
+            : 'min-h-[100dvh] pb-20 md:pb-0'
     }`;
 
-    // Responsive container logic
     let contentContainerClass = 'mx-auto w-full transition-all duration-300';
     if (isFullHeightPage) {
-        // Chat/Settings: Full height, constrained max-width on desktop
         contentContainerClass += ' h-full max-w-6xl md:px-4 md:py-4 flex flex-col';
     } else {
-        // Feed/Discovery: Standard margins
         contentContainerClass += isWidePage ? ' max-w-5xl px-4 py-6' : ' max-w-2xl px-4 py-6';
     }
 
