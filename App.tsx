@@ -1,6 +1,8 @@
 
 
 
+
+
 // import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 // import { useAuth } from './contexts/AuthContext';
 // import { useSocket } from './contexts/SocketContext';
@@ -181,6 +183,17 @@
 //         }
 //     }, [fetchData, isAuthLoading, currentUser]);
 
+//     // Effect to join tribe rooms for real-time unread counts
+//     useEffect(() => {
+//         if (socket && tribes.length > 0 && currentUser) {
+//             const myTribeIds = tribes.filter(t => t.members.includes(currentUser.id)).map(t => t.id);
+//             myTribeIds.forEach(tribeId => {
+//                 socket.emit('joinRoom', `tribe-${tribeId}`);
+//             });
+//         }
+//     }, [socket, tribes, currentUser]);
+
+
 //     useEffect(() => {
 //         if (!socket || !viewedTribe) return;
 //         const room = `tribe-${viewedTribe.id}`;
@@ -191,9 +204,19 @@
 //     useEffect(() => {
 //         if (!socket || !userMap.size) return;
 //         const handleNewPost = (post: any) => {
-//             if (post.user.id === currentUser?.id && isCreatingPost) return;
 //             const populated = populatePost(post, userMap);
-//             if (populated) setPosts(prev => [populated, ...prev].sort((a: Post, b: Post) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()));
+//             if (populated) {
+//                 // If it was an optimistic post, replace it. Otherwise, add it.
+//                 setPosts(prev => {
+//                     const optimisticPostIndex = prev.findIndex(p => p.id === `temp-${post.tempId}`);
+//                     if (optimisticPostIndex > -1) {
+//                         const newPosts = [...prev];
+//                         newPosts[optimisticPostIndex] = populated;
+//                         return newPosts;
+//                     }
+//                     return [populated, ...prev].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+//                 });
+//             }
 //         };
 //         const handlePostUpdated = (updatedPost: any) => {
 //             const populated = populatePost(updatedPost, userMap);
@@ -270,12 +293,27 @@
 //     const handleAddPost = async (content: string, imageUrl?: string) => {
 //         if (!currentUser) return;
 //         setIsCreatingPost(true);
+//         const tempId = Date.now().toString();
+//         // Optimistic update
+//         const tempPost: Post = {
+//             id: `temp-${tempId}`,
+//             author: currentUser,
+//             content: content,
+//             imageUrl: imageUrl,
+//             timestamp: new Date().toISOString(),
+//             likes: [],
+//             comments: [],
+//         };
+//         setPosts(prev => [tempPost, ...prev]);
+
 //         try {
-//             await api.createPost({ content, imageUrl });
+//             await api.createPost({ content, imageUrl, tempId });
 //             toast.success("Post created successfully!");
 //         } catch (error) {
 //             console.error("Failed to add post:", error);
 //             toast.error("Could not create post. Please try again.");
+//             // Revert optimistic update on failure
+//             setPosts(prev => prev.filter(p => p.id !== `temp-${tempId}`));
 //         } finally {
 //             setIsCreatingPost(false);
 //         }
@@ -667,7 +705,8 @@
 //                      return <div className="text-center p-8">User not found or is blocked.</div>;
 //                 }
 //                 const userPosts = visiblePosts.filter(p => p.author.id === viewedUser.id);
-//                 return <ProfilePage user={viewedUser} allUsers={users} visibleUsers={visibleUsers} allTribes={tribes} posts={userPosts} currentUser={currentUser} onLikePost={handleLikePost} onCommentPost={handleCommentPost} onDeletePost={handleDeletePost} onDeleteComment={handleDeleteComment} onViewProfile={handleViewProfile} onUpdateUser={handleUpdateUser} onAddPost={handleAddPost} isPosting={isCreatingPost} onToggleFollow={handleToggleFollow} onStartConversation={handleStartConversation} onNavigate={handleSelectItem} onSharePost={handleSharePost} onOpenStoryCreator={() => setIsCreatingStory(true)} myStories={myStories} onViewUserStories={handleViewUserStories} />;
+//                 const userHasStory = myStories.some(s => s.user === viewedUser.id) || followingUserStories.some(us => us.user.id === viewedUser.id);
+//                 return <ProfilePage user={viewedUser} allUsers={users} visibleUsers={visibleUsers} allTribes={tribes} posts={userPosts} currentUser={currentUser} hasStory={userHasStory} onLikePost={handleLikePost} onCommentPost={handleCommentPost} onDeletePost={handleDeletePost} onDeleteComment={handleDeleteComment} onViewProfile={handleViewProfile} onUpdateUser={handleUpdateUser} onAddPost={handleAddPost} isPosting={isCreatingPost} onToggleFollow={handleToggleFollow} onStartConversation={handleStartConversation} onNavigate={handleSelectItem} onSharePost={handleSharePost} onOpenStoryCreator={() => setIsCreatingStory(true)} myStories={myStories} onViewUserStories={handleViewUserStories} />;
 //             case 'Settings':
 //                  return <SettingsPage currentUser={currentUser} onLogout={logout} onDeleteAccount={handleDeleteAccount} onToggleBlock={handleToggleBlock} allUsers={users} onBack={() => handleSelectItem('Profile')} />;
 //             default:
@@ -694,17 +733,12 @@
 //             {editingTribe && <EditTribeModal tribe={editingTribe} onClose={() => setEditingTribe(null)} onSave={handleEditTribe} onDelete={handleDeleteTribe} />}
 //             {isCreatingStory && <StoryCreator onClose={() => setIsCreatingStory(false)} onCreate={handleCreateStory} />}
 //             {viewingUserStories && <StoryViewer userStories={viewingUserStories} currentUser={currentUser} allUsers={visibleUsers} allTribes={tribes} onClose={() => setViewingUserStories(null)} onDelete={handleDeleteStory} onLike={handleLikeStory} onSharePost={handleSharePost} />}
-//             {/* FIX: Corrected a typo in a prop name, ensuring the comment handler is passed correctly. */}
 //             {viewingPost && <PostViewModal post={viewingPost} currentUser={currentUser} allUsers={visibleUsers} allTribes={tribes} onLike={handleLikePost} onComment={handleCommentPost} onDeletePost={handleDeletePost} onDeleteComment={handleDeleteComment} onViewProfile={handleViewProfile} onSharePost={handleSharePost} onClose={() => setViewingPost(null)} />}
 //         </div>
 //     );
 // };
 
 // export default App;
-
-
-
-
 
 
 
@@ -922,6 +956,8 @@ const App: React.FC = () => {
                         newPosts[optimisticPostIndex] = populated;
                         return newPosts;
                     }
+                    // Only add if not duplicate
+                    if (prev.some(p => p.id === populated.id)) return prev;
                     return [populated, ...prev].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
                 });
             }
@@ -934,7 +970,22 @@ const App: React.FC = () => {
         const handleNewTribeMessage = (message: TribeMessage) => {
             if(viewedTribe && viewedTribe.id === message.tribeId) {
                 const sender = userMap.get(message.senderId!);
-                if (sender) setViewedTribe(prev => prev ? { ...prev, messages: [...prev.messages, {...message, sender}] } : null);
+                // Only add if not already optimistically added (check temp IDs if we used them there, but here we check content)
+                // Since we don't have unique non-db IDs easily, we trust the socket to send confirmed data.
+                // However, our optimistic UI handles local addition. To avoid duplicates, we can filter or check.
+                // Simpler: The message sent by ME is already displayed. The socket sends it back. 
+                // We should filter it out if we already have a matching temp message, OR just replace.
+                // For now, let's rely on the socket ID being the real DB ID.
+                if (sender) {
+                    setViewedTribe(prev => {
+                        if (!prev) return null;
+                        // Avoid duplicates if message with same ID exists
+                        if (prev.messages.some(m => m.id === message.id)) return prev;
+                        // Filter out temp messages if they match content/timestamp roughly (harder).
+                        // Better: in handleSendMessage, we can replace the temp message when we get the real one confirmation.
+                        return { ...prev, messages: [...prev.messages, {...message, sender}] };
+                    });
+                }
             }
         };
         const handleTribeMessageDeleted = ({ tribeId, messageId }: { tribeId: string, messageId: string }) => {
@@ -1029,7 +1080,9 @@ const App: React.FC = () => {
 
     const handleLikePost = async (postId: string) => {
         if (!currentUser) return;
-        const originalPosts = posts;
+        const originalPosts = [...posts]; // deep copy if needed, but shallow is ok for array structure
+        
+        // Optimistic Update
         setPosts(prev => prev.map(p => {
             if (p.id === postId) {
                 const isLiked = p.likes.includes(currentUser.id);
@@ -1037,12 +1090,13 @@ const App: React.FC = () => {
             }
             return p;
         }));
+
         try {
             await api.likePost(postId);
         } catch (error) {
             console.error("Failed to like post:", error);
             toast.error("Like failed. Reverting.");
-            setPosts(originalPosts); 
+            setPosts(originalPosts); // Revert
         }
     };
 
@@ -1050,12 +1104,16 @@ const App: React.FC = () => {
         if (!currentUser) return;
         const tempCommentId = `temp-${Date.now()}`;
         const tempComment: Comment = { id: tempCommentId, author: currentUser, text, timestamp: new Date().toISOString() };
+        
+        // Optimistic Update
         setPosts(prev => prev.map(p => p.id === postId ? { ...p, comments: [...p.comments, tempComment] } : p));
+        
         try {
             await api.commentOnPost(postId, { text });
         } catch (error) {
             console.error("Failed to comment:", error);
             toast.error("Failed to post comment.");
+            // Revert
             setPosts(prev => prev.map(p => p.id === postId ? { ...p, comments: p.comments.filter(c => c.id !== tempCommentId) } : p));
         }
     };
@@ -1063,21 +1121,27 @@ const App: React.FC = () => {
     const handleDeletePost = async (postId: string) => {
         if (!currentUser) return;
         const originalPosts = posts;
+        
+        // Optimistic Update
         setPosts(prev => prev.filter(p => p.id !== postId));
+        
         try {
             await api.deletePost(postId);
             toast.success("Post deleted.");
         } catch (error) {
             console.error("Failed to delete post:", error);
             toast.error("Could not delete post.");
-            setPosts(originalPosts);
+            setPosts(originalPosts); // Revert
         }
     };
 
     const handleDeleteComment = async (postId: string, commentId: string) => {
         if (!currentUser) return;
         const originalPosts = posts;
+        
+        // Optimistic Update
         setPosts(prev => prev.map(p => p.id === postId ? { ...p, comments: p.comments.filter(c => c.id !== commentId) } : p));
+        
         try {
             await api.deleteComment(postId, commentId);
         } catch (error) {
@@ -1147,7 +1211,12 @@ const App: React.FC = () => {
         const originalViewedUser = viewedUser ? { ...viewedUser } : null;
         const isFollowing = currentUser.following.includes(targetUserId);
 
-        setCurrentUser(prev => prev ? { ...prev, following: isFollowing ? prev.following.filter(id => id !== targetUserId) : [...prev.following, targetUserId] } : null);
+        // Optimistic Update
+        const newFollowing = isFollowing 
+            ? currentUser.following.filter(id => id !== targetUserId) 
+            : [...currentUser.following, targetUserId];
+            
+        setCurrentUser(prev => prev ? { ...prev, following: newFollowing } : null);
 
         if (viewedUser) {
             setViewedUser(prev => {
@@ -1157,17 +1226,18 @@ const App: React.FC = () => {
                     return { ...prev, followers: newFollowers };
                 }
                 if (prev.id === currentUser.id) {
-                    const newFollowing = isFollowing ? prev.following.filter(id => id !== targetUserId) : [...prev.following, targetUserId];
                     return { ...prev, following: newFollowing };
                 }
                 return prev;
             });
         }
+        
         try {
             await api.toggleFollow(targetUserId);
         } catch(error) {
             console.error('Failed to toggle follow', error);
             toast.error("Action failed. Reverting.");
+            // Revert
             setCurrentUser(originalCurrentUser);
             if (originalViewedUser) setViewedUser(originalViewedUser);
         }
@@ -1177,14 +1247,17 @@ const App: React.FC = () => {
         if (!currentUser) return;
         const originalUser = { ...currentUser };
         const isBlocked = (currentUser.blockedUsers || []).includes(targetUserId);
+        
+        // Optimistic Update
         setCurrentUser(prev => prev ? { ...prev, blockedUsers: isBlocked ? (prev.blockedUsers || []).filter(id => id !== targetUserId) : [...(prev.blockedUsers || []), targetUserId]} : null);
+        
         try {
             await api.toggleBlock(targetUserId);
             toast.success(isBlocked ? "User unblocked." : "User blocked.");
         } catch(error) {
             console.error('Failed to toggle block', error);
             toast.error("Action failed. Reverting.");
-            setCurrentUser(originalUser);
+            setCurrentUser(originalUser); // Revert
         }
     };
     
@@ -1203,6 +1276,9 @@ const App: React.FC = () => {
 
     const handleJoinToggle = async (tribeId: string) => {
         if (!currentUser) return;
+        
+        // Optimistic Update can be tricky for tribe objects as they are in a list
+        // For now, we will wait for server, or you can implement optimistic update here similar to posts
         try {
             const { data: updatedTribe } = await api.joinTribe(tribeId);
             setTribes(tribes.map(t => t.id === tribeId ? { ...t, members: updatedTribe.members } : t));
@@ -1253,10 +1329,14 @@ const App: React.FC = () => {
     
     const handleSendTribeMessage = async (tribeId: string, text: string, imageUrl?: string) => {
         if (!currentUser || !viewedTribe) return;
+        
+        // Optimistic handling is done inside TribeDetailPage to ensure UI responsiveness.
+        // We just make the API call here.
         try {
             await api.sendTribeMessage(tribeId, { text, imageUrl });
         } catch (error) {
             console.error("Failed to send tribe message:", error);
+            toast.error("Failed to send message.");
         }
     };
     

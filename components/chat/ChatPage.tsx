@@ -1,7 +1,6 @@
 
 
 
-
 // import React, { useState, useEffect, useCallback, useMemo } from 'react';
 // import { Conversation, User, Message, Post } from '../../types';
 // import ConversationList from './ConversationList';
@@ -29,6 +28,14 @@
 //   const [isNewMessageModalOpen, setNewMessageModalOpen] = useState(false);
 //   const [isSending, setIsSending] = useState(false);
 //   const { socket, onlineUsers, clearUnreadMessages, unreadCounts, setActiveChatPartnerId } = useSocket();
+
+//   useEffect(() => {
+//     // When ChatPage is unmounted (e.g., user navigates away),
+//     // ensure we clear the active chat partner ID so notifications resume correctly.
+//     return () => {
+//       setActiveChatPartnerId(null);
+//     };
+//   }, [setActiveChatPartnerId]);
 
 //   const userMap = useMemo(() => {
 //       const map = new Map(allUsers.map(user => [user.id, user]));
@@ -237,6 +244,9 @@
 
 
 
+
+
+
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Conversation, User, Message, Post } from '../../types';
 import ConversationList from './ConversationList';
@@ -266,8 +276,6 @@ const ChatPage: React.FC<ChatPageProps> = ({ currentUser, allUsers, chukUser, in
   const { socket, onlineUsers, clearUnreadMessages, unreadCounts, setActiveChatPartnerId } = useSocket();
 
   useEffect(() => {
-    // When ChatPage is unmounted (e.g., user navigates away),
-    // ensure we clear the active chat partner ID so notifications resume correctly.
     return () => {
       setActiveChatPartnerId(null);
     };
@@ -297,7 +305,6 @@ const ChatPage: React.FC<ChatPageProps> = ({ currentUser, allUsers, chukUser, in
     fetchConversations();
   }, [fetchConversations]);
   
-  // Listen for new messages via socket
   useEffect(() => {
     if (!socket) return;
     
@@ -440,7 +447,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ currentUser, allUsers, chukUser, in
   };
   
   return (
-    <div className="h-full bg-surface md:rounded-2xl md:border md:border-border md:shadow-lg flex overflow-hidden relative">
+    <div className="h-full bg-surface md:border md:border-border md:shadow-lg flex overflow-hidden relative">
        <div 
         className={`w-full md:w-[320px] lg:w-[380px] flex-shrink-0 flex flex-col transition-transform duration-300 ease-in-out md:static absolute inset-0 z-10 md:border-r md:border-border bg-surface ${
           isMessageAreaVisible ? '-translate-x-full' : 'translate-x-0'

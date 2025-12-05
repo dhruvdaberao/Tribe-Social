@@ -1,13 +1,10 @@
 
 
-
-
-
-
 // import React, { useState, useRef, useEffect } from 'react';
 // import { Conversation, User, Message } from '../../types';
 // import UserAvatar from '../common/UserAvatar';
 // import { useSocket } from '../../contexts/SocketContext';
+// import MarkdownRenderer from '../common/MarkdownRenderer';
 
 // interface MessageAreaProps {
 //   conversation: Conversation;
@@ -140,9 +137,15 @@
 //                         </div>
 //                     )}
 //                     <div className={`flex flex-col w-full max-w-xs lg:max-w-md ${isCurrentUser ? 'items-end' : 'items-start'}`}>
-//                         <div className={`px-4 py-2.5 rounded-xl break-words ${isCurrentUser ? 'bg-accent text-accent-text' : 'bg-surface text-primary shadow-sm'}`}>
+//                         <div className={`px-4 py-2.5 rounded-xl ${isCurrentUser ? 'bg-accent text-accent-text' : 'bg-surface text-primary shadow-sm'}`}>
 //                             {message.imageUrl && <img src={message.imageUrl} alt="Shared content" className="mb-2 rounded-lg w-full" />}
-//                             <p className="text-sm leading-relaxed whitespace-pre-wrap">{message.text}</p>
+//                             <div className="text-sm leading-relaxed">
+//                                 {sender?.id === 'chuk-ai' ? (
+//                                     <MarkdownRenderer text={message.text} />
+//                                 ) : (
+//                                     <p className="whitespace-pre-wrap break-words">{message.text}</p>
+//                                 )}
+//                             </div>
 //                         </div>
 //                         <p className="text-xs text-secondary mt-1.5 px-1">{sentAt}</p>
 //                     </div>
@@ -182,6 +185,9 @@
 
 // const SendIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="currentColor" viewBox="0 0 20 20"><path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z" /></svg>;
 // const BackIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>;
+
+
+
 
 
 
@@ -242,12 +248,10 @@ export const MessageArea: React.FC<MessageAreaProps> = ({ conversation, messages
     setInputText(e.target.value);
     if (socket && otherParticipantId) {
       if (!typingTimeoutRef.current) {
-        // FIX: Added 'userName' to the 'typing' event payload to match server expectations.
         socket.emit('typing', { roomId: `dm-${[currentUser.id, otherParticipantId].sort().join('-')}`, userId: currentUser.id, userName: currentUser.name });
       }
       if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
       typingTimeoutRef.current = setTimeout(() => {
-        // FIX: Added 'userName' to the 'stopTyping' event payload to match server expectations.
         socket.emit('stopTyping', { roomId: `dm-${[currentUser.id, otherParticipantId].sort().join('-')}`, userId: currentUser.id, userName: currentUser.name });
         typingTimeoutRef.current = null;
       }, 2000);
@@ -261,7 +265,6 @@ export const MessageArea: React.FC<MessageAreaProps> = ({ conversation, messages
       setInputText('');
       if (socket && otherParticipantId) {
         if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
-        // FIX: Added 'userName' to the 'stopTyping' event payload to match server expectations.
         socket.emit('stopTyping', { roomId: `dm-${[currentUser.id, otherParticipantId].sort().join('-')}`, userId: currentUser.id, userName: currentUser.name });
         typingTimeoutRef.current = null;
       }
@@ -325,7 +328,7 @@ export const MessageArea: React.FC<MessageAreaProps> = ({ conversation, messages
                         </div>
                     )}
                     <div className={`flex flex-col w-full max-w-xs lg:max-w-md ${isCurrentUser ? 'items-end' : 'items-start'}`}>
-                        <div className={`px-4 py-2.5 rounded-xl ${isCurrentUser ? 'bg-accent text-accent-text' : 'bg-surface text-primary shadow-sm'}`}>
+                        <div className={`px-4 py-2.5 ${isCurrentUser ? 'bg-accent text-accent-text rounded-2xl rounded-tr-none' : 'bg-surface text-primary shadow-sm rounded-2xl rounded-tl-none'}`}>
                             {message.imageUrl && <img src={message.imageUrl} alt="Shared content" className="mb-2 rounded-lg w-full" />}
                             <div className="text-sm leading-relaxed">
                                 {sender?.id === 'chuk-ai' ? (
@@ -360,9 +363,9 @@ export const MessageArea: React.FC<MessageAreaProps> = ({ conversation, messages
             value={inputText}
             onChange={handleInputChange}
             placeholder="Type a message..."
-            className="flex-1 bg-surface border border-border rounded-full px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-accent text-primary min-w-0"
+            className="flex-1 bg-surface border border-border rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-accent text-primary min-w-0"
           />
-          <button type="submit" className="bg-accent text-accent-text rounded-full w-11 h-11 flex-shrink-0 flex items-center justify-center hover:bg-accent-hover transition-colors disabled:opacity-50" disabled={!inputText.trim() || isSending}>
+          <button type="submit" className="bg-accent text-accent-text rounded-lg w-12 h-11 flex-shrink-0 flex items-center justify-center hover:bg-accent-hover transition-colors disabled:opacity-50" disabled={!inputText.trim() || isSending}>
             {isSending ? <div className="w-5 h-5 border-2 border-accent-text border-t-transparent rounded-full animate-spin"></div> : <SendIcon />}
           </button>
         </form>
