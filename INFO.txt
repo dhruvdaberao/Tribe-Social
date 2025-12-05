@@ -1,0 +1,130 @@
+
+# Tribe Social - Project Master Documentation
+
+## 1. Project Overview
+**Name:** Tribe Social
+**Type:** Full-Stack Social Media Application (PWA - Progressive Web App)
+**Core Value Proposition:** A real-time social platform focused on "Tribes" (communities), instant messaging, and AI-assisted interactions, featuring ephemeral content (Stories) and a main feed.
+
+---
+
+## 2. Technical Stack (The "MERN" + Real-time Stack)
+
+### Frontend (Client-Side)
+*   **Framework:** React 19 (Latest) with TypeScript.
+*   **Build Tool:** Vite (Fast hot module replacement and bundling).
+*   **Styling:** TailwindCSS (Utility-first CSS for rapid UI development).
+*   **State Management:** React Context API (AuthProvider, SocketProvider, ThemeProvider).
+*   **Routing:** Custom state-based routing (for single-page app feel without browser refreshes).
+*   **HTTP Client:** Axios (for REST API calls).
+*   **Real-Time Client:** Socket.io-client (for WebSockets).
+
+### Backend (Server-Side)
+*   **Runtime:** Node.js.
+*   **Framework:** Express.js (REST API framework).
+*   **Database:** MongoDB (NoSQL database).
+*   **ORM:** Mongoose (Object Data Modeling for MongoDB).
+*   **Real-Time Server:** Socket.io (Handles bi-directional event-based communication).
+*   **Authentication:** JWT (JSON Web Tokens) + bcryptjs (Password hashing).
+*   **AI Integration:** Google GenAI SDK (Gemini 2.5 Flash model).
+
+---
+
+## 3. Architecture & Data Flow
+
+### The Request Lifecycle (How it works)
+1.  **User Action:** User clicks "Like" on a post.
+2.  **Optimistic UI:** The React component updates the heart icon to red *immediately* (before server response) to make the app feel instant.
+3.  **API Call:** Axios sends a `PUT` request to `/api/posts/:id/like` with the JWT token in the header.
+4.  **Middleware:** The Express `protect` middleware intercepts the request, verifies the JWT signature, and attaches the user object to the request.
+5.  **Controller Logic:**
+    *   The route handler checks if the user already liked the post in MongoDB.
+    *   It updates the `likes` array in the `Post` document.
+    *   If it's a new like, it creates a `Notification` document for the post owner.
+6.  **Real-Time Event:**
+    *   The server emits a `postUpdated` event via Socket.io to all connected clients.
+    *   It emits a `newNotification` event specifically to the post owner's socket ID.
+7.  **Client Update:**
+    *   All other users viewing the feed receive `postUpdated` and their UI updates the like count automatically.
+    *   The post owner sees a red badge appear on their Notifications tab.
+
+---
+
+## 4. Key Features Breakdown (Interview Deep Dive)
+
+### A. Authentication & Security
+*   **How it works:** Users register with Name/Email/Password. Passwords are hashed using `bcrypt` before saving to DB.
+*   **Session Management:** Upon login, the server issues a **JWT** signed with a secret key. This token is stored in the browser's `localStorage`.
+*   **Protection:** Every API call sends this token. The backend verifies it on every protected route.
+
+### B. Real-Time Chat (Socket.io)
+*   **Room Architecture:**
+    *   **Direct Messages:** Users join a unique room ID based on sorted user IDs (e.g., `dm-userA-userB`). This ensures both users are always in the same "room" regardless of who started the chat.
+    *   **Tribe Chat:** Users join a room named `tribe-{tribeId}`.
+*   **Typing Indicators:** Broadcasts `typing` and `stopTyping` events to the specific room, implementing a debounce timer on the frontend to prevent spamming the server.
+
+### C. The "Feed" & Infinite Scroll
+*   **Data Structure:** Posts contain text, image (Base64), author reference, likes array, and comments array.
+*   **Optimization:** The feed uses **Pagination** (cursor-based or offset-based in the API) to load posts in chunks (e.g., 20 at a time) to prevent crashing the browser with too much data.
+*   **Infinite Scroll:** A hidden "Trigger" component at the bottom of the list detects when it comes into view (using `IntersectionObserver`) and fires the request for the next page of posts.
+
+### D. "Tribes" (Communities)
+*   **Concept:** Similar to Subreddits or Discord servers.
+*   **Data Model:** A Tribe document references an `owner` and an array of `members`.
+*   **Logic:** You can only post messages if you are in the `members` array.
+
+### E. Stories (Ephemeral Content)
+*   **Logic:** Stories have a `createdAt` timestamp and a MongoDB TTL (Time-To-Live) index (or logical filter) that expires them after 24 hours.
+*   **UI:** Modeled after Instagram. Supports text-only modes with custom background colors or image overlays.
+
+### F. AI Assistant ("Chuk")
+*   **Integration:** Uses `@google/genai`.
+*   **Personality:** System instructions are injected into the context window to enforce a "friendly baby chicken" persona.
+*   **Latency:** The backend proxies the request to Google's servers to keep the API Key secure (never exposed to frontend).
+
+---
+
+## 5. Database Schema Overview (MongoDB)
+
+1.  **User:** `name`, `username`, `email`, `password` (hashed), `followers` (array of IDs), `following` (array of IDs), `blockedUsers`.
+2.  **Post:** `user` (ref), `content`, `imageUrl`, `likes` (array of user IDs), `comments` (embedded array).
+3.  **Tribe:** `name`, `description`, `owner` (ref), `members` (array of user IDs).
+4.  **Message:** `sender`, `receiver`, `message`, `imageUrl`, `timestamp`.
+5.  **TribeMessage:** `tribe` (ref), `sender`, `text`.
+6.  **Notification:** `recipient`, `sender`, `type` (like/comment/follow), `read` (boolean).
+7.  **Story:** `user`, `imageUrl`, `text`, `createdAt`, `textColor`, `backgroundColor`.
+
+---
+
+## 6. Common Interview Questions & Answers for this Project
+
+**Q: Why did you choose MongoDB?**
+*A: MongoDB's flexible schema is perfect for social apps where data structures might evolve (e.g., adding polls to posts later). Also, its document-based structure maps directly to the JSON objects used in the frontend, making development faster.*
+
+**Q: How do you handle scalability with Real-time features?**
+*A: Currently, it uses a single Socket.io instance. To scale, I would use the Redis Adapter for Socket.io to distribute events across multiple server nodes.*
+
+**Q: How are images handled?**
+*A: For this version, images are converted to Base64 strings. In a production environment, I would upload them to AWS S3 or Cloudinary and save only the URL in MongoDB to reduce database size and improve performance.*
+
+**Q: How does the "Chuk" AI remember context?**
+*A: Currently, it's a stateless request/response model for simplicity. To make it conversational, I would need to send the previous message history along with the new prompt to the Gemini API.*
+
+**Q: What was the hardest bug you fixed?**
+*A: (Example) Synchronizing the "Like" count between the real-time socket event and the local optimistic UI update to prevent the count from jumping erratically.*
+
+**Q: How is the application secured?**
+*A: Passwords are hashed. API routes are protected via JWT middleware. CORS is configured to only allow requests from the specific frontend domain.*
+
+---
+
+## 7. Folder Structure Guide
+
+*   `/src/api`: Centralized Axios configuration and API endpoints.
+*   `/src/components`: Reusable UI blocks (Buttons, Cards, Modals).
+*   `/src/contexts`: Global state providers (Auth, Socket, Theme).
+*   `/src/utils`: Helper functions (Date formatting).
+*   `/backend/models`: Mongoose database schemas.
+*   `/backend/routes`: API endpoint definitions.
+*   `/backend/controllers`: (Inline in routes in this project) Business logic.
+*   `/backend/socketManager.js`: WebSocket event handlers.
