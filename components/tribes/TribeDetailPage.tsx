@@ -334,7 +334,8 @@ const TribeDetailPage: React.FC<TribeDetailPageProps> = (props) => {
 
   return (
     <>
-      <div className="flex flex-col h-full bg-surface border border-border shadow-md overflow-hidden">
+      <div className="flex flex-col h-full bg-surface border border-border shadow-md overflow-hidden relative rounded-xl">
+        {/* Header - Fixed */}
         <div className="flex items-center p-3 border-b border-border flex-shrink-0 h-16 bg-surface z-10">
           <button onClick={onBack} className="p-2 mr-2 text-primary"><BackIcon /></button>
           {tribe.avatarUrl ? <img src={tribe.avatarUrl} className="w-10 h-10 rounded-full mr-3 object-cover"/> : <TribePlaceholderIcon />}
@@ -349,12 +350,32 @@ const TribeDetailPage: React.FC<TribeDetailPageProps> = (props) => {
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-4 bg-background">
+        {/* Scrollable Messages Area */}
+        <div className="flex-1 overflow-y-auto p-4 bg-background scroll-smooth">
           <div className="flex flex-col space-y-2">
             {localMessages.map(message => {
-              // Robust sender checking
+              // Robust check for sender to fix blank bubbles
               const isCurrentUser = (message.sender?.id === currentUser.id) || (message.senderId === currentUser.id);
-              const sender = message.sender || userMap.get(message.senderId || '') || currentUser; 
+              
+              // Fallback logic if sender object is missing (network lag or partial data)
+              let sender = message.sender;
+              if (!sender && message.senderId) {
+                  sender = userMap.get(message.senderId);
+              }
+              // Ultimate fallback to prevent crash
+              if (!sender) {
+                  sender = { 
+                      id: message.senderId || 'unknown', 
+                      name: 'Unknown User', 
+                      username: 'unknown', 
+                      avatarUrl: null, 
+                      bannerUrl: null,
+                      bio: '',
+                      followers: [], 
+                      following: [], 
+                      blockedUsers: [] 
+                  };
+              }
 
               return (
                 <div key={message.id} className={`flex items-end gap-2.5 group ${isCurrentUser ? 'justify-end' : 'justify-start'}`}>
@@ -381,7 +402,8 @@ const TribeDetailPage: React.FC<TribeDetailPageProps> = (props) => {
           </div>
         </div>
 
-        <div className="p-4 border-t border-border bg-surface flex-shrink-0">
+        {/* Fixed Footer Input */}
+        <div className="p-4 border-t border-border bg-surface flex-shrink-0 z-10">
           <form onSubmit={handleSendMessage} className="flex items-center space-x-3">
             <input type="text" value={inputText} onChange={handleInputChange} placeholder={isMember ? `Message #${tribe.name}` : "You must be a member to chat"} className="flex-1 bg-background border border-border rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-accent text-primary min-w-0" disabled={!isMember} />
             <button type="submit" className="bg-accent text-accent-text rounded-lg w-12 h-12 flex-shrink-0 flex items-center justify-center hover:bg-accent-hover disabled:opacity-50" disabled={!inputText.trim() || !isMember}><SendIcon /></button>

@@ -320,6 +320,7 @@ import protect from '../middleware/authMiddleware.js';
 import Post from '../models/postModel.js';
 import User from '../models/userModel.js';
 import Notification from '../models/notificationModel.js';
+import mongoose from 'mongoose';
 
 const router = express.Router();
 
@@ -336,16 +337,20 @@ router.get('/feed', protect, async (req, res) => {
         const currentUser = await User.findById(req.user.id);
         if (!currentUser) return res.status(404).json({ message: "User not found" });
 
-        const userIdsForFeed = [currentUser._id, ...(currentUser.following || [])];
+        // Ensure user IDs are valid ObjectId strings before querying
+        // This prevents casting errors if bad data exists in the array
+        const userIdsForFeed = [currentUser._id, ...(currentUser.following || [])]
+            .filter(id => mongoose.Types.ObjectId.isValid(id));
         
-        // Use standard .find() which is safer on Free Tier
+        // Use standard .find() which is reliable on MongoDB Free Tier
         const posts = await Post.find({ user: { $in: userIdsForFeed } })
             .sort({ createdAt: -1 })
             .limit(50) 
             .populate('user', 'name username avatarUrl')
             .populate('comments.user', 'name username avatarUrl');
 
-        // Filter out posts where the user is null (deleted users)
+        // Robustness: Filter out posts where the user field is null (e.g., deleted users)
+        // This prevents the frontend from crashing when accessing post.author.name
         const validPosts = posts.filter(post => post.user !== null);
 
         res.json(validPosts);
@@ -365,6 +370,7 @@ router.get('/', protect, async (req, res) => {
             .populate('user', 'name username avatarUrl')
             .populate('comments.user', 'name username avatarUrl');
         
+        // Filter out posts from deleted users
         const validPosts = posts.filter(post => post.user !== null);
         res.json(validPosts);
     } catch (error) {
@@ -374,10 +380,15 @@ router.get('/', protect, async (req, res) => {
 });
 
 // @route   GET /api/posts/:id
+// @desc    Get a single post
 router.get('/:id', protect, async (req, res) => {
     try {
+        if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+            return res.status(404).json({ message: 'Post not found' });
+        }
         let post = await Post.findById(req.params.id);
         if (!post) return res.status(404).json({ message: 'Post not found' });
+        
         post = await fullyPopulatePost(post);
         res.json(post);
     } catch (error) {
@@ -386,6 +397,7 @@ router.get('/:id', protect, async (req, res) => {
 });
 
 // @route   POST /api/posts
+// @desc    Create a post
 router.post('/', protect, async (req, res) => {
     const { content, imageUrl, tempId } = req.body;
     if (!content && !imageUrl) return res.status(400).json({ message: 'Post content required' });
@@ -400,11 +412,13 @@ router.post('/', protect, async (req, res) => {
         let createdPost = await post.save();
         createdPost = await fullyPopulatePost(createdPost);
         
+        // Include tempId so frontend can reconcile optimistic updates
         const postForSocket = { ...createdPost.toJSON(), tempId };
         req.io.emit('newPost', postForSocket);
 
         res.status(201).json(createdPost);
     } catch (error) {
+        console.error("Create post error:", error);
         res.status(500).json({ message: 'Server Error' });
     }
 });

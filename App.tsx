@@ -1567,6 +1567,17 @@ const CHUK_AI_USER: User = {
     blockedUsers: [],
 };
 
+// Safe LocalStorage Helper to prevent QuotaExceededError crashes
+const safeSetItem = (key: string, value: string) => {
+    try {
+        localStorage.setItem(key, value);
+    } catch (e) {
+        console.warn(`LocalStorage quota exceeded. Failed to save ${key}. Cleaning up old data...`);
+        // Optional: clear non-critical items or handle gracefully
+        // localStorage.clear(); // Extreme measure, use with caution
+    }
+};
+
 const App: React.FC = () => {
     const { currentUser, setCurrentUser, logout, isLoading: isAuthLoading } = useAuth();
     const { socket, notifications, setNotifications, unreadMessageCount, unreadTribeCount, unreadNotificationCount, clearUnreadTribe } = useSocket();
@@ -1596,26 +1607,31 @@ const App: React.FC = () => {
 
     // INSTANT LOAD: Load cached data on mount
     useEffect(() => {
-        const cachedPosts = localStorage.getItem('tribe_posts');
-        const cachedUsers = localStorage.getItem('tribe_users');
-        const cachedTribes = localStorage.getItem('tribe_tribes');
-        const cachedSeenStories = localStorage.getItem('seenStoryAuthors');
+        try {
+            const cachedPosts = localStorage.getItem('tribe_posts');
+            const cachedUsers = localStorage.getItem('tribe_users');
+            const cachedTribes = localStorage.getItem('tribe_tribes');
+            const cachedSeenStories = localStorage.getItem('seenStoryAuthors');
 
-        if (cachedPosts) setPosts(JSON.parse(cachedPosts));
-        if (cachedUsers) setUsers(JSON.parse(cachedUsers));
-        if (cachedTribes) setTribes(JSON.parse(cachedTribes));
-        if (cachedSeenStories) setSeenStoryAuthors(new Set(JSON.parse(cachedSeenStories)));
-        
-        // If we have cached data, mark as loaded so user sees content immediately
-        if (cachedPosts && cachedUsers) {
-            setIsDataLoaded(true);
+            if (cachedPosts) setPosts(JSON.parse(cachedPosts));
+            if (cachedUsers) setUsers(JSON.parse(cachedUsers));
+            if (cachedTribes) setTribes(JSON.parse(cachedTribes));
+            if (cachedSeenStories) setSeenStoryAuthors(new Set(JSON.parse(cachedSeenStories)));
+            
+            // If we have cached data, mark as loaded so user sees content immediately
+            if (cachedPosts && cachedUsers) {
+                setIsDataLoaded(true);
+            }
+        } catch (error) {
+            console.error("Error loading cached data:", error);
+            // Fallback: wait for network
         }
     }, []);
 
     // CACHE UPDATES: Save to localStorage whenever data changes
-    useEffect(() => { if (posts.length > 0) localStorage.setItem('tribe_posts', JSON.stringify(posts)); }, [posts]);
-    useEffect(() => { if (users.length > 0) localStorage.setItem('tribe_users', JSON.stringify(users)); }, [users]);
-    useEffect(() => { if (tribes.length > 0) localStorage.setItem('tribe_tribes', JSON.stringify(tribes)); }, [tribes]);
+    useEffect(() => { if (posts.length > 0) safeSetItem('tribe_posts', JSON.stringify(posts)); }, [posts]);
+    useEffect(() => { if (users.length > 0) safeSetItem('tribe_users', JSON.stringify(users)); }, [users]);
+    useEffect(() => { if (tribes.length > 0) safeSetItem('tribe_tribes', JSON.stringify(tribes)); }, [tribes]);
 
     const userMap = useMemo<Map<string, User>>(() => {
         const map = new Map(users.map((user: User) => [user.id, user]));
@@ -1776,8 +1792,16 @@ const App: React.FC = () => {
         const handlePostDeleted = (postId: string) => setPosts(prev => prev.filter(p => p.id !== postId));
         const handleNewTribeMessage = (message: TribeMessage) => {
             if(viewedTribe && viewedTribe.id === message.tribeId) {
-                // Ensure we have sender info
-                const sender = message.sender || userMap.get(message.senderId!) || { id: message.senderId, name: 'Unknown', username: 'unknown', avatarUrl: null };
+                // Ensure we have sender info - handle missing data gracefully
+                const sender = message.sender || userMap.get(message.senderId || '') || { 
+                    id: message.senderId || 'unknown', 
+                    name: 'Unknown User', 
+                    username: 'unknown', 
+                    avatarUrl: null, 
+                    followers: [], 
+                    following: [], 
+                    blockedUsers: [] 
+                };
                 
                 setViewedTribe(prev => {
                     if (!prev) return null;
@@ -2217,7 +2241,7 @@ const App: React.FC = () => {
             setSeenStoryAuthors(prev => {
                 const newSet = new Set(prev);
                 newSet.add(userId);
-                localStorage.setItem('seenStoryAuthors', JSON.stringify(Array.from(newSet)));
+                safeSetItem('seenStoryAuthors', JSON.stringify(Array.from(newSet)));
                 return newSet;
             });
         }
@@ -2240,7 +2264,7 @@ const App: React.FC = () => {
     
     if (!currentUser) return <LoginPage />;
     
-    // Only show "Waking up server" if we have absolutely no data.
+    // Only show "Waking up server" if we have absolutely no data and are fetching
     if (!isDataLoaded && isFetching && posts.length === 0) {
         return <div className="min-h-screen bg-background flex flex-col items-center justify-center"><img src="/duckload.gif" alt="Loading..." className="w-24 h-24" /><h1 className="mt-4 text-xl font-semibold text-primary">Waking up the server...</h1></div>;
     }

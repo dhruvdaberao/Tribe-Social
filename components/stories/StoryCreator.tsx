@@ -227,12 +227,17 @@ const StoryCreator: React.FC<StoryCreatorProps> = ({ onClose, onCreate }) => {
     }
   };
 
+  // Improved Mouse Down Handler with strict stopPropagation
   const handleMouseDown = (e: React.MouseEvent | React.TouchEvent, type: 'text' | 'image', action: 'move' | 'rotate' | 'scale') => {
-      e.stopPropagation();
-      e.nativeEvent.stopImmediatePropagation();
+      e.stopPropagation(); 
+      // We do NOT call preventDefault here for 'text' 'move' to allow double click to work, 
+      // but we DO need it for handles to prevent browser native drag.
+      if (action !== 'move') {
+          e.preventDefault();
+      }
       
-      const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
-      const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+      const clientX = 'touches' in e ? e.touches[0].clientX : (e as React.MouseEvent).clientX;
+      const clientY = 'touches' in e ? e.touches[0].clientY : (e as React.MouseEvent).clientY;
 
       setSelectedElement(type);
       const target = type === 'text' ? text : image;
@@ -255,9 +260,10 @@ const StoryCreator: React.FC<StoryCreatorProps> = ({ onClose, onCreate }) => {
       const handleMove = (e: MouseEvent | TouchEvent) => {
           if (!dragRef.current.isDragging || !canvasRef.current) return;
           e.preventDefault(); 
+          e.stopPropagation();
 
-          const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
-          const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+          const clientX = 'touches' in e ? e.touches[0].clientX : (e as MouseEvent).clientX;
+          const clientY = 'touches' in e ? e.touches[0].clientY : (e as MouseEvent).clientY;
 
           const { startX, startY, initialX, initialY, initialRotation, initialScale, action, type } = dragRef.current;
           const deltaX = clientX - startX;
@@ -275,14 +281,19 @@ const StoryCreator: React.FC<StoryCreatorProps> = ({ onClose, onCreate }) => {
               updateTarget({ pos: { x: initialX + percentDeltaX, y: initialY + percentDeltaY } });
           } 
           else if (action === 'rotate') {
+              // Sensitivity for rotation
               updateTarget({ rotation: initialRotation + (deltaX * 0.5) });
           } 
           else if (action === 'scale') {
-              updateTarget({ scale: Math.max(0.2, initialScale + ((deltaX + deltaY) * 0.005)) });
+              // Sensitivity for scaling
+              const scaleChange = (deltaX + deltaY) * 0.01;
+              updateTarget({ scale: Math.max(0.2, initialScale + scaleChange) });
           }
       };
 
-      const handleUp = () => { dragRef.current.isDragging = false; };
+      const handleUp = () => { 
+          dragRef.current.isDragging = false; 
+      };
 
       window.addEventListener('mousemove', handleMove);
       window.addEventListener('mouseup', handleUp);
@@ -358,8 +369,8 @@ const StoryCreator: React.FC<StoryCreatorProps> = ({ onClose, onCreate }) => {
                           <img src={image.src} alt="" className="w-48 rounded-lg shadow-xl pointer-events-none" />
                           {selectedElement === 'image' && (
                               <>
-                                <div className="absolute -top-3 -right-3 w-8 h-8 bg-white rounded-full shadow-lg flex items-center justify-center cursor-ew-resize z-50 pointer-events-auto" onMouseDown={(e) => handleMouseDown(e, 'image', 'rotate')} onTouchStart={(e) => handleMouseDown(e, 'image', 'rotate')}><RotateIcon/></div>
-                                <div className="absolute -bottom-3 -right-3 w-8 h-8 bg-white rounded-full shadow-lg flex items-center justify-center cursor-nwse-resize z-50 pointer-events-auto" onMouseDown={(e) => handleMouseDown(e, 'image', 'scale')} onTouchStart={(e) => handleMouseDown(e, 'image', 'scale')}><ResizeIcon/></div>
+                                <div className="absolute -top-6 -right-6 w-10 h-10 bg-white rounded-full shadow-lg flex items-center justify-center cursor-ew-resize z-[100] pointer-events-auto" onMouseDown={(e) => handleMouseDown(e, 'image', 'rotate')} onTouchStart={(e) => handleMouseDown(e, 'image', 'rotate')}><RotateIcon/></div>
+                                <div className="absolute -bottom-6 -right-6 w-10 h-10 bg-white rounded-full shadow-lg flex items-center justify-center cursor-nwse-resize z-[100] pointer-events-auto" onMouseDown={(e) => handleMouseDown(e, 'image', 'scale')} onTouchStart={(e) => handleMouseDown(e, 'image', 'scale')}><ResizeIcon/></div>
                               </>
                           )}
                       </div>
@@ -385,8 +396,8 @@ const StoryCreator: React.FC<StoryCreatorProps> = ({ onClose, onCreate }) => {
                           )}
                           {selectedElement === 'text' && !isEditingText && (
                               <>
-                                <div className="absolute -top-4 -right-4 w-8 h-8 bg-white rounded-full shadow-lg flex items-center justify-center cursor-ew-resize z-50 pointer-events-auto" onMouseDown={(e) => handleMouseDown(e, 'text', 'rotate')} onTouchStart={(e) => handleMouseDown(e, 'text', 'rotate')}><RotateIcon/></div>
-                                <div className="absolute -bottom-4 -right-4 w-8 h-8 bg-white rounded-full shadow-lg flex items-center justify-center cursor-nwse-resize z-50 pointer-events-auto" onMouseDown={(e) => handleMouseDown(e, 'text', 'scale')} onTouchStart={(e) => handleMouseDown(e, 'text', 'scale')}><ResizeIcon/></div>
+                                <div className="absolute -top-6 -right-6 w-10 h-10 bg-white rounded-full shadow-lg flex items-center justify-center cursor-ew-resize z-[100] pointer-events-auto" onMouseDown={(e) => handleMouseDown(e, 'text', 'rotate')} onTouchStart={(e) => handleMouseDown(e, 'text', 'rotate')}><RotateIcon/></div>
+                                <div className="absolute -bottom-6 -right-6 w-10 h-10 bg-white rounded-full shadow-lg flex items-center justify-center cursor-nwse-resize z-[100] pointer-events-auto" onMouseDown={(e) => handleMouseDown(e, 'text', 'scale')} onTouchStart={(e) => handleMouseDown(e, 'text', 'scale')}><ResizeIcon/></div>
                               </>
                           )}
                       </div>
@@ -411,7 +422,7 @@ const StoryCreator: React.FC<StoryCreatorProps> = ({ onClose, onCreate }) => {
 const BackIcon = () => <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>;
 const CameraIcon = () => <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /><path strokeLinecap="round" strokeLinejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" /></svg>;
 const PenIcon = () => <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.536l12.232-12.232z" /></svg>;
-const RotateIcon = () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>;
-const ResizeIcon = () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" /></svg>;
+const RotateIcon = () => <svg className="w-5 h-5 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>;
+const ResizeIcon = () => <svg className="w-5 h-5 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" /></svg>;
 
 export default StoryCreator;

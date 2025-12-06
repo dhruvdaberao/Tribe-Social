@@ -390,6 +390,7 @@ import Notification from '../models/notificationModel.js';
 
 const router = express.Router();
 
+// Create Tribe
 router.post('/', protect, async (req, res) => {
     const { name, description, avatarUrl } = req.body;
     if (!name || !description) return res.status(400).json({ message: 'Fields required' });
@@ -402,10 +403,12 @@ router.post('/', protect, async (req, res) => {
     } catch (error) { res.status(500).json({ message: 'Server Error' }); }
 });
 
+// Get Tribes
 router.get('/', protect, async (req, res) => {
     try { const tribes = await Tribe.find({}).sort({ createdAt: -1 }); res.json(tribes); } catch (error) { res.status(500).json({ message: 'Server Error' }); }
 });
 
+// Update Tribe
 router.put('/:id', protect, async (req, res) => {
     try {
         const tribe = await Tribe.findById(req.params.id);
@@ -419,6 +422,7 @@ router.put('/:id', protect, async (req, res) => {
     } catch (error) { res.status(500).json({ message: 'Server Error' }); }
 });
 
+// Delete Tribe
 router.delete('/:id', protect, async (req, res) => {
     try {
         const tribe = await Tribe.findById(req.params.id);
@@ -431,6 +435,7 @@ router.delete('/:id', protect, async (req, res) => {
     } catch (error) { res.status(500).json({ message: 'Server Error' }); }
 });
 
+// Join/Leave Tribe
 router.put('/:id/join', protect, async (req, res) => {
     try {
         const tribe = await Tribe.findById(req.params.id);
@@ -454,6 +459,7 @@ router.put('/:id/join', protect, async (req, res) => {
     } catch (error) { res.status(500).json({ message: 'Server Error' }); }
 });
 
+// Get Tribe Messages
 router.get('/:id/messages', protect, async (req, res) => {
     try {
         const tribe = await Tribe.findById(req.params.id);
@@ -464,6 +470,7 @@ router.get('/:id/messages', protect, async (req, res) => {
     } catch (error) { res.status(500).json({ message: 'Server Error' }); }
 });
 
+// Post Tribe Message
 router.post('/:id/messages', protect, async (req, res) => {
     if (!req.body.text && !req.body.imageUrl) return res.status(400).json({ message: 'Content required' });
     try {
@@ -478,10 +485,12 @@ router.post('/:id/messages', protect, async (req, res) => {
             imageUrl: req.body.imageUrl || null
         });
         
-        await message.save();
+        const savedMessage = await message.save();
         
-        // CRITICAL FIX: Fully populate the sender before emitting via Socket
-        const populatedMessage = await TribeMessage.findById(message._id).populate('sender', 'name username avatarUrl');
+        // CRITICAL FIX: Explicitly populate sender details (name, avatar) before emitting
+        // This ensures the frontend doesn't render a blank bubble.
+        const populatedMessage = await TribeMessage.findById(savedMessage._id)
+            .populate('sender', 'name username avatarUrl');
 
         req.io.to(`tribe-${req.params.id}`).emit('newTribeMessage', populatedMessage);
         res.status(201).json(populatedMessage);
@@ -491,6 +500,7 @@ router.post('/:id/messages', protect, async (req, res) => {
     }
 });
 
+// Delete Tribe Message
 router.delete('/:tribeId/messages/:messageId', protect, async (req, res) => {
     try {
         const message = await TribeMessage.findById(req.params.messageId);

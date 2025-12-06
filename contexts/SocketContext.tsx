@@ -304,6 +304,7 @@ export const SocketProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     });
 
     socket.on('newNotification', (notification: Notification) => {
+        // Prevent notification if the user is the one who caused it
         if (notification.sender.id === currentUser.id) return;
 
         setNotifications(prev => [notification, ...prev]);
@@ -313,7 +314,10 @@ export const SocketProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     });
 
     socket.on('newMessage', (message: Message) => {
+        // Correct check: Is the sender ME?
         if (message.senderId === currentUser.id) return;
+        
+        // Is the chat currently open?
         if (message.senderId === activeChatPartnerId.current) return;
 
          setUnreadCounts(prev => ({
@@ -326,9 +330,10 @@ export const SocketProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     });
 
     socket.on('newTribeMessage', (message: TribeMessage) => {
-        // Handle ID whether it comes populated or as string
+        // Helper to get ID whether it's a populated object or a string
         const senderId = typeof message.sender === 'object' ? message.sender.id : message.senderId;
         
+        // Only increment unread if I am NOT the sender
         if(senderId && senderId !== currentUser.id) {
             setUnreadCounts(prev => ({
                 ...prev,
@@ -367,9 +372,8 @@ export const SocketProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     });
   }, []);
 
-  // Explicit typing for reduce to avoid TS errors
-  const unreadMessageCount = (Object.values(unreadCounts.messages) as number[]).reduce((sum: number, count: number) => sum + count, 0);
-  const unreadTribeCount = (Object.values(unreadCounts.tribes) as number[]).reduce((sum: number, count: number) => sum + count, 0);
+  const unreadMessageCount = Object.values(unreadCounts.messages).reduce((sum: number, count: number) => sum + count, 0);
+  const unreadTribeCount = Object.values(unreadCounts.tribes).reduce((sum: number, count: number) => sum + count, 0);
   const unreadNotificationCount = notifications.filter(n => !n.read).length;
 
   return (
