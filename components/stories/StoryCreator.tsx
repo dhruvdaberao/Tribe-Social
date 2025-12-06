@@ -192,7 +192,6 @@ const StoryCreator: React.FC<StoryCreatorProps> = ({ onClose, onCreate }) => {
   const canvasRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   
-  // Interaction state
   const dragRef = useRef<{ 
       isDragging: boolean;
       type: 'text' | 'image' | null;
@@ -203,11 +202,7 @@ const StoryCreator: React.FC<StoryCreatorProps> = ({ onClose, onCreate }) => {
       initialY: number;
       initialRotation: number;
       initialScale: number;
-  }>({ 
-      isDragging: false, type: null, action: null, 
-      startX: 0, startY: 0, initialX: 0, initialY: 0, 
-      initialRotation: 0, initialScale: 1 
-  });
+  }>({ isDragging: false, type: null, action: null, startX: 0, startY: 0, initialX: 0, initialY: 0, initialRotation: 0, initialScale: 1 });
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -232,11 +227,9 @@ const StoryCreator: React.FC<StoryCreatorProps> = ({ onClose, onCreate }) => {
     }
   };
 
-  // --- INTERACTION LOGIC ---
-
   const handleMouseDown = (e: React.MouseEvent | React.TouchEvent, type: 'text' | 'image', action: 'move' | 'rotate' | 'scale') => {
-      e.stopPropagation(); // Prevent canvas click
-      // e.preventDefault(); // Don't prevent default on touch start to allow scrolling if needed, but here we block it for drag
+      e.stopPropagation();
+      e.nativeEvent.stopImmediatePropagation();
       
       const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
       const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
@@ -261,7 +254,7 @@ const StoryCreator: React.FC<StoryCreatorProps> = ({ onClose, onCreate }) => {
   useEffect(() => {
       const handleMove = (e: MouseEvent | TouchEvent) => {
           if (!dragRef.current.isDragging || !canvasRef.current) return;
-          e.preventDefault(); // Prevent scrolling while dragging
+          e.preventDefault(); 
 
           const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
           const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
@@ -269,7 +262,6 @@ const StoryCreator: React.FC<StoryCreatorProps> = ({ onClose, onCreate }) => {
           const { startX, startY, initialX, initialY, initialRotation, initialScale, action, type } = dragRef.current;
           const deltaX = clientX - startX;
           const deltaY = clientY - startY;
-          
           const canvasRect = canvasRef.current.getBoundingClientRect();
 
           const updateTarget = (updates: any) => {
@@ -278,27 +270,19 @@ const StoryCreator: React.FC<StoryCreatorProps> = ({ onClose, onCreate }) => {
           };
 
           if (action === 'move') {
-              // Convert pixel movement to percentage movement
               const percentDeltaX = (deltaX / canvasRect.width) * 100;
               const percentDeltaY = (deltaY / canvasRect.height) * 100;
               updateTarget({ pos: { x: initialX + percentDeltaX, y: initialY + percentDeltaY } });
           } 
           else if (action === 'rotate') {
-              // Simple rotation: dragging right increases angle
-              const rotationChange = deltaX * 0.5; 
-              updateTarget({ rotation: initialRotation + rotationChange });
+              updateTarget({ rotation: initialRotation + (deltaX * 0.5) });
           } 
           else if (action === 'scale') {
-              // Dragging down/right increases scale
-              const scaleChange = (deltaX + deltaY) * 0.005;
-              const newScale = Math.max(0.2, initialScale + scaleChange);
-              updateTarget({ scale: newScale });
+              updateTarget({ scale: Math.max(0.2, initialScale + ((deltaX + deltaY) * 0.005)) });
           }
       };
 
-      const handleUp = () => {
-          dragRef.current.isDragging = false;
-      };
+      const handleUp = () => { dragRef.current.isDragging = false; };
 
       window.addEventListener('mousemove', handleMove);
       window.addEventListener('mouseup', handleUp);
@@ -313,13 +297,11 @@ const StoryCreator: React.FC<StoryCreatorProps> = ({ onClose, onCreate }) => {
       };
   }, []);
 
-
   const handlePost = async () => {
     if (!image && (!text || !text.content.trim())) {
         alert("Please add an image or text to your story.");
         return;
     }
-    
     setIsPosting(true);
     try {
         await onCreate({
@@ -336,7 +318,6 @@ const StoryCreator: React.FC<StoryCreatorProps> = ({ onClose, onCreate }) => {
         });
         onClose();
     } catch (error) {
-        console.error("Error creating story in creator:", error);
         alert("Failed to post story. Please try again.");
         setIsPosting(false);
     }
@@ -344,29 +325,23 @@ const StoryCreator: React.FC<StoryCreatorProps> = ({ onClose, onCreate }) => {
 
   return (
     <div className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4">
-      {/* Main Container */}
       <div 
         className="relative w-full max-w-[360px] aspect-[9/16] rounded-3xl overflow-hidden flex flex-col border-4 border-white/20 shadow-2xl transition-colors duration-300 select-none"
         style={{ backgroundColor: bgColor }}
       >
-          {/* Header Controls */}
           <div className="absolute top-0 left-0 right-0 p-4 z-30 flex justify-between pointer-events-none">
-              <button onClick={onClose} className="pointer-events-auto p-2 bg-black/20 backdrop-blur-md rounded-full text-white hover:bg-black/40 transition-colors"><BackIcon /></button>
+              <button onClick={onClose} className="pointer-events-auto p-2 bg-black/20 backdrop-blur-md rounded-full text-white hover:bg-black/40"><BackIcon /></button>
               <div className="flex space-x-2 pointer-events-auto">
-                  <button onClick={() => fileInputRef.current?.click()} className="p-2 bg-black/20 backdrop-blur-md rounded-full text-white hover:bg-black/40 transition-colors"><CameraIcon /></button>
-                  <button onClick={handleAddText} className="p-2 bg-black/20 backdrop-blur-md rounded-full text-white hover:bg-black/40 transition-colors"><PenIcon /></button>
+                  <button onClick={() => fileInputRef.current?.click()} className="p-2 bg-black/20 backdrop-blur-md rounded-full text-white hover:bg-black/40"><CameraIcon /></button>
+                  <button onClick={handleAddText} className="p-2 bg-black/20 backdrop-blur-md rounded-full text-white hover:bg-black/40"><PenIcon /></button>
               </div>
           </div>
 
-          {/* Canvas Area */}
           <div 
             ref={canvasRef} 
             className="flex-1 relative overflow-hidden" 
-            onMouseDown={() => {
-                if (!isEditingText) setSelectedElement(null);
-            }}
+            onMouseDown={() => { if (!isEditingText) setSelectedElement(null); }}
           >
-              {/* IMAGE ELEMENT */}
               {image && (
                   <div 
                     className="absolute"
@@ -374,94 +349,44 @@ const StoryCreator: React.FC<StoryCreatorProps> = ({ onClose, onCreate }) => {
                         left: `${image.pos.x}%`, 
                         top: `${image.pos.y}%`, 
                         transform: `translate(-50%, -50%) rotate(${image.rotation}deg) scale(${image.scale})`,
-                        cursor: 'move',
-                        touchAction: 'none'
+                        cursor: 'move', touchAction: 'none'
                     }}
                     onMouseDown={(e) => handleMouseDown(e, 'image', 'move')}
                     onTouchStart={(e) => handleMouseDown(e, 'image', 'move')}
                   >
                       <div className={`relative group ${selectedElement === 'image' ? 'ring-2 ring-white ring-dashed p-1' : ''}`}>
                           <img src={image.src} alt="" className="w-48 rounded-lg shadow-xl pointer-events-none" />
-                          
-                          {/* Controls only visible when selected */}
                           {selectedElement === 'image' && (
                               <>
-                                {/* Rotate Handle (Top Right) */}
-                                <div 
-                                    className="absolute -top-3 -right-3 w-8 h-8 bg-white rounded-full text-black shadow-lg flex items-center justify-center cursor-ew-resize z-50 hover:bg-gray-100"
-                                    onMouseDown={(e) => handleMouseDown(e, 'image', 'rotate')}
-                                    onTouchStart={(e) => handleMouseDown(e, 'image', 'rotate')}
-                                >
-                                    <RotateIcon/>
-                                </div>
-                                {/* Scale Handle (Bottom Right) */}
-                                <div 
-                                    className="absolute -bottom-3 -right-3 w-8 h-8 bg-white rounded-full text-black shadow-lg flex items-center justify-center cursor-nwse-resize z-50 hover:bg-gray-100"
-                                    onMouseDown={(e) => handleMouseDown(e, 'image', 'scale')}
-                                    onTouchStart={(e) => handleMouseDown(e, 'image', 'scale')}
-                                >
-                                    <ResizeIcon/>
-                                </div>
+                                <div className="absolute -top-3 -right-3 w-8 h-8 bg-white rounded-full shadow-lg flex items-center justify-center cursor-ew-resize z-50 pointer-events-auto" onMouseDown={(e) => handleMouseDown(e, 'image', 'rotate')} onTouchStart={(e) => handleMouseDown(e, 'image', 'rotate')}><RotateIcon/></div>
+                                <div className="absolute -bottom-3 -right-3 w-8 h-8 bg-white rounded-full shadow-lg flex items-center justify-center cursor-nwse-resize z-50 pointer-events-auto" onMouseDown={(e) => handleMouseDown(e, 'image', 'scale')} onTouchStart={(e) => handleMouseDown(e, 'image', 'scale')}><ResizeIcon/></div>
                               </>
                           )}
                       </div>
                   </div>
               )}
 
-              {/* TEXT ELEMENT */}
               {text && (
                   <div 
                     className="absolute"
                     style={{
-                        left: `${text.pos.x}%`, 
-                        top: `${text.pos.y}%`,
+                        left: `${text.pos.x}%`, top: `${text.pos.y}%`,
                         transform: `translate(-50%, -50%) rotate(${text.rotation}deg) scale(${text.scale})`,
-                        cursor: 'move',
-                        touchAction: 'none',
-                        maxWidth: '80%'
+                        cursor: 'move', touchAction: 'none', maxWidth: '80%'
                     }}
                     onMouseDown={(e) => !isEditingText && handleMouseDown(e, 'text', 'move')}
                     onTouchStart={(e) => !isEditingText && handleMouseDown(e, 'text', 'move')}
                   >
                       <div className={`relative ${selectedElement === 'text' && !isEditingText ? 'ring-2 ring-white ring-dashed p-2 rounded-lg' : ''}`}>
                           {isEditingText ? (
-                              <textarea 
-                                autoFocus 
-                                value={text.content} 
-                                onChange={e => setText(p => p ? {...p, content: e.target.value} : null)} 
-                                onBlur={() => setIsEditingText(false)}
-                                className="bg-transparent text-center text-3xl font-bold font-display resize-none outline-none overflow-hidden min-w-[200px]"
-                                style={{ color: text.color, textShadow: '2px 2px 4px rgba(0,0,0,0.5)' }}
-                                rows={Math.max(1, text.content.split('\n').length)}
-                              />
+                              <textarea autoFocus value={text.content} onChange={e => setText(p => p ? {...p, content: e.target.value} : null)} onBlur={() => setIsEditingText(false)} className="bg-transparent text-center text-3xl font-bold font-display resize-none outline-none overflow-hidden min-w-[200px]" style={{ color: text.color, textShadow: '2px 2px 4px rgba(0,0,0,0.5)' }} rows={Math.max(1, text.content.split('\n').length)}/>
                           ) : (
-                              <div 
-                                className="text-3xl font-bold font-display text-center whitespace-pre-wrap select-none" 
-                                style={{ color: text.color, textShadow: '2px 2px 4px rgba(0,0,0,0.5)' }}
-                                onDoubleClick={() => setIsEditingText(true)}
-                              >
-                                  {text.content}
-                              </div>
+                              <div className="text-3xl font-bold font-display text-center whitespace-pre-wrap select-none" style={{ color: text.color, textShadow: '2px 2px 4px rgba(0,0,0,0.5)' }} onDoubleClick={() => setIsEditingText(true)}>{text.content}</div>
                           )}
-
                           {selectedElement === 'text' && !isEditingText && (
                               <>
-                                {/* Rotate Handle */}
-                                <div 
-                                    className="absolute -top-4 -right-4 w-8 h-8 bg-white rounded-full text-black shadow-lg flex items-center justify-center cursor-ew-resize z-50 hover:bg-gray-100"
-                                    onMouseDown={(e) => handleMouseDown(e, 'text', 'rotate')}
-                                    onTouchStart={(e) => handleMouseDown(e, 'text', 'rotate')}
-                                >
-                                    <RotateIcon/>
-                                </div>
-                                {/* Scale Handle */}
-                                <div 
-                                    className="absolute -bottom-4 -right-4 w-8 h-8 bg-white rounded-full text-black shadow-lg flex items-center justify-center cursor-nwse-resize z-50 hover:bg-gray-100"
-                                    onMouseDown={(e) => handleMouseDown(e, 'text', 'scale')}
-                                    onTouchStart={(e) => handleMouseDown(e, 'text', 'scale')}
-                                >
-                                    <ResizeIcon/>
-                                </div>
+                                <div className="absolute -top-4 -right-4 w-8 h-8 bg-white rounded-full shadow-lg flex items-center justify-center cursor-ew-resize z-50 pointer-events-auto" onMouseDown={(e) => handleMouseDown(e, 'text', 'rotate')} onTouchStart={(e) => handleMouseDown(e, 'text', 'rotate')}><RotateIcon/></div>
+                                <div className="absolute -bottom-4 -right-4 w-8 h-8 bg-white rounded-full shadow-lg flex items-center justify-center cursor-nwse-resize z-50 pointer-events-auto" onMouseDown={(e) => handleMouseDown(e, 'text', 'scale')} onTouchStart={(e) => handleMouseDown(e, 'text', 'scale')}><ResizeIcon/></div>
                               </>
                           )}
                       </div>
@@ -469,45 +394,20 @@ const StoryCreator: React.FC<StoryCreatorProps> = ({ onClose, onCreate }) => {
               )}
           </div>
 
-          {/* Footer Controls */}
           <div className="bg-black/60 backdrop-blur-xl p-4 space-y-4 z-30">
               <div className="flex space-x-3 overflow-x-auto hide-scrollbar justify-center py-1">
-                  {selectedElement === 'text' ? (
-                      TEXT_COLORS.map(c => (
-                        <button 
-                            key={c} 
-                            onClick={() => setText(p => p ? {...p, color: c} : null)} 
-                            className={`w-8 h-8 rounded-full border-2 ${text?.color === c ? 'border-white scale-110' : 'border-transparent'} transition-all`} 
-                            style={{ backgroundColor: c }} 
-                        />
-                      ))
-                  ) : (
-                      COLORS.map(c => (
-                        <button 
-                            key={c} 
-                            onClick={() => setBgColor(c)} 
-                            className={`w-8 h-8 rounded-full border-2 ${bgColor === c ? 'border-white scale-110' : 'border-transparent'} transition-all`} 
-                            style={{ backgroundColor: c }} 
-                        />
-                      ))
-                  )}
+                  {(selectedElement === 'text' ? TEXT_COLORS : COLORS).map(c => (
+                    <button key={c} onClick={() => selectedElement === 'text' ? setText(p => p ? {...p, color: c} : null) : setBgColor(c)} className={`w-8 h-8 rounded-full border-2 transition-all ${((selectedElement === 'text' ? text?.color : bgColor) === c) ? 'border-white scale-110' : 'border-transparent'}`} style={{ backgroundColor: c }} />
+                  ))}
               </div>
-              <button 
-                onClick={handlePost} 
-                disabled={isPosting} 
-                className="w-full bg-white text-black py-3.5 rounded-xl font-bold text-lg shadow-lg active:scale-95 transition-transform disabled:opacity-50 disabled:scale-100"
-              >
-                  {isPosting ? 'Posting...' : 'Share Story'}
-              </button>
+              <button onClick={handlePost} disabled={isPosting} className="w-full bg-white text-black py-3.5 rounded-xl font-bold text-lg shadow-lg active:scale-95 transition-transform disabled:opacity-50">{isPosting ? 'Posting...' : 'Share Story'}</button>
           </div>
-          
           <input type="file" ref={fileInputRef} onChange={handleFileChange} accept="image/*" className="hidden" />
       </div>
     </div>
   );
 };
 
-// Icons
 const BackIcon = () => <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>;
 const CameraIcon = () => <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /><path strokeLinecap="round" strokeLinejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" /></svg>;
 const PenIcon = () => <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.536l12.232-12.232z" /></svg>;

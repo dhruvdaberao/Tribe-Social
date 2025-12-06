@@ -314,6 +314,7 @@
 
 
 
+
 import express from 'express';
 import protect from '../middleware/authMiddleware.js';
 import Post from '../models/postModel.js';
@@ -337,14 +338,17 @@ router.get('/feed', protect, async (req, res) => {
 
         const userIdsForFeed = [currentUser._id, ...(currentUser.following || [])];
         
-        // Use standard .find() which is safer and reliable on Atlas M0 Free Tier
+        // Use standard .find() which is safer on Free Tier
         const posts = await Post.find({ user: { $in: userIdsForFeed } })
             .sort({ createdAt: -1 })
-            .limit(50) // Reasonable limit for performance
+            .limit(50) 
             .populate('user', 'name username avatarUrl')
             .populate('comments.user', 'name username avatarUrl');
 
-        res.json(posts);
+        // Filter out posts where the user is null (deleted users)
+        const validPosts = posts.filter(post => post.user !== null);
+
+        res.json(validPosts);
     } catch (error) {
         console.error("Feed error:", error);
         res.status(500).json({ message: 'Server Error' });
@@ -361,7 +365,8 @@ router.get('/', protect, async (req, res) => {
             .populate('user', 'name username avatarUrl')
             .populate('comments.user', 'name username avatarUrl');
         
-        res.json(posts);
+        const validPosts = posts.filter(post => post.user !== null);
+        res.json(validPosts);
     } catch (error) {
         console.error("Discover error:", error);
         res.status(500).json({ message: 'Server Error' });
