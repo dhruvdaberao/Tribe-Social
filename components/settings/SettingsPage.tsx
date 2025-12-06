@@ -1,7 +1,6 @@
 
 
 
-
 // import React, { useState } from 'react';
 // import { User } from '../../types';
 // import BlockedListModal from '../profile/BlockedListModal';
@@ -128,8 +127,6 @@ import { User } from '../../types';
 import BlockedListModal from '../profile/BlockedListModal';
 import HelpPage from './HelpPage';
 import AboutUsPage from './AboutUsPage';
-import * as api from '../../api.ts';
-import { toast } from '../common/Toast';
 
 interface SettingsPageProps {
   currentUser: User;
@@ -147,67 +144,29 @@ const SettingsPage: React.FC<SettingsPageProps> = (props) => {
   const [activeTab, setActiveTab] = useState<SettingsTab>('Account');
   const [isBlockedModalOpen, setBlockedModalOpen] = useState(false);
   const [isDeleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
-  const [email, setEmail] = useState(currentUser.email || '');
-  const [password, setPassword] = useState('');
-  const [isUpdating, setIsUpdating] = useState(false);
-
-  const handleUpdateAccount = async (e: React.FormEvent) => {
-      e.preventDefault();
-      setIsUpdating(true);
-      try {
-          const updates: any = {};
-          if (email && email !== currentUser.email) updates.email = email;
-          if (password) updates.password = password;
-
-          if (Object.keys(updates).length > 0) {
-              await api.updateProfile(updates);
-              toast.success("Account updated successfully!");
-              setPassword(''); // Clear pass
-          } else {
-              toast.info("No changes to save.");
-          }
-      } catch (error: any) {
-          toast.error(error.response?.data?.message || "Update failed.");
-      } finally {
-          setIsUpdating(false);
-      }
-  };
 
   const renderContent = () => {
     switch (activeTab) {
       case 'Account':
         return (
-          <div className="space-y-6">
-            <div className="bg-background p-4 rounded-xl border border-border">
-                <h3 className="font-bold text-lg mb-4">Account Details</h3>
-                <form onSubmit={handleUpdateAccount} className="space-y-4">
-                    <div>
-                        <label className="text-sm font-semibold text-secondary">Email Address</label>
-                        <input type="email" value={email} onChange={e => setEmail(e.target.value)} className="w-full mt-1 p-2 bg-surface border border-border rounded-lg" />
-                    </div>
-                    <div>
-                        <label className="text-sm font-semibold text-secondary">New Password</label>
-                        <input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="Leave blank to keep current" className="w-full mt-1 p-2 bg-surface border border-border rounded-lg" />
-                    </div>
-                    <button type="submit" disabled={isUpdating} className="bg-accent text-accent-text px-4 py-2 rounded-lg font-semibold disabled:opacity-50">
-                        {isUpdating ? 'Saving...' : 'Save Changes'}
-                    </button>
-                </form>
-            </div>
-
+          <>
             <SettingsButton icon={<BlockIcon/>} text="Blocked Users" detail={`${(currentUser.blockedUsers || []).length} users`} onClick={() => setBlockedModalOpen(true)} />
             <SettingsButton icon={<LogoutIcon/>} text="Logout" onClick={onLogout} />
             <SettingsButton icon={<TrashIcon/>} text="Delete Account" onClick={() => setDeleteConfirmOpen(true)} isDestructive />
-          </div>
+          </>
         );
-      case 'Help': return <HelpPage />;
-      case 'About': return <AboutUsPage />;
-      default: return null;
+      case 'Help':
+        return <HelpPage />;
+      case 'About':
+        return <AboutUsPage />;
+      default:
+        return null;
     }
   };
 
   return (
     <div className="h-full flex flex-col md:flex-row bg-surface md:rounded-2xl md:border md:border-border md:shadow-lg overflow-hidden">
+      {/* Sidebar */}
       <div className="flex-shrink-0 md:w-64 border-b md:border-b-0 md:border-r border-border p-4">
         <div className="flex items-center space-x-3 mb-6">
             <button onClick={onBack} className="p-2 -ml-2 text-primary hover:bg-background rounded-full"><BackIcon /></button>
@@ -219,10 +178,16 @@ const SettingsPage: React.FC<SettingsPageProps> = (props) => {
           <NavItem text="About Tribe" icon={<InfoIcon />} isActive={activeTab === 'About'} onClick={() => setActiveTab('About')} />
         </nav>
       </div>
+
+      {/* Content */}
       <div className="flex-1 p-4 md:p-8 overflow-y-auto">
+        <img src="/noodles.gif" alt="Noodles eating gif" className="w-full max-w-xs mx-auto rounded-lg mb-8 shadow-md" />
         <h2 className="text-2xl font-bold font-display text-primary mb-6">{activeTab}</h2>
-        <div className="space-y-4">{renderContent()}</div>
+        <div className="space-y-4">
+          {renderContent()}
+        </div>
       </div>
+      
       {isBlockedModalOpen && <BlockedListModal userIds={currentUser.blockedUsers || []} allUsers={allUsers} onClose={() => setBlockedModalOpen(false)} onToggleBlock={onToggleBlock}/>}
       {isDeleteConfirmOpen && <DeleteAccountModal onClose={() => setDeleteConfirmOpen(false)} onConfirm={onDeleteAccount} />}
     </div>
@@ -231,14 +196,21 @@ const SettingsPage: React.FC<SettingsPageProps> = (props) => {
 
 const NavItem: React.FC<{text: string, icon: React.ReactNode, isActive: boolean, onClick: () => void}> = ({text, icon, isActive, onClick}) => (
     <button onClick={onClick} className={`w-full flex items-center space-x-3 p-2.5 rounded-lg font-semibold text-left transition-colors ${isActive ? 'bg-accent text-accent-text' : 'text-primary hover:bg-background'}`}>
-        <span className="w-6 h-6">{icon}</span><span>{text}</span>
+        <span className="w-6 h-6">{icon}</span>
+        <span>{text}</span>
     </button>
 )
 
 const SettingsButton: React.FC<{icon: React.ReactNode, text: string, detail?: string, onClick: () => void, isDestructive?: boolean}> = ({icon, text, detail, onClick, isDestructive}) => (
     <button onClick={onClick} className={`w-full flex items-center justify-between p-4 rounded-lg transition-colors ${isDestructive ? 'bg-red-500/10 text-red-500 hover:bg-red-500/20' : 'bg-background hover:bg-border'}`}>
-        <div className="flex items-center space-x-4"><span className="w-6 h-6">{icon}</span><span className="font-semibold">{text}</span></div>
-        <div className="flex items-center space-x-2 text-secondary">{detail && <span>{detail}</span>}<span className="w-5 h-5"><ChevronRightIcon /></span></div>
+        <div className="flex items-center space-x-4">
+            <span className="w-6 h-6">{icon}</span>
+            <span className="font-semibold">{text}</span>
+        </div>
+        <div className="flex items-center space-x-2 text-secondary">
+            {detail && <span>{detail}</span>}
+            <span className="w-5 h-5"><ChevronRightIcon /></span>
+        </div>
     </button>
 )
 
@@ -246,15 +218,16 @@ const DeleteAccountModal: React.FC<{onClose: () => void, onConfirm: () => void}>
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
         <div className="bg-surface rounded-2xl shadow-xl w-full max-w-md p-6 border border-border">
             <h2 className="text-xl font-bold text-primary">Delete Account</h2>
-            <p className="text-secondary my-4">Are you sure? This is irreversible.</p>
+            <p className="text-secondary my-4">Are you sure you want to permanently delete your account and all of your data? This action is irreversible.</p>
             <div className="flex justify-end space-x-4 mt-6">
                 <button onClick={onClose} className="text-secondary font-semibold px-4 py-2 rounded-lg hover:bg-background">Cancel</button>
-                <button onClick={() => { onConfirm(); onClose(); }} className="bg-red-600 text-white font-semibold px-6 py-2 rounded-lg hover:bg-red-700">Delete</button>
+                <button onClick={() => { onConfirm(); onClose(); }} className="bg-red-600 text-white font-semibold px-6 py-2 rounded-lg hover:bg-red-700">Confirm Delete</button>
             </div>
         </div>
     </div>
 );
 
+// ICONS
 const Icon: React.FC<{children: React.ReactNode}> = ({children}) => <>{children}</>;
 const UserIcon = () => <Icon><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" /></svg></Icon>;
 const HelpIcon = () => <Icon><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9 5.25h.008v.008H12v-.008z" /></svg></Icon>;

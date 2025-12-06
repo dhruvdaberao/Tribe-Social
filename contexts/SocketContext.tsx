@@ -193,6 +193,10 @@
 
 
 
+
+
+
+
 import React, { createContext, useContext, useEffect, useState, ReactNode, useCallback, useRef } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { useAuth } from './AuthContext';
@@ -313,11 +317,10 @@ export const SocketProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     });
 
     socket.on('newMessage', (message: Message) => {
-        // Correct check: Is the sender ME?
-        if (message.senderId === currentUser.id) return;
-        
-        // Is the chat currently open?
-        if (message.senderId === activeChatPartnerId.current) return;
+        // Don't create notification if user is sending the message or if the chat is already open
+        if (message.senderId === currentUser.id || message.senderId === activeChatPartnerId.current) {
+            return;
+        }
 
          setUnreadCounts(prev => ({
             ...prev,
@@ -329,11 +332,8 @@ export const SocketProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     });
 
     socket.on('newTribeMessage', (message: TribeMessage) => {
-        // Helper to get ID whether it's a populated object or a string
-        const senderId = typeof message.sender === 'object' ? message.sender.id : message.senderId;
-        
         // Only increment unread if I am NOT the sender
-        if(senderId && senderId !== currentUser.id) {
+        if(message.senderId && message.senderId !== currentUser.id) {
             setUnreadCounts(prev => ({
                 ...prev,
                 tribes: {

@@ -1,4 +1,5 @@
 
+
 // import express from 'express';
 // import protect from '../middleware/authMiddleware.js';
 // import Story from '../models/storyModel.js';
@@ -147,9 +148,6 @@
 
 
 
-
-
-
 import express from 'express';
 import protect from '../middleware/authMiddleware.js';
 import Story from '../models/storyModel.js';
@@ -161,19 +159,7 @@ const router = express.Router();
 // @route   POST /api/stories
 // @desc    Create a new story
 router.post('/', protect, async (req, res) => {
-    // Destructure all the new style properties
-    const { 
-        imageUrl, 
-        text, 
-        textPosition, 
-        imagePosition,
-        textRotation,
-        imageRotation,
-        textScale,
-        imageScale,
-        textColor,
-        backgroundColor
-    } = req.body;
+    const { imageUrl, text, textPosition, imagePosition } = req.body;
 
     if (!imageUrl && !text) {
         return res.status(400).json({ message: 'Story must have an image or text.' });
@@ -186,12 +172,6 @@ router.post('/', protect, async (req, res) => {
             text,
             textPosition,
             imagePosition,
-            textRotation,
-            imageRotation,
-            textScale,
-            imageScale,
-            textColor,
-            backgroundColor
         });
 
         const createdStory = await story.save();
@@ -227,6 +207,7 @@ router.get('/feed', protect, async (req, res) => {
             .populate('user', 'name username avatarUrl')
             .sort({ 'user': 1, createdAt: 'asc' });
 
+        // Group stories by user
         const groupedStories = stories.reduce((acc, story) => {
             const userId = story.user.id.toString();
             if (!acc[userId]) {
@@ -242,6 +223,7 @@ router.get('/feed', protect, async (req, res) => {
         res.status(500).json({ message: 'Server error' });
     }
 });
+
 
 // @route   DELETE /api/stories/:id
 // @desc    Delete a story
