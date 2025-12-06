@@ -1616,7 +1616,7 @@ const App: React.FC = () => {
     const populatePost = useCallback((postFromApi: any, userMapToUse: Map<string, User>): Post | null => {
         const { user: author, ...restOfPost } = postFromApi;
         if (!author || typeof author !== 'object') {
-            console.warn("Post with invalid author found and filtered:", postFromApi);
+            // console.warn("Post with invalid author found and filtered:", postFromApi);
             return null;
         }
         return {
@@ -1634,6 +1634,7 @@ const App: React.FC = () => {
             localStorage.setItem(key, value);
         } catch (e) {
             console.warn(`Failed to save ${key} to localStorage (quota exceeded or other error).`, e);
+            // Optionally try to clear some keys or just fail silently
         }
     };
 
@@ -1659,9 +1660,7 @@ const App: React.FC = () => {
                 localMap.set(CHUK_AI_USER.id, CHUK_AI_USER);
                 
                 const parsedPosts = JSON.parse(cachedPosts);
-                // Re-hydrate dates or complex objects if necessary, but simple JSON is usually fine for initial render
                 setPosts(parsedPosts);
-                
                 setTribes(JSON.parse(cachedTribes));
                 setIsDataLoaded(true); // Show cached data immediately
             }
@@ -1683,6 +1682,7 @@ const App: React.FC = () => {
     
             const [usersResult, feedPostsResult, tribesResult, notificationsResult, myStoriesResult, followingStoriesResult] = results;
     
+            // Handle Auth Error
             const hasAuthError = results.some(r => r.status === 'rejected' && (r.reason as any)?.response?.status === 401);
             if (hasAuthError) {
                 toast.error("Your session has expired. Please log in again.");
@@ -1719,7 +1719,6 @@ const App: React.FC = () => {
 
         } catch (error) {
             console.error("A critical error occurred during data fetching: ", error);
-            // Don't show toast if we already showed cached data
             if (!isDataLoaded) toast.error("Could not load data. Please try refreshing.");
         } finally {
             setIsFetching(false);
@@ -1786,7 +1785,6 @@ const App: React.FC = () => {
             if (populated) setPosts(prev => prev.map(p => p.id === populated.id ? populated : p));
         };
         const handlePostDeleted = (postId: string) => setPosts(prev => prev.filter(p => p.id !== postId));
-        
         const handleNewTribeMessage = (message: TribeMessage) => {
             if(viewedTribe && viewedTribe.id === message.tribeId) {
                 const sender = userMap.get(message.senderId!);
@@ -1929,7 +1927,6 @@ const App: React.FC = () => {
         if (!currentUser) return;
         const originalPosts = posts;
         
-        // Optimistic Update: Remove instantly
         setPosts(prev => prev.filter(p => p.id !== postId));
         
         try {
@@ -1938,7 +1935,7 @@ const App: React.FC = () => {
         } catch (error) {
             console.error("Failed to delete post:", error);
             toast.error("Could not delete post.");
-            setPosts(originalPosts); // Revert on error
+            setPosts(originalPosts);
         }
     };
 
