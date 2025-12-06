@@ -76,19 +76,13 @@
 
 
 
-
-
 import axios from 'axios';
 
 // The backend URL is now hardcoded here to prevent module loading failures
 // that were causing a blank screen. This makes the API layer more robust.
 const API_URL = 'https://tribe-social-backend.onrender.com';
 
-const API = axios.create({ 
-  baseURL: `${API_URL}/api`,
-  // Increase timeout to 5 minutes (300000ms) to handle Render free tier cold starts
-  timeout: 300000 
-});
+const API = axios.create({ baseURL: `${API_URL}/api` });
 
 API.interceptors.request.use((req) => {
   const token = localStorage.getItem('token');

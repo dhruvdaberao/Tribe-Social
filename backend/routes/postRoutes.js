@@ -663,8 +663,6 @@ router.get('/feed', protect, async (req, res) => {
         .populate('comments.user', 'name username avatarUrl');
 
         // Robustly filter out posts where the user field is null (deleted users)
-        // transform to JSON to ensure virtuals like 'id' are applied if configured, 
-        // though strictly with Mongoose .toJSON this happens automatically at res.json
         const validPosts = posts.filter(post => post.user !== null);
 
         res.json(validPosts);
@@ -892,3 +890,4 @@ router.delete('/:id/comments/:comment_id', protect, async (req, res) => {
 });
 
 export default router;
+a

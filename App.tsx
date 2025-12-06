@@ -1633,13 +1633,13 @@ const App: React.FC = () => {
         try {
             localStorage.setItem(key, value);
         } catch (e) {
-            console.warn(`Failed to save ${key} to localStorage (quota exceeded or other error).`, e);
-            // Optionally try to clear some keys or just fail silently
+            console.warn(`Failed to save ${key} to localStorage. Quota likely exceeded. Skipping cache.`);
         }
     };
 
     const fetchData = useCallback(async () => {
-        if (isDataLoaded && lastFetchTimestamp.current && (Date.now() - lastFetchTimestamp.current < 300000)) { 
+        if (isDataLoaded && lastFetchTimestamp.current && (Date.now() - lastFetchTimestamp.current < 60000)) { 
+            // Reduced cache valid time to 1 minute to ensure freshness
             return;
         }
         if (!currentUser) {
@@ -1650,15 +1650,10 @@ const App: React.FC = () => {
         // --- 1. Load from Cache First (Instant) ---
         try {
             const cachedPosts = localStorage.getItem('posts');
-            const cachedUsers = localStorage.getItem('users');
+            // We DO NOT cache 'users' anymore as it causes QuotaExceededError due to size
             const cachedTribes = localStorage.getItem('tribes');
             
-            if (cachedPosts && cachedUsers && cachedTribes) {
-                const parsedUsers = JSON.parse(cachedUsers);
-                setUsers(parsedUsers);
-                const localMap = new Map<string, User>(parsedUsers.map((user: User) => [user.id, user]));
-                localMap.set(CHUK_AI_USER.id, CHUK_AI_USER);
-                
+            if (cachedPosts && cachedTribes) {
                 const parsedPosts = JSON.parse(cachedPosts);
                 setPosts(parsedPosts);
                 setTribes(JSON.parse(cachedTribes));
@@ -1713,13 +1708,15 @@ const App: React.FC = () => {
             lastFetchTimestamp.current = Date.now();
 
             // --- 3. Update Cache ---
-            safeSetItem('users', JSON.stringify(usersData));
-            safeSetItem('posts', JSON.stringify(populatedPosts));
+            // Only cache a small subset of posts to prevent overflow
+            const postsToCache = populatedPosts.slice(0, 20); 
+            safeSetItem('posts', JSON.stringify(postsToCache));
             safeSetItem('tribes', JSON.stringify(populatedTribes));
+            // DO NOT cache users list
 
         } catch (error) {
             console.error("A critical error occurred during data fetching: ", error);
-            if (!isDataLoaded) toast.error("Could not load data. Please try refreshing.");
+            if (!isDataLoaded) toast.error("Connection issue. Some data may be missing.");
         } finally {
             setIsFetching(false);
         }
@@ -1785,6 +1782,7 @@ const App: React.FC = () => {
             if (populated) setPosts(prev => prev.map(p => p.id === populated.id ? populated : p));
         };
         const handlePostDeleted = (postId: string) => setPosts(prev => prev.filter(p => p.id !== postId));
+        
         const handleNewTribeMessage = (message: TribeMessage) => {
             if(viewedTribe && viewedTribe.id === message.tribeId) {
                 const sender = userMap.get(message.senderId!);
@@ -1927,6 +1925,7 @@ const App: React.FC = () => {
         if (!currentUser) return;
         const originalPosts = posts;
         
+        // Optimistic Update: Remove instantly
         setPosts(prev => prev.filter(p => p.id !== postId));
         
         try {

@@ -214,15 +214,16 @@ import protect from '../middleware/authMiddleware.js';
 const router = express.Router();
 
 // @route   GET /api/users
-// @desc    Get all users, sorted by newest. Optimized to select only necessary fields.
+// @desc    Get users for discover. Optimized to prevent 502 timeouts on free tier.
 router.get('/', protect, async (req, res) => {
     try {
-        // Optimization: Only fetch fields needed for the UI map (Avatar, Name, Username, ID)
-        // Excluding 'password', 'bannerUrl', 'bio' from the bulk list to save massive bandwidth/memory
+        // Optimization: Strict limit and only essential fields
         const users = await User.find({})
-            .select('name username avatarUrl _id followers following blockedUsers') 
+            .select('name username avatarUrl _id') 
             .sort({ createdAt: -1 })
-            .limit(200); // Add a safety limit
+            .limit(50); // Reduced from 200 to 50 to prevent timeout/memory crash
+        
+        // Populate full details for these 50 only if needed, but select is better
         res.json(users);
     } catch (error) {
         console.error("Error fetching users:", error);
