@@ -745,6 +745,9 @@
 
 
 
+
+
+
 // import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 // import { useAuth } from './contexts/AuthContext';
 // import { useSocket } from './contexts/SocketContext';
@@ -811,12 +814,28 @@
 //     const [isCreatingStory, setIsCreatingStory] = useState(false);
 //     const [viewingUserStories, setViewingUserStories] = useState<{ user: User, stories: Story[] } | null>(null);
 
+//     // INSTANT LOAD: Load cached data on mount
 //     useEffect(() => {
-//         const seen = localStorage.getItem('seenStoryAuthors');
-//         if (seen) {
-//             setSeenStoryAuthors(new Set(JSON.parse(seen)));
+//         const cachedPosts = localStorage.getItem('tribe_posts');
+//         const cachedUsers = localStorage.getItem('tribe_users');
+//         const cachedTribes = localStorage.getItem('tribe_tribes');
+//         const cachedSeenStories = localStorage.getItem('seenStoryAuthors');
+
+//         if (cachedPosts) setPosts(JSON.parse(cachedPosts));
+//         if (cachedUsers) setUsers(JSON.parse(cachedUsers));
+//         if (cachedTribes) setTribes(JSON.parse(cachedTribes));
+//         if (cachedSeenStories) setSeenStoryAuthors(new Set(JSON.parse(cachedSeenStories)));
+        
+//         // If we have cached data, mark as loaded so user sees content immediately
+//         if (cachedPosts && cachedUsers) {
+//             setIsDataLoaded(true);
 //         }
 //     }, []);
+
+//     // CACHE UPDATES: Save to localStorage whenever data changes
+//     useEffect(() => { if (posts.length > 0) localStorage.setItem('tribe_posts', JSON.stringify(posts)); }, [posts]);
+//     useEffect(() => { if (users.length > 0) localStorage.setItem('tribe_users', JSON.stringify(users)); }, [users]);
+//     useEffect(() => { if (tribes.length > 0) localStorage.setItem('tribe_tribes', JSON.stringify(tribes)); }, [tribes]);
 
 //     const userMap = useMemo(() => {
 //         const map = new Map(users.map((user: User) => [user.id, user]));
@@ -827,7 +846,6 @@
 //     const populatePost = useCallback((postFromApi: any, userMapToUse: Map<string, User>): Post | null => {
 //         const { user: author, ...restOfPost } = postFromApi;
 //         if (!author || typeof author !== 'object') {
-//             console.warn("Post with invalid author found and filtered:", postFromApi);
 //             return null;
 //         }
 //         return {
@@ -841,9 +859,7 @@
 //     }, []);
 
 //     const fetchData = useCallback(async () => {
-//         if (isDataLoaded && lastFetchTimestamp.current && (Date.now() - lastFetchTimestamp.current < 300000)) { // 5 min cache to prevent re-fetch
-//             return;
-//         }
+//         // Fetch new data in background even if we have cached data
 //         if (!currentUser) {
 //             setIsDataLoaded(false);
 //             return;
@@ -861,13 +877,6 @@
     
 //             const [usersResult, feedPostsResult, tribesResult, notificationsResult, myStoriesResult, followingStoriesResult] = results;
     
-//             if (usersResult.status === 'rejected') console.error("Failed to fetch users:", usersResult.reason);
-//             if (feedPostsResult.status === 'rejected') console.error("Failed to fetch feed posts:", feedPostsResult.reason);
-//             if (tribesResult.status === 'rejected') console.error("Failed to fetch tribes:", tribesResult.reason);
-//             if (notificationsResult.status === 'rejected') console.error("Failed to fetch notifications:", notificationsResult.reason);
-//             if (myStoriesResult.status === 'rejected') console.error("Failed to fetch my stories:", myStoriesResult.reason);
-//             if (followingStoriesResult.status === 'rejected') console.error("Failed to fetch following stories:", followingStoriesResult.reason);
-    
 //             const hasAuthError = results.some(r => r.status === 'rejected' && (r.reason as any)?.response?.status === 401);
 //             if (hasAuthError) {
 //                 toast.error("Your session has expired. Please log in again.");
@@ -882,24 +891,34 @@
 //             const myStoriesData = myStoriesResult.status === 'fulfilled' ? myStoriesResult.value.data : [];
 //             const followingStoriesData = followingStoriesResult.status === 'fulfilled' ? followingStoriesResult.value.data : [];
 
-//             setUsers(usersData);
+//             // Update state with fresh data from server
+//             if (usersData.length > 0) setUsers(usersData);
+            
 //             const localUserMap = new Map<string, User>(usersData.map((user: User) => [user.id, user]));
 //             localUserMap.set(CHUK_AI_USER.id, CHUK_AI_USER);
 
-//             const populatedPosts = feedPostsData.map((post: any) => populatePost(post, localUserMap)).filter(Boolean);
-//             setPosts(populatedPosts as Post[]);
+//             if (feedPostsData.length > 0) {
+//                 const populatedPosts = feedPostsData.map((post: any) => populatePost(post, localUserMap)).filter(Boolean);
+//                 setPosts(populatedPosts as Post[]);
+//             }
             
-//             const populatedTribes = tribesData.map((tribe: any) => ({ ...tribe, messages: [] }));
-//             setTribes(populatedTribes);
+//             if (tribesData.length > 0) {
+//                 const populatedTribes = tribesData.map((tribe: any) => ({ ...tribe, messages: [] }));
+//                 setTribes(populatedTribes);
+//             }
+
 //             setNotifications(notificationsData);
 //             setMyStories(myStoriesData);
 //             setFollowingUserStories(followingStoriesData);
+            
+//             // Mark as loaded to remove loading screen if it was still there
 //             setIsDataLoaded(true);
 //             lastFetchTimestamp.current = Date.now();
 
 //         } catch (error) {
 //             console.error("A critical error occurred during data fetching: ", error);
-//             toast.error("Could not load data. Please try refreshing.");
+//             // Don't show error toast if we have cached data, just log it
+//             if (!isDataLoaded) toast.error("Could not connect to server.");
 //         } finally {
 //             setIsFetching(false);
 //         }
@@ -948,15 +967,14 @@
 //         const handleNewPost = (post: any) => {
 //             const populated = populatePost(post, userMap);
 //             if (populated) {
-//                 // If it was an optimistic post, replace it. Otherwise, add it.
 //                 setPosts(prev => {
+//                     // Check if we have an optimistic post to replace
 //                     const optimisticPostIndex = prev.findIndex(p => p.id === `temp-${post.tempId}`);
 //                     if (optimisticPostIndex > -1) {
 //                         const newPosts = [...prev];
 //                         newPosts[optimisticPostIndex] = populated;
 //                         return newPosts;
 //                     }
-//                     // Only add if not duplicate
 //                     if (prev.some(p => p.id === populated.id)) return prev;
 //                     return [populated, ...prev].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
 //                 });
@@ -969,23 +987,21 @@
 //         const handlePostDeleted = (postId: string) => setPosts(prev => prev.filter(p => p.id !== postId));
 //         const handleNewTribeMessage = (message: TribeMessage) => {
 //             if(viewedTribe && viewedTribe.id === message.tribeId) {
-//                 const sender = userMap.get(message.senderId!);
-//                 // Only add if not already optimistically added (check temp IDs if we used them there, but here we check content)
-//                 // Since we don't have unique non-db IDs easily, we trust the socket to send confirmed data.
-//                 // However, our optimistic UI handles local addition. To avoid duplicates, we can filter or check.
-//                 // Simpler: The message sent by ME is already displayed. The socket sends it back. 
-//                 // We should filter it out if we already have a matching temp message, OR just replace.
-//                 // For now, let's rely on the socket ID being the real DB ID.
-//                 if (sender) {
-//                     setViewedTribe(prev => {
-//                         if (!prev) return null;
-//                         // Avoid duplicates if message with same ID exists
-//                         if (prev.messages.some(m => m.id === message.id)) return prev;
-//                         // Filter out temp messages if they match content/timestamp roughly (harder).
-//                         // Better: in handleSendMessage, we can replace the temp message when we get the real one confirmation.
-//                         return { ...prev, messages: [...prev.messages, {...message, sender}] };
-//                     });
-//                 }
+//                 // Ensure we have sender info
+//                 const sender = message.sender || userMap.get(message.senderId!) || { id: message.senderId, name: 'Unknown', username: 'unknown', avatarUrl: null };
+                
+//                 setViewedTribe(prev => {
+//                     if (!prev) return null;
+//                     if (prev.messages.some(m => m.id === message.id)) return prev;
+//                     // Replace temp message if exists
+//                     const tempIndex = prev.messages.findIndex(m => m.id.startsWith('temp-') && m.text === message.text);
+//                     if (tempIndex !== -1) {
+//                          const newMsgs = [...prev.messages];
+//                          newMsgs[tempIndex] = { ...message, sender: sender as User };
+//                          return { ...prev, messages: newMsgs };
+//                     }
+//                     return { ...prev, messages: [...prev.messages, {...message, sender: sender as User}] };
+//                 });
 //             }
 //         };
 //         const handleTribeMessageDeleted = ({ tribeId, messageId }: { tribeId: string, messageId: string }) => {
@@ -1053,7 +1069,6 @@
 //         if (!currentUser) return;
 //         setIsCreatingPost(true);
 //         const tempId = Date.now().toString();
-//         // Optimistic update
 //         const tempPost: Post = {
 //             id: `temp-${tempId}`,
 //             author: currentUser,
@@ -1071,7 +1086,6 @@
 //         } catch (error) {
 //             console.error("Failed to add post:", error);
 //             toast.error("Could not create post. Please try again.");
-//             // Revert optimistic update on failure
 //             setPosts(prev => prev.filter(p => p.id !== `temp-${tempId}`));
 //         } finally {
 //             setIsCreatingPost(false);
@@ -1080,9 +1094,7 @@
 
 //     const handleLikePost = async (postId: string) => {
 //         if (!currentUser) return;
-//         const originalPosts = [...posts]; // deep copy if needed, but shallow is ok for array structure
-        
-//         // Optimistic Update
+//         const originalPosts = [...posts];
 //         setPosts(prev => prev.map(p => {
 //             if (p.id === postId) {
 //                 const isLiked = p.likes.includes(currentUser.id);
@@ -1090,13 +1102,12 @@
 //             }
 //             return p;
 //         }));
-
 //         try {
 //             await api.likePost(postId);
 //         } catch (error) {
 //             console.error("Failed to like post:", error);
 //             toast.error("Like failed. Reverting.");
-//             setPosts(originalPosts); // Revert
+//             setPosts(originalPosts); 
 //         }
 //     };
 
@@ -1104,16 +1115,12 @@
 //         if (!currentUser) return;
 //         const tempCommentId = `temp-${Date.now()}`;
 //         const tempComment: Comment = { id: tempCommentId, author: currentUser, text, timestamp: new Date().toISOString() };
-        
-//         // Optimistic Update
 //         setPosts(prev => prev.map(p => p.id === postId ? { ...p, comments: [...p.comments, tempComment] } : p));
-        
 //         try {
 //             await api.commentOnPost(postId, { text });
 //         } catch (error) {
 //             console.error("Failed to comment:", error);
 //             toast.error("Failed to post comment.");
-//             // Revert
 //             setPosts(prev => prev.map(p => p.id === postId ? { ...p, comments: p.comments.filter(c => c.id !== tempCommentId) } : p));
 //         }
 //     };
@@ -1121,27 +1128,21 @@
 //     const handleDeletePost = async (postId: string) => {
 //         if (!currentUser) return;
 //         const originalPosts = posts;
-        
-//         // Optimistic Update
 //         setPosts(prev => prev.filter(p => p.id !== postId));
-        
 //         try {
 //             await api.deletePost(postId);
 //             toast.success("Post deleted.");
 //         } catch (error) {
 //             console.error("Failed to delete post:", error);
 //             toast.error("Could not delete post.");
-//             setPosts(originalPosts); // Revert
+//             setPosts(originalPosts);
 //         }
 //     };
 
 //     const handleDeleteComment = async (postId: string, commentId: string) => {
 //         if (!currentUser) return;
 //         const originalPosts = posts;
-        
-//         // Optimistic Update
 //         setPosts(prev => prev.map(p => p.id === postId ? { ...p, comments: p.comments.filter(c => c.id !== commentId) } : p));
-        
 //         try {
 //             await api.deleteComment(postId, commentId);
 //         } catch (error) {
@@ -1211,7 +1212,6 @@
 //         const originalViewedUser = viewedUser ? { ...viewedUser } : null;
 //         const isFollowing = currentUser.following.includes(targetUserId);
 
-//         // Optimistic Update
 //         const newFollowing = isFollowing 
 //             ? currentUser.following.filter(id => id !== targetUserId) 
 //             : [...currentUser.following, targetUserId];
@@ -1237,7 +1237,6 @@
 //         } catch(error) {
 //             console.error('Failed to toggle follow', error);
 //             toast.error("Action failed. Reverting.");
-//             // Revert
 //             setCurrentUser(originalCurrentUser);
 //             if (originalViewedUser) setViewedUser(originalViewedUser);
 //         }
@@ -1248,7 +1247,6 @@
 //         const originalUser = { ...currentUser };
 //         const isBlocked = (currentUser.blockedUsers || []).includes(targetUserId);
         
-//         // Optimistic Update
 //         setCurrentUser(prev => prev ? { ...prev, blockedUsers: isBlocked ? (prev.blockedUsers || []).filter(id => id !== targetUserId) : [...(prev.blockedUsers || []), targetUserId]} : null);
         
 //         try {
@@ -1257,7 +1255,7 @@
 //         } catch(error) {
 //             console.error('Failed to toggle block', error);
 //             toast.error("Action failed. Reverting.");
-//             setCurrentUser(originalUser); // Revert
+//             setCurrentUser(originalUser); 
 //         }
 //     };
     
@@ -1276,9 +1274,6 @@
 
 //     const handleJoinToggle = async (tribeId: string) => {
 //         if (!currentUser) return;
-        
-//         // Optimistic Update can be tricky for tribe objects as they are in a list
-//         // For now, we will wait for server, or you can implement optimistic update here similar to posts
 //         try {
 //             const { data: updatedTribe } = await api.joinTribe(tribeId);
 //             setTribes(tribes.map(t => t.id === tribeId ? { ...t, members: updatedTribe.members } : t));
@@ -1329,9 +1324,6 @@
     
 //     const handleSendTribeMessage = async (tribeId: string, text: string, imageUrl?: string) => {
 //         if (!currentUser || !viewedTribe) return;
-        
-//         // Optimistic handling is done inside TribeDetailPage to ensure UI responsiveness.
-//         // We just make the API call here.
 //         try {
 //             await api.sendTribeMessage(tribeId, { text, imageUrl });
 //         } catch (error) {
@@ -1459,7 +1451,8 @@
     
 //     if (!currentUser) return <LoginPage />;
     
-//     if (!isDataLoaded && isFetching) {
+//     // Only show "Waking up server" if we have absolutely no data.
+//     if (!isDataLoaded && isFetching && posts.length === 0) {
 //         return <div className="min-h-screen bg-background flex flex-col items-center justify-center"><img src="/duckload.gif" alt="Loading..." className="w-24 h-24" /><h1 className="mt-4 text-xl font-semibold text-primary">Waking up the server...</h1></div>;
 //     }
 
@@ -1537,8 +1530,8 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useAuth } from './contexts/AuthContext';
 import { useSocket } from './contexts/SocketContext';
-import { User, Post, Tribe, TribeMessage, Notification as NotificationType, Comment, Story } from './types';
-import * as api from './api.ts';
+import { User, Post, Tribe, Comment, Story } from './types';
+import * as api from './api';
 
 // Components
 import Sidebar from './components/layout/Sidebar';
@@ -1573,6 +1566,15 @@ const CHUK_AI_USER: User = {
     blockedUsers: [],
 };
 
+// Safe LocalStorage Helper to prevent QuotaExceededError crashes
+const safeSetItem = (key: string, value: string) => {
+    try {
+        localStorage.setItem(key, value);
+    } catch (e) {
+        console.warn(`LocalStorage quota exceeded. Failed to save ${key}. Cleaning up old data...`);
+    }
+};
+
 const App: React.FC = () => {
     const { currentUser, setCurrentUser, logout, isLoading: isAuthLoading } = useAuth();
     const { socket, notifications, setNotifications, unreadMessageCount, unreadTribeCount, unreadNotificationCount, clearUnreadTribe } = useSocket();
@@ -1600,14 +1602,34 @@ const App: React.FC = () => {
     const [isCreatingStory, setIsCreatingStory] = useState(false);
     const [viewingUserStories, setViewingUserStories] = useState<{ user: User, stories: Story[] } | null>(null);
 
+    // INSTANT LOAD: Load cached data on mount
     useEffect(() => {
-        const seen = localStorage.getItem('seenStoryAuthors');
-        if (seen) {
-            setSeenStoryAuthors(new Set(JSON.parse(seen)));
+        try {
+            const cachedPosts = localStorage.getItem('tribe_posts');
+            const cachedUsers = localStorage.getItem('tribe_users');
+            const cachedTribes = localStorage.getItem('tribe_tribes');
+            const cachedSeenStories = localStorage.getItem('seenStoryAuthors');
+
+            if (cachedPosts) setPosts(JSON.parse(cachedPosts));
+            if (cachedUsers) setUsers(JSON.parse(cachedUsers));
+            if (cachedTribes) setTribes(JSON.parse(cachedTribes));
+            if (cachedSeenStories) setSeenStoryAuthors(new Set(JSON.parse(cachedSeenStories)));
+            
+            // If we have cached data, mark as loaded so user sees content immediately
+            if (cachedPosts && cachedUsers) {
+                setIsDataLoaded(true);
+            }
+        } catch (error) {
+            console.error("Error loading cached data:", error);
         }
     }, []);
 
-    const userMap = useMemo(() => {
+    // CACHE UPDATES: Save to localStorage whenever data changes
+    useEffect(() => { if (posts.length > 0) safeSetItem('tribe_posts', JSON.stringify(posts)); }, [posts]);
+    useEffect(() => { if (users.length > 0) safeSetItem('tribe_users', JSON.stringify(users)); }, [users]);
+    useEffect(() => { if (tribes.length > 0) safeSetItem('tribe_tribes', JSON.stringify(tribes)); }, [tribes]);
+
+    const userMap = useMemo<Map<string, User>>(() => {
         const map = new Map(users.map((user: User) => [user.id, user]));
         map.set(CHUK_AI_USER.id, CHUK_AI_USER);
         return map;
@@ -1615,55 +1637,27 @@ const App: React.FC = () => {
 
     const populatePost = useCallback((postFromApi: any, userMapToUse: Map<string, User>): Post | null => {
         const { user: author, ...restOfPost } = postFromApi;
-        if (!author || typeof author !== 'object') {
-            // console.warn("Post with invalid author found and filtered:", postFromApi);
+        const resolvedAuthor = typeof author === 'string' ? userMapToUse.get(author) : author;
+
+        if (!resolvedAuthor || typeof resolvedAuthor !== 'object') {
             return null;
         }
         return {
             ...restOfPost,
-            author,
+            author: resolvedAuthor,
             comments: restOfPost.comments ? restOfPost.comments.map((comment: any) => {
-                const { user, ...restOfComment } = comment;
-                return { ...restOfComment, author: user };
+                const { user: commentUser, ...restOfComment } = comment;
+                const resolvedCommentUser = typeof commentUser === 'string' ? userMapToUse.get(commentUser) : commentUser;
+                return { ...restOfComment, author: resolvedCommentUser };
             }).filter((c: any) => c.author && typeof c.author === 'object') : [],
         };
     }, []);
 
-    const safeSetItem = (key: string, value: string) => {
-        try {
-            localStorage.setItem(key, value);
-        } catch (e) {
-            console.warn(`Failed to save ${key} to localStorage. Quota likely exceeded. Skipping cache.`);
-        }
-    };
-
     const fetchData = useCallback(async () => {
-        if (isDataLoaded && lastFetchTimestamp.current && (Date.now() - lastFetchTimestamp.current < 60000)) { 
-            // Reduced cache valid time to 1 minute to ensure freshness
-            return;
-        }
         if (!currentUser) {
             setIsDataLoaded(false);
             return;
         }
-        
-        // --- 1. Load from Cache First (Instant) ---
-        try {
-            const cachedPosts = localStorage.getItem('posts');
-            // We DO NOT cache 'users' anymore as it causes QuotaExceededError due to size
-            const cachedTribes = localStorage.getItem('tribes');
-            
-            if (cachedPosts && cachedTribes) {
-                const parsedPosts = JSON.parse(cachedPosts);
-                setPosts(parsedPosts);
-                setTribes(JSON.parse(cachedTribes));
-                setIsDataLoaded(true); // Show cached data immediately
-            }
-        } catch(e) {
-            console.warn("Error loading cached data", e);
-        }
-
-        // --- 2. Fetch Fresh Data (Background) ---
         setIsFetching(true);
         try {
             const results = await Promise.allSettled([
@@ -1677,7 +1671,6 @@ const App: React.FC = () => {
     
             const [usersResult, feedPostsResult, tribesResult, notificationsResult, myStoriesResult, followingStoriesResult] = results;
     
-            // Handle Auth Error
             const hasAuthError = results.some(r => r.status === 'rejected' && (r.reason as any)?.response?.status === 401);
             if (hasAuthError) {
                 toast.error("Your session has expired. Please log in again.");
@@ -1692,31 +1685,35 @@ const App: React.FC = () => {
             const myStoriesData = myStoriesResult.status === 'fulfilled' ? myStoriesResult.value.data : [];
             const followingStoriesData = followingStoriesResult.status === 'fulfilled' ? followingStoriesResult.value.data : [];
 
-            setUsers(usersData);
-            const localUserMap = new Map<string, User>(usersData.map((user: User) => [user.id, user]));
-            localUserMap.set(CHUK_AI_USER.id, CHUK_AI_USER);
-
-            const populatedPosts = feedPostsData.map((post: any) => populatePost(post, localUserMap)).filter(Boolean);
-            setPosts(populatedPosts as Post[]);
+            let localUserMap: Map<string, User> | null = null;
+            if (usersData.length > 0) {
+                setUsers(usersData);
+                localUserMap = new Map<string, User>(usersData.map((user: User) => [user.id, user]));
+                localUserMap.set(CHUK_AI_USER.id, CHUK_AI_USER);
+            }
             
-            const populatedTribes = tribesData.map((tribe: any) => ({ ...tribe, messages: [] }));
-            setTribes(populatedTribes);
+            const mapToUse = localUserMap || new Map<string, User>();
+
+            if (feedPostsData.length > 0) {
+                const populatedPosts = feedPostsData.map((post: any) => populatePost(post, mapToUse)).filter(Boolean);
+                setPosts(populatedPosts as Post[]);
+            }
+            
+            if (tribesData.length > 0) {
+                const populatedTribes = tribesData.map((tribe: any) => ({ ...tribe, messages: [] }));
+                setTribes(populatedTribes);
+            }
+
             setNotifications(notificationsData);
             setMyStories(myStoriesData);
             setFollowingUserStories(followingStoriesData);
+            
             setIsDataLoaded(true);
             lastFetchTimestamp.current = Date.now();
 
-            // --- 3. Update Cache ---
-            // Only cache a small subset of posts to prevent overflow
-            const postsToCache = populatedPosts.slice(0, 20); 
-            safeSetItem('posts', JSON.stringify(postsToCache));
-            safeSetItem('tribes', JSON.stringify(populatedTribes));
-            // DO NOT cache users list
-
         } catch (error) {
             console.error("A critical error occurred during data fetching: ", error);
-            if (!isDataLoaded) toast.error("Connection issue. Some data may be missing.");
+            if (!isDataLoaded) toast.error("Could not connect to server.");
         } finally {
             setIsFetching(false);
         }
@@ -1742,7 +1739,6 @@ const App: React.FC = () => {
         }
     }, [fetchData, isAuthLoading, currentUser]);
 
-    // Effect to join tribe rooms for real-time unread counts
     useEffect(() => {
         if (socket && tribes.length > 0 && currentUser) {
             const myTribeIds = tribes.filter(t => t.members.includes(currentUser.id)).map(t => t.id);
@@ -1782,17 +1778,29 @@ const App: React.FC = () => {
             if (populated) setPosts(prev => prev.map(p => p.id === populated.id ? populated : p));
         };
         const handlePostDeleted = (postId: string) => setPosts(prev => prev.filter(p => p.id !== postId));
-        
-        const handleNewTribeMessage = (message: TribeMessage) => {
+        const handleNewTribeMessage = (message: any) => {
             if(viewedTribe && viewedTribe.id === message.tribeId) {
-                const sender = userMap.get(message.senderId!);
-                if (sender) {
-                    setViewedTribe(prev => {
-                        if (!prev) return null;
-                        if (prev.messages.some(m => m.id === message.id)) return prev;
-                        return { ...prev, messages: [...prev.messages, {...message, sender}] };
-                    });
-                }
+                const sender = message.sender || userMap.get(message.senderId || '') || { 
+                    id: message.senderId || 'unknown', 
+                    name: 'Unknown User', 
+                    username: 'unknown', 
+                    avatarUrl: null, 
+                    followers: [], 
+                    following: [], 
+                    blockedUsers: [] 
+                };
+                
+                setViewedTribe(prev => {
+                    if (!prev) return null;
+                    if (prev.messages.some(m => m.id === message.id)) return prev;
+                    const tempIndex = prev.messages.findIndex(m => m.id.startsWith('temp-') && m.text === message.text);
+                    if (tempIndex !== -1) {
+                         const newMsgs = [...prev.messages];
+                         newMsgs[tempIndex] = { ...message, sender: sender as User };
+                         return { ...prev, messages: newMsgs };
+                    }
+                    return { ...prev, messages: [...prev.messages, {...message, sender: sender as User}] };
+                });
             }
         };
         const handleTribeMessageDeleted = ({ tribeId, messageId }: { tribeId: string, messageId: string }) => {
@@ -1860,7 +1868,6 @@ const App: React.FC = () => {
         if (!currentUser) return;
         setIsCreatingPost(true);
         const tempId = Date.now().toString();
-        // Optimistic update
         const tempPost: Post = {
             id: `temp-${tempId}`,
             author: currentUser,
@@ -1887,7 +1894,6 @@ const App: React.FC = () => {
     const handleLikePost = async (postId: string) => {
         if (!currentUser) return;
         const originalPosts = [...posts];
-        
         setPosts(prev => prev.map(p => {
             if (p.id === postId) {
                 const isLiked = p.likes.includes(currentUser.id);
@@ -1895,7 +1901,6 @@ const App: React.FC = () => {
             }
             return p;
         }));
-
         try {
             await api.likePost(postId);
         } catch (error) {
@@ -1909,9 +1914,7 @@ const App: React.FC = () => {
         if (!currentUser) return;
         const tempCommentId = `temp-${Date.now()}`;
         const tempComment: Comment = { id: tempCommentId, author: currentUser, text, timestamp: new Date().toISOString() };
-        
         setPosts(prev => prev.map(p => p.id === postId ? { ...p, comments: [...p.comments, tempComment] } : p));
-        
         try {
             await api.commentOnPost(postId, { text });
         } catch (error) {
@@ -1924,10 +1927,7 @@ const App: React.FC = () => {
     const handleDeletePost = async (postId: string) => {
         if (!currentUser) return;
         const originalPosts = posts;
-        
-        // Optimistic Update: Remove instantly
         setPosts(prev => prev.filter(p => p.id !== postId));
-        
         try {
             await api.deletePost(postId);
             toast.success("Post deleted.");
@@ -1941,9 +1941,7 @@ const App: React.FC = () => {
     const handleDeleteComment = async (postId: string, commentId: string) => {
         if (!currentUser) return;
         const originalPosts = posts;
-        
         setPosts(prev => prev.map(p => p.id === postId ? { ...p, comments: p.comments.filter(c => c.id !== commentId) } : p));
-        
         try {
             await api.deleteComment(postId, commentId);
         } catch (error) {
@@ -2056,7 +2054,7 @@ const App: React.FC = () => {
         } catch(error) {
             console.error('Failed to toggle block', error);
             toast.error("Action failed. Reverting.");
-            setCurrentUser(originalUser);
+            setCurrentUser(originalUser); 
         }
     };
     
@@ -2102,7 +2100,7 @@ const App: React.FC = () => {
             setViewedTribe({ ...tribe, messages: [] });
             setActiveNavItem('TribeDetail');
             const { data: messages } = await api.fetchTribeMessages(tribe.id);
-            const populatedMessages = messages.map((msg: any) => ({ ...msg, sender: userMap.get(msg.sender) })).filter((m: TribeMessage) => m.sender);
+            const populatedMessages = messages.map((msg: any) => ({ ...msg, sender: userMap.get(msg.sender) })).filter((m: any) => m.sender);
             setViewedTribe(prev => prev ? { ...prev, messages: populatedMessages } : null);
         } catch (error) {
             console.error("Failed to fetch tribe messages:", error);
@@ -2229,7 +2227,7 @@ const App: React.FC = () => {
             setSeenStoryAuthors(prev => {
                 const newSet = new Set(prev);
                 newSet.add(userId);
-                localStorage.setItem('seenStoryAuthors', JSON.stringify(Array.from(newSet)));
+                safeSetItem('seenStoryAuthors', JSON.stringify(Array.from(newSet)));
                 return newSet;
             });
         }
@@ -2252,7 +2250,7 @@ const App: React.FC = () => {
     
     if (!currentUser) return <LoginPage />;
     
-    if (!isDataLoaded && isFetching) {
+    if (!isDataLoaded && isFetching && posts.length === 0) {
         return <div className="min-h-screen bg-background flex flex-col items-center justify-center"><img src="/duckload.gif" alt="Loading..." className="w-24 h-24" /><h1 className="mt-4 text-xl font-semibold text-primary">Waking up the server...</h1></div>;
     }
 
