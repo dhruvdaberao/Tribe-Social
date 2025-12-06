@@ -169,6 +169,7 @@
 
 
 
+
 import React, { useState, useRef, useEffect } from 'react';
 import type { Story } from '../../types';
 
@@ -229,12 +230,15 @@ const StoryCreator: React.FC<StoryCreatorProps> = ({ onClose, onCreate }) => {
   // Improved Mouse Down Handler with strict stopPropagation
   const handleMouseDown = (e: React.MouseEvent | React.TouchEvent, type: 'text' | 'image', action: 'move' | 'rotate' | 'scale') => {
       e.stopPropagation(); 
-      e.preventDefault(); 
+      // Prevent defaults to stop browser scrolling/selection
+      if(e.cancelable) e.preventDefault(); 
       
       const clientX = 'touches' in e ? e.touches[0].clientX : (e as React.MouseEvent).clientX;
       const clientY = 'touches' in e ? e.touches[0].clientY : (e as React.MouseEvent).clientY;
 
-      setSelectedElement(type);
+      // Only change selection if not just clicking a handle on an already selected item
+      if(action === 'move') setSelectedElement(type);
+      
       const target = type === 'text' ? text : image;
       if (!target) return;
 
@@ -254,7 +258,7 @@ const StoryCreator: React.FC<StoryCreatorProps> = ({ onClose, onCreate }) => {
   useEffect(() => {
       const handleMove = (e: MouseEvent | TouchEvent) => {
           if (!dragRef.current.isDragging || !canvasRef.current) return;
-          e.preventDefault(); 
+          if(e.cancelable) e.preventDefault(); 
           e.stopPropagation();
 
           const clientX = 'touches' in e ? e.touches[0].clientX : (e as MouseEvent).clientX;
@@ -344,7 +348,7 @@ const StoryCreator: React.FC<StoryCreatorProps> = ({ onClose, onCreate }) => {
 
           <div 
             ref={canvasRef} 
-            className="flex-1 relative overflow-hidden" 
+            className="flex-1 relative overflow-hidden touch-none" 
             onMouseDown={() => { if (!isEditingText) setSelectedElement(null); }}
           >
               {image && (
@@ -354,7 +358,8 @@ const StoryCreator: React.FC<StoryCreatorProps> = ({ onClose, onCreate }) => {
                         left: `${image.pos.x}%`, 
                         top: `${image.pos.y}%`, 
                         transform: `translate(-50%, -50%) rotate(${image.rotation}deg) scale(${image.scale})`,
-                        cursor: 'move', touchAction: 'none'
+                        cursor: 'move',
+                        touchAction: 'none'
                     }}
                     onMouseDown={(e) => handleMouseDown(e, 'image', 'move')}
                     onTouchStart={(e) => handleMouseDown(e, 'image', 'move')}
@@ -377,7 +382,9 @@ const StoryCreator: React.FC<StoryCreatorProps> = ({ onClose, onCreate }) => {
                     style={{
                         left: `${text.pos.x}%`, top: `${text.pos.y}%`,
                         transform: `translate(-50%, -50%) rotate(${text.rotation}deg) scale(${text.scale})`,
-                        cursor: 'move', touchAction: 'none', maxWidth: '80%'
+                        cursor: 'move', 
+                        touchAction: 'none', 
+                        maxWidth: '80%'
                     }}
                     onMouseDown={(e) => !isEditingText && handleMouseDown(e, 'text', 'move')}
                     onTouchStart={(e) => !isEditingText && handleMouseDown(e, 'text', 'move')}
