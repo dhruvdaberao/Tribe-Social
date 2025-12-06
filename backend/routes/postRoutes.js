@@ -338,7 +338,6 @@ router.get('/feed', protect, async (req, res) => {
         if (!currentUser) return res.status(404).json({ message: "User not found" });
 
         // Ensure user IDs are valid ObjectId strings before querying
-        // This prevents casting errors if bad data exists in the array
         const userIdsForFeed = [currentUser._id, ...(currentUser.following || [])]
             .filter(id => mongoose.Types.ObjectId.isValid(id));
         
@@ -350,7 +349,6 @@ router.get('/feed', protect, async (req, res) => {
             .populate('comments.user', 'name username avatarUrl');
 
         // Robustness: Filter out posts where the user field is null (e.g., deleted users)
-        // This prevents the frontend from crashing when accessing post.author.name
         const validPosts = posts.filter(post => post.user !== null);
 
         res.json(validPosts);
@@ -370,7 +368,6 @@ router.get('/', protect, async (req, res) => {
             .populate('user', 'name username avatarUrl')
             .populate('comments.user', 'name username avatarUrl');
         
-        // Filter out posts from deleted users
         const validPosts = posts.filter(post => post.user !== null);
         res.json(validPosts);
     } catch (error) {
@@ -380,7 +377,6 @@ router.get('/', protect, async (req, res) => {
 });
 
 // @route   GET /api/posts/:id
-// @desc    Get a single post
 router.get('/:id', protect, async (req, res) => {
     try {
         if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
@@ -397,7 +393,6 @@ router.get('/:id', protect, async (req, res) => {
 });
 
 // @route   POST /api/posts
-// @desc    Create a post
 router.post('/', protect, async (req, res) => {
     const { content, imageUrl, tempId } = req.body;
     if (!content && !imageUrl) return res.status(400).json({ message: 'Post content required' });
@@ -454,7 +449,6 @@ router.put('/:id/like', protect, async (req, res) => {
         } else {
             post.likes.push(req.user.id);
             if (post.user.toString() !== req.user.id) {
-                // Prevent duplicate notifications
                 const existingNotif = await Notification.findOne({
                    recipient: post.user,
                    sender: req.user.id,

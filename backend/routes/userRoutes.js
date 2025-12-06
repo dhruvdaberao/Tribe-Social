@@ -205,6 +205,7 @@
 
 
 
+
 import express from 'express';
 import User from '../models/userModel.js';
 import Post from '../models/postModel.js';
@@ -215,9 +216,11 @@ import bcrypt from 'bcryptjs';
 const router = express.Router();
 
 // @route   GET /api/users
+// @desc    Get all users (with limit for free tier stability)
 router.get('/', protect, async (req, res) => {
     try {
-        const users = await User.find({}).select('-password').sort({ createdAt: -1 });
+        // Limit to 100 recent users to prevent 502/Memory errors on Render free tier
+        const users = await User.find({}).select('-password').sort({ createdAt: -1 }).limit(100);
         res.json(users);
     } catch (error) {
         res.status(500).json({ message: 'Server error' });
@@ -236,7 +239,6 @@ router.get('/:id', protect, async (req, res) => {
 });
 
 // @route   PUT /api/users/profile
-// @desc    Update user profile (Bio, Name, Avatar, Email, Password)
 router.put('/profile', protect, async (req, res) => {
     try {
         const user = await User.findById(req.user.id);
@@ -247,27 +249,21 @@ router.put('/profile', protect, async (req, res) => {
             user.avatarUrl = req.body.avatarUrl === null ? null : req.body.avatarUrl || user.avatarUrl;
             user.bannerUrl = req.body.bannerUrl === null ? null : req.body.bannerUrl || user.bannerUrl;
 
-            // Secure Email Update
             if (req.body.email && req.body.email !== user.email) {
                 const emailExists = await User.findOne({ email: req.body.email });
                 if (emailExists) return res.status(400).json({ message: 'Email already in use' });
                 user.email = req.body.email;
             }
 
-            // Secure Password Update
             if (req.body.password) {
-                // The pre-save hook in userModel will hash this
                 user.password = req.body.password; 
             }
 
             const updatedUser = await user.save();
-            
-            // Do NOT emit password/email in broadcast
             const publicUser = updatedUser.toJSON();
             delete publicUser.email; 
             
             req.io.emit('userUpdated', publicUser);
-
             res.json(updatedUser);
         } else {
             res.status(404).json({ message: 'User not found' });

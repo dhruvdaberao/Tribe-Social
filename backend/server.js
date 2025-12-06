@@ -254,7 +254,7 @@ const startServer = async () => {
 
     // Dynamic CORS configuration
     const corsOptions = {
-      origin: true, // Allow any origin dynamically
+      origin: true, 
       credentials: true,
       methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
       allowedHeaders: ["Origin", "X-Requested-With", "Content-Type", "Accept", "Authorization"]
@@ -263,7 +263,6 @@ const startServer = async () => {
     app.use(cors(corsOptions));
     app.use(express.json({ limit: '50mb' }));
     
-    // Global JSON Error Handler
     app.use((err, req, res, next) => {
         if (err instanceof SyntaxError && err.status === 400 && 'body' in err) {
             return res.status(400).send({ message: 'Invalid JSON' });
@@ -295,7 +294,7 @@ const startServer = async () => {
 
     app.get('/', (req, res) => res.send('Tribe API Running'));
 
-    // Global Error Handler
+    // Global Error Handler to prevent crashes
     app.use((err, req, res, next) => {
         console.error("Unhandled Error:", err);
         if(!res.headersSent) res.status(500).json({ message: "Internal Server Error" });

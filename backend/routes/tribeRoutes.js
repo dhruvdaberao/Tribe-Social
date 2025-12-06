@@ -487,8 +487,7 @@ router.post('/:id/messages', protect, async (req, res) => {
         
         const savedMessage = await message.save();
         
-        // CRITICAL FIX: Explicitly populate sender details (name, avatar) before emitting
-        // This ensures the frontend doesn't render a blank bubble.
+        // CRITICAL FIX: Fully populate the sender so the frontend receives avatar/name immediately
         const populatedMessage = await TribeMessage.findById(savedMessage._id)
             .populate('sender', 'name username avatarUrl');
 

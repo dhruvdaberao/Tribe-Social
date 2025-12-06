@@ -169,7 +169,6 @@
 
 
 
-
 import React, { useState, useRef, useEffect } from 'react';
 import type { Story } from '../../types';
 
@@ -230,11 +229,7 @@ const StoryCreator: React.FC<StoryCreatorProps> = ({ onClose, onCreate }) => {
   // Improved Mouse Down Handler with strict stopPropagation
   const handleMouseDown = (e: React.MouseEvent | React.TouchEvent, type: 'text' | 'image', action: 'move' | 'rotate' | 'scale') => {
       e.stopPropagation(); 
-      // We do NOT call preventDefault here for 'text' 'move' to allow double click to work, 
-      // but we DO need it for handles to prevent browser native drag.
-      if (action !== 'move') {
-          e.preventDefault();
-      }
+      e.preventDefault(); 
       
       const clientX = 'touches' in e ? e.touches[0].clientX : (e as React.MouseEvent).clientX;
       const clientY = 'touches' in e ? e.touches[0].clientY : (e as React.MouseEvent).clientY;
@@ -281,11 +276,10 @@ const StoryCreator: React.FC<StoryCreatorProps> = ({ onClose, onCreate }) => {
               updateTarget({ pos: { x: initialX + percentDeltaX, y: initialY + percentDeltaY } });
           } 
           else if (action === 'rotate') {
-              // Sensitivity for rotation
               updateTarget({ rotation: initialRotation + (deltaX * 0.5) });
           } 
           else if (action === 'scale') {
-              // Sensitivity for scaling
+              // Increased sensitivity for better UX
               const scaleChange = (deltaX + deltaY) * 0.01;
               updateTarget({ scale: Math.max(0.2, initialScale + scaleChange) });
           }

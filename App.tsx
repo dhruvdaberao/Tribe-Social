@@ -1527,11 +1527,10 @@
 
 
 
-
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useAuth } from './contexts/AuthContext';
 import { useSocket } from './contexts/SocketContext';
-import { User, Post, Tribe, TribeMessage, Notification as NotificationType, Comment, Story } from './types';
+import { User, Post, Tribe, Comment, Story } from './types';
 import * as api from './api';
 
 // Components
@@ -1573,8 +1572,6 @@ const safeSetItem = (key: string, value: string) => {
         localStorage.setItem(key, value);
     } catch (e) {
         console.warn(`LocalStorage quota exceeded. Failed to save ${key}. Cleaning up old data...`);
-        // Optional: clear non-critical items or handle gracefully
-        // localStorage.clear(); // Extreme measure, use with caution
     }
 };
 
@@ -1624,7 +1621,6 @@ const App: React.FC = () => {
             }
         } catch (error) {
             console.error("Error loading cached data:", error);
-            // Fallback: wait for network
         }
     }, []);
 
@@ -1641,7 +1637,6 @@ const App: React.FC = () => {
 
     const populatePost = useCallback((postFromApi: any, userMapToUse: Map<string, User>): Post | null => {
         const { user: author, ...restOfPost } = postFromApi;
-        // Handle cases where author is just an ID or null
         const resolvedAuthor = typeof author === 'string' ? userMapToUse.get(author) : author;
 
         if (!resolvedAuthor || typeof resolvedAuthor !== 'object') {
@@ -1659,7 +1654,6 @@ const App: React.FC = () => {
     }, []);
 
     const fetchData = useCallback(async () => {
-        // Fetch new data in background even if we have cached data
         if (!currentUser) {
             setIsDataLoaded(false);
             return;
@@ -1691,7 +1685,6 @@ const App: React.FC = () => {
             const myStoriesData = myStoriesResult.status === 'fulfilled' ? myStoriesResult.value.data : [];
             const followingStoriesData = followingStoriesResult.status === 'fulfilled' ? followingStoriesResult.value.data : [];
 
-            // Update state with fresh data from server
             let localUserMap: Map<string, User> | null = null;
             if (usersData.length > 0) {
                 setUsers(usersData);
@@ -1699,7 +1692,6 @@ const App: React.FC = () => {
                 localUserMap.set(CHUK_AI_USER.id, CHUK_AI_USER);
             }
             
-            // Use local map if available, otherwise fallback to empty map temporarily
             const mapToUse = localUserMap || new Map<string, User>();
 
             if (feedPostsData.length > 0) {
@@ -1716,13 +1708,11 @@ const App: React.FC = () => {
             setMyStories(myStoriesData);
             setFollowingUserStories(followingStoriesData);
             
-            // Mark as loaded to remove loading screen if it was still there
             setIsDataLoaded(true);
             lastFetchTimestamp.current = Date.now();
 
         } catch (error) {
             console.error("A critical error occurred during data fetching: ", error);
-            // Don't show error toast if we have cached data, just log it
             if (!isDataLoaded) toast.error("Could not connect to server.");
         } finally {
             setIsFetching(false);
@@ -1749,7 +1739,6 @@ const App: React.FC = () => {
         }
     }, [fetchData, isAuthLoading, currentUser]);
 
-    // Effect to join tribe rooms for real-time unread counts
     useEffect(() => {
         if (socket && tribes.length > 0 && currentUser) {
             const myTribeIds = tribes.filter(t => t.members.includes(currentUser.id)).map(t => t.id);
@@ -1773,7 +1762,6 @@ const App: React.FC = () => {
             const populated = populatePost(post, userMap);
             if (populated) {
                 setPosts(prev => {
-                    // Check if we have an optimistic post to replace
                     const optimisticPostIndex = prev.findIndex(p => p.id === `temp-${post.tempId}`);
                     if (optimisticPostIndex > -1) {
                         const newPosts = [...prev];
@@ -1790,9 +1778,8 @@ const App: React.FC = () => {
             if (populated) setPosts(prev => prev.map(p => p.id === populated.id ? populated : p));
         };
         const handlePostDeleted = (postId: string) => setPosts(prev => prev.filter(p => p.id !== postId));
-        const handleNewTribeMessage = (message: TribeMessage) => {
+        const handleNewTribeMessage = (message: any) => {
             if(viewedTribe && viewedTribe.id === message.tribeId) {
-                // Ensure we have sender info - handle missing data gracefully
                 const sender = message.sender || userMap.get(message.senderId || '') || { 
                     id: message.senderId || 'unknown', 
                     name: 'Unknown User', 
@@ -1806,7 +1793,6 @@ const App: React.FC = () => {
                 setViewedTribe(prev => {
                     if (!prev) return null;
                     if (prev.messages.some(m => m.id === message.id)) return prev;
-                    // Replace temp message if exists
                     const tempIndex = prev.messages.findIndex(m => m.id.startsWith('temp-') && m.text === message.text);
                     if (tempIndex !== -1) {
                          const newMsgs = [...prev.messages];
@@ -2114,7 +2100,7 @@ const App: React.FC = () => {
             setViewedTribe({ ...tribe, messages: [] });
             setActiveNavItem('TribeDetail');
             const { data: messages } = await api.fetchTribeMessages(tribe.id);
-            const populatedMessages = messages.map((msg: any) => ({ ...msg, sender: userMap.get(msg.sender) })).filter((m: TribeMessage) => m.sender);
+            const populatedMessages = messages.map((msg: any) => ({ ...msg, sender: userMap.get(msg.sender) })).filter((m: any) => m.sender);
             setViewedTribe(prev => prev ? { ...prev, messages: populatedMessages } : null);
         } catch (error) {
             console.error("Failed to fetch tribe messages:", error);
@@ -2264,7 +2250,6 @@ const App: React.FC = () => {
     
     if (!currentUser) return <LoginPage />;
     
-    // Only show "Waking up server" if we have absolutely no data and are fetching
     if (!isDataLoaded && isFetching && posts.length === 0) {
         return <div className="min-h-screen bg-background flex flex-col items-center justify-center"><img src="/duckload.gif" alt="Loading..." className="w-24 h-24" /><h1 className="mt-4 text-xl font-semibold text-primary">Waking up the server...</h1></div>;
     }
