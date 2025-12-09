@@ -1,12 +1,13 @@
 
 
 
+
 // import React, { useState, useEffect, useCallback, useMemo } from 'react';
 // import { Conversation, User, Message, Post } from '../../types';
 // import ConversationList from './ConversationList';
 // import { MessageArea } from './MessageArea';
 // import NewMessageModal from './NewMessageModal';
-// import * as api from '../../api.ts';
+// import * as api from '../../api';
 // import { useSocket } from '../../contexts/SocketContext';
 
 // interface ChatPageProps {
@@ -204,7 +205,8 @@
 //   };
   
 //   return (
-//     <div className="h-full bg-surface md:rounded-2xl md:border md:border-border md:shadow-lg flex overflow-hidden relative">
+//     // Removed rounded corners here (md:rounded-2xl)
+//     <div className="h-full bg-surface md:border md:border-border md:shadow-lg flex overflow-hidden relative">
 //        <div 
 //         className={`w-full md:w-[320px] lg:w-[380px] flex-shrink-0 flex flex-col transition-transform duration-300 ease-in-out md:static absolute inset-0 z-10 md:border-r md:border-border bg-surface ${
 //           isMessageAreaVisible ? '-translate-x-full' : 'translate-x-0'
@@ -242,12 +244,13 @@
 
 
 
+
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Conversation, User, Message, Post } from '../../types';
 import ConversationList from './ConversationList';
 import { MessageArea } from './MessageArea';
 import NewMessageModal from './NewMessageModal';
-import * as api from '../../api';
+import * as api from '../../api.ts';
 import { useSocket } from '../../contexts/SocketContext';
 
 interface ChatPageProps {
@@ -271,8 +274,6 @@ const ChatPage: React.FC<ChatPageProps> = ({ currentUser, allUsers, chukUser, in
   const { socket, onlineUsers, clearUnreadMessages, unreadCounts, setActiveChatPartnerId } = useSocket();
 
   useEffect(() => {
-    // When ChatPage is unmounted (e.g., user navigates away),
-    // ensure we clear the active chat partner ID so notifications resume correctly.
     return () => {
       setActiveChatPartnerId(null);
     };
@@ -307,10 +308,17 @@ const ChatPage: React.FC<ChatPageProps> = ({ currentUser, allUsers, chukUser, in
     if (!socket) return;
     
     const handleNewMessage = (message: Message) => {
+        // Fix: Ignore message if I sent it (prevents duplicates)
+        if (message.senderId === currentUser.id) return;
+
         const isActiveConversation = (activeConversation?.participants.some(p => p.id === message.senderId) && activeConversation?.participants.some(p => p.id === message.receiverId));
 
         if (isActiveConversation) {
-            setMessages(prev => [...prev, message]);
+            setMessages(prev => {
+                // Double check to prevent duplicates even if logic fails elsewhere
+                if (prev.some(m => m.id === message.id)) return prev;
+                return [...prev, message];
+            });
         }
         
         setConversations(prev => {
@@ -445,7 +453,6 @@ const ChatPage: React.FC<ChatPageProps> = ({ currentUser, allUsers, chukUser, in
   };
   
   return (
-    // Removed rounded corners here (md:rounded-2xl)
     <div className="h-full bg-surface md:border md:border-border md:shadow-lg flex overflow-hidden relative">
        <div 
         className={`w-full md:w-[320px] lg:w-[380px] flex-shrink-0 flex flex-col transition-transform duration-300 ease-in-out md:static absolute inset-0 z-10 md:border-r md:border-border bg-surface ${
