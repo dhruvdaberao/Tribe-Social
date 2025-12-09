@@ -308,14 +308,14 @@ const ChatPage: React.FC<ChatPageProps> = ({ currentUser, allUsers, chukUser, in
     if (!socket) return;
     
     const handleNewMessage = (message: Message) => {
-        // Fix: Ignore message if I sent it (prevents duplicates)
+        // FIX: Ignore duplicate messages sent by self (since we add them optimistically)
         if (message.senderId === currentUser.id) return;
 
         const isActiveConversation = (activeConversation?.participants.some(p => p.id === message.senderId) && activeConversation?.participants.some(p => p.id === message.receiverId));
 
         if (isActiveConversation) {
             setMessages(prev => {
-                // Double check to prevent duplicates even if logic fails elsewhere
+                // Double check for duplicates
                 if (prev.some(m => m.id === message.id)) return prev;
                 return [...prev, message];
             });

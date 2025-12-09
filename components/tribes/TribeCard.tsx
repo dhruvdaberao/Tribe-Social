@@ -179,7 +179,7 @@ const TribeCard: React.FC<TribeCardProps> = ({ tribe, isMember, currentUser, onJ
                     className={`w-full font-semibold px-4 py-2 rounded-lg transition-colors text-sm ${
                        isMember
                        ? 'bg-surface text-red-500 border border-border hover:bg-red-500/10'
-                       : 'bg-accent text-accent-text hover:bg-accent-hover'
+                       : 'bg-accent text-accent-text hover:bg-accent-hover w-full'
                     }`}
                 >
                     {isMember ? 'Leave' : 'Join'}

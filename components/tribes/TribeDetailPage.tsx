@@ -1293,7 +1293,7 @@ import { Tribe, User, TribeMessage } from '../../types';
 import UserAvatar from '../common/UserAvatar';
 import { useSocket } from '../../contexts/SocketContext';
 import TribeMembersModal from './TribeMembersModal';
-import * as api from '../../api'; // Assumed in root
+import * as api from '../../api';
 
 interface TribeDetailPageProps {
   tribe: Tribe;
@@ -1321,14 +1321,11 @@ const TribePlaceholderIcon = () => (
 
 
 const TribeDetailPage: React.FC<TribeDetailPageProps> = (props) => {
-  const { tribe, currentUser, userMap, onSendMessage, onDeleteMessage, onDeleteTribe, onBack, onViewProfile, onEditTribe, onJoinToggle } = props;
+  const { tribe, currentUser, userMap, onSendMessage, onDeleteMessage, onDeleteTribe, onBack, onViewProfile, onEditTribe } = props;
   const [inputText, setInputText] = useState('');
   const [typingUsers, setTypingUsers] = useState<string[]>([]);
   const [isMembersModalOpen, setMembersModalOpen] = useState(false);
-  
-  // Local state to handle messages specifically for this view
   const [localMessages, setLocalMessages] = useState<TribeMessage[]>([]);
-  
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const { socket, clearUnreadTribe } = useSocket();
@@ -1357,10 +1354,7 @@ const TribeDetailPage: React.FC<TribeDetailPageProps> = (props) => {
                 const currentIds = new Set(prev.map(m => m.id));
                 const newMsgs = tribe.messages.filter(m => !currentIds.has(m.id));
                 
-                // If there are new messages, append them. 
-                // Also, replace any temp messages with confirmed ones if IDs match logic (not implemented here but good practice)
                 if (newMsgs.length === 0) return prev;
-                
                 return [...prev, ...newMsgs];
            });
       }
@@ -1376,10 +1370,8 @@ const TribeDetailPage: React.FC<TribeDetailPageProps> = (props) => {
 
   useEffect(() => {
     if (!socket) return;
-    const handleTyping = ({ userName, userId }: { userName: string, userId: string }) => {
-        if (userId !== currentUser.id) {
-            setTypingUsers(prev => [...new Set([...prev, userName])]);
-        }
+    const handleTyping = ({ userName }: { userName: string }) => {
+        setTypingUsers(prev => [...new Set([...prev, userName])]);
     };
     const handleStopTyping = ({ userName }: { userName: string }) => {
         setTypingUsers(prev => prev.filter(name => name !== userName));
@@ -1391,7 +1383,7 @@ const TribeDetailPage: React.FC<TribeDetailPageProps> = (props) => {
       socket.off('userTyping');
       socket.off('userStoppedTyping');
     };
-  }, [socket, currentUser.id]);
+  }, [socket]);
   
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setInputText(e.target.value);
@@ -1439,7 +1431,6 @@ const TribeDetailPage: React.FC<TribeDetailPageProps> = (props) => {
     const otherTypingUsers = typingUsers.filter(name => name !== currentUser.name);
     if (otherTypingUsers.length === 0) return `${tribe.members.length} members`;
     if (otherTypingUsers.length === 1) return `${otherTypingUsers[0]} is typing...`;
-    if (otherTypingUsers.length === 2) return `${otherTypingUsers[0]} and ${otherTypingUsers[1]} are typing...`;
     return 'Several people are typing...';
   }, [typingUsers, tribe.members.length, currentUser.name]);
 
@@ -1493,28 +1484,35 @@ const TribeDetailPage: React.FC<TribeDetailPageProps> = (props) => {
         <div className="flex-1 overflow-y-auto p-4 bg-background">
           <div className="flex flex-col space-y-2">
             {localMessages.map(message => {
-              // Robust ID retrieval
-              const rawSenderId = message.senderId;
-              const senderId = typeof rawSenderId === 'object' && rawSenderId ? (rawSenderId as any)._id || (rawSenderId as any).id : rawSenderId;
+              // Robust Sender Resolution to fix "Unknown User"
+              // 1. Try message.sender (if populated object)
+              // 2. Try map lookups
+              let sender: User | null = null;
               
-              // Correct Alignment Check
-              const isCurrentUser = String(senderId) === String(currentUser.id);
-              
-              // Robust Sender Resolution
-              // 1. Use `message.sender` (populated object from backend/socket)
-              // 2. Use `message.senderId` (if it happens to be the populated object)
-              // 3. Look up in `userMap`
-              // 4. Fallback
-              const sender = message.sender || (typeof message.senderId === 'object' ? message.senderId : null) || userMap.get(String(senderId)) || { name: 'Unknown User', avatarUrl: null, id: 'unknown', username: 'unknown' };
+              if (message.sender && typeof message.sender === 'object' && 'name' in message.sender) {
+                  sender = message.sender as User;
+              } else if (message.senderId) {
+                  const idToCheck = typeof message.senderId === 'object' ? (message.senderId as any).id : message.senderId;
+                  sender = userMap.get(idToCheck) || null;
+              }
+
+              // Robust Alignment Check
+              // Handle case where senderId is object or string
+              const rawSenderId = message.senderId || (message.sender ? message.sender.id : null);
+              const senderIdStr = typeof rawSenderId === 'object' ? (rawSenderId as any).toString() : String(rawSenderId);
+              const isCurrentUser = senderIdStr === String(currentUser.id);
+
+              // Fallback for UI if sender still null
+              const displaySender = sender || (isCurrentUser ? currentUser : { name: 'Unknown User', avatarUrl: null, id: 'unknown', username: 'unknown' } as User);
 
               return (
                 <div key={message.id} className={`flex items-end gap-2.5 group ${isCurrentUser ? 'justify-end' : 'justify-start'}`}>
                   {!isCurrentUser && (
                       <div 
                           className="w-8 h-8 rounded-full cursor-pointer self-start flex-shrink-0"
-                          onClick={() => sender.id !== 'unknown' && onViewProfile(sender as User)}
+                          onClick={() => displaySender.id !== 'unknown' && onViewProfile(displaySender)}
                       >
-                          <UserAvatar user={sender as User} className="w-full h-full" />
+                          <UserAvatar user={displaySender} className="w-full h-full" />
                       </div>
                   )}
                   {isCurrentUser && (
@@ -1526,9 +1524,9 @@ const TribeDetailPage: React.FC<TribeDetailPageProps> = (props) => {
                       {!isCurrentUser && (
                           <p 
                               className="text-xs text-secondary mb-1 ml-3 cursor-pointer hover:underline"
-                              onClick={() => sender.id !== 'unknown' && onViewProfile(sender as User)}
+                              onClick={() => displaySender.id !== 'unknown' && onViewProfile(displaySender)}
                           >
-                              {sender.name}
+                              {displaySender.name}
                           </p>
                       )}
                       <div className={`px-4 py-2.5 text-sm break-words ${isCurrentUser ? 'bg-accent text-accent-text rounded-2xl rounded-tr-none' : 'bg-surface text-primary shadow-sm rounded-2xl rounded-tl-none'}`}>
@@ -1586,6 +1584,5 @@ const SendIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-
 const BackIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>;
 const EditIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.536l12.232-12.232z" /></svg>;
 const TrashIcon = ({ className = 'h-5 w-5' }: { className?: string; }) => <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>;
-
 
 export default TribeDetailPage;

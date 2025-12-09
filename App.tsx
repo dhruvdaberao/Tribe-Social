@@ -2350,6 +2350,9 @@ const App: React.FC = () => {
     const [isCreatingPost, setIsCreatingPost] = useState(false);
     const [isAllPostsLoaded, setIsAllPostsLoaded] = useState(false);
     
+    // Use refs for timestamps to avoid re-renders
+    const lastFetchTimestamp = useRef<number>(0);
+
     // Navigation & Modal State
     const [activeNavItem, setActiveNavItem] = useState<NavItem>('Home');
     const [viewedUser, setViewedUser] = useState<User | null>(null);
@@ -2374,7 +2377,6 @@ const App: React.FC = () => {
 
     const populatePost = useCallback((postFromApi: any, userMapToUse: Map<string, User>): Post | null => {
         const { user: author, ...restOfPost } = postFromApi;
-        // If author is null (deleted user), skip
         if (!author) return null;
         
         return {
@@ -2388,13 +2390,16 @@ const App: React.FC = () => {
     }, []);
 
     const fetchData = useCallback(async () => {
-        if (isFetching) return;
+        // Prevent excessive calls, but allow updates reasonably often (e.g., 5s)
+        if (isFetching || (Date.now() - lastFetchTimestamp.current < 5000)) return;
+        
         if (!currentUser) {
             setIsDataLoaded(false);
             return;
         }
         
         setIsFetching(true);
+        lastFetchTimestamp.current = Date.now();
 
         try {
             const results = await Promise.allSettled([
@@ -2500,12 +2505,10 @@ const App: React.FC = () => {
             if (populated) setPosts(prev => prev.map(p => p.id === populated.id ? populated : p));
         };
         const handlePostDeleted = (postId: string) => setPosts(prev => prev.filter(p => p.id !== postId));
-        
-        // Handle incoming tribe messages globally (mainly for updating unread counts or other logic)
-        // Note: The specific TribeDetailPage handles its own message list updates now for better stability
         const handleNewTribeMessage = (message: TribeMessage) => {
             if(viewedTribe && viewedTribe.id === message.tribeId) {
                 const sender = message.sender || userMap.get(message.senderId!);
+                
                 if (sender) {
                     setViewedTribe(prev => {
                         if (!prev) return null;
@@ -2805,8 +2808,11 @@ const App: React.FC = () => {
             clearUnreadTribe(tribe.id);
             setViewedTribe({ ...tribe, messages: [] });
             setActiveNavItem('TribeDetail');
+            const { data: messages } = await api.fetchTribeMessages(tribe.id);
+            const populatedMessages = messages.map((msg: any) => ({ ...msg, sender: userMap.get(msg.sender) || msg.sender })).filter((m: TribeMessage) => m.sender);
+            setViewedTribe(prev => prev ? { ...prev, messages: populatedMessages } : null);
         } catch (error) {
-            console.error("Failed to set tribe view:", error);
+            console.error("Failed to fetch tribe messages:", error);
         }
     };
 
@@ -2952,6 +2958,7 @@ const App: React.FC = () => {
     
     if (!currentUser) return <LoginPage />;
     
+    // Only show loading screen if we have absolutely no data (first load)
     if (!isDataLoaded && isFetching && posts.length === 0) {
         return <div className="min-h-screen bg-background flex flex-col items-center justify-center"><img src="/duckload.gif" alt="Loading..." className="w-24 h-24" /><h1 className="mt-4 text-xl font-semibold text-primary">Waking up the server...</h1></div>;
     }
