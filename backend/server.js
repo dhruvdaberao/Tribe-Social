@@ -222,6 +222,7 @@
 
 
 
+
 import express from 'express';
 import dotenv from 'dotenv';
 import cors from 'cors';
@@ -246,36 +247,55 @@ const startServer = async () => {
   console.log("🚀 Starting Tribe Backend Server...");
   
   try {
+    console.log("1. Attempting to connect to MongoDB...");
     await connectDB();
-    console.log("✅ MongoDB connected.");
+    console.log("✅ MongoDB connected successfully.");
 
     const app = express();
     const httpServer = createServer(app);
 
-    // Dynamic CORS configuration
+    // Dynamic CORS configuration to allow multiple origins easily
     const corsOptions = {
-      origin: true, 
+      origin: (origin, callback) => {
+        // Allow requests with no origin (like mobile apps or curl requests)
+        if (!origin) return callback(null, true);
+        
+        // Allow localhost and Vercel deployments
+        if (origin.startsWith('http://localhost') || origin.endsWith('.vercel.app')) {
+          return callback(null, true);
+        }
+        
+        console.warn(`CORS Warning: Origin ${origin} not explicitly allowed, but allowing for now to prevent blocking.`);
+        callback(null, true); 
+      },
       credentials: true,
-      methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-      allowedHeaders: ["Origin", "X-Requested-With", "Content-Type", "Accept", "Authorization"]
+      methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+      allowedHeaders: ['Content-Type', 'Authorization']
     };
     
+    console.log("2. Configuring CORS and Express middleware...");
     app.use(cors(corsOptions));
     app.use(express.json({ limit: '50mb' }));
     
+    // Global Error Handler for JSON parsing errors
     app.use((err, req, res, next) => {
-        if (err instanceof SyntaxError && err.status === 400 && 'body' in err) {
-            return res.status(400).send({ message: 'Invalid JSON' });
-        }
-        next();
+      if (err instanceof SyntaxError && err.status === 400 && 'body' in err) {
+        console.error('Bad JSON Body:', err);
+        return res.status(400).send({ message: 'Invalid JSON body' });
+      }
+      next();
     });
 
+    console.log("✅ Middleware configured.");
+
+    console.log("3. Initializing Socket.IO...");
     const io = new Server(httpServer, {
       pingTimeout: 60000,
       cors: corsOptions,
     });
     app.set('io', io);
     const onlineUsers = initializeSocket(io);
+    console.log("✅ Socket.IO initialized.");
     
     app.use((req, res, next) => {
       req.io = io;
@@ -283,6 +303,7 @@ const startServer = async () => {
       next();
     });
     
+    console.log("4. Registering API routes...");
     app.use('/api/auth', authRoutes);
     app.use('/api/posts', postRoutes);
     app.use('/api/users', userRoutes);
@@ -291,22 +312,25 @@ const startServer = async () => {
     app.use('/api/notifications', notificationRoutes);
     app.use('/api/ai', aiRoutes);
     app.use('/api/stories', storyRoutes);
+    console.log("✅ API routes registered.");
 
-    app.get('/', (req, res) => res.send('Tribe API Running'));
-
-    // Global Error Handler to prevent crashes
-    app.use((err, req, res, next) => {
-        console.error("Unhandled Error:", err);
-        if(!res.headersSent) res.status(500).json({ message: "Internal Server Error" });
+    app.get('/', (req, res) => {
+      res.send('Tribe API is running...');
     });
 
     const PORT = process.env.PORT || 5001;
     httpServer.listen(PORT, () => {
-        console.log(`🎉 Server listening on port ${PORT}`);
+        console.log("----------------------------------");
+        console.log(`🎉 Server is live and listening on port ${PORT}`);
+        console.log("----------------------------------");
     });
 
   } catch (error) {
-    console.error("❌ FAILED TO START SERVER", error);
+    console.error("\n❌ FAILED TO START SERVER ❌");
+    console.error("----------------------------------");
+    console.error(error);
+    console.error("----------------------------------");
+    console.error("Server startup failed. Please check the error message above.");
     process.exit(1);
   }
 };
