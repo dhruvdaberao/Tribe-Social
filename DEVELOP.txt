@@ -378,3 +378,4 @@ Recent AI optimizations have introduced performance fixes (Cursor Pagination, Sa
     ```bash
     node backend/scripts/migrate-images-to-cloudinary.js --dry-run
     ```
+roll back
