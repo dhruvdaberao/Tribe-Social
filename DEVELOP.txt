@@ -215,3 +215,166 @@ Tribe Social follows a **Monolithic Client-Server Architecture** decoupled via A
 
 **30. What did you learn from this project?**
 *   **Answer:** I learned the importance of **Data Sanitization** (handling deleted users), **Memory Management** (pagination on free tier servers), and the complexity of **Real-time State Management** (syncing Optimistic UI with Socket events).
+
+---
+
+## PART 5: PROJECT DIRECTORY STRUCTURE
+
+```
+/
+├── backend/
+│   ├── config/
+│   │   └── db.js
+│   ├── middleware/
+│   │   └── authMiddleware.js
+│   ├── models/
+│   │   ├── clanMessageModel.js
+│   │   ├── clanModel.js
+│   │   ├── messageModel.js
+│   │   ├── notificationModel.js
+│   │   ├── postModel.js
+│   │   ├── storyModel.js
+│   │   ├── tribeMessageModel.js
+│   │   ├── tribeModel.js
+│   │   └── userModel.js
+│   ├── routes/
+│   │   ├── aiRoutes.js
+│   │   ├── authRoutes.js
+│   │   ├── clanRoutes.js
+│   │   ├── messageRoutes.js
+│   │   ├── notificationRoutes.js
+│   │   ├── postRoutes.js
+│   │   ├── storyRoutes.js
+│   │   ├── tribeRoutes.js
+│   │   └── userRoutes.js
+│   ├── scripts/
+│   │   └── migrate-images-to-cloudinary.js
+│   ├── package.json
+│   ├── server.js
+│   └── socketManager.js
+├── components/
+│   ├── auth/
+│   │   └── LoginPage.tsx
+│   ├── chat/
+│   │   ├── ChatPage.tsx
+│   │   ├── ConversationList.tsx
+│   │   ├── MessageArea.tsx
+│   │   └── NewMessageModal.tsx
+│   ├── clans/
+│   │   ├── ClanCard.tsx
+│   │   ├── ClanDetailPage.tsx
+│   │   ├── ClansPage.tsx
+│   │   ├── CreateClanModal.tsx
+│   │   └── EditTribeModal.tsx
+│   ├── common/
+│   │   ├── MarkdownRenderer.tsx
+│   │   ├── ShareButton.tsx
+│   │   ├── ShareModal.tsx
+│   │   ├── Toast.tsx
+│   │   └── UserAvatar.tsx
+│   ├── discover/
+│   │   └── DiscoverPage.tsx
+│   ├── feed/
+│   │   ├── CreatePost.tsx
+│   │   ├── FeedPage.tsx
+│   │   ├── ImageCropModal.tsx
+│   │   └── PostCard.tsx
+│   ├── layout/
+│   │   ├── FloatingActionButton.tsx
+│   │   └── Sidebar.tsx
+│   ├── notifications/
+│   │   └── NotificationsPage.tsx
+│   ├── profile/
+│   │   ├── BlockedListModal.tsx
+│   │   ├── FollowListModal.tsx
+│   │   ├── PostGridItem.tsx
+│   │   ├── PostViewModal.tsx
+│   │   └── ProfilePage.tsx
+│   ├── settings/
+│   │   ├── AboutUsPage.tsx
+│   │   ├── HelpPage.tsx
+│   │   └── SettingsPage.tsx
+│   ├── stories/
+│   │   ├── StoryCreator.tsx
+│   │   ├── StoryFeed.tsx
+│   │   └── StoryViewer.tsx
+│   ├── tribals/
+│   │   ├── TribalsPage.tsx
+│   │   └── UserCard.tsx
+│   ├── tribes/
+│   │   ├── CreateTribeModal.tsx
+│   │   ├── EditTribeModal.tsx
+│   │   ├── TribeCard.tsx
+│   │   ├── TribeDetailPage.tsx
+│   │   ├── TribeMembersModal.tsx
+│   │   └── TribesPage.tsx
+│   └── users/
+│       ├── DevNotesPage.tsx
+│       └── UserCard.tsx
+├── contexts/
+│   ├── AuthContext.tsx
+│   ├── SocketContext.tsx
+│   └── ThemeContext.tsx
+├── storage/
+│   └── safeStorage.ts
+├── tests/
+│   └── stubs.test.js
+├── api.ts
+├── App.tsx
+├── CHANGELOG-AI-FIXES.md
+├── BlockedListModal.tsx
+├── BlockListModal.tsx
+├── develop.txt
+├── index.css
+├── index.html
+├── index.tsx
+├── loader.svg
+├── manifest.json
+├── metadata.json
+├── package-lock.json
+├── package.json
+├── postcss.config.js
+├── POST-MERGE-CHECKLIST.md
+├── README.md
+├── README.txt
+├── README-scaling.md
+├── tailwind.config.js
+├── tsconfig.json
+├── tsconfig.node.json
+├── types.d.ts
+├── types.ts
+├── untitled-2.tsx
+├── untitled.tsx
+└── vite.config.ts
+```
+
+---
+
+## PART 6: MAJOR UPDATES & DEPLOYMENT ACTIONS (POST-OPTIMIZATION)
+
+Recent AI optimizations have introduced performance fixes (Cursor Pagination, Safe Storage, Security Headers). Here is what you must do to apply them:
+
+### 1. Local Development
+1.  **Backend Dependencies:** You MUST install the new security packages.
+    ```bash
+    cd backend
+    npm install
+    # Installs: compression, helmet, express-rate-limit
+    ```
+2.  **Restart Server:** Stop and restart `npm run server` to load the new middleware.
+3.  **Frontend:** No new installs required. Just reload the browser to pick up the `safeStorage` logic.
+
+### 2. Render (Backend Deployment)
+1.  **Push Code:** Commit and push the `backend/package.json` and `backend/server.js` changes.
+2.  **Verify Build:** Render will automatically detect the `package.json` change and run `npm install`. Monitor the logs to ensure `helmet` and `compression` install correctly.
+3.  **Environment Variables:** If you plan to use the image migration tool later, add `CLOUDINARY_URL` to your Render Environment Variables. Otherwise, no changes needed.
+
+### 3. Vercel (Frontend Deployment)
+1.  **Push Code:** Pushing the changes will trigger an automatic redeploy.
+2.  **Verify:** Open the live site console. You should no longer see `QuotaExceededError`.
+
+### 4. Database Maintenance (Optional)
+*   If your database is large (>50MB) or slow, run the new migration script locally to identify heavy images:
+    ```bash
+    node backend/scripts/migrate-images-to-cloudinary.js --dry-run
+    ```
