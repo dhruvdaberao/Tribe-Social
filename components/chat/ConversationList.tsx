@@ -292,7 +292,7 @@ const ConversationList: React.FC<ConversationListProps> = ({ conversations, isLo
         
         {isLoading ? (
             <div className="text-center p-8 text-secondary flex flex-col items-center">
-                <img src="/kiss.gif" alt="Loading..." className="w-24 h-auto mb-2" />
+                <img src="/busstop.gif" alt="Loading..." className="w-24 h-auto mb-2" />
                 <p>Loading your chats...</p>
             </div>
         ) : conversations.length === 0 ? (
