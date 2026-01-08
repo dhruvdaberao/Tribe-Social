@@ -1,42 +1,29 @@
-=== TRIBE SYSTEM DATA FLOW ARCHITECTURE ===
+=== TRIBE SOCIAL FINAL PRODUCTION ARCHITECTURE ===
 
-1. USER DATA (Name, Bio, Username, Followers/Following)
-   - STORAGE: MongoDB 'User' Collection.
-   - IMAGES (Avatar/Banner): Base64 sent to Backend -> Uploaded to Cloudinary ('tribe/avatars' folder) -> URL stored in MongoDB.
-   - FETCH: GET /api/users/profile (Current User) or GET /api/users/:id (Others).
-   - CACHE: Stored in 'currentUser' and 'allUsers' localStorage keys on Frontend.
+1. DATA HYDRATION (Layered Fallback)
+   - L1 (UI Cache): Immediate load from 'tr_cache_*' localStorage keys. No spinners.
+   - L2 (Background Refresh): Silent API fetch on every page load/mount.
+   - L3 (Real-time): Socket.io pushes updates (new posts/messages) to state without refresh.
 
-2. POST DATA (Text, Image)
-   - STORAGE: MongoDB 'Post' Collection.
-   - IMAGE: Base64 sent to Backend -> Uploaded to Cloudinary ('tribe/posts' folder) -> URL stored in MongoDB.
-   - FLOW: CreatePost.tsx -> handleAddPost (Optimistic) -> api.createPost -> Socket.io emits 'newPost' to all online users.
-   - FETCH: GET /api/posts/feed (Following + Me).
-   - CACHE: Stored in 'feed_posts' localStorage.
+2. MEDIA PIPELINE (Cloudinary-to-Mongo)
+   - UPLOAD: FE sends Base64 -> Backend -> Cloudinary.
+   - STORAGE: Cloudinary returns URL -> Backend saves URL to MongoDB field 'imageUrl'.
+   - NEVER: Store base64 in MongoDB. This prevents document size limits and 502 errors.
 
-3. STORY DATA (Temporary 24h)
-   - STORAGE: MongoDB 'Story' Collection (with TTL index).
-   - IMAGE: Same Cloudinary flow as Posts.
-   - FLOW: StoryCreator.tsx -> api.createStory -> App.tsx updates myStories state.
-   - FETCH: GET /api/stories/feed (Grouped by User).
+3. FEED & LIST PERFORMANCE
+   - INDEXING: Compound indexes on (user: 1, createdAt: -1) ensure O(log n) lookups.
+   - OPTIMIZATION: Mandatory .lean() on all find() queries to bypass Mongoose hydration overhead.
+   - PAGINATION: Enforced 10-15 item limit per page to reduce payload size.
 
-4. PRIVATE MESSAGING (DMs)
-   - STORAGE: MongoDB 'Message' Collection.
-   - FLOW: MessageArea.tsx -> api.sendMessage -> Socket.io emits 'newMessage' to specific User Room.
-   - REAL-TIME: Socket.io handles typing indicators and message delivery instantly.
-   - FETCH: GET /api/messages/:otherUserId.
+4. CHAT & REALTIME
+   - ROOMS: On connect, FE joins unique 'dm-id-id' and 'tribe-id' rooms.
+   - RELIABILITY: Socket emits are non-blocking. If DB write fails, socket remains unaffected.
+   - CACHE: Messages are persisted in state; reload fetches last 50 only.
 
-5. TRIBE CHAT (Group)
-   - STORAGE: MongoDB 'Tribe' (Meta) and 'TribeMessage' (Content) Collections.
-   - FLOW: TribeDetailPage.tsx -> api.sendTribeMessage -> Socket.io emits 'newTribeMessage' to Room 'tribe-{id}'.
-   - FETCH: GET /api/tribes/:id/messages.
+5. FAULT TOLERANCE
+   - EMPTY DB: All GET APIs strictly return empty arrays [] instead of null/500.
+   - TIMEOUTS: Axios timeout set to 20s with a single auto-retry for Render spin-up.
+   - GHOST DATA: Filters verify that populated 'user' field exists before sending to FE.
 
-6. NOTIFICATIONS
-   - STORAGE: MongoDB 'Notification' Collection.
-   - FLOW: Action (Like/Follow) -> Backend creates Doc -> Socket.io emits 'newNotification' to Recipient.
-   - FETCH: GET /api/notifications.
-
-=== WHERE IT BREAKS (TROUBLESHOOTING) ===
-- Blank Feed: Usually a 502/Timeout. Fix: FE Cache + DB Indexes.
-- Image Upload Fail: Cloudinary API Key error or Payload too large (>50mb).
-- Chat Not Working: Socket.io connection failed (Check SOCKET_URL).
-- Message Sent but Disappears: Optimistic UI failed or Backend returned 500.
+=== END-TO-END FLOW SUMMARY ===
+Action (Post/Msg) -> Optimistic UI Update -> API Call (Cloudinary + DB) -> Socket Broadcast -> Hydrate Recipients.
