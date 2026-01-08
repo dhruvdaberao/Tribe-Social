@@ -810,85 +810,86 @@ import Notification from '../models/notificationModel.js';
 
 const router = express.Router();
 
-// Helper to populate posts consistently
-const postPopulation = [
-    { path: 'user', select: 'name username avatarUrl' },
-    { path: 'comments.user', select: 'name username avatarUrl' }
+// HELPER: Reusable population config to keep payloads light
+const MINIMAL_USER = 'name username avatarUrl';
+const POST_POPULATION = [
+    { path: 'user', select: MINIMAL_USER },
+    { path: 'comments.user', select: MINIMAL_USER }
 ];
 
 // @route   GET /api/posts/feed
+// @desc    Get paginated feed for following
 router.get('/feed', protect, async (req, res) => {
     try {
         const page = parseInt(req.query.page) || 1;
         const limit = parseInt(req.query.limit) || 10;
         const skip = (page - 1) * limit;
 
-        const currentUser = await User.findById(req.user.id).lean();
+        const currentUser = await User.findById(req.user.id).select('following').lean();
         if (!currentUser) return res.status(401).json({ message: "User not found." });
         
-        const followingIds = (currentUser.following || []).map(id => new mongoose.Types.ObjectId(id));
-        const userIdsForFeed = [new mongoose.Types.ObjectId(req.user.id), ...followingIds];
+        const userIdsForFeed = [req.user.id, ...(currentUser.following || [])];
         
         const posts = await Post.find({ user: { $in: userIdsForFeed } })
             .sort({ createdAt: -1 })
             .skip(skip)
             .limit(limit)
-            .populate(postPopulation)
-            .lean();
+            .populate(POST_POPULATION)
+            .lean(); // Faster: returns plain JSON instead of Mongoose Docs
 
-        // Filter out posts with deleted users
-        const validPosts = posts.filter(post => post.user !== null);
-        res.json(validPosts);
+        res.json(posts);
     } catch (error) {
-        console.error("Feed error:", error);
-        res.json([]); 
+        console.error("Feed API Error:", error);
+        res.status(500).json([]); 
     }
 });
 
 // @route   GET /api/posts (Discover)
+// @desc    Get paginated posts for discovery
 router.get('/', protect, async (req, res) => {
     try {
         const page = parseInt(req.query.page) || 1;
-        const limit = parseInt(req.query.limit) || 12;
+        const limit = parseInt(req.query.limit) || 10; // Small batch for instant load
         const skip = (page - 1) * limit;
 
         const posts = await Post.find({})
             .sort({ createdAt: -1 })
             .skip(skip)
             .limit(limit)
-            .populate(postPopulation)
+            .populate(POST_POPULATION)
             .lean();
         
-        const validPosts = posts.filter(post => post.user !== null);
-        res.json(validPosts);
+        res.json(posts);
     } catch (error) {
-        console.error("Discover posts error:", error);
-        res.json([]);
+        console.error("Discover API Error:", error);
+        res.status(500).json([]);
     }
 });
 
-// @route   POST /api/posts
+// @route   GET /api/posts/:id
+router.get('/:id', protect, async (req, res) => {
+    try {
+        const post = await Post.findById(req.params.id)
+            .populate(POST_POPULATION)
+            .lean();
+        if (!post) return res.status(404).json({ message: 'Post not found' });
+        res.json(post);
+    } catch (error) {
+        res.status(500).json({ message: 'Server Error' });
+    }
+});
+
+// REST OF POST ROUTES (POST, DELETE, LIKE) REMAIN BUT UPDATED TO EMIT CLEAN DATA
 router.post('/', protect, async (req, res) => {
     const { content, imageUrl, tempId } = req.body;
     if (!content && !imageUrl) return res.status(400).json({ message: 'Post must have content or an image' });
     try {
         const post = new Post({ content: content || '', imageUrl: imageUrl || null, user: req.user.id });
         let createdPost = await post.save();
-        const populatedPost = await Post.findById(createdPost._id).populate(postPopulation).lean();
+        const populatedPost = await Post.findById(createdPost._id).populate(POST_POPULATION).lean();
         
         req.io.emit('newPost', { ...populatedPost, tempId });
         res.status(201).json(populatedPost);
-    } catch (error) {
-        res.status(500).json({ message: 'Server Error' });
-    }
-});
-
-// Remaining routes updated to use .lean() where possible
-router.get('/:id', protect, async (req, res) => {
-    try {
-        const post = await Post.findById(req.params.id).populate(postPopulation).lean();
-        if (!post) return res.status(404).json({ message: 'Post not found' });
-        res.json(post);
     } catch (error) {
         res.status(500).json({ message: 'Server Error' });
     }
