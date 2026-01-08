@@ -242,7 +242,7 @@ const API_URL = 'https://tribe-social-backend.onrender.com';
 
 const API = axios.create({ 
   baseURL: `${API_URL}/api`,
-  timeout: 20000 // Reduced to 20s for better user experience fallback
+  timeout: 20000 
 });
 
 API.interceptors.request.use((req) => {
@@ -251,7 +251,6 @@ API.interceptors.request.use((req) => {
   return req;
 });
 
-// Auto-retry once on timeout
 API.interceptors.response.use(
   response => response,
   async error => {
@@ -282,6 +281,7 @@ export const deleteAccount = () => API.delete('/users/profile');
 // Posts
 export const fetchFeedPosts = (page = 1, limit = 10) => API.get(`/posts/feed?page=${page}&limit=${limit}`);
 export const fetchPosts = (page = 1, limit = 10) => API.get(`/posts?page=${page}&limit=${limit}`);
+export const fetchUserPosts = (userId: string) => API.get(`/posts/user/${userId}`);
 export const createPost = (newPost: any) => API.post('/posts', newPost);
 export const likePost = (id: string) => API.put(`/posts/${id}/like`);
 export const commentOnPost = (id: string, data: any) => API.post(`/posts/${id}/comments`, data);
@@ -294,6 +294,7 @@ export const sendMessage = (id: string, data: any) => API.post(`/messages/send/$
 
 // Tribes
 export const fetchTribes = () => API.get('/tribes');
+export const fetchMyTribes = () => API.get('/tribes/my-tribes');
 export const joinTribe = (id: string) => API.put(`/tribes/${id}/join`);
 export const fetchTribeMessages = (id: string) => API.get(`/tribes/${id}/messages`);
 export const sendTribeMessage = (id: string, data: any) => API.post(`/tribes/${id}/messages`, data);

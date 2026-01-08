@@ -1,3 +1,118 @@
+// // // import mongoose from 'mongoose';
+
+// // // const commentSchema = mongoose.Schema(
+// // //   {
+// // //     user: { type: mongoose.Schema.Types.ObjectId, required: true, ref: 'User' },
+// // //     text: { type: String, required: true },
+// // //   },
+// // //   {
+// // //     timestamps: { createdAt: true, updatedAt: false }
+// // //   }
+// // // );
+
+// // // commentSchema.set('toJSON', {
+// // //   transform: (document, returnedObject) => {
+// // //     returnedObject.id = returnedObject._id.toString();
+// // //     returnedObject.timestamp = returnedObject.createdAt;
+// // //     delete returnedObject._id;
+// // //     delete returnedObject.createdAt;
+// // //     delete returnedObject.updatedAt;
+// // //   }
+// // // });
+
+// // // const postSchema = mongoose.Schema(
+// // //   {
+// // //     user: { type: mongoose.Schema.Types.ObjectId, required: true, ref: 'User', index: true },
+// // //     content: { type: String, required: function() { return !this.imageUrl; } },
+// // //     imageUrl: { type: String },
+// // //     likes: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+// // //     comments: [commentSchema],
+// // //   },
+// // //   {
+// // //     timestamps: true,
+// // //   }
+// // // );
+
+// // // postSchema.set('toJSON', {
+// // //   transform: (document, returnedObject) => {
+// // //     returnedObject.id = returnedObject._id.toString();
+// // //     returnedObject.timestamp = returnedObject.createdAt;
+// // //     delete returnedObject._id;
+// // //     delete returnedObject.__v;
+// // //     delete returnedObject.createdAt;
+// // //     delete returnedObject.updatedAt;
+// // //   }
+// // // });
+
+// // // const Post = mongoose.model('Post', postSchema);
+// // // export default Post;
+
+
+
+
+
+
+// // // import mongoose from 'mongoose';
+
+// // // const commentSchema = mongoose.Schema(
+// // //   {
+// // //     user: { type: mongoose.Schema.Types.ObjectId, required: true, ref: 'User' },
+// // //     text: { type: String, required: true },
+// // //   },
+// // //   {
+// // //     timestamps: { createdAt: true, updatedAt: false }
+// // //   }
+// // // );
+
+// // // commentSchema.set('toJSON', {
+// // //   transform: (document, returnedObject) => {
+// // //     returnedObject.id = returnedObject._id.toString();
+// // //     returnedObject.timestamp = returnedObject.createdAt;
+// // //     delete returnedObject._id;
+// // //     delete returnedObject.createdAt;
+// // //     delete returnedObject.updatedAt;
+// // //   }
+// // // });
+
+// // // const postSchema = mongoose.Schema(
+// // //   {
+// // //     user: { type: mongoose.Schema.Types.ObjectId, required: true, ref: 'User', index: true },
+// // //     content: { type: String, required: function() { return !this.imageUrl; } },
+// // //     imageUrl: { type: String },
+// // //     likes: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+// // //     comments: [commentSchema],
+// // //   },
+// // //   {
+// // //     timestamps: true,
+// // //   }
+// // // );
+
+// // // // Index to optimize sorting posts by creation date
+// // // postSchema.index({ createdAt: -1 });
+
+// // // postSchema.set('toJSON', {
+// // //   transform: (document, returnedObject) => {
+// // //     returnedObject.id = returnedObject._id.toString();
+// // //     returnedObject.timestamp = returnedObject.createdAt;
+// // //     delete returnedObject._id;
+// // //     delete returnedObject.__v;
+// // //     delete returnedObject.createdAt;
+// // //     delete returnedObject.updatedAt;
+// // //   }
+// // // });
+
+// // // const Post = mongoose.model('Post', postSchema);
+// // // export default Post;
+
+
+
+
+
+
+
+
+
+
 // // import mongoose from 'mongoose';
 
 // // const commentSchema = mongoose.Schema(
@@ -33,63 +148,14 @@
 // //   }
 // // );
 
-// // postSchema.set('toJSON', {
-// //   transform: (document, returnedObject) => {
-// //     returnedObject.id = returnedObject._id.toString();
-// //     returnedObject.timestamp = returnedObject.createdAt;
-// //     delete returnedObject._id;
-// //     delete returnedObject.__v;
-// //     delete returnedObject.createdAt;
-// //     delete returnedObject.updatedAt;
-// //   }
-// // });
-
-// // const Post = mongoose.model('Post', postSchema);
-// // export default Post;
-
-
-
-
-
-
-// // import mongoose from 'mongoose';
-
-// // const commentSchema = mongoose.Schema(
-// //   {
-// //     user: { type: mongoose.Schema.Types.ObjectId, required: true, ref: 'User' },
-// //     text: { type: String, required: true },
-// //   },
-// //   {
-// //     timestamps: { createdAt: true, updatedAt: false }
-// //   }
-// // );
-
-// // commentSchema.set('toJSON', {
-// //   transform: (document, returnedObject) => {
-// //     returnedObject.id = returnedObject._id.toString();
-// //     returnedObject.timestamp = returnedObject.createdAt;
-// //     delete returnedObject._id;
-// //     delete returnedObject.createdAt;
-// //     delete returnedObject.updatedAt;
-// //   }
-// // });
-
-// // const postSchema = mongoose.Schema(
-// //   {
-// //     user: { type: mongoose.Schema.Types.ObjectId, required: true, ref: 'User', index: true },
-// //     content: { type: String, required: function() { return !this.imageUrl; } },
-// //     imageUrl: { type: String },
-// //     likes: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
-// //     comments: [commentSchema],
-// //   },
-// //   {
-// //     timestamps: true,
-// //   }
-// // );
-
-// // // Index to optimize sorting posts by creation date
+// // // CRITICAL INDEXES FOR PRODUCTION PERFORMANCE
+// // // 1. Global Feed Index (Sort by newest)
 // // postSchema.index({ createdAt: -1 });
 
+// // // 2. User/Following Feed Index (Filter by user + sort by newest)
+// // // This is the specific index needed to fix the "Feed Timeout"
+// // postSchema.index({ user: 1, createdAt: -1 });
+
 // // postSchema.set('toJSON', {
 // //   transform: (document, returnedObject) => {
 // //     returnedObject.id = returnedObject._id.toString();
@@ -103,10 +169,6 @@
 
 // // const Post = mongoose.model('Post', postSchema);
 // // export default Post;
-
-
-
-
 
 
 
@@ -139,7 +201,7 @@
 //   {
 //     user: { type: mongoose.Schema.Types.ObjectId, required: true, ref: 'User', index: true },
 //     content: { type: String, required: function() { return !this.imageUrl; } },
-//     imageUrl: { type: String },
+//     imageUrl: { type: String, default: null },
 //     likes: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
 //     comments: [commentSchema],
 //   },
@@ -148,12 +210,8 @@
 //   }
 // );
 
-// // CRITICAL INDEXES FOR PRODUCTION PERFORMANCE
-// // 1. Global Feed Index (Sort by newest)
+// // High-performance compound indexes for Render free tier
 // postSchema.index({ createdAt: -1 });
-
-// // 2. User/Following Feed Index (Filter by user + sort by newest)
-// // This is the specific index needed to fix the "Feed Timeout"
 // postSchema.index({ user: 1, createdAt: -1 });
 
 // postSchema.set('toJSON', {
@@ -169,7 +227,6 @@
 
 // const Post = mongoose.model('Post', postSchema);
 // export default Post;
-
 
 
 
@@ -199,7 +256,9 @@ commentSchema.set('toJSON', {
 
 const postSchema = mongoose.Schema(
   {
+    // user is kept for backward compatibility, author is the new standard
     user: { type: mongoose.Schema.Types.ObjectId, required: true, ref: 'User', index: true },
+    author: { type: mongoose.Schema.Types.ObjectId, required: true, ref: 'User', index: true },
     content: { type: String, required: function() { return !this.imageUrl; } },
     imageUrl: { type: String, default: null },
     likes: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
@@ -210,9 +269,10 @@ const postSchema = mongoose.Schema(
   }
 );
 
-// High-performance compound indexes for Render free tier
+// Compound indexes for feed and profile performance
 postSchema.index({ createdAt: -1 });
 postSchema.index({ user: 1, createdAt: -1 });
+postSchema.index({ author: 1, createdAt: -1 });
 
 postSchema.set('toJSON', {
   transform: (document, returnedObject) => {
