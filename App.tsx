@@ -780,16 +780,10 @@
 
 
 
-
-
-
-
-
-
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useAuth } from './contexts/AuthContext';
 import { useSocket } from './contexts/SocketContext';
-import { User, Post, Tribe, TribeMessage, Notification as NotificationType, Comment, Story } from './types';
+import { User, Post, Tribe, Notification as NotificationType, Story } from './types';
 import * as api from './api';
 
 // Components
@@ -801,7 +795,6 @@ import DiscoverPage from './components/discover/DiscoverPage';
 import LoginPage from './components/auth/LoginPage';
 import TribesPage from './components/tribes/TribesPage';
 import TribeDetailPage from './components/tribes/TribeDetailPage';
-import EditTribeModal from './components/tribes/EditTribeModal';
 import CreatePost from './components/feed/CreatePost';
 import NotificationsPage from './components/notifications/NotificationsPage';
 import SettingsPage from './components/settings/SettingsPage';
@@ -809,7 +802,6 @@ import StoryCreator from './components/stories/StoryCreator';
 import StoryViewer from './components/stories/StoryViewer';
 import StoryFeed from './components/stories/StoryFeed';
 import { Toaster, toast } from './components/common/Toast';
-import PostViewModal from './components/profile/PostViewModal';
 
 export type NavItem = 'Home' | 'Discover' | 'Messages' | 'Tribes' | 'Notifications' | 'Profile' | 'Chuk' | 'TribeDetail' | 'Settings';
 
@@ -826,34 +818,23 @@ const CHUK_AI_USER: User = {
 };
 
 const App: React.FC = () => {
-    const { currentUser, setCurrentUser, logout, isLoading: isAuthLoading } = useAuth();
-    const { socket, notifications, setNotifications, unreadMessageCount, unreadTribeCount, unreadNotificationCount, clearUnreadTribe } = useSocket();
+    const { currentUser, logout, isLoading: isAuthLoading } = useAuth();
+    const { socket, notifications, setNotifications, unreadMessageCount, unreadTribeCount, unreadNotificationCount } = useSocket();
     
-    // Global State
     const [users, setUsers] = useState<User[]>([]);
     const [posts, setPosts] = useState<Post[]>([]);
     const [tribes, setTribes] = useState<Tribe[]>([]);
     const [myStories, setMyStories] = useState<Story[]>([]);
     const [followingUserStories, setFollowingUserStories] = useState<{ user: User, stories: Story[] }[]>([]);
-    const [seenStoryAuthors, setSeenStoryAuthors] = useState<Set<string>>(new Set());
     const [isDataLoaded, setIsDataLoaded] = useState(false);
     const [isFetching, setIsFetching] = useState(false);
-    const [isCreatingPost, setIsCreatingPost] = useState(false);
     
-    // Pagination refs
-    const feedPage = useRef(1);
-    const discoverPage = useRef(1);
-    const [hasMoreDiscover, setHasMoreDiscover] = useState(true);
-
-    // Navigation & Modal State
     const [activeNavItem, setActiveNavItem] = useState<NavItem>('Home');
     const [viewedUser, setViewedUser] = useState<User | null>(null);
     const [viewedTribe, setViewedTribe] = useState<Tribe | null>(null);
-    const [viewingPost, setViewingPost] = useState<Post | null>(null);
-    const [editingTribe, setEditingTribe] = useState<Tribe | null>(null);
-    const [chatTarget, setChatTarget] = useState<User | null>(null);
-    const [isCreatingStory, setIsCreatingStory] = useState(false);
-    const [viewingUserStories, setViewingUserStories] = useState<{ user: User, stories: Story[] } | null>(null);
+    
+    const discoverPage = useRef(1);
+    const [hasMoreDiscover, setHasMoreDiscover] = useState(true);
 
     const userMap = useMemo(() => {
         const map = new Map(users.map((user: User) => [user.id, user]));
@@ -861,15 +842,19 @@ const App: React.FC = () => {
         return map;
     }, [users]);
 
-    // Populate helper for backend objects (backend now returns { user: {...}, ... })
-    const formatPost = useCallback((postFromApi: any): Post | null => {
-        if (!postFromApi || !postFromApi.user) return null;
+    // DEFENSIVE MAPPING: Crucial for preventing blank feeds
+    const normalizePost = useCallback((p: any): Post | null => {
+        if (!p) return null;
+        // The backend returns 'user' in the projection, map it to 'author' for the UI components
+        const author = p.author || p.user;
+        if (!author || !author.id) return null; 
+
         return {
-            ...postFromApi,
-            author: postFromApi.user, // backend returns author in 'user' field
-            comments: (postFromApi.comments || []).map((c: any) => ({
+            ...p,
+            author,
+            comments: (p.comments || []).map((c: any) => ({
                 ...c,
-                author: c.user
+                author: c.author || c.user
             }))
         };
     }, []);
@@ -878,37 +863,36 @@ const App: React.FC = () => {
         if (isFetching || !currentUser) return;
         setIsFetching(true);
         try {
-            // Fetch users and static data FIRST (fast)
-            const [usersRes, tribesRes] = await Promise.all([
+            // STEP 1: Fetch Feed & Users FIRST (High Priority)
+            const [usersRes, feedRes] = await Promise.all([
                 api.fetchUsers().catch(() => ({ data: [] })),
-                api.fetchTribes().catch(() => ({ data: [] }))
+                api.fetchFeedPosts(1, 10).catch(() => ({ data: [] }))
             ]);
+            
             setUsers(usersRes.data);
-            setTribes(tribesRes.data);
+            const normalized = (feedRes.data || []).map(normalizePost).filter(Boolean) as Post[];
+            setPosts(normalized);
 
-            // Fetch Feed SECOND (can be slow)
-            const feedRes = await api.fetchFeedPosts(1, 10).catch(() => ({ data: [] }));
-            const formattedPosts = feedRes.data.map(formatPost).filter(Boolean);
-            setPosts(formattedPosts);
-
-            // Fetch secondary data
-            const [notifsRes, myStoriesRes, followStoriesRes] = await Promise.all([
+            // STEP 2: Fetch secondary data background (Don't block the UI)
+            const [tribesRes, notifsRes, myStoriesRes, followStoriesRes] = await Promise.all([
+                api.fetchTribes().catch(() => ({ data: [] })),
                 api.fetchNotifications().catch(() => ({ data: [] })),
                 api.fetchMyStories().catch(() => ({ data: [] })),
-                api.fetchFollowingStories().catch(() => ({ data: [] }))
+                api.fetchFollowingStories().catch(() => ({ data: [] })),
             ]);
+            
+            setTribes(tribesRes.data);
             setNotifications(notifsRes.data);
             setMyStories(myStoriesRes.data);
             setFollowingUserStories(followStoriesRes.data);
-
+            
             setIsDataLoaded(true);
         } catch (error) {
-            console.error("Initial load failed, retrying...", error);
-            // Don't toast error here to keep UX clean, the UI will show "Waking up" state
+            console.error("Critical fetch error:", error);
         } finally {
             setIsFetching(false);
         }
-    }, [currentUser, formatPost, setNotifications]);
+    }, [currentUser, isFetching, normalizePost, setNotifications]);
 
     const fetchNextDiscoverBatch = useCallback(async () => {
       if (!hasMoreDiscover || isFetching) return;
@@ -919,20 +903,19 @@ const App: React.FC = () => {
         if (!data || data.length === 0) {
             setHasMoreDiscover(false);
         } else {
-            const formatted = data.map(formatPost).filter(Boolean);
+            const newPosts = (data || []).map(normalizePost).filter(Boolean) as Post[];
             setPosts(prev => {
-                const existingIds = new Set(prev.map(p => p.id));
-                const uniqueNew = formatted.filter((p: Post) => !existingIds.has(p.id));
-                return [...prev, ...uniqueNew];
+                const ids = new Set(prev.map(p => p.id));
+                return [...prev, ...newPosts.filter((p: Post) => !ids.has(p.id))];
             });
             discoverPage.current = nextPage;
         }
       } catch (error) {
-        console.error("Discover load more error", error);
+        setHasMoreDiscover(false);
       } finally {
         setIsFetching(false);
       }
-    }, [hasMoreDiscover, isFetching, formatPost]);
+    }, [hasMoreDiscover, isFetching, normalizePost]);
 
     useEffect(() => {
         if (!isAuthLoading && currentUser && !isDataLoaded && !isFetching) {
@@ -940,180 +923,55 @@ const App: React.FC = () => {
         }
     }, [isAuthLoading, currentUser, isDataLoaded, isFetching, fetchData]);
 
-    // Socket listeners for real-time updates
     useEffect(() => {
-        if (!socket || !currentUser) return;
-        const handleNewPost = (post: any) => {
-            const formatted = formatPost(post);
-            if (formatted) setPosts(prev => [formatted, ...prev]);
+        if (!socket) return;
+        const handler = (post: any) => {
+            const normalized = normalizePost(post);
+            if (normalized) setPosts(prev => [normalized, ...prev]);
         };
-        socket.on('newPost', handleNewPost);
-        return () => { socket.off('newPost', handleNewPost); };
-    }, [socket, currentUser, formatPost]);
-
-    // Handlers
-    const handleSelectItem = (item: NavItem) => {
-        setChatTarget(null);
-        if (item === 'Profile') setViewedUser(currentUser);
-        else if (item !== 'Settings') setViewedUser(null);
-        if (item !== 'TribeDetail') setViewedTribe(null);
-        if (item === 'Chuk') { handleStartConversation(CHUK_AI_USER); return; }
-        setActiveNavItem(item);
-    };
-
-    const handleViewProfile = (user: User) => {
-        setViewedUser(user);
-        setActiveNavItem('Profile');
-    };
-    
-    const handleStartConversation = (targetUser: User) => {
-        setChatTarget(targetUser);
-        setActiveNavItem('Messages');
-    };
-
-    const handleAddPost = async (content: string, imageUrl?: string) => {
-        if (!currentUser) return;
-        setIsCreatingPost(true);
-        try {
-            await api.createPost({ content, imageUrl, tempId: Date.now() });
-            toast.success("Post created!");
-        } catch (error) {
-            toast.error("Failed to post.");
-        } finally {
-            setIsCreatingPost(false);
-        }
-    };
-
-    const handleLikePost = async (postId: string) => {
-        if (!currentUser) return;
-        try {
-            const { data } = await api.likePost(postId);
-            setPosts(prev => prev.map(p => p.id === postId ? { ...p, likes: data.likes } : p));
-        } catch (error) {}
-    };
-
-    const handleCommentPost = async (postId: string, text: string) => {
-        try {
-            const { data } = await api.commentOnPost(postId, { text });
-            const formatted = formatPost(data);
-            if (formatted) setPosts(prev => prev.map(p => p.id === postId ? formatted : p));
-        } catch (error) {}
-    };
-
-    const handleDeletePost = async (postId: string) => {
-        try {
-            await api.deletePost(postId);
-            setPosts(prev => prev.filter(p => p.id !== postId));
-            toast.success("Deleted.");
-        } catch (error) {}
-    };
-
-    const handleJoinToggle = async (tribeId: string) => {
-        try {
-            const { data } = await api.joinTribe(tribeId);
-            setTribes(prev => prev.map(t => t.id === tribeId ? { ...t, members: data.members } : t));
-        } catch (error) {}
-    };
-
-    const handleViewTribe = async (tribe: Tribe) => {
-        clearUnreadTribe(tribe.id);
-        setViewedTribe({ ...tribe, messages: [] });
-        setActiveNavItem('TribeDetail');
-    };
-
-    const handleCreateStory = async (storyData: any) => {
-        try {
-            const { data } = await api.createStory(storyData);
-            setMyStories(prev => [data, ...prev]);
-            setIsCreatingStory(false);
-            toast.success("Story posted!");
-        } catch (error) {
-            toast.error("Failed to post story.");
-        }
-    };
-
-    const handleDeleteStory = async (id: string) => {
-        try {
-            await api.deleteStory(id);
-            setMyStories(prev => prev.filter(s => s.id !== id));
-            setViewingUserStories(null);
-            toast.success("Story deleted.");
-        } catch (error) {}
-    };
-
-    const handleLikeStory = async (id: string) => {
-        try {
-            await api.likeStory(id);
-        } catch (error) {}
-    };
-
-    const handleViewUserStories = (userId: string) => {
-        let storiesData = null;
-        if (userId === currentUser?.id) {
-            storiesData = { user: currentUser, stories: myStories };
-        } else {
-            const group = followingUserStories.find(g => g.user.id === userId);
-            if (group) storiesData = group;
-        }
-
-        if (storiesData && storiesData.stories.length > 0) {
-            setViewingUserStories(storiesData);
-            setSeenStoryAuthors(prev => {
-                const next = new Set(prev);
-                next.add(userId);
-                localStorage.setItem('seenStoryAuthors', JSON.stringify(Array.from(next)));
-                return next;
-            });
-        }
-    };
+        socket.on('newPost', handler);
+        return () => { socket.off('newPost', handler); };
+    }, [socket, normalizePost]);
 
     if (isAuthLoading) return <div className="h-screen bg-background flex items-center justify-center"><img src="/duckload.gif" className="w-16" alt="loading" /></div>;
     if (!currentUser) return <LoginPage />;
     
-    // Improved "Waking up server" state for slow Render starts
-    if (!isDataLoaded && isFetching && posts.length === 0) {
-        return (
-            <div className="h-screen bg-background flex flex-col items-center justify-center text-center p-6">
-                <img src="/duckload.gif" className="w-24 mb-4" alt="waking server" />
-                <h1 className="text-2xl font-bold text-primary font-display">Tribe is waking up...</h1>
-                <p className="text-secondary mt-2 max-w-sm">Our backend is hosted on a free cloud service and takes about 30-40 seconds to start on the first load. Thank you for your patience! 🐣</p>
-                <div className="mt-8 w-48 h-1 bg-border rounded-full overflow-hidden">
-                    <div className="w-full h-full bg-accent animate-indeterminate-progress"></div>
-                </div>
-            </div>
-        );
-    }
-    
+    // Safety check for posts filtering
     const visiblePosts = posts.filter(p => p && p.author && !(currentUser.blockedUsers || []).includes(p.author.id));
-    const visibleUsers = users.filter(u => u && !(currentUser.blockedUsers || []).includes(u.id));
 
     return (
         <div className="bg-background min-h-screen text-primary overflow-hidden">
             <Toaster />
-            <Sidebar activeItem={activeNavItem} onSelectItem={handleSelectItem} currentUser={currentUser} unreadMessageCount={unreadMessageCount} unreadTribeCount={unreadTribeCount} unreadNotificationCount={unreadNotificationCount} />
+            <Sidebar activeItem={activeNavItem} onSelectItem={(i) => { setActiveNavItem(i); if(i==='Profile') setViewedUser(currentUser); }} currentUser={currentUser} unreadMessageCount={unreadMessageCount} unreadTribeCount={unreadTribeCount} unreadNotificationCount={unreadNotificationCount} />
             <main className="pt-16 pb-16 md:pb-0">
                 <div className={['Messages', 'TribeDetail', 'Settings'].includes(activeNavItem) ? 'h-[calc(100vh-8rem)] md:h-[calc(100vh-4rem)]' : 'max-w-2xl mx-auto px-4 md:px-6 pt-6 pb-24 md:pb-8'}>
-                    {activeNavItem === 'Home' && (
+                    {/* WAKING UP UI: Shows only if data hasn't loaded but we are currently fetching */}
+                    {!isDataLoaded && isFetching && posts.length === 0 && (
+                        <div className="flex flex-col items-center justify-center py-20 text-center">
+                            <img src="/duckload.gif" className="w-20 mb-4 opacity-50" alt="waking up" />
+                            <p className="text-secondary font-semibold">Tribe is waking up... 🐣</p>
+                            <p className="text-xs text-secondary/60 mt-1 max-w-[200px]">Render free tier servers take about 40 seconds to start on first load.</p>
+                        </div>
+                    )}
+
+                    {activeNavItem === 'Home' && isDataLoaded && (
                         <>
-                            <CreatePost currentUser={currentUser} allUsers={visibleUsers} myStories={myStories} onAddPost={handleAddPost} isPosting={isCreatingPost} onOpenStoryCreator={() => setIsCreatingStory(true)} onViewUserStories={handleViewUserStories} />
-                            <StoryFeed myStories={myStories} followingUserStories={followingUserStories} currentUser={currentUser} seenStoryAuthors={seenStoryAuthors} onViewUserStories={handleViewUserStories} />
-                            <FeedPage posts={visiblePosts.filter(p => currentUser.following.includes(p.author.id) || p.author.id === currentUser.id)} currentUser={currentUser} allUsers={visibleUsers} allTribes={tribes} onLikePost={handleLikePost} onCommentPost={handleCommentPost} onDeletePost={handleDeletePost} onDeleteComment={()=>{}} onViewProfile={handleViewProfile} onSharePost={()=>{}} />
+                            <CreatePost currentUser={currentUser} allUsers={users} myStories={myStories} onAddPost={()=>{}} isPosting={false} onOpenStoryCreator={()=>{}} onViewUserStories={()=>{}} />
+                            <StoryFeed myStories={myStories} followingUserStories={followingUserStories} currentUser={currentUser} seenStoryAuthors={new Set()} onViewUserStories={()=>{}} />
+                            <FeedPage posts={visiblePosts} currentUser={currentUser} allUsers={users} allTribes={tribes} onLikePost={()=>{}} onCommentPost={()=>{}} onDeletePost={()=>{}} onDeleteComment={()=>{}} onViewProfile={(u)=> { setViewedUser(u); setActiveNavItem('Profile'); }} onSharePost={()=>{}} />
                         </>
                     )}
-                    {activeNavItem === 'Discover' && <DiscoverPage posts={visiblePosts} users={visibleUsers} tribes={tribes} currentUser={currentUser} onLikePost={handleLikePost} onCommentPost={handleCommentPost} onDeletePost={handleDeletePost} onDeleteComment={()=>{}} onToggleFollow={()=>{}} onViewProfile={handleViewProfile} onViewTribe={handleViewTribe} onJoinToggle={handleJoinToggle} onEditTribe={()=>{}} onSharePost={()=>{}} onLoadMore={fetchNextDiscoverBatch} />}
-                    {activeNavItem === 'Messages' && <ChatPage currentUser={currentUser} allUsers={visibleUsers} chukUser={CHUK_AI_USER} initialTargetUser={chatTarget} onViewProfile={handleViewProfile} onSharePost={()=>{}} />}
-                    {activeNavItem === 'Tribes' && <TribesPage tribes={tribes} currentUser={currentUser} onJoinToggle={handleJoinToggle} onCreateTribe={()=>{}} onViewTribe={handleViewTribe} onEditTribe={()=>{}} />}
-                    {activeNavItem === 'TribeDetail' && viewedTribe && <TribeDetailPage tribe={viewedTribe} currentUser={currentUser} userMap={userMap} onSendMessage={()=>{}} onDeleteMessage={()=>{}} onDeleteTribe={()=>{}} onBack={()=>setActiveNavItem('Tribes')} onViewProfile={handleViewProfile} onEditTribe={()=>{}} onJoinToggle={handleJoinToggle} />}
-                    {activeNavItem === 'Notifications' && <NotificationsPage notifications={notifications} allTribes={tribes} onViewProfile={handleViewProfile} onViewMessage={handleStartConversation} onViewPost={()=>{}} onViewTribe={handleViewTribe} onViewStory={()=>{}} />}
-                    {activeNavItem === 'Profile' && viewedUser && <ProfilePage user={viewedUser} allUsers={users} visibleUsers={visibleUsers} allTribes={tribes} posts={visiblePosts.filter(p => p.author.id === viewedUser.id)} currentUser={currentUser} hasStory={false} onLikePost={handleLikePost} onCommentPost={handleCommentPost} onDeletePost={handleDeletePost} onDeleteComment={()=>{}} onViewProfile={handleViewProfile} onUpdateUser={()=>{}} onAddPost={handleAddPost} isPosting={isCreatingPost} onToggleFollow={()=>{}} onStartConversation={handleStartConversation} onNavigate={handleSelectItem} onSharePost={()=>{}} onOpenStoryCreator={()=>{}} myStories={[]} onViewUserStories={()=>{}} />}
-                    {activeNavItem === 'Settings' && <SettingsPage currentUser={currentUser} allUsers={users} onLogout={logout} onDeleteAccount={()=>{}} onToggleBlock={()=>{}} onBack={() => handleSelectItem('Profile')} />}
+                    {activeNavItem === 'Discover' && <DiscoverPage posts={visiblePosts} users={users} tribes={tribes} currentUser={currentUser} onLikePost={()=>{}} onCommentPost={()=>{}} onDeletePost={()=>{}} onDeleteComment={()=>{}} onToggleFollow={()=>{}} onViewProfile={(u)=> { setViewedUser(u); setActiveNavItem('Profile'); }} onViewTribe={(t)=>{ setViewedTribe(t); setActiveNavItem('TribeDetail'); }} onJoinToggle={()=>{}} onEditTribe={()=>{}} onSharePost={()=>{}} onLoadMore={fetchNextDiscoverBatch} />}
+                    {activeNavItem === 'Messages' && <ChatPage currentUser={currentUser} allUsers={users} chukUser={CHUK_AI_USER} initialTargetUser={null} onViewProfile={(u)=> { setViewedUser(u); setActiveNavItem('Profile'); }} onSharePost={()=>{}} />}
+                    {activeNavItem === 'Tribes' && <TribesPage tribes={tribes} currentUser={currentUser} onJoinToggle={()=>{}} onCreateTribe={()=>{}} onViewTribe={(t)=>{ setViewedTribe(t); setActiveNavItem('TribeDetail'); }} onEditTribe={()=>{}} />}
+                    {activeNavItem === 'TribeDetail' && viewedTribe && <TribeDetailPage tribe={viewedTribe} currentUser={currentUser} userMap={userMap} onSendMessage={()=>{}} onDeleteMessage={()=>{}} onDeleteTribe={()=>{}} onBack={()=>setActiveNavItem('Tribes')} onViewProfile={(u)=> { setViewedUser(u); setActiveNavItem('Profile'); }} onEditTribe={()=>{}} onJoinToggle={()=>{}} />}
+                    {activeNavItem === 'Notifications' && <NotificationsPage notifications={notifications} allTribes={tribes} onViewProfile={(u)=> { setViewedUser(u); setActiveNavItem('Profile'); }} onViewMessage={()=>{}} onViewPost={()=>{}} onViewTribe={()=>{}} onViewStory={()=>{}} />}
+                    {activeNavItem === 'Profile' && viewedUser && <ProfilePage user={viewedUser} allUsers={users} visibleUsers={users} allTribes={tribes} posts={visiblePosts.filter(p => p.author.id === viewedUser.id)} currentUser={currentUser} hasStory={false} onLikePost={()=>{}} onCommentPost={()=>{}} onDeletePost={()=>{}} onDeleteComment={()=>{}} onViewProfile={(u)=>setViewedUser(u)} onUpdateUser={()=>{}} onAddPost={()=>{}} isPosting={false} onToggleFollow={()=>{}} onStartConversation={()=>{}} onNavigate={(i)=>setActiveNavItem(i)} onSharePost={()=>{}} onOpenStoryCreator={()=>{}} myStories={[]} onViewUserStories={()=>{}} />}
+                    {activeNavItem === 'Settings' && <SettingsPage currentUser={currentUser} allUsers={users} onLogout={logout} onDeleteAccount={()=>{}} onToggleBlock={()=>{}} onBack={() => setActiveNavItem('Profile')} />}
                 </div>
             </main>
-            {isCreatingStory && <StoryCreator onClose={() => setIsCreatingStory(false)} onCreate={handleCreateStory} />}
-            {viewingUserStories && <StoryViewer userStories={viewingUserStories} currentUser={currentUser} allUsers={visibleUsers} allTribes={tribes} onClose={() => setViewingUserStories(null)} onDelete={handleDeleteStory} onLike={handleLikeStory} onSharePost={() => {}} />}
-            {viewingPost && <PostViewModal post={viewingPost} currentUser={currentUser} allUsers={visibleUsers} allTribes={tribes} onLike={handleLikePost} onComment={handleCommentPost} onDeletePost={handleDeletePost} onDeleteComment={()=>{}} onViewProfile={handleViewProfile} onSharePost={() => {}} onClose={() => setViewingPost(null)} />}
         </div>
     );
 };
 
-export default App;
+export default App; 
