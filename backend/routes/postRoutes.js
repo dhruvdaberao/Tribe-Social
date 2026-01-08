@@ -1241,6 +1241,7 @@ import express from 'express';
 import protect from '../middleware/authMiddleware.js';
 import Post from '../models/postModel.js';
 import User from '../models/userModel.js';
+import Notification from '../models/notificationModel.js';
 import { uploadImage } from '../utils/cloudinary.js';
 
 const router = express.Router();
@@ -1258,89 +1259,116 @@ router.get('/feed', protect, async (req, res) => {
         const page = Math.max(1, parseInt(req.query.page) || 1);
         const limit = Math.min(20, parseInt(req.query.limit) || 10);
         const skip = (page - 1) * limit;
-
         const currentUser = await User.findById(req.user.id).select('following').lean();
-        if (!currentUser) return res.json([]);
-
-        const userIdsForFeed = [req.user.id, ...(currentUser.following || [])];
+        const userIdsForFeed = [req.user.id, ...(currentUser?.following || [])];
         
-        const posts = await Post.find({ user: { $in: userIdsForFeed } })
+        const posts = await Post.find({ author: { $in: userIdsForFeed } })
             .sort({ createdAt: -1 })
             .skip(skip)
             .limit(limit)
             .populate(POST_POPULATION)
             .lean(); 
 
-        res.json(posts.filter(p => p.user || p.author) || []);
+        res.json(posts);
     } catch (error) {
-        console.error("Feed Error:", error);
-        res.status(200).json([]);
+        res.status(500).json([]);
     }
 });
 
 // @route   GET /api/posts/user/:userId
 router.get('/user/:userId', protect, async (req, res) => {
     try {
-        const posts = await Post.find({ 
-            $or: [{ user: req.params.userId }, { author: req.params.userId }] 
-        })
-        .sort({ createdAt: -1 })
-        .populate(POST_POPULATION)
-        .lean();
-        
+        const posts = await Post.find({ author: req.params.userId })
+            .sort({ createdAt: -1 })
+            .populate(POST_POPULATION)
+            .lean();
         res.json(posts);
     } catch (error) {
-        res.status(500).json({ message: "Error fetching user posts" });
+        res.status(500).json([]);
+    }
+});
+
+// @route   PUT /api/posts/:id/like
+router.put('/:id/like', protect, async (req, res) => {
+    try {
+        const post = await Post.findById(req.params.id);
+        if (!post) return res.status(404).json({ message: 'Post not found' });
+
+        const isLiked = post.likes.includes(req.user.id);
+        if (isLiked) {
+            post.likes = post.likes.filter(id => id.toString() !== req.user.id.toString());
+        } else {
+            post.likes.push(req.user.id);
+            // Create Notification
+            if (post.author.toString() !== req.user.id.toString()) {
+                const notif = new Notification({
+                    recipient: post.author,
+                    sender: req.user.id,
+                    type: 'like',
+                    postId: post._id
+                });
+                await notif.save();
+                const populatedNotif = await Notification.findById(notif._id).populate('sender', MINIMAL_USER);
+                if (req.io) req.io.to(post.author.toString()).emit('newNotification', populatedNotif);
+            }
+        }
+        await post.save();
+        const updated = await Post.findById(post._id).populate(POST_POPULATION).lean();
+        res.json(updated);
+    } catch (error) {
+        res.status(500).json({ message: 'Like failed' });
+    }
+});
+
+// @route   POST /api/posts/:id/comments
+router.post('/:id/comments', protect, async (req, res) => {
+    try {
+        const { text } = req.body;
+        const post = await Post.findById(req.params.id);
+        if (!post) return res.status(404).json({ message: 'Post not found' });
+
+        post.comments.push({ user: req.user.id, text });
+        await post.save();
+
+        if (post.author.toString() !== req.user.id.toString()) {
+            const notif = new Notification({
+                recipient: post.author,
+                sender: req.user.id,
+                type: 'comment',
+                postId: post._id
+            });
+            await notif.save();
+            const populatedNotif = await Notification.findById(notif._id).populate('sender', MINIMAL_USER);
+            if (req.io) req.io.to(post.author.toString()).emit('newNotification', populatedNotif);
+        }
+
+        const updated = await Post.findById(post._id).populate(POST_POPULATION).lean();
+        res.json(updated);
+    } catch (error) {
+        res.status(500).json({ message: 'Comment failed' });
     }
 });
 
 // @route   POST /api/posts
 router.post('/', protect, async (req, res) => {
     const { content, imageUrl: base64Image } = req.body;
-    
-    if (!content && !base64Image) {
-        return res.status(400).json({ message: 'Content or image required' });
-    }
-
     try {
         let finalImageUrl = null;
-        if (base64Image && base64Image.startsWith('data:image')) {
+        if (base64Image?.startsWith('data:image')) {
             finalImageUrl = await uploadImage(base64Image, 'posts');
         }
-
         const post = new Post({
             content: content || '',
             imageUrl: finalImageUrl,
             user: req.user.id,
-            author: req.user.id // Explicitly enforce author mapping
+            author: req.user.id
         });
-
         const savedPost = await post.save();
-        const populatedPost = await Post.findById(savedPost._id)
-            .populate(POST_POPULATION)
-            .lean();
-
+        const populatedPost = await Post.findById(savedPost._id).populate(POST_POPULATION).lean();
         if (req.io) req.io.emit('newPost', populatedPost);
         res.status(201).json(populatedPost);
     } catch (error) {
-        console.error("Post Creation Error:", error);
-        res.status(500).json({ message: 'Server error' });
-    }
-});
-
-router.get('/', protect, async (req, res) => {
-    try {
-        const page = Math.max(1, parseInt(req.query.page) || 1);
-        const limit = 10;
-        const posts = await Post.find({})
-            .sort({ createdAt: -1 })
-            .skip((page - 1) * limit)
-            .limit(limit)
-            .populate(POST_POPULATION)
-            .lean();
-        res.json(posts.filter(p => p.user || p.author) || []);
-    } catch (error) {
-        res.status(200).json([]);
+        res.status(500).json({ message: 'Failed to create post' });
     }
 });
 

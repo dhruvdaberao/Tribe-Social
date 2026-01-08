@@ -1162,175 +1162,47 @@ const router = express.Router();
 // @route   POST /api/tribes
 router.post('/', protect, async (req, res) => {
     const { name, description, avatarUrl } = req.body;
-    if (!name || !description) {
-        return res.status(400).json({ message: 'Please provide a name and description' });
-    }
+    if (!name || !description) return res.status(400).json({ message: 'Missing fields' });
     try {
-        const tribeExists = await Tribe.findOne({ name });
-        if (tribeExists) {
-            return res.status(400).json({ message: 'A tribe with this name already exists' });
-        }
         const tribe = new Tribe({
-            name,
-            description,
-            avatarUrl,
-            owner: req.user.id,
-            members: [req.user.id],
+            name, description, avatarUrl, owner: req.user.id, members: [req.user.id],
         });
         const createdTribe = await tribe.save();
         res.status(201).json(createdTribe);
-    } catch (error) {
-        console.error('Error creating tribe:', error);
-        res.status(500).json({ message: 'Server Error' });
-    }
+    } catch (error) { res.status(500).json({ message: 'Server Error' }); }
 });
 
 // @route   GET /api/tribes/my-tribes
 router.get('/my-tribes', protect, async (req, res) => {
     try {
-        const tribes = await Tribe.find({ members: req.user.id }).sort({ updatedAt: -1 });
+        const tribes = await Tribe.find({ 
+            $or: [{ members: req.user.id }, { owner: req.user.id }] 
+        }).sort({ updatedAt: -1 });
         res.json(tribes);
-    } catch (error) {
-        res.status(500).json({ message: 'Server Error' });
-    }
+    } catch (error) { res.status(500).json([]); }
 });
 
-// @route   GET /api/tribes
 router.get('/', protect, async (req, res) => {
     try {
         const tribes = await Tribe.find({}).sort({ createdAt: -1 });
         res.json(tribes);
-    } catch (error) {
-        res.status(500).json({ message: 'Server Error' });
-    }
+    } catch (error) { res.status(500).json([]); }
 });
 
-// @route   PUT /api/tribes/:id
-router.put('/:id', protect, async (req, res) => {
-    const { name, description, avatarUrl } = req.body;
-    try {
-        const tribe = await Tribe.findById(req.params.id);
-        if (!tribe) return res.status(404).json({ message: 'Tribe not found' });
-        if (tribe.owner.toString() !== req.user.id) {
-            return res.status(401).json({ message: 'User not authorized' });
-        }
-        tribe.name = name || tribe.name;
-        tribe.description = description || tribe.description;
-        if (avatarUrl !== undefined) tribe.avatarUrl = avatarUrl;
-        
-        const updatedTribe = await tribe.save();
-        res.json(updatedTribe);
-    } catch (error) {
-        res.status(500).json({ message: 'Server Error' });
-    }
-});
-
-// @route   DELETE /api/tribes/:id
-router.delete('/:id', protect, async (req, res) => {
-    try {
-        const tribe = await Tribe.findById(req.params.id);
-        if (!tribe) return res.status(404).json({ message: 'Tribe not found' });
-        if (tribe.owner.toString() !== req.user.id) {
-            return res.status(401).json({ message: 'Only the owner can delete this tribe' });
-        }
-
-        await TribeMessage.deleteMany({ tribe: tribe._id });
-        await tribe.deleteOne();
-
-        req.io.emit('tribeDeleted', req.params.id);
-        res.json({ message: 'Tribe deleted successfully' });
-    } catch (error) {
-        res.status(500).json({ message: 'Server Error' });
-    }
-});
-
-// @route   PUT /api/tribes/:id/join
 router.put('/:id/join', protect, async (req, res) => {
     try {
         const tribe = await Tribe.findById(req.params.id);
-        if (!tribe) return res.status(404).json({ message: 'Tribe not found' });
-        
-        const isMember = tribe.members.some(memberId => memberId.equals(req.user.id));
+        if (!tribe) return res.status(404).json({ message: 'Not found' });
+        const isMember = tribe.members.includes(req.user.id);
         if (isMember) {
-             if (tribe.owner.equals(req.user.id)) {
-                return res.status(400).json({ message: 'Owner cannot leave the tribe' });
-            }
-            tribe.members = tribe.members.filter(memberId => !memberId.equals(req.user.id));
+            if (tribe.owner.toString() === req.user.id.toString()) return res.status(400).json({ message: 'Owner cannot leave' });
+            tribe.members = tribe.members.filter(m => m.toString() !== req.user.id.toString());
         } else {
             tribe.members.push(req.user.id);
-            // Notify owner
-            if (tribe.owner.toString() !== req.user.id) {
-                const notification = new Notification({
-                    recipient: tribe.owner,
-                    sender: req.user.id,
-                    type: 'tribe_join',
-                    tribeId: tribe._id,
-                });
-                await notification.save();
-                const populatedNotification = await notification.populate('sender', 'name username avatarUrl');
-                if (req.io) {
-                    req.io.to(tribe.owner.toString()).emit('newNotification', populatedNotification);
-                }
-            }
         }
         await tribe.save();
         res.json(tribe);
-    } catch (error) {
-        res.status(500).json({ message: 'Server Error' });
-    }
-});
-
-// @route   GET /api/tribes/:id/messages
-router.get('/:id/messages', protect, async (req, res) => {
-    try {
-        const tribe = await Tribe.findById(req.params.id);
-        if (!tribe) return res.status(404).json({ message: 'Tribe not found' });
-        
-        if (!tribe.members.some(memberId => memberId.equals(req.user.id))) {
-            return res.status(403).json({ message: 'You must be a member to view messages' });
-        }
-        
-        const messages = await TribeMessage.find({ tribe: req.params.id })
-            .populate('sender', 'name username avatarUrl')
-            .sort({ createdAt: 'asc' });
-        
-        res.json(messages.map(m => m.toJSON()));
-    } catch (error) {
-        res.status(500).json({ message: 'Server Error' });
-    }
-});
-
-// @route   POST /api/tribes/:id/messages
-router.post('/:id/messages', protect, async (req, res) => {
-    const { text, imageUrl } = req.body;
-    if (!text && !imageUrl) {
-        return res.status(400).json({ message: 'Message text or image is required' });
-    }
-    try {
-        const tribe = await Tribe.findById(req.params.id);
-        if (!tribe) return res.status(404).json({ message: 'Tribe not found' });
-        if (!tribe.members.some(memberId => memberId.equals(req.user.id))) {
-            return res.status(403).json({ message: 'You must be a member to send messages' });
-        }
-        
-        const message = new TribeMessage({
-            tribe: req.params.id,
-            sender: req.user.id,
-            text,
-            imageUrl: imageUrl || null
-        });
-        
-        let savedMessage = await message.save();
-        savedMessage = await savedMessage.populate('sender', 'name username avatarUrl');
-        
-        const responseMessage = savedMessage.toJSON();
-        req.io.to(`tribe-${req.params.id}`).emit('newTribeMessage', responseMessage);
-
-        res.status(201).json(responseMessage);
-    } catch (error) {
-        console.error("Error sending tribe message:", error);
-        res.status(500).json({ message: 'Server Error' });
-    }
+    } catch (error) { res.status(500).json({ message: 'Join failed' }); }
 });
 
 export default router;

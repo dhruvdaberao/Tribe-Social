@@ -256,7 +256,6 @@ commentSchema.set('toJSON', {
 
 const postSchema = mongoose.Schema(
   {
-    // user is kept for backward compatibility, author is the new standard
     user: { type: mongoose.Schema.Types.ObjectId, required: true, ref: 'User', index: true },
     author: { type: mongoose.Schema.Types.ObjectId, required: true, ref: 'User', index: true },
     content: { type: String, required: function() { return !this.imageUrl; } },
@@ -269,10 +268,10 @@ const postSchema = mongoose.Schema(
   }
 );
 
-// Compound indexes for feed and profile performance
+// High-performance compound indexes
 postSchema.index({ createdAt: -1 });
-postSchema.index({ user: 1, createdAt: -1 });
 postSchema.index({ author: 1, createdAt: -1 });
+postSchema.index({ user: 1, createdAt: -1 });
 
 postSchema.set('toJSON', {
   transform: (document, returnedObject) => {

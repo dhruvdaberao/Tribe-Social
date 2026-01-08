@@ -1,26 +1,25 @@
-=== TRIBE SOCIAL PRODUCTION STABILIZATION ARCHITECTURE ===
+=== TRIBE SOCIAL ARCHITECTURE ===
 
-1. SOURCE OF TRUTH (BACKEND)
-   - MongoDB: Stores all data. Lean queries (.lean()) and indexes ensure <200ms DB responses.
-   - Cloudinary: Media storage. Frontend uploads base64 -> Backend pipes to Cloudinary -> URL stored in DB.
+1. DATA NORMALIZATION & PERSISTENCE
+   - Single source of truth: MongoDB.
+   - Separate queries for /feed (followers) and /user/:userId (profile specific).
+   - Author field enforced on every Post document.
 
-2. FAST-LOAD STRATEGY (FRONTEND CACHING)
-   - Layer 1: Hydration from 'cache_posts', 'cache_users', 'cache_tribes' in localStorage on mount. UI appears instant.
-   - Layer 2: Background Fetch. App makes fresh API calls immediately after mount.
-   - Layer 3: State Reconcilliation. API response silently updates local state and cache.
+2. ATOMIC POST ACTIONS
+   - Likes and comments update specific documents by ID.
+   - Backend returns full updated object; Frontend maps ID to state for instant, targeted update.
+   - Prevents "Global Like" bug by ensuring per-post state management.
 
-3. INSTANT FEEL (OPTIMISTIC UI)
-   - Action (Post/Like/Follow/Message): UI updates state immediately.
-   - Backend Sync: API call happens in background.
-   - Fail-Safe: On error, a rollback is triggered and toast alert notifies user.
+3. REAL-TIME NOTIFICATIONS
+   - Schema: Persists recipient, sender, type, and entityId.
+   - Trigger: Follow, Like, Comment, and Tribe Join actions create DB entry.
+   - Socket: Emits to recipient's private room. UI toasts and increments bell count.
 
-4. REAL-TIME ENGINE (SOCKET.IO)
-   - Connections: Users join their own private room (userId) for notifications and shared rooms for DMs (dm-convoId) and Tribes (tribe-id).
-   - Events: 'newMessage', 'newPost', 'newNotification' trigger state updates without page refetching.
+4. USER INTERACTION & CACHING
+   - Profiles fetch on-mount based on URL/Viewing context.
+   - User banners now correctly fetched via full User object hydration in ProfilePage.
+   - Local state reconciliation on every API response.
 
-5. PERSISTENCE ON REFRESH
-   - Token & User: JWT stored in localStorage. AuthProvider hydrates user state.
-   - Cache: Feed and lists use Layer 1 (Cache) to show content while server is cold-starting.
-
-=== DATA FLOW SUMMARY ===
-Create Post -> Local State -> Cloudinary -> MongoDB -> Socket Broadcast -> Recipients.
+5. AI ASSISTANT (CHUK)
+   - Navigates to a targeted conversation window.
+   - Proxies through Gemini API with custom mascot persona.
