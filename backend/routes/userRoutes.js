@@ -668,12 +668,31 @@
 
 
 
+
 import express from 'express';
 import User from '../models/userModel.js';
 import protect from '../middleware/authMiddleware.js';
 import { uploadImage } from '../utils/cloudinary.js';
 
 const router = express.Router();
+
+// @route   GET /api/users/:id
+// NEW: Fetch specific user profile with populated connections
+router.get('/:id', protect, async (req, res) => {
+    try {
+        const user = await User.findById(req.params.id)
+            .populate('followers', 'name username avatarUrl bio')
+            .populate('following', 'name username avatarUrl bio')
+            .lean();
+        
+        if (!user) return res.status(404).json({ message: 'User not found' });
+        
+        // Ensure ID is mapped correctly for frontend
+        res.json({ ...user, id: user._id.toString() });
+    } catch (error) {
+        res.status(500).json({ message: 'Server error' });
+    }
+});
 
 router.put('/profile', protect, async (req, res) => {
     try {
@@ -684,35 +703,62 @@ router.put('/profile', protect, async (req, res) => {
         user.username = req.body.username || user.username;
         user.bio = req.body.bio ?? user.bio;
 
-        // CDN OFFLOADING: intercept base64 profile images
         if (req.body.avatarUrl && req.body.avatarUrl.startsWith('data:image')) {
             user.avatarUrl = await uploadImage(req.body.avatarUrl, 'avatars');
-        } else if (req.body.avatarUrl === null) {
-            user.avatarUrl = null;
         }
 
         if (req.body.bannerUrl && req.body.bannerUrl.startsWith('data:image')) {
             user.bannerUrl = await uploadImage(req.body.bannerUrl, 'banners');
-        } else if (req.body.bannerUrl === null) {
-            user.bannerUrl = null;
         }
 
         const updatedUser = await user.save();
-        const userResponse = updatedUser.toJSON();
-        
-        if (req.io) req.io.emit('userUpdated', userResponse);
-        res.json(userResponse);
+        const populated = await User.findById(updatedUser._id)
+            .populate('followers', 'name username avatarUrl bio')
+            .populate('following', 'name username avatarUrl bio')
+            .lean();
+
+        res.json({ ...populated, id: populated._id.toString() });
     } catch (error) {
-        console.error("Update profile error:", error);
         res.status(500).json({ message: 'Server error' });
     }
 });
 
-// Keep other standard routes (GET, DELETE, FOLLOW)
 router.get('/', protect, async (req, res) => {
     try {
-        const users = await User.find({}).select('name username avatarUrl bio followers following').limit(20).lean();
-        res.json(users);
+        // Increased limit and added sorting to make Discover more useful
+        const users = await User.find({})
+            .select('name username avatarUrl bio followers following')
+            .sort({ createdAt: -1 })
+            .limit(100) 
+            .lean();
+        res.json(users.map(u => ({ ...u, id: u._id.toString() })));
+    } catch (error) {
+        res.status(500).json([]);
+    }
+});
+
+// @route   PUT /api/users/:id/follow
+router.put('/:id/follow', protect, async (req, res) => {
+    try {
+        const userToFollow = await User.findById(req.params.id);
+        const currentUser = await User.findById(req.user.id);
+
+        if (!userToFollow || !currentUser) return res.status(404).json({ message: "User not found" });
+
+        const isFollowing = currentUser.following.includes(req.params.id);
+
+        if (isFollowing) {
+            currentUser.following = currentUser.following.filter(id => id.toString() !== req.params.id);
+            userToFollow.followers = userToFollow.followers.filter(id => id.toString() !== req.user.id);
+        } else {
+            currentUser.following.push(req.params.id);
+            userToFollow.followers.push(req.user.id);
+        }
+
+        await currentUser.save();
+        await userToFollow.save();
+
+        res.json({ following: currentUser.following });
     } catch (error) {
         res.status(500).json({ message: 'Server error' });
     }
