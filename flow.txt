@@ -1,29 +1,26 @@
-=== TRIBE SOCIAL FINAL PRODUCTION ARCHITECTURE ===
+=== TRIBE SOCIAL PRODUCTION STABILIZATION ARCHITECTURE ===
 
-1. DATA HYDRATION (Layered Fallback)
-   - L1 (UI Cache): Immediate load from 'tr_cache_*' localStorage keys. No spinners.
-   - L2 (Background Refresh): Silent API fetch on every page load/mount.
-   - L3 (Real-time): Socket.io pushes updates (new posts/messages) to state without refresh.
+1. SOURCE OF TRUTH (BACKEND)
+   - MongoDB: Stores all data. Lean queries (.lean()) and indexes ensure <200ms DB responses.
+   - Cloudinary: Media storage. Frontend uploads base64 -> Backend pipes to Cloudinary -> URL stored in DB.
 
-2. MEDIA PIPELINE (Cloudinary-to-Mongo)
-   - UPLOAD: FE sends Base64 -> Backend -> Cloudinary.
-   - STORAGE: Cloudinary returns URL -> Backend saves URL to MongoDB field 'imageUrl'.
-   - NEVER: Store base64 in MongoDB. This prevents document size limits and 502 errors.
+2. FAST-LOAD STRATEGY (FRONTEND CACHING)
+   - Layer 1: Hydration from 'cache_posts', 'cache_users', 'cache_tribes' in localStorage on mount. UI appears instant.
+   - Layer 2: Background Fetch. App makes fresh API calls immediately after mount.
+   - Layer 3: State Reconcilliation. API response silently updates local state and cache.
 
-3. FEED & LIST PERFORMANCE
-   - INDEXING: Compound indexes on (user: 1, createdAt: -1) ensure O(log n) lookups.
-   - OPTIMIZATION: Mandatory .lean() on all find() queries to bypass Mongoose hydration overhead.
-   - PAGINATION: Enforced 10-15 item limit per page to reduce payload size.
+3. INSTANT FEEL (OPTIMISTIC UI)
+   - Action (Post/Like/Follow/Message): UI updates state immediately.
+   - Backend Sync: API call happens in background.
+   - Fail-Safe: On error, a rollback is triggered and toast alert notifies user.
 
-4. CHAT & REALTIME
-   - ROOMS: On connect, FE joins unique 'dm-id-id' and 'tribe-id' rooms.
-   - RELIABILITY: Socket emits are non-blocking. If DB write fails, socket remains unaffected.
-   - CACHE: Messages are persisted in state; reload fetches last 50 only.
+4. REAL-TIME ENGINE (SOCKET.IO)
+   - Connections: Users join their own private room (userId) for notifications and shared rooms for DMs (dm-convoId) and Tribes (tribe-id).
+   - Events: 'newMessage', 'newPost', 'newNotification' trigger state updates without page refetching.
 
-5. FAULT TOLERANCE
-   - EMPTY DB: All GET APIs strictly return empty arrays [] instead of null/500.
-   - TIMEOUTS: Axios timeout set to 20s with a single auto-retry for Render spin-up.
-   - GHOST DATA: Filters verify that populated 'user' field exists before sending to FE.
+5. PERSISTENCE ON REFRESH
+   - Token & User: JWT stored in localStorage. AuthProvider hydrates user state.
+   - Cache: Feed and lists use Layer 1 (Cache) to show content while server is cold-starting.
 
-=== END-TO-END FLOW SUMMARY ===
-Action (Post/Msg) -> Optimistic UI Update -> API Call (Cloudinary + DB) -> Socket Broadcast -> Hydrate Recipients.
+=== DATA FLOW SUMMARY ===
+Create Post -> Local State -> Cloudinary -> MongoDB -> Socket Broadcast -> Recipients.
