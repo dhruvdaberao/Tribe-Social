@@ -830,17 +830,18 @@ router.get('/feed', protect, async (req, res) => {
         
         const userIdsForFeed = [req.user.id, ...(currentUser.following || [])];
         
+        // Use .lean() to get plain JS objects instead of heavy Mongoose documents
         const posts = await Post.find({ user: { $in: userIdsForFeed } })
             .sort({ createdAt: -1 })
             .skip(skip)
             .limit(limit)
             .populate(POST_POPULATION)
-            .lean(); // Faster: returns plain JSON instead of Mongoose Docs
+            .lean(); 
 
         res.json(posts);
     } catch (error) {
         console.error("Feed API Error:", error);
-        res.status(500).json([]); 
+        res.status(500).json({ message: 'Error loading feed', error: error.message }); 
     }
 });
 
@@ -849,9 +850,10 @@ router.get('/feed', protect, async (req, res) => {
 router.get('/', protect, async (req, res) => {
     try {
         const page = parseInt(req.query.page) || 1;
-        const limit = parseInt(req.query.limit) || 10; // Small batch for instant load
+        const limit = parseInt(req.query.limit) || 10; 
         const skip = (page - 1) * limit;
 
+        // Fetch small batches to ensure the server never hangs
         const posts = await Post.find({})
             .sort({ createdAt: -1 })
             .skip(skip)
@@ -862,7 +864,7 @@ router.get('/', protect, async (req, res) => {
         res.json(posts);
     } catch (error) {
         console.error("Discover API Error:", error);
-        res.status(500).json([]);
+        res.status(500).json({ message: 'Error loading posts', error: error.message });
     }
 });
 
@@ -879,18 +881,22 @@ router.get('/:id', protect, async (req, res) => {
     }
 });
 
-// REST OF POST ROUTES (POST, DELETE, LIKE) REMAIN BUT UPDATED TO EMIT CLEAN DATA
 router.post('/', protect, async (req, res) => {
     const { content, imageUrl, tempId } = req.body;
     if (!content && !imageUrl) return res.status(400).json({ message: 'Post must have content or an image' });
     try {
-        const post = new Post({ content: content || '', imageUrl: imageUrl || null, user: req.user.id });
-        let createdPost = await post.save();
+        const post = new Post({ 
+            content: content || '', 
+            imageUrl: imageUrl || null, 
+            user: req.user.id 
+        });
+        const createdPost = await post.save();
         const populatedPost = await Post.findById(createdPost._id).populate(POST_POPULATION).lean();
         
-        req.io.emit('newPost', { ...populatedPost, tempId });
+        if (req.io) req.io.emit('newPost', { ...populatedPost, tempId });
         res.status(201).json(populatedPost);
     } catch (error) {
+        console.error("Create Post Error:", error);
         res.status(500).json({ message: 'Server Error' });
     }
 });
@@ -901,7 +907,7 @@ router.delete('/:id', protect, async (req, res) => {
         if (!post) return res.status(404).json({ message: 'Post not found' });
         if (post.user.toString() !== req.user.id) return res.status(401).json({ message: 'Not authorized' });
         await post.deleteOne();
-        req.io.emit('postDeleted', req.params.id);
+        if (req.io) req.io.emit('postDeleted', req.params.id);
         res.json({ message: 'Post removed' });
     } catch (error) {
         res.status(500).json({ message: 'Server Error' });
@@ -918,15 +924,35 @@ router.put('/:id/like', protect, async (req, res) => {
         } else {
             post.likes.push(req.user.id);
             if (post.user.toString() !== req.user.id) {
-                const notification = new Notification({ recipient: post.user, sender: req.user.id, type: 'like', postId: post._id });
+                const notification = new Notification({ 
+                    recipient: post.user, 
+                    sender: req.user.id, 
+                    type: 'like', 
+                    postId: post._id 
+                });
                 await notification.save();
                 const popNotif = await notification.populate('sender', 'name username avatarUrl');
-                const socketId = req.onlineUsers.get(post.user.toString());
-                if (socketId) req.io.to(socketId).emit('newNotification', popNotif);
+                const socketId = req.onlineUsers?.get(post.user.toString());
+                if (socketId && req.io) req.io.to(socketId).emit('newNotification', popNotif);
             }
         }
         await post.save();
         res.json({ id: post._id, likes: post.likes });
+    } catch (error) {
+        res.status(500).json({ message: 'Server Error' });
+    }
+});
+
+router.post('/:id/comments', protect, async (req, res) => {
+    try {
+        const post = await Post.findById(req.params.id);
+        if (!post) return res.status(404).json({ message: 'Post not found' });
+        
+        post.comments.push({ user: req.user.id, text: req.body.text });
+        await post.save();
+        
+        const updatedPost = await Post.findById(post._id).populate(POST_POPULATION).lean();
+        res.json(updatedPost);
     } catch (error) {
         res.status(500).json({ message: 'Server Error' });
     }
