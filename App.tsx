@@ -785,6 +785,8 @@
 
 
 
+
+
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useAuth } from './contexts/AuthContext';
 import { useSocket } from './contexts/SocketContext';
@@ -841,7 +843,6 @@ const App: React.FC = () => {
     const [isAllPostsLoaded, setIsAllPostsLoaded] = useState(false);
     
     // Pagination refs
-    const feedPage = useRef(1);
     const discoverPage = useRef(1);
 
     // Navigation & Modal State
@@ -864,23 +865,29 @@ const App: React.FC = () => {
         if (isFetching || !currentUser) return;
         setIsFetching(true);
         try {
-            const [usersRes, feedRes, tribesRes, notifsRes, myStoriesRes, followStoriesRes] = await Promise.all([
-                api.fetchUsers(),
-                api.fetchFeedPosts(1, 10),
-                api.fetchTribes(),
-                api.fetchNotifications(),
-                api.fetchMyStories(),
-                api.fetchFollowingStories(),
-            ]);
+            // Sequential fetching is safer for waking up Render free-tier
+            const usersRes = await api.fetchUsers().catch(() => ({ data: [] }));
             setUsers(usersRes.data);
+
+            const feedRes = await api.fetchFeedPosts(1, 10).catch(() => ({ data: [] }));
             setPosts(feedRes.data);
+
+            const tribesRes = await api.fetchTribes().catch(() => ({ data: [] }));
             setTribes(tribesRes.data);
+
+            const notifsRes = await api.fetchNotifications().catch(() => ({ data: [] }));
             setNotifications(notifsRes.data);
+
+            const myStoriesRes = await api.fetchMyStories().catch(() => ({ data: [] }));
             setMyStories(myStoriesRes.data);
+
+            const followStoriesRes = await api.fetchFollowingStories().catch(() => ({ data: [] }));
             setFollowingUserStories(followStoriesRes.data);
+
             setIsDataLoaded(true);
         } catch (error) {
-            console.error("Initial load failed:", error);
+            console.error("Resilient load failed, retrying in 5s...", error);
+            setTimeout(fetchData, 5000);
         } finally {
             setIsFetching(false);
         }
@@ -891,12 +898,12 @@ const App: React.FC = () => {
       setIsFetching(true);
       try {
         const { data } = await api.fetchPosts(discoverPage.current, 12);
-        if (data.length === 0) {
+        if (!data || data.length === 0) {
             setIsAllPostsLoaded(true);
         } else {
             setPosts(prev => {
                 const existingIds = new Set(prev.map(p => p.id));
-                const uniqueNew = data.filter((p: Post) => !existingIds.has(p.id));
+                const uniqueNew = data.filter((p: Post) => p && !existingIds.has(p.id));
                 return [...prev, ...uniqueNew];
             });
             discoverPage.current += 1;
@@ -909,8 +916,10 @@ const App: React.FC = () => {
     }, [isAllPostsLoaded, isFetching]);
 
     useEffect(() => {
-        if (!isAuthLoading && currentUser && !isDataLoaded) fetchData();
-    }, [fetchData, isAuthLoading, currentUser, isDataLoaded]);
+        if (!isAuthLoading && currentUser && !isDataLoaded && !isFetching) {
+            fetchData();
+        }
+    }, [isAuthLoading, currentUser, isDataLoaded, isFetching, fetchData]);
 
     // Socket Logic
     useEffect(() => {
@@ -994,11 +1003,106 @@ const App: React.FC = () => {
         setActiveNavItem('TribeDetail');
     };
 
-    if (isAuthLoading) return <div className="h-screen bg-background flex items-center justify-center"><img src="/duckload.gif" className="w-16" /></div>;
+    // FIX: Added handleCreateStory to resolve 'Cannot find name' error.
+    const handleCreateStory = async (storyData: Omit<Story, 'id' | 'user' | 'createdAt' | 'author' | 'likes'>) => {
+        try {
+            const { data: newStory } = await api.createStory(storyData);
+            setMyStories(prev => [newStory, ...prev]);
+            setIsCreatingStory(false);
+            handleViewUserStories(currentUser!.id, [newStory, ...myStories]);
+            toast.success("Story posted!");
+        } catch (error) {
+            console.error("Failed to create story:", error);
+            toast.error("Could not post story. Please try again.");
+        }
+    };
+
+    // FIX: Added handleDeleteStory to resolve 'Cannot find name' error.
+    const handleDeleteStory = async (storyId: string) => {
+        const originalStories = myStories;
+        setMyStories(prev => prev.filter(s => s.id !== storyId));
+        setViewingUserStories(null);
+        try {
+            await api.deleteStory(storyId);
+            toast.success("Story deleted.");
+        } catch (error) {
+            console.error("Failed to delete story:", error);
+            toast.error("Could not delete story.");
+            setMyStories(originalStories);
+        }
+    };
+
+    // FIX: Added handleLikeStory to resolve 'Cannot find name' error.
+    const handleLikeStory = async (storyId: string) => {
+        if (!currentUser) return;
+        
+        const optimisticUpdate = (storiesState: typeof followingUserStories) => 
+            storiesState.map(userStoryGroup => ({
+                ...userStoryGroup,
+                stories: userStoryGroup.stories.map(story => {
+                    if (story.id === storyId) {
+                        const isLiked = story.likes.includes(currentUser.id);
+                        return {
+                            ...story,
+                            likes: isLiked ? story.likes.filter(id => id !== currentUser.id) : [...story.likes, currentUser.id]
+                        };
+                    }
+                    return story;
+                })
+            }));
+
+        const originalFollowingStories = followingUserStories;
+        setFollowingUserStories(optimisticUpdate(followingUserStories));
+        if(viewingUserStories) {
+            setViewingUserStories(prev => prev ? { ...prev, stories: optimisticUpdate([{...prev}])[0].stories } : null);
+        }
+        
+        try {
+            await api.likeStory(storyId);
+        } catch (error) {
+            console.error("Failed to like story:", error);
+            toast.error("Like failed. Reverting.");
+            setFollowingUserStories(originalFollowingStories);
+        }
+    };
+    
+    // FIX: Added handleViewUserStories to resolve 'Cannot find name' error.
+    const handleViewUserStories = (userId: string, stories?: Story[]) => {
+        let userStoryData;
+        if (userId === currentUser?.id) {
+            userStoryData = { user: currentUser, stories: stories || myStories };
+        } else {
+            const foundUserStories = followingUserStories.find(us => us.user.id === userId);
+            if(foundUserStories) userStoryData = foundUserStories;
+        }
+
+        if (userStoryData && userStoryData.stories.length > 0) {
+            setViewingUserStories(userStoryData);
+            setSeenStoryAuthors(prev => {
+                const newSet = new Set(prev);
+                newSet.add(userId);
+                localStorage.setItem('seenStoryAuthors', JSON.stringify(Array.from(newSet)));
+                return newSet;
+            });
+        }
+    };
+
+    if (isAuthLoading) return <div className="h-screen bg-background flex items-center justify-center"><img src="/duckload.gif" className="w-16" alt="loading" /></div>;
     if (!currentUser) return <LoginPage />;
     
-    const visiblePosts = posts.filter(p => p.author && !(currentUser.blockedUsers || []).includes(p.author.id));
-    const visibleUsers = users.filter(u => !(currentUser.blockedUsers || []).includes(u.id));
+    // Show a friendlier waking state instead of a completely blank feed
+    if (!isDataLoaded && isFetching && posts.length === 0) {
+        return (
+            <div className="h-screen bg-background flex flex-col items-center justify-center text-center p-4">
+                <img src="/duckload.gif" className="w-20 mb-4" alt="waking server" />
+                <h1 className="text-xl font-bold text-primary">Waking up the Tribe server...</h1>
+                <p className="text-secondary mt-2">This usually takes about 30-40 seconds on the first load. Thank you for your patience! 🐣</p>
+            </div>
+        );
+    }
+    
+    const visiblePosts = posts.filter(p => p && p.author && !(currentUser.blockedUsers || []).includes(p.author.id));
+    const visibleUsers = users.filter(u => u && !(currentUser.blockedUsers || []).includes(u.id));
 
     return (
         <div className="bg-background min-h-screen text-primary overflow-hidden">
@@ -1008,8 +1112,8 @@ const App: React.FC = () => {
                 <div className={['Messages', 'TribeDetail', 'Settings'].includes(activeNavItem) ? 'h-[calc(100vh-8rem)] md:h-[calc(100vh-4rem)]' : 'max-w-2xl mx-auto px-4 md:px-6 pt-6 pb-24 md:pb-8'}>
                     {activeNavItem === 'Home' && (
                         <>
-                            <CreatePost currentUser={currentUser} allUsers={visibleUsers} myStories={myStories} onAddPost={handleAddPost} isPosting={isCreatingPost} onOpenStoryCreator={() => setIsCreatingStory(true)} onViewUserStories={(id) => {}} />
-                            <StoryFeed myStories={myStories} followingUserStories={followingUserStories} currentUser={currentUser} seenStoryAuthors={seenStoryAuthors} onViewUserStories={(id) => {}} />
+                            <CreatePost currentUser={currentUser} allUsers={visibleUsers} myStories={myStories} onAddPost={handleAddPost} isPosting={isCreatingPost} onOpenStoryCreator={() => setIsCreatingStory(true)} onViewUserStories={(id) => handleViewUserStories(id)} />
+                            <StoryFeed myStories={myStories} followingUserStories={followingUserStories} currentUser={currentUser} seenStoryAuthors={seenStoryAuthors} onViewUserStories={(id) => handleViewUserStories(id)} />
                             <FeedPage posts={visiblePosts.filter(p => currentUser.following.includes(p.author.id) || p.author.id === currentUser.id)} currentUser={currentUser} allUsers={visibleUsers} allTribes={tribes} onLikePost={handleLikePost} onCommentPost={handleCommentPost} onDeletePost={handleDeletePost} onDeleteComment={()=>{}} onViewProfile={handleViewProfile} onSharePost={()=>{}} />
                         </>
                     )}
@@ -1022,6 +1126,9 @@ const App: React.FC = () => {
                     {activeNavItem === 'Settings' && <SettingsPage currentUser={currentUser} allUsers={users} onLogout={logout} onDeleteAccount={()=>{}} onToggleBlock={()=>{}} onBack={() => handleSelectItem('Profile')} />}
                 </div>
             </main>
+            {isCreatingStory && <StoryCreator onClose={() => setIsCreatingStory(false)} onCreate={handleCreateStory} />}
+            {viewingUserStories && <StoryViewer userStories={viewingUserStories} currentUser={currentUser} allUsers={visibleUsers} allTribes={tribes} onClose={() => setViewingUserStories(null)} onDelete={handleDeleteStory} onLike={handleLikeStory} onSharePost={() => {}} />}
+            {viewingPost && <PostViewModal post={viewingPost} currentUser={currentUser} allUsers={visibleUsers} allTribes={tribes} onLike={handleLikePost} onComment={handleCommentPost} onDeletePost={handleDeletePost} onDeleteComment={()=>{}} onViewProfile={handleViewProfile} onSharePost={() => {}} onClose={() => setViewingPost(null)} />}
         </div>
     );
 };

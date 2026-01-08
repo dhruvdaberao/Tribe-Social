@@ -150,8 +150,12 @@
 
 import axios from 'axios';
 
+// Ensure this matches your ACTUAL Render backend URL
 const API_URL = 'https://tribe-social-backend.onrender.com';
-const API = axios.create({ baseURL: `${API_URL}/api`, timeout: 15000 }); // Fail faster to allow user retry
+const API = axios.create({ 
+  baseURL: `${API_URL}/api`, 
+  timeout: 60000 // Increased to 60s for Render free tier cold starts
+});
 
 API.interceptors.request.use((req) => {
   const token = localStorage.getItem('token');
@@ -160,6 +164,17 @@ API.interceptors.request.use((req) => {
   }
   return req;
 });
+
+// Optional: Interceptor to handle specific errors globally
+API.interceptors.response.use(
+  response => response,
+  error => {
+    if (error.code === 'ECONNABORTED') {
+      console.warn('Request timed out. The server might be waking up.');
+    }
+    return Promise.reject(error);
+  }
+);
 
 // Auth
 export const login = (formData: any) => API.post('/auth/login', formData);
@@ -175,7 +190,7 @@ export const toggleFollow = (id: string) => API.put(`/users/${id}/follow`);
 export const toggleBlock = (id: string) => API.put(`/users/${id}/block`);
 export const deleteAccount = () => API.delete('/users/profile');
 
-// Posts - PAGINATION SUPPORT
+// Posts
 export const fetchPost = (id: string) => API.get(`/posts/${id}`);
 export const fetchPosts = (page: number = 1, limit: number = 12) => API.get(`/posts?page=${page}&limit=${limit}`);
 export const fetchFeedPosts = (page: number = 1, limit: number = 10) => API.get(`/posts/feed?page=${page}&limit=${limit}`);
@@ -197,7 +212,7 @@ export const updateTribe = (id: string, tribeData: any) => API.put(`/tribes/${id
 export const deleteTribe = (id: string) => API.delete(`/tribes/${id}`);
 export const joinTribe = (id: string) => API.put(`/tribes/${id}/join`);
 export const fetchTribeMessages = (id: string) => API.get(`/tribes/${id}/messages`);
-export const sendTribeMessage = (id: string, messageData: any) => API.post(`/tribes/${id}/messages`, messageData);
+export const sendTribeMessage = (id: string, messageData: { text: string, imageUrl?: string, isAnonymous?: boolean }) => API.post(`/tribes/${id}/messages`, messageData);
 export const deleteTribeMessage = (tribeId: string, messageId: string) => API.delete(`/tribes/${tribeId}/messages/${messageId}`);
 
 // AI Chat
