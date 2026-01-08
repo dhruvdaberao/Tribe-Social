@@ -144,10 +144,11 @@ const postSchema = mongoose.Schema(
 );
 
 // CRITICAL INDEXES FOR PRODUCTION PERFORMANCE
-// 1. Newest-First Index (Prevents memory sorting)
+// 1. Global Feed Index (Sort by newest)
 postSchema.index({ createdAt: -1 });
 
-// 2. Following Feed Index (Filters by user THEN sorts)
+// 2. User/Following Feed Index (Filter by user + sort by newest)
+// This is the specific index needed to fix the "Feed Timeout"
 postSchema.index({ user: 1, createdAt: -1 });
 
 postSchema.set('toJSON', {
