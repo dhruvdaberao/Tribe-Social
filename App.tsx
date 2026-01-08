@@ -1205,7 +1205,6 @@ const App: React.FC = () => {
     const { currentUser, setCurrentUser, logout, isLoading: isAuthLoading } = useAuth();
     const { socket, notifications, setNotifications, unreadMessageCount, unreadTribeCount, unreadNotificationCount } = useSocket();
     
-    // CACHE HYDRATION: Load from localStorage if available
     const [users, setUsers] = useState<User[]>(() => JSON.parse(localStorage.getItem('cached_users') || '[]'));
     const [posts, setPosts] = useState<Post[]>(() => JSON.parse(localStorage.getItem('cached_posts') || '[]'));
     const [tribes, setTribes] = useState<Tribe[]>(() => JSON.parse(localStorage.getItem('cached_tribes') || '[]'));
@@ -1221,90 +1220,94 @@ const App: React.FC = () => {
     const [viewedUser, setViewedUser] = useState<User | null>(null);
     const [viewedTribe, setViewedTribe] = useState<Tribe | null>(null);
     
+    const discoverPage = useRef(1);
+    const [hasMoreDiscover, setHasMoreDiscover] = useState(true);
+
     const userMap = useMemo(() => {
         const map = new Map(users.map((user: User) => [user.id, user]));
         map.set(CHUK_AI_USER.id, CHUK_AI_USER);
         return map;
     }, [users]);
 
-    const normalizePost = useCallback((p: any): Post => ({
-        ...p,
-        author: p.author || p.user,
-        comments: (p.comments || []).map((c: any) => ({ ...c, author: c.author || c.user }))
-    }), []);
+    // DEFENSIVE MAPPING: Ensures 'user' field from backend always maps to 'author' for UI
+    const normalizePost = useCallback((p: any): Post => {
+        if (!p) return p;
+        return {
+            ...p,
+            author: p.author || p.user || { name: 'User', id: p.userId || 'deleted' },
+            comments: (p.comments || []).map((c: any) => ({ ...c, author: c.author || c.user }))
+        };
+    }, []);
 
-    // FETCH DATA WITH PERSISTENCE
     const fetchData = useCallback(async () => {
         if (isFetching || !currentUser) return;
         setIsFetching(true);
         try {
             const [usersRes, feedRes] = await Promise.all([
                 api.fetchUsers().catch(() => ({ data: users })),
-                api.fetchFeedPosts(1, 10).catch(() => ({ data: posts }))
+                api.fetchFeedPosts(1, 20).catch(() => ({ data: posts }))
             ]);
             
-            const normalizedPosts = (feedRes.data || []).map(normalizePost);
-            setUsers(usersRes.data);
+            const normalizedPosts = (feedRes.data || []).map(normalizePost).filter((p: Post) => p.author);
+            setUsers(usersRes.data || []);
             setPosts(normalizedPosts);
             
-            // Save to cache for next load
-            localStorage.setItem('cached_users', JSON.stringify(usersRes.data));
+            localStorage.setItem('cached_users', JSON.stringify(usersRes.data || []));
             localStorage.setItem('cached_posts', JSON.stringify(normalizedPosts));
             
             setIsDataLoaded(true);
 
-            // Fetch non-critical background data
             const [tribesRes, storiesRes, followStoriesRes] = await Promise.all([
                 api.fetchTribes().catch(() => ({ data: tribes })),
                 api.fetchMyStories().catch(() => ({ data: [] })),
                 api.fetchFollowingStories().catch(() => ({ data: [] }))
             ]);
 
-            setTribes(tribesRes.data);
-            setMyStories(storiesRes.data);
-            setFollowingUserStories(followStoriesRes.data);
-            localStorage.setItem('cached_tribes', JSON.stringify(tribesRes.data));
+            setTribes(tribesRes.data || []);
+            setMyStories(storiesRes.data || []);
+            setFollowingUserStories(followStoriesRes.data || []);
+            localStorage.setItem('cached_tribes', JSON.stringify(tribesRes.data || []));
             
         } catch (error) {
-            console.error("Sync error:", error);
+            console.error("Critical Fetch Error:", error);
         } finally {
             setIsFetching(false);
         }
     }, [currentUser, isFetching, normalizePost, users, posts, tribes]);
 
-    // INSTAGRAM-STYLE OPTIMISTIC UI FOR POSTING
     const handleAddPost = async (content: string, imageUrl?: string) => {
         if (!currentUser || isPosting) return;
-        
         setIsPosting(true);
 
-        // 1. Create temporary optimistic post
+        const tempId = `temp-${Date.now()}`;
         const optimisticPost: Post = {
-            id: `temp-${Date.now()}`,
+            id: tempId,
             author: currentUser,
             content,
-            imageUrl, // Showing local preview immediately
+            imageUrl, // Show local preview
             timestamp: new Date().toISOString(),
             likes: [],
             comments: []
         };
 
-        // 2. Add to feed immediately
         setPosts(prev => [optimisticPost, ...prev]);
 
         try {
-            // 3. Perform real network request
             const { data } = await api.createPost({ content, imageUrl });
             const finalPost = normalizePost(data);
             
-            // 4. Replace temp post with real post from server
-            setPosts(prev => prev.map(p => p.id === optimisticPost.id ? finalPost : p));
+            // Replace optimistic post with confirmed one from DB
+            setPosts(prev => {
+                const updated = prev.map(p => p.id === tempId ? finalPost : p);
+                // Also update cache so refresh works immediately
+                localStorage.setItem('cached_posts', JSON.stringify(updated.slice(0, 20)));
+                return updated;
+            });
             toast.success("Shared! ✨");
         } catch (error) {
-            // 5. Rollback on failure
-            setPosts(prev => prev.filter(p => p.id !== optimisticPost.id));
-            toast.error("Cloudinary or Server Error. Try again.");
-            console.error("Post failed:", error);
+            setPosts(prev => prev.filter(p => p.id !== tempId));
+            toast.error("Failed to share post. Please try again.");
+            console.error("Posting error:", error);
         } finally {
             setIsPosting(false);
         }
@@ -1317,7 +1320,7 @@ const App: React.FC = () => {
             const usersRes = await api.fetchUsers();
             setUsers(usersRes.data);
         } catch (error) {
-            toast.error("Sync failed");
+            toast.error("Update failed");
         }
     };
 
@@ -1331,8 +1334,10 @@ const App: React.FC = () => {
         if (!socket) return;
         socket.on('newPost', (post: any) => {
             setPosts(prev => {
+                // Don't add if we already have it (from our own handleAddPost)
                 if (prev.some(p => p.id === post.id)) return prev;
-                return [normalizePost(post), ...prev];
+                const normalized = normalizePost(post);
+                return [normalized, ...prev];
             });
         });
         return () => { socket.off('newPost'); };

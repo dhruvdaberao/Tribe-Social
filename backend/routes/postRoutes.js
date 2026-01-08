@@ -1040,13 +1040,15 @@ const POST_POPULATION = [
 router.get('/feed', protect, async (req, res) => {
     try {
         const page = Math.max(1, parseInt(req.query.page) || 1);
-        const limit = Math.min(10, parseInt(req.query.limit) || 10);
+        const limit = Math.min(20, parseInt(req.query.limit) || 10);
         const skip = (page - 1) * limit;
 
+        // Fetch following IDs
         const currentUser = await User.findById(req.user.id).select('following').lean();
         const userIdsForFeed = [req.user.id, ...(currentUser?.following || [])];
         
-        // .lean() makes the query significantly faster for the free tier
+        // Use .lean() for high performance on Render free tier
+        // Explicitly sort by createdAt -1 (using the index added in postModel)
         const posts = await Post.find({ user: { $in: userIdsForFeed } })
             .sort({ createdAt: -1 })
             .skip(skip)
@@ -1054,14 +1056,67 @@ router.get('/feed', protect, async (req, res) => {
             .populate(POST_POPULATION)
             .lean(); 
 
-        const validPosts = posts.filter(p => p.user !== null);
+        // Filter out any posts where population failed (user deleted)
+        const validPosts = posts.filter(p => p.user);
         res.json(validPosts);
     } catch (error) {
-        console.error("Feed API Error:", error);
-        res.status(200).json([]); // Fallback to empty array to prevent FE crash
+        console.error("Feed Fetch Error:", error);
+        res.status(500).json([]);
     }
 });
 
+// @route   POST /api/posts
+router.post('/', protect, async (req, res) => {
+    const { content, imageUrl: base64Image } = req.body;
+    
+    // Validation
+    if (!content && !base64Image) {
+        return res.status(400).json({ message: 'Post content or image is required' });
+    }
+
+    try {
+        let finalImageUrl = null;
+
+        // 1. Upload to Cloudinary FIRST
+        if (base64Image && base64Image.startsWith('data:image')) {
+            try {
+                finalImageUrl = await uploadImage(base64Image, 'posts');
+                console.log("Cloudinary Upload Success:", finalImageUrl);
+            } catch (uploadError) {
+                console.error("Cloudinary Upload Failed:", uploadError);
+                return res.status(500).json({ message: 'Image upload failed. Post not saved.' });
+            }
+        }
+
+        // 2. Create Post object only after successful upload
+        const post = new Post({
+            content: content || '',
+            imageUrl: finalImageUrl,
+            user: req.user.id
+        });
+
+        // 3. Save to MongoDB
+        const savedPost = await post.save();
+        console.log("Post Saved to DB:", savedPost._id);
+
+        // 4. Fetch fully populated post to return to frontend
+        const populatedPost = await Post.findById(savedPost._id)
+            .populate(POST_POPULATION)
+            .lean();
+
+        // 5. Broadcast via Socket
+        if (req.io) {
+            req.io.emit('newPost', populatedPost);
+        }
+        
+        res.status(201).json(populatedPost);
+    } catch (error) {
+        console.error("Post Creation Error:", error);
+        res.status(500).json({ message: 'Failed to create post. Server error.' });
+    }
+});
+
+// @route   GET /api/posts
 router.get('/', protect, async (req, res) => {
     try {
         const page = Math.max(1, parseInt(req.query.page) || 1);
@@ -1075,33 +1130,10 @@ router.get('/', protect, async (req, res) => {
             .populate(POST_POPULATION)
             .lean();
         
-        const validPosts = posts.filter(p => p.user !== null);
-        res.json(validPosts);
+        res.json(posts.filter(p => p.user));
     } catch (error) {
-        res.status(200).json([]);
+        res.status(500).json([]);
     }
 });
 
-router.post('/', protect, async (req, res) => {
-    const { content, imageUrl: base64Image } = req.body;
-    if (!content && !base64Image) return res.status(400).json({ message: 'Empty post' });
-
-    try {
-        let finalImageUrl = base64Image;
-        if (base64Image && base64Image.startsWith('data:image')) {
-            finalImageUrl = await uploadImage(base64Image, 'posts');
-        }
-
-        const post = new Post({ content: content || '', imageUrl: finalImageUrl, user: req.user.id });
-        await post.save();
-        
-        const populatedPost = await Post.findById(post._id).populate(POST_POPULATION).lean();
-        if (req.io) req.io.emit('newPost', populatedPost);
-        
-        res.status(201).json(populatedPost);
-    } catch (error) {
-        res.status(500).json({ message: 'Post failed' });
-    }
-});
-
-export default router;
+export default router;A
