@@ -377,6 +377,8 @@ export const fetchMyTribes = () => API.get('/tribes/my-tribes');
 export const joinTribe = (id: string) => API.put(`/tribes/${id}/join`);
 export const fetchTribeMessages = (id: string) => API.get(`/tribes/${id}/messages`);
 export const sendTribeMessage = (id: string, data: any) => API.post(`/tribes/${id}/messages`, data);
+export const deleteTribeMessage = (tribeId: string, messageId: string) =>
+  API.delete(`/tribes/${tribeId}/messages/${messageId}`);
 
 // AI & Notifications
 export const generateAiChat = (data: { prompt: string }) => API.post('/ai/chat', data);

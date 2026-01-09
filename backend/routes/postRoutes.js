@@ -118,83 +118,66 @@ import express from 'express';
 import protect from '../middleware/authMiddleware.js';
 import Post from '../models/postModel.js';
 import User from '../models/userModel.js';
-import Notification from '../models/notificationModel.js';
 
 const router = express.Router();
+const USER_FIELDS = 'name username avatarUrl';
 
-const USER_FIELDS = 'name username avatarUrl bannerUrl';
-
-/* ===================== FEED ===================== */
+/* ================= FEED ================= */
 router.get('/feed', protect, async (req, res) => {
   try {
     const me = await User.findById(req.user.id).select('following').lean();
     const ids = [req.user.id, ...(me.following || [])];
 
-    const posts = await Post.find({ author: { $in: ids } })
+    let posts = await Post.find({ author: { $in: ids } })
       .sort({ createdAt: -1 })
       .limit(30)
       .populate('author', USER_FIELDS)
       .populate('comments.author', USER_FIELDS)
       .lean();
 
-    res.json(
-      posts.map(p => ({
-        ...p,
-        id: p._id.toString(),
-        author: { ...p.author, id: p.author._id.toString() }
-      }))
-    );
-  } catch (e) {
-    res.status(500).json({ message: 'Failed to load feed' });
-  }
-});
-
-/* ===================== USER POSTS ===================== */
-router.get('/user/:userId', protect, async (req, res) => {
-  try {
-    const posts = await Post.find({ author: req.params.userId })
-      .sort({ createdAt: -1 })
-      .populate('author', USER_FIELDS)
-      .populate('comments.author', USER_FIELDS)
-      .lean();
+    if (!posts.length) {
+      posts = await Post.find()
+        .sort({ createdAt: -1 })
+        .limit(20)
+        .populate('author', USER_FIELDS)
+        .populate('comments.author', USER_FIELDS)
+        .lean();
+    }
 
     res.json(posts.map(p => ({ ...p, id: p._id.toString() })));
   } catch {
-    res.status(500).json({ message: 'Failed to load profile posts' });
+    res.status(500).json({ message: 'Feed failed' });
   }
 });
 
-/* ===================== LIKE ===================== */
+/* ================= USER POSTS ================= */
+router.get('/user/:userId', protect, async (req, res) => {
+  const posts = await Post.find({ author: req.params.userId })
+    .sort({ createdAt: -1 })
+    .populate('author', USER_FIELDS)
+    .populate('comments.author', USER_FIELDS)
+    .lean();
+  res.json(posts.map(p => ({ ...p, id: p._id.toString() })));
+});
+
+/* ================= LIKE ================= */
 router.put('/:id/like', protect, async (req, res) => {
-  try {
-    const post = await Post.findById(req.params.id);
-    if (!post) return res.status(404).json({ message: 'Post not found' });
+  const post = await Post.findById(req.params.id);
+  if (!post) return res.status(404).json({ message: 'Post not found' });
 
-    const liked = post.likes.includes(req.user.id);
-    post.likes = liked
-      ? post.likes.filter(i => i.toString() !== req.user.id)
-      : [...post.likes, req.user.id];
+  const liked = post.likes.includes(req.user.id);
+  post.likes = liked
+    ? post.likes.filter(i => i.toString() !== req.user.id)
+    : [...post.likes, req.user.id];
 
-    if (!liked && post.author.toString() !== req.user.id) {
-      await Notification.create({
-        recipient: post.author,
-        sender: req.user.id,
-        type: 'like',
-        postId: post._id
-      });
-    }
+  await post.save();
 
-    await post.save();
+  const updated = await Post.findById(post._id)
+    .populate('author', USER_FIELDS)
+    .populate('comments.author', USER_FIELDS)
+    .lean();
 
-    const updated = await Post.findById(post._id)
-      .populate('author', USER_FIELDS)
-      .populate('comments.author', USER_FIELDS)
-      .lean();
-
-    res.json({ ...updated, id: updated._id.toString() });
-  } catch {
-    res.status(500).json({ message: 'Like failed' });
-  }
+  res.json({ ...updated, id: updated._id.toString() });
 });
 
 export default router;
