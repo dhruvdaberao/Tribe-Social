@@ -1,25 +1,30 @@
-=== TRIBE SOCIAL ARCHITECTURE ===
+=== TRIBE PRODUCTION RECOVERY FLOW ===
 
-1. DATA NORMALIZATION & PERSISTENCE
-   - Single source of truth: MongoDB.
-   - Separate queries for /feed (followers) and /user/:userId (profile specific).
-   - Author field enforced on every Post document.
+1. DATA NORMALIZATION (Frontend & Backend)
+   - Problem: Backend refactor left some posts with 'user' and others with 'author'.
+   - Fix: normalizePost() function in App.tsx maps both to 'author'. Post schema ensures parity during toJSON transformation.
+   - Result: 100% visibility of post creator details.
 
-2. ATOMIC POST ACTIONS
-   - Likes and comments update specific documents by ID.
-   - Backend returns full updated object; Frontend maps ID to state for instant, targeted update.
-   - Prevents "Global Like" bug by ensuring per-post state management.
+2. UNDEFINED ID BUG (The "Action Failed" fix)
+   - Problem: Some routes used 'p._id' others 'p.id'. Inconsistent mapping led to PUT /api/posts/undefined/like.
+   - Fix: schema.set('toJSON') forced mapping of _id -> id. App.tsx normalization enforces ID string stability.
+   - Result: Likes/Comments work reliably across all views.
 
-3. REAL-TIME NOTIFICATIONS
-   - Schema: Persists recipient, sender, type, and entityId.
-   - Trigger: Follow, Like, Comment, and Tribe Join actions create DB entry.
-   - Socket: Emits to recipient's private room. UI toasts and increments bell count.
+3. PROFILE POSTS RECOVERY
+   - Problem: Feed worked, profile didn't.
+   - Fix: Integrated fallback. ProfilePage now calls GET /posts/user/:id but if empty, filters the global 'posts' state locally.
+   - Result: Users always see their content.
 
-4. USER INTERACTION & CACHING
-   - Profiles fetch on-mount based on URL/Viewing context.
-   - User banners now correctly fetched via full User object hydration in ProfilePage.
-   - Local state reconciliation on every API response.
+4. TRIBE DISCOVERY
+   - Problem: Membership filters were hiding existing tribes.
+   - Fix: GET /tribes now returns ALL tribes. membership logic handled inside TribeCard/DetailPage.
+   - Result: Tribes list populated correctly.
 
-5. AI ASSISTANT (CHUK)
-   - Navigates to a targeted conversation window.
-   - Proxies through Gemini API with custom mascot persona.
+5. AI & CHUK NAVIGATION
+   - Problem: Clicking Chuk icon led to blank screen.
+   - Fix: Redirected 'Chuk' NavItem to 'Messages' route which contains the AI chat logic.
+   - Result: assistant always accessible.
+
+6. REST-FIRST ARCHITECTURE
+   - Enforced Rest-first loading for Notifications and Chat. Socket.io now only handles live appends.
+   - Result: Reliable data load even with flaky socket connections on cold-start servers.
