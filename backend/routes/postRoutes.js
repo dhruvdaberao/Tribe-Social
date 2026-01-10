@@ -30,7 +30,7 @@
 // // //         postObject.timestamp = postObject.createdAt;
 // // //         // The 'user' property is already populated. We will NOT rename it to 'author' here
 // // //         // to maintain consistency with other endpoints. The frontend is responsible for this mapping.
-        
+
 // // //         delete postObject._id;
 // // //         delete postObject.__v;
 // // //         delete postObject.createdAt;
@@ -42,7 +42,7 @@
 // // //             commentObject.id = commentObject._id.toString();
 // // //             commentObject.timestamp = commentObject.createdAt;
 // // //             // 'comment.user' is populated. No rename needed.
-            
+
 // // //             delete commentObject._id;
 // // //             delete commentObject.createdAt;
 // // //             delete commentObject.updatedAt;
@@ -62,13 +62,13 @@
 // // //         if (!currentUser) {
 // // //             return res.status(401).json({ message: "User not found." });
 // // //         }
-        
+
 // // //         const page = parseInt(req.query.page) || 1;
 // // //         const limit = parseInt(req.query.limit) || 20;
 // // //         const skip = (page - 1) * limit;
 
 // // //         const userIdsForFeed = [currentUser._id, ...(currentUser.following || [])];
-        
+
 // // //         let posts = await Post.aggregate([
 // // //             { $match: { user: { $in: userIdsForFeed.map(id => new mongoose.Types.ObjectId(id.toString())) } } },
 // // //             { $sort: { createdAt: -1 } },
@@ -102,13 +102,13 @@
 // // //             { $skip: skip },
 // // //             { $limit: limit }
 // // //         ]).allowDiskUse(true);
-        
+
 // // //         posts = await Post.populate(posts, { path: 'user' });
 // // //         posts = await Post.populate(posts, { path: 'comments.user' });
-        
+
 // // //         const formattedPosts = formatAggregatedPosts(posts);
 // // //         res.json(formattedPosts);
-        
+
 // // //     } catch (error) {
 // // //         console.error("Discover posts route error:", error);
 // // //         res.status(500).json({ message: 'Server Error: Could not fetch posts.' });
@@ -148,7 +148,7 @@
 
 // // //         let createdPost = await post.save();
 // // //         createdPost = await fullyPopulatePost(createdPost);
-        
+
 // // //         // Include tempId in the socket event to allow frontend to replace optimistic post
 // // //         const postForSocket = { ...createdPost.toJSON(), tempId };
 // // //         req.io.emit('newPost', postForSocket);
@@ -242,7 +242,7 @@
 
 // // //         const newComment = { text, user: req.user.id };
 // // //         post.comments.push(newComment);
-        
+
 // // //         if (post.user.toString() !== req.user.id) {
 // // //             // Check for a very recent similar notification to prevent duplicates from fast clicks/retries
 // // //             const recentNotification = await Notification.findOne({
@@ -268,7 +268,7 @@
 // // //                 }
 // // //             }
 // // //         }
-        
+
 // // //         let updatedPost = await post.save();
 // // //         updatedPost = await fullyPopulatePost(updatedPost);
 // // //         req.io.emit('postUpdated', updatedPost);
@@ -297,7 +297,7 @@
 // // //         }
 
 // // //         post.comments = post.comments.filter(c => c._id.toString() !== req.params.comment_id);
-        
+
 // // //         let updatedPost = await post.save();
 // // //         updatedPost = await fullyPopulatePost(updatedPost);
 // // //         req.io.emit('postUpdated', updatedPost);
@@ -340,7 +340,7 @@
 // //         // Ensure user IDs are valid ObjectId strings before querying
 // //         const userIdsForFeed = [currentUser._id, ...(currentUser.following || [])]
 // //             .filter(id => mongoose.Types.ObjectId.isValid(id));
-        
+
 // //         // Use standard .find() which is reliable on MongoDB Free Tier
 // //         const posts = await Post.find({ user: { $in: userIdsForFeed } })
 // //             .sort({ createdAt: -1 })
@@ -367,7 +367,7 @@
 // //             .limit(50)
 // //             .populate('user', 'name username avatarUrl')
 // //             .populate('comments.user', 'name username avatarUrl');
-        
+
 // //         const validPosts = posts.filter(post => post.user !== null);
 // //         res.json(validPosts);
 // //     } catch (error) {
@@ -384,7 +384,7 @@
 // //         }
 // //         let post = await Post.findById(req.params.id);
 // //         if (!post) return res.status(404).json({ message: 'Post not found' });
-        
+
 // //         post = await fullyPopulatePost(post);
 // //         res.json(post);
 // //     } catch (error) {
@@ -406,7 +406,7 @@
 
 // //         let createdPost = await post.save();
 // //         createdPost = await fullyPopulatePost(createdPost);
-        
+
 // //         // Include tempId so frontend can reconcile optimistic updates
 // //         const postForSocket = { ...createdPost.toJSON(), tempId };
 // //         req.io.emit('newPost', postForSocket);
@@ -489,7 +489,7 @@
 // //         if (!post) return res.status(404).json({ message: 'Post not found' });
 
 // //         post.comments.push({ text, user: req.user.id });
-        
+
 // //         if (post.user.toString() !== req.user.id) {
 // //              const notification = new Notification({
 // //                 recipient: post.user,
@@ -502,7 +502,7 @@
 // //             const socketId = req.onlineUsers.get(post.user.toString());
 // //             if (socketId) req.io.to(socketId).emit('newNotification', popNotif);
 // //         }
-        
+
 // //         await post.save();
 // //         const updatedPost = await fullyPopulatePost(post);
 // //         req.io.emit('postUpdated', updatedPost);
@@ -565,11 +565,11 @@
 //         if (!currentUser) {
 //             return res.status(401).json({ message: "User not found." });
 //         }
-        
+
 //         // Filter out any invalid ObjectIds from the following list to prevent crashes
 //         const followingIds = (currentUser.following || []).filter(id => mongoose.Types.ObjectId.isValid(id));
 //         const userIdsForFeed = [currentUser._id, ...followingIds];
-        
+
 //         // Use simple .find() instead of aggregate to avoid memory limits on free tier
 //         // Limit to 10 posts initially to ensure speed
 //         const posts = await Post.find({ user: { $in: userIdsForFeed } })
@@ -607,15 +607,15 @@
 //             .limit(20)
 //             .populate('user', 'name username avatarUrl')
 //             .populate('comments.user', 'name username avatarUrl');
-        
+
 //         const validPosts = posts.filter(post => post.user !== null).map(post => {
 //             const postObj = post.toJSON();
 //             postObj.comments = postObj.comments.filter(c => c.user !== null);
 //             return postObj;
 //         });
-        
+
 //         res.json(validPosts);
-        
+
 //     } catch (error) {
 //         console.error("Discover posts route error:", error);
 //         res.json([]);
@@ -652,7 +652,7 @@
 
 //         let createdPost = await post.save();
 //         createdPost = await fullyPopulatePost(createdPost);
-        
+
 //         const postForSocket = { ...createdPost.toJSON(), tempId };
 //         req.io.emit('newPost', postForSocket);
 
@@ -736,7 +736,7 @@
 
 //         const newComment = { text, user: req.user.id };
 //         post.comments.push(newComment);
-        
+
 //         if (post.user.toString() !== req.user.id) {
 //             const recentNotification = await Notification.findOne({
 //                 recipient: post.user,
@@ -761,7 +761,7 @@
 //                 }
 //             }
 //         }
-        
+
 //         let updatedPost = await post.save();
 //         updatedPost = await fullyPopulatePost(updatedPost);
 //         req.io.emit('postUpdated', updatedPost);
@@ -785,7 +785,7 @@
 //         }
 
 //         post.comments = post.comments.filter(c => c._id.toString() !== req.params.comment_id);
-        
+
 //         let updatedPost = await post.save();
 //         updatedPost = await fullyPopulatePost(updatedPost);
 //         req.io.emit('postUpdated', updatedPost);
@@ -807,6 +807,7 @@ import protect from '../middleware/authMiddleware.js';
 import Post from '../models/postModel.js';
 import User from '../models/userModel.js';
 import Notification from '../models/notificationModel.js';
+import cloudinary from '../config/cloudinary.js';
 
 const router = express.Router();
 
@@ -818,24 +819,46 @@ const fullyPopulatePost = async (post) => {
 
 // @route   GET /api/posts/feed
 // @desc    Get posts for feed - Optimized for Free Tier
+// @route   GET /api/posts/feed
+// @desc    Get posts for feed - Optimized with Fallback
 router.get('/feed', protect, async (req, res) => {
     try {
+        console.log("----------------------------------");
+        console.log(`🔍 GET /api/posts/feed - User: ${req.user.id}`);
+
         const currentUser = await User.findById(req.user.id);
         if (!currentUser) {
             return res.status(401).json({ message: "User not found." });
         }
-        
+
         // Filter out any invalid ObjectIds from the following list to prevent crashes
         const followingIds = (currentUser.following || []).filter(id => mongoose.Types.ObjectId.isValid(id));
         const userIdsForFeed = [currentUser._id, ...followingIds];
-        
+
+        console.log(`📋 Feed for users: ${userIdsForFeed.length} (Self + ${followingIds.length} following)`);
+
         // Use simple .find() instead of aggregate to avoid memory limits on free tier
-        // Limit to 10 posts initially to ensure speed
-        const posts = await Post.find({ user: { $in: userIdsForFeed } })
+        let posts = await Post.find({ user: { $in: userIdsForFeed } })
             .sort({ createdAt: -1 })
-            .limit(10)
+            .limit(20)
             .populate('user', 'name username avatarUrl')
             .populate('comments.user', 'name username avatarUrl');
+
+        console.log(`✅ Personalized feed found: ${posts.length} posts`);
+
+        // FALLBACK: If feed is empty (new user or inactive following), show global posts
+        // "Remove over-restrictive filters temporarily" (Phase 2 Requirement)
+        if (posts.length === 0) {
+            console.log("⚠️ Feed empty or too small. Fetching global posts as fallback...");
+            const globalPosts = await Post.find({})
+                .sort({ createdAt: -1 })
+                .limit(20)
+                .populate('user', 'name username avatarUrl')
+                .populate('comments.user', 'name username avatarUrl');
+
+            posts = globalPosts;
+            console.log(`✅ Fallback feed found: ${posts.length} posts`);
+        }
 
         // Robustly format posts, handling cases where users might be deleted (null)
         // CRITICAL FIX: Only return posts where post.user is NOT null.
@@ -846,12 +869,13 @@ router.get('/feed', protect, async (req, res) => {
             return postObj;
         });
 
+        console.log(`📤 Returning ${validPosts.length} posts to frontend.`);
         res.json(validPosts);
 
     } catch (error) {
-        console.error("Error in /api/posts/feed route:", error);
+        console.error("❌ Error in /api/posts/feed route:", error);
         // Return empty array instead of 500 to keep app running
-        res.json([]); 
+        res.json([]);
     }
 });
 
@@ -860,28 +884,55 @@ router.get('/feed', protect, async (req, res) => {
 // @desc    Get all posts for discover - Optimized
 router.get('/', protect, async (req, res) => {
     try {
-        // Limit to 20 posts to prevent 502 Bad Gateway (OOM)
+        console.log("----------------------------------");
+        console.log("🔍 GET /api/posts - Fetching Discover feed");
+
+        // Limit to 50 posts to prevent 502 Bad Gateway (OOM)
         const posts = await Post.find({})
             .sort({ createdAt: -1 })
-            .limit(20)
+            .limit(50)
             .populate('user', 'name username avatarUrl')
             .populate('comments.user', 'name username avatarUrl');
-        
+
         const validPosts = posts.filter(post => post.user !== null).map(post => {
             const postObj = post.toJSON();
             postObj.comments = postObj.comments.filter(c => c.user !== null);
             return postObj;
         });
-        
+
+        console.log(`✅ Discover found: ${validPosts.length} posts`);
         res.json(validPosts);
-        
+
     } catch (error) {
-        console.error("Discover posts route error:", error);
+        console.error("❌ Discover posts route error:", error);
         res.json([]);
     }
 });
 
+// @route   GET /api/posts/user/:id
+// @desc    Get posts by a specific user
+router.get('/user/:id', protect, async (req, res) => {
+    try {
+        const posts = await Post.find({ user: req.params.id })
+            .sort({ createdAt: -1 })
+            .populate('user', 'name username avatarUrl')
+            .populate('comments.user', 'name username avatarUrl');
+
+        const validPosts = posts.filter(post => post.user !== null).map(post => {
+            const postObj = post.toJSON();
+            postObj.comments = postObj.comments.filter(c => c.user !== null);
+            return postObj;
+        });
+
+        res.json(validPosts);
+    } catch (error) {
+        console.error("Error fetching user posts:", error);
+        res.status(500).json({ message: 'Server Error' });
+    }
+});
+
 // @route   GET /api/posts/:id
+// @desc    Get a single post by ID
 router.get('/:id', protect, async (req, res) => {
     try {
         let post = await Post.findById(req.params.id);
@@ -902,21 +953,37 @@ router.post('/', protect, async (req, res) => {
     if (!content && !imageUrl) {
         return res.status(400).json({ message: 'Post must have content or an image' });
     }
+    let finalImageUrl = null;
+    let finalPublicId = null;
+
     try {
+        if (imageUrl && imageUrl.startsWith('data:image')) {
+            const uploadResponse = await cloudinary.uploader.upload(imageUrl, {
+                folder: 'tribe_social_posts',
+            });
+            finalImageUrl = uploadResponse.secure_url;
+            finalPublicId = uploadResponse.public_id;
+        } else if (imageUrl) {
+            finalImageUrl = imageUrl;
+        }
+
         const post = new Post({
             content: content || '',
-            imageUrl: imageUrl || null,
+            imageUrl: finalImageUrl,
+            imagePublicId: finalPublicId,
             user: req.user.id,
         });
 
         let createdPost = await post.save();
         createdPost = await fullyPopulatePost(createdPost);
-        
+
+        // Include tempId so frontend can reconcile optimistic updates
         const postForSocket = { ...createdPost.toJSON(), tempId };
         req.io.emit('newPost', postForSocket);
 
         res.status(201).json(createdPost);
     } catch (error) {
+        console.error("Create post error:", error);
         res.status(500).json({ message: 'Server Error' });
     }
 });
@@ -932,6 +999,15 @@ router.delete('/:id', protect, async (req, res) => {
         if (post.user.toString() !== req.user.id) {
             return res.status(401).json({ message: 'User not authorized' });
         }
+
+        if (post.imagePublicId) {
+            try {
+                await cloudinary.uploader.destroy(post.imagePublicId);
+            } catch (err) {
+                console.error("Failed to delete image from Cloudinary:", err);
+            }
+        }
+
         await post.deleteOne();
         req.io.emit('postDeleted', req.params.id);
         res.json({ message: 'Post removed' });
@@ -955,10 +1031,10 @@ router.put('/:id/like', protect, async (req, res) => {
             post.likes.push(req.user.id);
             if (post.user.toString() !== req.user.id) {
                 const existingNotification = await Notification.findOne({
-                   recipient: post.user,
-                   sender: req.user.id,
-                   type: 'like',
-                   postId: post._id,
+                    recipient: post.user,
+                    sender: req.user.id,
+                    type: 'like',
+                    postId: post._id,
                 });
                 if (!existingNotification) {
                     const notification = new Notification({
@@ -988,25 +1064,25 @@ router.put('/:id/like', protect, async (req, res) => {
 // @route   POST /api/posts/:id/comments
 router.post('/:id/comments', protect, async (req, res) => {
     const { text } = req.body;
-     if (!text) return res.status(400).json({ message: 'Comment text is required' });
+    if (!text) return res.status(400).json({ message: 'Comment text is required' });
     try {
         let post = await Post.findById(req.params.id);
         if (!post) return res.status(404).json({ message: 'Post not found' });
 
         const newComment = { text, user: req.user.id };
         post.comments.push(newComment);
-        
+
         if (post.user.toString() !== req.user.id) {
             const recentNotification = await Notification.findOne({
                 recipient: post.user,
                 sender: req.user.id,
                 type: 'comment',
                 postId: post._id,
-                createdAt: { $gte: new Date(Date.now() - 10000) } 
+                createdAt: { $gte: new Date(Date.now() - 10000) }
             });
 
             if (!recentNotification) {
-                 const notification = new Notification({
+                const notification = new Notification({
                     recipient: post.user,
                     sender: req.user.id,
                     type: 'comment',
@@ -1020,7 +1096,7 @@ router.post('/:id/comments', protect, async (req, res) => {
                 }
             }
         }
-        
+
         let updatedPost = await post.save();
         updatedPost = await fullyPopulatePost(updatedPost);
         req.io.emit('postUpdated', updatedPost);
@@ -1044,7 +1120,7 @@ router.delete('/:id/comments/:comment_id', protect, async (req, res) => {
         }
 
         post.comments = post.comments.filter(c => c._id.toString() !== req.params.comment_id);
-        
+
         let updatedPost = await post.save();
         updatedPost = await fullyPopulatePost(updatedPost);
         req.io.emit('postUpdated', updatedPost);

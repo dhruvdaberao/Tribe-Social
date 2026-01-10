@@ -77,8 +77,9 @@ commentSchema.set('toJSON', {
 const postSchema = mongoose.Schema(
   {
     user: { type: mongoose.Schema.Types.ObjectId, required: true, ref: 'User', index: true },
-    content: { type: String, required: function() { return !this.imageUrl; } },
+    content: { type: String, required: function () { return !this.imageUrl; } },
     imageUrl: { type: String },
+    imagePublicId: { type: String },
     likes: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
     comments: [commentSchema],
   },
