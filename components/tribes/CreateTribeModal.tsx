@@ -1,112 +1,169 @@
-import React, { useState, useRef } from 'react';
+import React, { useState } from 'react';
+import styled from 'styled-components';
+import { X } from 'lucide-react';
+import * as api from '../../api';
+
+const Overlay = styled.div`
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+`;
+
+const Modal = styled.div`
+  background: ${({ theme }) => theme.cardBackground};
+  width: 100%;
+  max-width: 500px;
+  border-radius: 12px;
+  padding: 24px;
+  position: relative;
+`;
+
+const Header = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+  
+  h2 { margin: 0; font-size: 1.5rem; color: ${({ theme }) => theme.text}; }
+`;
+
+const CloseButton = styled.button`
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: ${({ theme }) => theme.textSecondary};
+  &:hover { color: ${({ theme }) => theme.text}; }
+`;
+
+const Form = styled.form`
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+`;
+
+const Label = styled.label`
+  font-weight: 500;
+  color: ${({ theme }) => theme.text};
+  margin-bottom: 4px;
+  display: block;
+`;
+
+const Input = styled.input`
+  width: 100%;
+  padding: 12px;
+  border-radius: 8px;
+  border: 1px solid ${({ theme }) => theme.borderColor};
+  background: ${({ theme }) => theme.inputBackground};
+  color: ${({ theme }) => theme.text};
+  
+  &:focus { outline: 2px solid #FF5722; border-color: transparent; }
+`;
+
+const TextArea = styled.textarea`
+  width: 100%;
+  padding: 12px;
+  border-radius: 8px;
+  border: 1px solid ${({ theme }) => theme.borderColor};
+  background: ${({ theme }) => theme.inputBackground};
+  color: ${({ theme }) => theme.text};
+  min-height: 100px;
+  resize: vertical;
+  
+  &:focus { outline: 2px solid #FF5722; border-color: transparent; }
+`;
+
+const Button = styled.button`
+  background: #FF5722;
+  color: white;
+  padding: 14px;
+  border-radius: 8px;
+  border: none;
+  font-weight: 600;
+  cursor: pointer;
+  margin-top: 8px;
+  
+  &:disabled { opacity: 0.7; cursor: not-allowed; }
+`;
 
 interface CreateTribeModalProps {
     onClose: () => void;
-    onCreate: (name: string, description: string, avatarUrl?: string) => void;
+    onSuccess: (newTribe: any) => void;
 }
 
-const TribePlaceholderIcon = () => (
-    <div className="w-full h-full rounded-full bg-background border border-border flex items-center justify-center text-secondary p-5">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
-            <circle cx="9" cy="7" r="4"></circle>
-            <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
-            <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
-        </svg>
-    </div>
-);
-
-const CreateTribeModal: React.FC<CreateTribeModalProps> = ({ onClose, onCreate }) => {
+const CreateTribeModal: React.FC<CreateTribeModalProps> = ({ onClose, onSuccess }) => {
     const [name, setName] = useState('');
     const [description, setDescription] = useState('');
-    const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
-    const avatarInputRef = useRef<HTMLInputElement>(null);
+    const [avatarUrl, setAvatarUrl] = useState('');
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [error, setError] = useState<string | null>(null);
 
-    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (file) {
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                setAvatarPreview(reader.result as string);
-            };
-            reader.readAsDataURL(file);
-        }
-    };
-
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (name.trim() && description.trim()) {
-            onCreate(name.trim(), description.trim(), avatarPreview || undefined);
-            onClose();
+        setError(null);
+        setIsSubmitting(true);
+
+        try {
+            const { data } = await api.createTribe({ name, description, avatarUrl });
+            onSuccess(data);
+        } catch (err: any) {
+            console.error("Create tribe failed", err);
+            setError(err.response?.data?.message || "Failed to create tribe");
+            setIsSubmitting(false);
         }
     };
 
     return (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" onClick={onClose}>
-            <div className="bg-surface rounded-2xl shadow-xl w-full max-w-md border border-border" onClick={e => e.stopPropagation()}>
-                <div className="p-4 flex justify-between items-center border-b border-border">
-                    <h2 className="text-xl font-bold text-primary">Create a New Tribe</h2>
-                    <button onClick={onClose} className="text-secondary hover:text-primary text-2xl leading-none">&times;</button>
-                </div>
-                
-                <form onSubmit={handleSubmit} className="p-6">
-                    <div className="flex flex-col items-center mb-6">
-                        <div className="w-24 h-24 rounded-full bg-background border border-border flex items-center justify-center relative group">
-                           {avatarPreview ? (
-                                <img 
-                                    src={avatarPreview} 
-                                    alt="Tribe avatar preview" 
-                                    className="w-full h-full rounded-full object-cover"
-                                />
-                            ) : (
-                                <TribePlaceholderIcon />
-                           )}
-                            <button type="button" onClick={() => avatarInputRef.current?.click()} className="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity" aria-label="Upload tribe avatar">
-                                <CameraIcon />
-                            </button>
-                        </div>
-                        <input type="file" ref={avatarInputRef} onChange={handleFileChange} accept="image/*" className="hidden" />
+        <Overlay onClick={onClose}>
+            <Modal onClick={e => e.stopPropagation()}>
+                <Header>
+                    <h2>Create New Tribe</h2>
+                    <CloseButton onClick={onClose}><X size={24} /></CloseButton>
+                </Header>
+
+                <Form onSubmit={handleSubmit}>
+                    {error && <div style={{ color: 'red', marginBottom: 10 }}>{error}</div>}
+
+                    <div>
+                        <Label>Tribe Name</Label>
+                        <Input
+                            placeholder="e.g. Developers, Artists..."
+                            value={name}
+                            onChange={e => setName(e.target.value)}
+                            required
+                        />
                     </div>
 
-                    <div className="space-y-4">
-                        <div>
-                            <label htmlFor="tribe-name" className="text-sm font-semibold text-secondary">Tribe Name</label>
-                            <input
-                                id="tribe-name"
-                                type="text"
-                                value={name}
-                                onChange={(e) => setName(e.target.value)}
-                                className="w-full mt-1 p-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-accent text-primary"
-                                placeholder="e.g., React Enthusiasts"
-                                maxLength={50}
-                                required
-                            />
-                        </div>
-                        <div>
-                            <label htmlFor="tribe-description" className="text-sm font-semibold text-secondary">Description</label>
-                            <textarea
-                                id="tribe-description"
-                                value={description}
-                                onChange={(e) => setDescription(e.target.value)}
-                                rows={3}
-                                className="w-full mt-1 p-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-accent text-primary resize-none"
-                                placeholder="What is this tribe about?"
-                                maxLength={200}
-                                required
-                            />
-                        </div>
+                    <div>
+                        <Label>Description</Label>
+                        <TextArea
+                            placeholder="What is this community about?"
+                            value={description}
+                            onChange={e => setDescription(e.target.value)}
+                            required
+                        />
                     </div>
 
-                    <div className="flex justify-end items-center pt-6">
-                        <button type="button" onClick={onClose} className="text-secondary font-semibold px-4 py-2 rounded-lg hover:bg-background">Cancel</button>
-                        <button type="submit" className="bg-accent text-accent-text font-semibold px-6 py-2 rounded-lg hover:bg-accent-hover transition-colors disabled:opacity-50" disabled={!name.trim() || !description.trim()}>Create</button>
+                    <div>
+                        <Label>Avatar Image URL (Optional)</Label>
+                        <Input
+                            placeholder="https://..."
+                            value={avatarUrl}
+                            onChange={e => setAvatarUrl(e.target.value)}
+                        />
+                        <small style={{ color: '#888', marginTop: 4, display: 'block' }}>Supported: Imgur, Cloudinary links</small>
                     </div>
-                </form>
-            </div>
-        </div>
+
+                    <Button type="submit" disabled={isSubmitting}>
+                        {isSubmitting ? 'Creating...' : 'Create Tribe'}
+                    </Button>
+                </Form>
+            </Modal>
+        </Overlay>
     );
 };
-
-const CameraIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
 
 export default CreateTribeModal;

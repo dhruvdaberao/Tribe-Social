@@ -92,6 +92,20 @@ const App: React.FC = () => {
     // Navigation & Modal State
     const [activeNavItem, setActiveNavItem] = useState<NavItem>('Home');
     const [viewedUser, setViewedUser] = useState<User | null>(null);
+
+    // URL Sync for Tribes
+    const navigate = useNavigate();
+    const location = useLocation();
+
+    useEffect(() => {
+        if (location.pathname === '/tribes' || location.pathname === '/tribes/') {
+            setActiveNavItem('Tribes');
+        } else if (location.pathname.startsWith('/tribes/')) {
+            setActiveNavItem('TribeDetail');
+        }
+    }, [location.pathname]);
+
+    // ... existing code ...
     const [viewedTribe, setViewedTribe] = useState<Tribe | null>(null);
     const [viewingPost, setViewingPost] = useState<Post | null>(null);
     const [editingTribe, setEditingTribe] = useState<Tribe | null>(null);
@@ -769,18 +783,20 @@ const App: React.FC = () => {
             case 'Tribes':
                 return (
                     <TribesPage
-                        tribes={tribes}
                         currentUser={currentUser!}
-                        onJoinToggle={handleJoinToggle}
-                        onCreateTribe={handleCreateTribe}
-                        onViewTribe={handleViewTribe}
-                        onEditTribe={handleEditTribe}
-                        isLoading={isFetching}
+                        isLoadingProp={isFetching}
                     />
                 );
             case 'TribeDetail':
-                if (!viewedTribe) return <div className="text-center p-8">Tribe not found. Go back to discover more tribes.</div>;
-                return <TribeDetailPage tribe={viewedTribe} currentUser={currentUser} userMap={userMap} onSendMessage={handleSendTribeMessage} onDeleteMessage={handleDeleteTribeMessage} onDeleteTribe={handleDeleteTribe} onBack={() => setActiveNavItem('Tribes')} onViewProfile={handleViewProfile} onEditTribe={(tribe) => setEditingTribe(tribe)} onJoinToggle={handleJoinToggle} />;
+                const urlTribeId = location.pathname.split('/').pop();
+                const effectiveTribeId = urlTribeId || viewedTribe?.id;
+
+                if (!effectiveTribeId) return <div className="text-center p-8">Tribe not found.</div>;
+
+                return <TribeDetailPage
+                    currentUser={currentUser}
+                    tribeId={effectiveTribeId}
+                />;
             case 'Notifications':
                 return <NotificationsPage notifications={notifications} allTribes={tribes} onViewProfile={handleViewProfile} onViewMessage={handleStartConversation} onViewPost={handleViewPost} onViewTribe={handleViewTribe} onViewStory={handleViewUserStories} />;
             case 'Profile':

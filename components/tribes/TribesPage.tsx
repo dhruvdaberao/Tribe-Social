@@ -1,115 +1,183 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import styled from 'styled-components';
 import { Tribe, User } from '../../types';
+import * as api from '../../api';
 import TribeCard from './TribeCard';
 import CreateTribeModal from './CreateTribeModal';
+import { Plus } from 'lucide-react';
+import { useAuth } from '../../contexts/AuthContext';
 
+// Styled Components (Clean, Modern, Robust)
+const Container = styled.div`
+  padding: 24px;
+  max-width: 1200px;
+  margin: 0 auto;
+`;
+
+const Header = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 32px;
+`;
+
+const Title = styled.h1`
+  font-size: 28px;
+  font-weight: 700;
+  color: ${({ theme }) => theme.text};
+`;
+
+const CreateButton = styled.button`
+  background-color: #FF5722; // Brand Orange
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 20px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: opacity 0.2s;
+  
+  &:hover {
+    opacity: 0.9;
+  }
+`;
+
+const Grid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 24px;
+`;
+
+const LoadingMessage = styled.div`
+  text-align: center;
+  padding: 40px;
+  color: ${({ theme }) => theme.textSecondary};
+  font-size: 1.1rem;
+`;
+
+const EmptyState = styled.div`
+  text-align: center;
+  padding: 60px;
+  background: ${({ theme }) => theme.cardBackground};
+  border-radius: 12px;
+  color: ${({ theme }) => theme.textSecondary};
+  
+  h3 {
+    margin-bottom: 12px;
+    font-size: 1.5rem;
+    color: ${({ theme }) => theme.text};
+  }
+`;
+
+// Interface for Props
 interface TribesPageProps {
-    tribes: Tribe[];
-    currentUser: User;
-    onJoinToggle: (tribeId: string) => void;
-    onCreateTribe: (name: string, description: string, avatarUrl?: string) => void;
-    onViewTribe: (tribe: Tribe) => void;
-    onEditTribe: (tribe: Tribe) => void;
-    isLoading: boolean;
+    currentUser: User | null;
+    isLoadingProp?: boolean; // Optional override from App.tsx
 }
 
-const TribesPage: React.FC<TribesPageProps> = ({ tribes, currentUser, onJoinToggle, onCreateTribe, onViewTribe, onEditTribe, isLoading }) => {
-    const [isCreateModalOpen, setCreateModalOpen] = useState(false);
+const TribesPage: React.FC<TribesPageProps> = ({ currentUser, isLoadingProp }) => {
+    // Local state for reliability - don't depend solely on App.tsx state
+    const [tribes, setTribes] = useState<Tribe[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+    const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
-    const myTribes = tribes.filter(c => c.members.includes(currentUser.id));
-    const otherTribes = tribes.filter(c => !c.members.includes(currentUser.id));
+    // FETCH TRIBES ON MOUNT
+    useEffect(() => {
+        let isMounted = true;
 
-    // Only show full loading screen if we have NO data AND we are currently loading
-    if ((!tribes || tribes.length === 0) && isLoading) {
-        return (
-            <div className="flex flex-col items-center justify-center min-h-[50vh] text-center p-8 space-y-4">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-                <h3 className="text-xl font-bold text-primary">Loading tribes...</h3>
-                <p className="text-secondary">Finding your community</p>
-            </div>
-        );
-    }
+        const loadTribes = async () => {
+            // If App.tsx passed loading prop as false BUT we have no tribes, we force a fetch yourself.
+            try {
+                // Check cache first for instant render
+                const cached = localStorage.getItem('tribe_storage_tribes');
+                if (cached) {
+                    const parsed = JSON.parse(cached);
+                    if (Array.isArray(parsed) && parsed.length > 0) {
+                        setTribes(parsed);
+                        // Don't verify loading false yet, wait for network verify
+                    }
+                }
 
-    // If we have no data and are NOT loading, show specific empty state (likely API failure or actually 0 tribes)
-    if (!tribes || tribes.length === 0) {
-        return (
-            <div className="flex flex-col items-center justify-center min-h-[50vh] text-center p-8 space-y-4">
-                <div className="text-4xl">🏝️</div>
-                <h3 className="text-xl font-bold text-primary">No Tribes Found</h3>
-                <p className="text-secondary">We couldn't load any tribes. Please check your internet connection.</p>
-                <button onClick={() => window.location.reload()} className="text-accent font-semibold hover:underline">Retry</button>
-            </div>
-        )
-    }
+                console.log("🔍 TribesPage: Fetching tribes from API...");
+                const response = await api.fetchTribes();
 
+                if (isMounted) {
+                    setTribes(response.data);
+                    setIsLoading(false);
+                    // Update cache
+                    localStorage.setItem('tribe_storage_tribes', JSON.stringify(response.data));
+                }
+            } catch (err) {
+                console.error("❌ TribesPage: Failed to load tribes", err);
+                if (isMounted) {
+                    setError("Failed to load tribes. Please try again.");
+                    setIsLoading(false);
+                }
+            }
+        };
 
+        loadTribes();
+
+        return () => { isMounted = false; };
+    }, []);
+
+    const handleTribeCreated = (newTribe: Tribe) => {
+        setTribes(prev => [newTribe, ...prev]);
+        setIsCreateModalOpen(false);
+    };
+
+    // RENDER LOGIC
     return (
-        <div>
-            <div className="flex flex-col sm:flex-row justify-between sm:items-center mb-6 gap-4">
-                <h1 className="text-2xl font-bold text-primary font-display">Tribes</h1>
-                <button
-                    onClick={() => setCreateModalOpen(true)}
-                    className="bg-accent text-accent-text font-semibold px-5 py-2 rounded-lg hover:bg-accent-hover transition-colors flex items-center justify-center space-x-2 shadow-sm hover:shadow-md"
-                >
-                    {/* FIX: PlusIcon was used but not defined. */}
-                    <PlusIcon />
-                    <span>Create Tribe</span>
-                </button>
-            </div>
+        <Container>
+            <Header>
+                <Title>Tribes</Title>
+                <CreateButton onClick={() => setIsCreateModalOpen(true)}>
+                    <Plus size={20} />
+                    Create Tribe
+                </CreateButton>
+            </Header>
 
-            {myTribes.length > 0 && (
-                <div className="mb-8">
-                    <h2 className="text-xl font-bold text-primary mb-4 font-display">Your Tribes</h2>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {myTribes.map(tribe => (
-                            <TribeCard
-                                key={tribe.id}
-                                tribe={tribe}
-                                currentUser={currentUser}
-                                isMember={true}
-                                onJoinToggle={onJoinToggle}
-                                onViewTribe={onViewTribe}
-                                onEditTribe={onEditTribe}
-                            />
-                        ))}
-                    </div>
-                </div>
+            {/* ERROR STATE */}
+            {error && (
+                <LoadingMessage style={{ color: 'red' }}>
+                    {error} <br />
+                    <button onClick={() => window.location.reload()} style={{ marginTop: 10, padding: '5px 10px' }}>Retry</button>
+                </LoadingMessage>
             )}
 
-            <div>
-                <h2 className="text-xl font-bold text-primary mb-4 font-display">Discover Tribes</h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {otherTribes.map(tribe => (
-                        <TribeCard
-                            key={tribe.id}
-                            tribe={tribe}
-                            currentUser={currentUser}
-                            isMember={false}
-                            onJoinToggle={onJoinToggle}
-                            onViewTribe={onViewTribe}
-                            onEditTribe={onEditTribe}
-                        />
-                    ))}
-                </div>
-                {otherTribes.length === 0 && (
-                    <div className="bg-surface p-8 text-center rounded-2xl border border-border col-span-full shadow-md">
-                        <p className="text-secondary">No other tribes to join right now.</p>
-                    </div>
-                )}
-            </div>
+            {/* LOADING STATE - Only show if NO tribes are visible (i.e. empty cache) */}
+            {isLoading && tribes.length === 0 && (
+                <LoadingMessage>Finding your community...</LoadingMessage>
+            )}
 
+            {/* EMPTY STATE - Only show if not getting loading/error and truly 0 items */}
+            {!isLoading && !error && tribes.length === 0 && (
+                <EmptyState>
+                    <h3>No Tribes Found</h3>
+                    <p>Be the first to start a community!</p>
+                </EmptyState>
+            )}
+
+            {/* DATA GRID */}
+            <Grid>
+                {tribes.map(tribe => (
+                    <TribeCard key={tribe.id} tribe={tribe} currentUser={currentUser} />
+                ))}
+            </Grid>
+
+            {/* MODALS */}
             {isCreateModalOpen && (
                 <CreateTribeModal
-                    onClose={() => setCreateModalOpen(false)}
-                    onCreate={onCreateTribe}
+                    onClose={() => setIsCreateModalOpen(false)}
+                    onSuccess={handleTribeCreated}
                 />
             )}
-        </div>
+        </Container>
     );
 };
 
-// FIX: Added PlusIcon definition to resolve 'Cannot find name' error.
-const PlusIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg>;
-
-// FIX: Added default export to resolve module import error in App.tsx.
 export default TribesPage;

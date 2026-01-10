@@ -1,5 +1,6 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
+import { BrowserRouter } from 'react-router-dom';
 import App from './App';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { AuthProvider } from './contexts/AuthContext';
@@ -13,12 +14,14 @@ if (!rootElement) {
 const root = ReactDOM.createRoot(rootElement);
 root.render(
   <React.StrictMode>
-    <ThemeProvider>
-      <AuthProvider>
-        <SocketProvider>
-          <App />
-        </SocketProvider>
-      </AuthProvider>
-    </ThemeProvider>
+    <BrowserRouter>
+      <ThemeProvider>
+        <AuthProvider>
+          <SocketProvider>
+            <App />
+          </SocketProvider>
+        </AuthProvider>
+      </ThemeProvider>
+    </BrowserRouter>
   </React.StrictMode>
 );
