@@ -143,14 +143,14 @@
 // // // //     try {
 // // // //         const tribe = await Tribe.findById(req.params.id);
 // // // //         if (!tribe) return res.status(404).json({ message: 'Tribe not found' });
-        
+
 // // // //         if (!tribe.members.some(memberId => memberId.equals(req.user.id))) {
 // // // //             return res.status(403).json({ message: 'You must be a member to view messages' });
 // // // //         }
-        
+
 // // // //         const messages = await TribeMessage.find({ tribe: req.params.id })
 // // // //             .sort({ createdAt: 'asc' });
-        
+
 // // // //         res.json(messages.map(m => m.toJSON()));
 
 // // // //     } catch (error) {
@@ -260,11 +260,11 @@
 // // // //         const tribe = await Tribe.findById(req.params.id);
 // // // //         if (!tribe) return res.status(404).json({ message: 'Tribe not found' });
 // // // //         if (tribe.owner.toString() !== req.user.id) return res.status(401).json({ message: 'Unauthorized' });
-        
+
 // // // //         tribe.name = req.body.name || tribe.name;
 // // // //         tribe.description = req.body.description || tribe.description;
 // // // //         if (req.body.avatarUrl !== undefined) tribe.avatarUrl = req.body.avatarUrl;
-        
+
 // // // //         await tribe.save();
 // // // //         res.json(tribe);
 // // // //     } catch (error) {
@@ -294,7 +294,7 @@
 // // // //         const tribe = await Tribe.findById(req.params.id);
 // // // //         if (!tribe) return res.status(404).json({ message: 'Tribe not found' });
 // // // //         const isMember = tribe.members.some(id => id.equals(req.user.id));
-        
+
 // // // //         if (isMember) {
 // // // //              if (tribe.owner.equals(req.user.id)) return res.status(400).json({ message: 'Owner cannot leave' });
 // // // //             tribe.members = tribe.members.filter(id => !id.equals(req.user.id));
@@ -321,12 +321,12 @@
 // // // //         const tribe = await Tribe.findById(req.params.id);
 // // // //         if (!tribe) return res.status(404).json({ message: 'Tribe not found' });
 // // // //         if (!tribe.members.some(id => id.equals(req.user.id))) return res.status(403).json({ message: 'Access denied' });
-        
+
 // // // //         // Populate sender info. Crucial for displaying avatars in chat.
 // // // //         const messages = await TribeMessage.find({ tribe: req.params.id })
 // // // //             .populate('sender', 'name username avatarUrl')
 // // // //             .sort({ createdAt: 1 }); // Sort oldest to newest
-        
+
 // // // //         res.json(messages);
 // // // //     } catch (error) {
 // // // //         console.error("Get messages error", error);
@@ -341,14 +341,14 @@
 // // // //         const tribe = await Tribe.findById(req.params.id);
 // // // //         if (!tribe) return res.status(404).json({ message: 'Tribe not found' });
 // // // //         if (!tribe.members.some(id => id.equals(req.user.id))) return res.status(403).json({ message: 'Access denied' });
-        
+
 // // // //         const message = new TribeMessage({
 // // // //             tribe: req.params.id,
 // // // //             sender: req.user.id,
 // // // //             text: req.body.text,
 // // // //             imageUrl: req.body.imageUrl || null
 // // // //         });
-        
+
 // // // //         await message.save();
 // // // //         const populatedMessage = await message.populate('sender', 'name username avatarUrl');
 
@@ -477,16 +477,16 @@
 // // //         const tribe = await Tribe.findById(req.params.id);
 // // //         if (!tribe) return res.status(404).json({ message: 'Tribe not found' });
 // // //         if (!tribe.members.some(id => id.equals(req.user.id))) return res.status(403).json({ message: 'Access denied' });
-        
+
 // // //         const message = new TribeMessage({
 // // //             tribe: req.params.id,
 // // //             sender: req.user.id,
 // // //             text: req.body.text,
 // // //             imageUrl: req.body.imageUrl || null
 // // //         });
-        
+
 // // //         const savedMessage = await message.save();
-        
+
 // // //         // CRITICAL FIX: Fully populate the sender so the frontend receives avatar/name immediately
 // // //         const populatedMessage = await TribeMessage.findById(savedMessage._id)
 // // //             .populate('sender', 'name username avatarUrl');
@@ -578,7 +578,7 @@
 // //         tribe.name = name || tribe.name;
 // //         tribe.description = description || tribe.description;
 // //         if (avatarUrl !== undefined) tribe.avatarUrl = avatarUrl;
-        
+
 // //         const updatedTribe = await tribe.save();
 // //         res.json(updatedTribe);
 // //     } catch (error) {
@@ -611,7 +611,7 @@
 // //     try {
 // //         const tribe = await Tribe.findById(req.params.id);
 // //         if (!tribe) return res.status(404).json({ message: 'Tribe not found' });
-        
+
 // //         const isMember = tribe.members.some(memberId => memberId.equals(req.user.id));
 // //         if (isMember) {
 // //              if (tribe.owner.equals(req.user.id)) {
@@ -648,15 +648,15 @@
 // //     try {
 // //         const tribe = await Tribe.findById(req.params.id);
 // //         if (!tribe) return res.status(404).json({ message: 'Tribe not found' });
-        
+
 // //         if (!tribe.members.some(memberId => memberId.equals(req.user.id))) {
 // //             return res.status(403).json({ message: 'You must be a member to view messages' });
 // //         }
-        
+
 // //         const messages = await TribeMessage.find({ tribe: req.params.id })
 // //             .populate('sender', 'name username avatarUrl') // Populate sender for existing messages
 // //             .sort({ createdAt: 'asc' });
-        
+
 // //         res.json(messages.map(m => m.toJSON()));
 
 // //     } catch (error) {
@@ -676,20 +676,20 @@
 // //         if (!tribe.members.some(memberId => memberId.equals(req.user.id))) {
 // //             return res.status(403).json({ message: 'You must be a member to send messages' });
 // //         }
-        
+
 // //         const message = new TribeMessage({
 // //             tribe: req.params.id,
 // //             sender: req.user.id,
 // //             text,
 // //             imageUrl: imageUrl || null
 // //         });
-        
+
 // //         let savedMessage = await message.save();
-        
+
 // //         // CRITICAL FIX: Fully populate the sender before sending to socket
 // //         // This ensures the frontend receives 'name' and 'avatarUrl' immediately
 // //         savedMessage = await savedMessage.populate('sender', 'name username avatarUrl');
-        
+
 // //         const responseMessage = savedMessage.toJSON();
 
 // //         req.io.to(`tribe-${req.params.id}`).emit('newTribeMessage', responseMessage);
@@ -761,25 +761,6 @@
 //         res.status(201).json(createdTribe);
 //     } catch (error) {
 //         console.error('Error creating tribe:', error);
-//         res.status(500).json({ message: 'Server Error' });
-//     }
-// });
-
-// // @route   GET /api/tribes
-// // @desc    Get all tribes
-// router.get('/', protect, async (req, res) => {
-//     try {
-//         const tribes = await Tribe.find({}).sort({ createdAt: -1 });
-//         res.json(tribes);
-//     } catch (error) {
-//         res.status(500).json({ message: 'Server Error' });
-//     }
-// });
-
-// // @route   PUT /api/tribes/:id
-// router.put('/:id', protect, async (req, res) => {
-//     const { name, description, avatarUrl } = req.body;
-//     try {
 //         const tribe = await Tribe.findById(req.params.id);
 //         if (!tribe) return res.status(404).json({ message: 'Tribe not found' });
 //         if (tribe.owner.toString() !== req.user.id) {
@@ -788,7 +769,7 @@
 //         tribe.name = name || tribe.name;
 //         tribe.description = description || tribe.description;
 //         if (avatarUrl !== undefined) tribe.avatarUrl = avatarUrl;
-        
+
 //         const updatedTribe = await tribe.save();
 //         res.json(updatedTribe);
 //     } catch (error) {
@@ -821,7 +802,7 @@
 //     try {
 //         const tribe = await Tribe.findById(req.params.id);
 //         if (!tribe) return res.status(404).json({ message: 'Tribe not found' });
-        
+
 //         const isMember = tribe.members.some(memberId => memberId.equals(req.user.id));
 //         if (isMember) {
 //              if (tribe.owner.equals(req.user.id)) {
@@ -858,15 +839,15 @@
 //     try {
 //         const tribe = await Tribe.findById(req.params.id);
 //         if (!tribe) return res.status(404).json({ message: 'Tribe not found' });
-        
+
 //         if (!tribe.members.some(memberId => memberId.equals(req.user.id))) {
 //             return res.status(403).json({ message: 'You must be a member to view messages' });
 //         }
-        
+
 //         const messages = await TribeMessage.find({ tribe: req.params.id })
 //             .populate('sender', 'name username avatarUrl') // Populate sender for existing messages
 //             .sort({ createdAt: 'asc' });
-        
+
 //         res.json(messages.map(m => m.toJSON()));
 
 //     } catch (error) {
@@ -886,20 +867,20 @@
 //         if (!tribe.members.some(memberId => memberId.equals(req.user.id))) {
 //             return res.status(403).json({ message: 'You must be a member to send messages' });
 //         }
-        
+
 //         const message = new TribeMessage({
 //             tribe: req.params.id,
 //             sender: req.user.id,
 //             text,
 //             imageUrl: imageUrl || null
 //         });
-        
+
 //         let savedMessage = await message.save();
-        
+
 //         // CRITICAL FIX: Fully populate the sender before sending to socket
 //         // This ensures the frontend receives 'name' and 'avatarUrl' immediately
 //         savedMessage = await savedMessage.populate('sender', 'name username avatarUrl');
-        
+
 //         const responseMessage = savedMessage.toJSON();
 
 //         req.io.to(`tribe-${req.params.id}`).emit('newTribeMessage', responseMessage);
@@ -982,17 +963,18 @@ router.post('/', protect, async (req, res) => {
 // @desc    Get all tribes
 router.get('/', protect, async (req, res) => {
     try {
-        console.log("----------------------------------");
-        console.log("🔍 GET /api/tribes - Fetching tribes...");
-        
-        const query = {}; // Fetch ALL tribes (no filtering yet)
-        console.log("❓ Query:", JSON.stringify(query));
+        console.log("🔍 GET /api/tribes - Optimized Fetch");
 
-        const tribes = await Tribe.find(query).sort({ createdAt: -1 });
+        // Optimization: Select only necessary fields and use lean() for performance
+        const tribes = await Tribe.find({})
+            .sort({ createdAt: -1 })
+            .select('name description avatarUrl owner members createdAt')
+            .lean();
+
         console.log(`✅ Found ${tribes.length} tribes.`);
-        
+
         if (tribes.length === 0) {
-            console.warn("⚠️ WARNING: No tribes found in DB. Returning empty array.");
+            console.warn("⚠️ No tribes found.");
         }
 
         res.json(tribes);
@@ -1014,7 +996,7 @@ router.put('/:id', protect, async (req, res) => {
         tribe.name = name || tribe.name;
         tribe.description = description || tribe.description;
         if (avatarUrl !== undefined) tribe.avatarUrl = avatarUrl;
-        
+
         const updatedTribe = await tribe.save();
         res.json(updatedTribe);
     } catch (error) {
@@ -1047,10 +1029,10 @@ router.put('/:id/join', protect, async (req, res) => {
     try {
         const tribe = await Tribe.findById(req.params.id);
         if (!tribe) return res.status(404).json({ message: 'Tribe not found' });
-        
+
         const isMember = tribe.members.some(memberId => memberId.equals(req.user.id));
         if (isMember) {
-             if (tribe.owner.equals(req.user.id)) {
+            if (tribe.owner.equals(req.user.id)) {
                 return res.status(400).json({ message: 'Owner cannot leave the tribe' });
             }
             tribe.members = tribe.members.filter(memberId => !memberId.equals(req.user.id));
@@ -1084,15 +1066,15 @@ router.get('/:id/messages', protect, async (req, res) => {
     try {
         const tribe = await Tribe.findById(req.params.id);
         if (!tribe) return res.status(404).json({ message: 'Tribe not found' });
-        
+
         if (!tribe.members.some(memberId => memberId.equals(req.user.id))) {
             return res.status(403).json({ message: 'You must be a member to view messages' });
         }
-        
+
         const messages = await TribeMessage.find({ tribe: req.params.id })
             .populate('sender', 'name username avatarUrl') // Populate sender for existing messages
             .sort({ createdAt: 'asc' });
-        
+
         res.json(messages.map(m => m.toJSON()));
 
     } catch (error) {
@@ -1112,20 +1094,20 @@ router.post('/:id/messages', protect, async (req, res) => {
         if (!tribe.members.some(memberId => memberId.equals(req.user.id))) {
             return res.status(403).json({ message: 'You must be a member to send messages' });
         }
-        
+
         const message = new TribeMessage({
             tribe: req.params.id,
             sender: req.user.id,
             text,
             imageUrl: imageUrl || null
         });
-        
+
         let savedMessage = await message.save();
-        
+
         // CRITICAL FIX: Fully populate the sender before sending to socket
         // This ensures the frontend receives 'name' and 'avatarUrl' immediately
         savedMessage = await savedMessage.populate('sender', 'name username avatarUrl');
-        
+
         const responseMessage = savedMessage.toJSON();
 
         req.io.to(`tribe-${req.params.id}`).emit('newTribeMessage', responseMessage);
