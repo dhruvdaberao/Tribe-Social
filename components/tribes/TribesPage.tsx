@@ -28,8 +28,8 @@ const Title = styled.h1`
 `;
 
 const CreateButton = styled.button`
-  background-color: #FF5722; // Brand Orange
-  color: white;
+  background-color: ${({ theme }) => theme.primary}; // Use theme color (Brown/Beige)
+  color: ${({ theme }) => theme.cardBackground}; // Contrast text
   border: none;
   border-radius: 8px;
   padding: 10px 20px;
@@ -52,10 +52,16 @@ const Grid = styled.div`
 `;
 
 const LoadingMessage = styled.div`
-  text-align: center;
-  padding: 40px;
-  color: ${({ theme }) => theme.textSecondary};
-  font-size: 1.1rem;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 60px;
+  
+  img {
+      width: 100px;
+      height: 100px;
+      object-fit: contain;
+  }
 `;
 
 const EmptyState = styled.div`

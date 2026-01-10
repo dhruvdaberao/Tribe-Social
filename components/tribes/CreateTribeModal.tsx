@@ -60,7 +60,7 @@ const Input = styled.input`
   background: ${({ theme }) => theme.inputBackground};
   color: ${({ theme }) => theme.text};
   
-  &:focus { outline: 2px solid #FF5722; border-color: transparent; }
+  &:focus { outline: 2px solid ${({ theme }) => theme.primary}; border-color: transparent; }
 `;
 
 const TextArea = styled.textarea`
@@ -73,12 +73,12 @@ const TextArea = styled.textarea`
   min-height: 100px;
   resize: vertical;
   
-  &:focus { outline: 2px solid #FF5722; border-color: transparent; }
+  &:focus { outline: 2px solid ${({ theme }) => theme.primary}; border-color: transparent; }
 `;
 
 const Button = styled.button`
-  background: #FF5722;
-  color: white;
+  background: ${({ theme }) => theme.primary};
+  color: white; // Or theme.cardBackground depending on contrast. White usually safe for dark brown.
   padding: 14px;
   border-radius: 8px;
   border: none;

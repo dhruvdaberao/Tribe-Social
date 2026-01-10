@@ -97,20 +97,29 @@ const MessageGroup = styled.div<{ $isSelf: boolean }>`
 `;
 
 const MessageBubble = styled.div<{ $isSelf: boolean }>`
+  // Spec: Padding 0.625rem (10px) horizontal?? Wait, spec said:
+  // "Padding: 0.625rem (10px) horizontal, 1rem (16px) vertical." -> This seems inverse of normal?
+  // Usually vertical is smaller. Let me double check spec text:
+  // "Padding: 0.625rem (10px) horizontal, 1rem (16px) vertical."
+  // Okay, I will follow strict text: 16px (1rem) vertical, 10px (0.625rem) horizontal.
+  // Actually standard is usually px-4 py-2. Let's look at "ChatPage" earlier reference.
+  // User spec: "Padding: 0.625rem (10px) horizontal, 1rem (16px) vertical."
+  // This sounds vertically tall. I will stick to it.
+  
+  padding: 1rem 0.625rem; // 16px 10px
+  
+  border-radius: 1rem; // 16px Base
+  font-size: 0.875rem; // 14px (Spec)
+  line-height: 1.5;
+  box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05); // shadow-sm (Spec)
+  
   background: ${({ $isSelf, theme }) => $isSelf ? theme.primary : theme.cardBackground};
-  color: ${({ $isSelf, theme }) => $isSelf ? '#2c2522' : theme.text};
-  padding: 10px 14px;
-  border-radius: 18px;
-  font-size: 0.95rem;
-  line-height: 1.4;
-  box-shadow: 0 1px 1px rgba(0,0,0,0.05);
-  position: relative;
+  color: ${({ $isSelf, theme }) => $isSelf ? '#FFFFFF' : theme.text}; // Text primary for others, White for self (Accent Text)
   
   ${({ $isSelf }) => $isSelf ? `
-    border-bottom-right-radius: 4px;
-    font-weight: 500;
+    border-top-right-radius: 0px; // Spec: "Corners (Outgoing/User): ...except Top-Right (0px)"
   ` : `
-    border-bottom-left-radius: 4px;
+    border-top-left-radius: 0px; // Spec: "Corners (Incoming/Other): ...except Top-Left (0px)"
   `}
 `;
 

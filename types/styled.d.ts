@@ -13,5 +13,7 @@ declare module 'styled-components' {
         inputBackground: string;
         borderColor: string;
         hoverBackground: string;
+        accentHover?: string; // Optional if not in light theme, but user put it in both.
+        accentText?: string;
     }
 }
