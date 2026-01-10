@@ -190,13 +190,19 @@
 
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Conversation, User, Message } from '../../types';
+import { User, Message } from '../../types';
+
 import UserAvatar from '../common/UserAvatar';
 import { useSocket } from '../../contexts/SocketContext';
 import MarkdownRenderer from '../common/MarkdownRenderer';
 
 interface MessageAreaProps {
-  conversation: Conversation;
+  conversation: {
+    id: string;
+    otherUser: User;
+    lastMessage: string;
+    timestamp: string;
+  };
   messages: Message[];
   isLoading: boolean;
   currentUser: User;

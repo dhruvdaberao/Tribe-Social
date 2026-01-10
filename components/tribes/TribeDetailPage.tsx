@@ -319,7 +319,8 @@ import { Tribe, User, TribeMessage } from '../../types';
 import UserAvatar from '../common/UserAvatar';
 import { useSocket } from '../../contexts/SocketContext';
 import TribeMembersModal from './TribeMembersModal';
-import * as api from '../../api.ts'; // Assumed in root based on instruction
+import * as api from '../../api';
+// Assumed in root based on instruction
 
 interface TribeDetailPageProps {
   tribe: Tribe;
@@ -356,7 +357,8 @@ const TribeDetailPage: React.FC<TribeDetailPageProps> = (props) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const { socket, clearUnreadTribe } = useSocket();
-  const isMember = tribe.members.includes(currentUser.id);
+const isMember = Array.isArray(tribe.members) && tribe.members.includes(currentUser.id);
+
 
   // Fetch messages immediately on mount
   useEffect(() => {

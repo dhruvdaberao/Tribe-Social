@@ -1,9 +1,108 @@
 
 
+// // export interface User {
+// //   id: string;
+// //   name: string;
+// //   username: string;
+// //   avatarUrl: string | null;
+// //   bannerUrl: string | null;
+// //   bio: string;
+// //   followers: string[]; // Array of user IDs
+// //   following: string[]; // Array of user IDs
+// //   blockedUsers: string[]; // Array of user IDs
+// // }
+
+// // export interface Comment {
+// //   id: string;
+// //   author: User;
+// //   text: string;
+// //   timestamp: string;
+// // }
+
+// // export interface Post {
+// //   id:string;
+// //   author: User;
+// //   content: string;
+// //   imageUrl?: string;
+// //   timestamp: string;
+// //   likes: string[]; // Array of user IDs
+// //   comments: Comment[];
+// // }
+
+// // export interface Message {
+// //   id: string;
+// //   senderId: string;
+// //   receiverId: string;
+// //   text: string;
+// //   timestamp: string;
+// //   imageUrl?: string;
+// // }
+
+// // export interface Conversation {
+// //   id: string;
+// //   participants: { id: string }[]; // Just participant IDs
+// //   messages: Message[];
+// //   lastMessage: string;
+// //   timestamp: string;
+// // }
+
+// // export interface TribeMessage {
+// //   id: string;
+// //   tribeId?: string; // Added for socket events
+// //   sender: User;
+// //   senderId?: string; // Added for socket events
+// //   text: string;
+// //   timestamp: string;
+// //   imageUrl?: string;
+// // }
+
+// // export interface Tribe {
+// //   id: string;
+// //   name: string;
+// //   avatarUrl: string | null;
+// //   description: string;
+// //   owner: string; // User ID
+// //   members: string[]; // Array of user IDs
+// //   messages: TribeMessage[];
+// // }
+
+// // export interface Notification {
+// //   id: string;
+// //   recipient: string; // User ID
+// //   sender: User;
+// //   type: 'like' | 'comment' | 'follow' | 'message' | 'story_like' | 'tribe_join';
+// //   read: boolean;
+// //   postId?: string; // ID of the post that was liked/commented on
+// //   storyId?: string; // ID of the story that was liked
+// //   tribeId?: string; // ID of the tribe that was joined
+// //   commentId?: string;
+// //   timestamp: string;
+// // }
+
+// // export interface Story {
+// //   id: string;
+// //   author: User; 
+// //   user: string; // User ID
+// //   imageUrl?: string;
+// //   text?: string;
+// //   textPosition?: { x: number; y: number };
+// //   imagePosition?: { x: number; y: number };
+// //   likes: string[]; // Array of user IDs
+// //   createdAt: string;
+// // }
+
+
+
+
+
+// //new
+
+
 // export interface User {
 //   id: string;
 //   name: string;
 //   username: string;
+//   email?: string;
 //   avatarUrl: string | null;
 //   bannerUrl: string | null;
 //   bio: string;
@@ -87,6 +186,12 @@
 //   text?: string;
 //   textPosition?: { x: number; y: number };
 //   imagePosition?: { x: number; y: number };
+//   textRotation?: number;
+//   imageRotation?: number;
+//   textScale?: number;
+//   imageScale?: number;
+//   textColor?: string;
+//   backgroundColor?: string;
 //   likes: string[]; // Array of user IDs
 //   createdAt: string;
 // }
@@ -94,8 +199,6 @@
 
 
 
-
-//new
 
 
 export interface User {
@@ -106,9 +209,9 @@ export interface User {
   avatarUrl: string | null;
   bannerUrl: string | null;
   bio: string;
-  followers: string[]; // Array of user IDs
-  following: string[]; // Array of user IDs
-  blockedUsers: string[]; // Array of user IDs
+  followers: string[];
+  following: string[];
+  blockedUsers: string[];
 }
 
 export interface Comment {
@@ -119,12 +222,12 @@ export interface Comment {
 }
 
 export interface Post {
-  id:string;
+  id: string;
   author: User;
   content: string;
   imageUrl?: string;
   timestamp: string;
-  likes: string[]; // Array of user IDs
+  likes: string[];
   comments: Comment[];
 }
 
@@ -137,19 +240,11 @@ export interface Message {
   imageUrl?: string;
 }
 
-export interface Conversation {
-  id: string;
-  participants: { id: string }[]; // Just participant IDs
-  messages: Message[];
-  lastMessage: string;
-  timestamp: string;
-}
-
 export interface TribeMessage {
   id: string;
-  tribeId?: string; // Added for socket events
+  tribeId?: string;
   sender: User;
-  senderId?: string; // Added for socket events
+  senderId?: string;
   text: string;
   timestamp: string;
   imageUrl?: string;
@@ -160,38 +255,29 @@ export interface Tribe {
   name: string;
   avatarUrl: string | null;
   description: string;
-  owner: string; // User ID
-  members: string[]; // Array of user IDs
+  owner: string;
+  members: string[];
   messages: TribeMessage[];
 }
 
+
 export interface Notification {
   id: string;
-  recipient: string; // User ID
+  recipient: string;
   sender: User;
   type: 'like' | 'comment' | 'follow' | 'message' | 'story_like' | 'tribe_join';
   read: boolean;
-  postId?: string; // ID of the post that was liked/commented on
-  storyId?: string; // ID of the story that was liked
-  tribeId?: string; // ID of the tribe that was joined
-  commentId?: string;
+  postId?: string;
+  tribeId?: string;
   timestamp: string;
 }
 
 export interface Story {
   id: string;
-  author: User; 
-  user: string; // User ID
+  author: User;
+  user: string;
   imageUrl?: string;
   text?: string;
-  textPosition?: { x: number; y: number };
-  imagePosition?: { x: number; y: number };
-  textRotation?: number;
-  imageRotation?: number;
-  textScale?: number;
-  imageScale?: number;
-  textColor?: string;
-  backgroundColor?: string;
-  likes: string[]; // Array of user IDs
+  likes: string[];
   createdAt: string;
 }
