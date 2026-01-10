@@ -149,53 +149,70 @@ const App: React.FC = () => {
         lastFetchTimestamp.current = Date.now();
 
         try {
-            const results = await Promise.allSettled([
-                api.fetchUsers(),
-                api.fetchFeedPosts(),
-                api.fetchTribes(),
-                api.fetchNotifications(),
-                api.fetchMyStories(),
-                api.fetchFollowingStories(),
+            // Decoupled fetching strategy: fire all requests, update state AS SOON as each finishes.
+            // This prevents a slow request (e.g. Feed) from blocking a fast request (e.g. Tribes).
+
+            const usersPromise = api.fetchUsers()
+                .then(({ data }) => setUsers(data))
+                .catch(e => console.error("Failed to fetch users", e));
+
+            const postsPromise = api.fetchFeedPosts()
+                .then(async ({ data }) => {
+                    // Populate posts with empty user map initially, real users will fill in via state update or re-render
+                    // actually, wait, we might need users... ensure we have a fallback or minimal population
+                    // For now, simple population. 'users' state update triggers re-render anyway.
+                    const populatedPosts = data.map((post: any) => populatePost(post, new Map())).filter(Boolean);
+                    setPosts(populatedPosts as Post[]);
+                    saveToCache('posts', populatedPosts.slice(0, 50));
+                })
+                .catch(e => console.error("Failed to fetch posts", e));
+
+            const tribesPromise = api.fetchTribes()
+                .then(({ data }) => {
+                    if (data.length === 0 && tribesRetryCount.current === 0) {
+                        console.warn("⚠️ Tribes list empty. Retrying fetch once...");
+                        tribesRetryCount.current = 1;
+                        setTimeout(() => {
+                            api.fetchTribes().then(({ data: retryData }) => {
+                                const populated = retryData.map((tribe: any) => ({ ...tribe, messages: [] }));
+                                setTribes(populated);
+                                saveToCache('tribes', populated);
+                                if (retryData.length > 0) console.log("✅ Retry successful: Tribes loaded.");
+                            }).catch(e => console.error("❌ Tribe retry failed", e));
+                        }, 1500);
+                        // Return empty for now so we resolve
+                        return [];
+                    } else {
+                        const populatedTribes = data.map((tribe: any) => ({ ...tribe, messages: [] }));
+                        setTribes(populatedTribes);
+                        saveToCache('tribes', populatedTribes);
+                        return populatedTribes;
+                    }
+                })
+                .catch(e => console.error("Failed to fetch tribes", e));
+
+            const notificationsPromise = api.fetchNotifications()
+                .then(({ data }) => setNotifications(data))
+                .catch(e => console.error("Failed to fetch notifications", e));
+
+            const myStoriesPromise = api.fetchMyStories()
+                .then(({ data }) => setMyStories(data))
+                .catch(e => console.error("Failed to fetch my stories", e));
+
+            const followingStoriesPromise = api.fetchFollowingStories()
+                .then(({ data }) => setFollowingUserStories(data))
+                .catch(e => console.error("Failed to fetch stories", e));
+
+            // Wait for all to finish only to set "isFetching" to false and "Data Loaded" to true.
+            // But the UI will already be populated by the individual .then blocks above!
+            await Promise.allSettled([
+                usersPromise,
+                postsPromise,
+                tribesPromise,
+                notificationsPromise,
+                myStoriesPromise,
+                followingStoriesPromise
             ]);
-
-            const [usersResult, feedPostsResult, tribesResult, notificationsResult, myStoriesResult, followingStoriesResult] = results;
-
-            if (usersResult.status === 'fulfilled') {
-                setUsers(usersResult.value.data);
-            }
-
-            if (feedPostsResult.status === 'fulfilled') {
-                const feedPostsData = feedPostsResult.value.data;
-                const populatedPosts = feedPostsData.map((post: any) => populatePost(post, new Map())).filter(Boolean);
-                setPosts(populatedPosts as Post[]);
-                saveToCache('posts', populatedPosts.slice(0, 50)); // Cache top 50
-            }
-
-            if (tribesResult.status === 'fulfilled') {
-                const tribesData = tribesResult.value.data;
-
-                // PHASE 1 FIX: If tribes array is empty → retry once automatically
-                if (tribesData.length === 0 && tribesRetryCount.current === 0) {
-                    console.warn("⚠️ Tribes list empty. Retrying fetch once...");
-                    tribesRetryCount.current = 1;
-                    setTimeout(() => {
-                        api.fetchTribes().then(({ data }) => {
-                            const populated = data.map((tribe: any) => ({ ...tribe, messages: [] }));
-                            setTribes(populated);
-                            saveToCache('tribes', populated);
-                            if (data.length > 0) console.log("✅ Retry successful: Tribes loaded.");
-                        }).catch(e => console.error("❌ Tribe retry failed", e));
-                    }, 1500);
-                } else {
-                    const populatedTribes = tribesData.map((tribe: any) => ({ ...tribe, messages: [] }));
-                    setTribes(populatedTribes);
-                    saveToCache('tribes', populatedTribes);
-                }
-            }
-
-            if (notificationsResult.status === 'fulfilled') setNotifications(notificationsResult.value.data);
-            if (myStoriesResult.status === 'fulfilled') setMyStories(myStoriesResult.value.data);
-            if (followingStoriesResult.status === 'fulfilled') setFollowingUserStories(followingStoriesResult.value.data);
 
             setIsDataLoaded(true);
 
