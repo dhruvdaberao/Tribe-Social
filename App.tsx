@@ -3,6 +3,7 @@
 
 
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from './contexts/AuthContext';
 import { useSocket } from './contexts/SocketContext';
 import { User, Post, Tribe, TribeMessage, Notification as NotificationType, Comment, Story } from './types';
@@ -354,8 +355,20 @@ const App: React.FC = () => {
     }, [socket, userMap, populatePost, currentUser?.id, setCurrentUser, viewedUser?.id, viewedTribe, isCreatingPost]);
 
     const handleSelectItem = (item: NavItem) => {
+        // If clicking the already active item, scroll to top
+        if (item === activeNavItem && item !== 'Profile' && item !== 'TribeDetail') {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+            return;
+        }
+
         setChatTarget(null);
         if (item === 'Profile') {
+            // Logic for profile can be complex (own profile vs others), but if we click "Profile" in nav, usually means own profile.
+            // If we are already on own profile, scroll to top.
+            if (activeNavItem === 'Profile' && viewedUser?.id === currentUser?.id) {
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+                return;
+            }
             setViewedUser(currentUser);
         } else if (item !== 'Settings') {
             setViewedUser(null);
@@ -366,6 +379,7 @@ const App: React.FC = () => {
             return;
         }
         setActiveNavItem(item);
+        window.scrollTo({ top: 0, behavior: 'smooth' }); // Also scroll to top on new navigation
     };
 
     const handleViewProfile = (user: User) => {
@@ -829,7 +843,15 @@ const App: React.FC = () => {
                     {renderContent()}
                 </div>
             </main>
-            {editingTribe && <EditTribeModal tribe={editingTribe} onClose={() => setEditingTribe(null)} onSave={handleEditTribe} onDelete={handleDeleteTribe} />}
+            {editingTribe && <EditTribeModal
+                tribe={editingTribe}
+                onClose={() => setEditingTribe(null)}
+                onSuccess={(updatedTribe) => {
+                    setTribes(prev => prev.map(t => t.id === updatedTribe.id ? { ...updatedTribe, messages: t.messages } : t));
+                    setEditingTribe(null);
+                    toast.success("Tribe updated successfully");
+                }}
+            />}
             {isCreatingStory && <StoryCreator onClose={() => setIsCreatingStory(false)} onCreate={handleCreateStory} />}
             {viewingUserStories && <StoryViewer userStories={viewingUserStories} currentUser={currentUser} allUsers={visibleUsers} allTribes={tribes} onClose={() => setViewingUserStories(null)} onDelete={handleDeleteStory} onLike={handleLikeStory} onSharePost={handleSharePost} />}
             {viewingPost && <PostViewModal post={viewingPost} currentUser={currentUser} allUsers={visibleUsers} allTribes={tribes} onLike={handleLikePost} onComment={handleCommentPost} onDeletePost={handleDeletePost} onDeleteComment={handleDeleteComment} onViewProfile={handleViewProfile} onSharePost={handleSharePost} onClose={() => setViewingPost(null)} />}

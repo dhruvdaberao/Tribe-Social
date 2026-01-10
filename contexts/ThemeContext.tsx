@@ -1,20 +1,22 @@
 import React, { createContext, useState, useEffect, useContext, ReactNode } from 'react';
+import { ThemeProvider as StyledThemeProvider } from 'styled-components';
+import { lightTheme, darkTheme } from '../styles/theme';
 
-type Theme = 'light' | 'dark';
+type ThemeMode = 'light' | 'dark';
 
 interface ThemeContextType {
-  theme: Theme;
+  theme: ThemeMode;
   toggleTheme: () => void;
 }
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  const [theme, setTheme] = useState<Theme>('light');
+  const [theme, setTheme] = useState<ThemeMode>('light');
 
   // Initialize theme from localStorage or system preference
   useEffect(() => {
-    const storedTheme = localStorage.getItem('theme') as Theme | null;
+    const storedTheme = localStorage.getItem('theme') as ThemeMode | null;
     const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
     if (storedTheme) {
       setTheme(storedTheme);
@@ -37,9 +39,13 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     setTheme(prevTheme => (prevTheme === 'light' ? 'dark' : 'light'));
   };
 
+  const currentThemeObject = theme === 'light' ? lightTheme : darkTheme;
+
   return (
     <ThemeContext.Provider value={{ theme, toggleTheme }}>
-      {children}
+      <StyledThemeProvider theme={currentThemeObject}>
+        {children}
+      </StyledThemeProvider>
     </ThemeContext.Provider>
   );
 }
@@ -51,3 +57,4 @@ export const useTheme = (): ThemeContextType => {
   }
   return context;
 };
+

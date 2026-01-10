@@ -130,6 +130,14 @@ const TribesPage: React.FC<TribesPageProps> = ({ currentUser, isLoadingProp }) =
         setIsCreateModalOpen(false);
     };
 
+    // Filter Tribes
+    const myTribes = tribes.filter(t =>
+        currentUser && (t.owner === currentUser.id || t.members.includes(currentUser.id))
+    );
+    const discoverTribes = tribes.filter(t =>
+        !currentUser || (t.owner !== currentUser.id && !t.members.includes(currentUser.id))
+    );
+
     // RENDER LOGIC
     return (
         <Container>
@@ -154,20 +162,54 @@ const TribesPage: React.FC<TribesPageProps> = ({ currentUser, isLoadingProp }) =
                 <LoadingMessage>Finding your community...</LoadingMessage>
             )}
 
-            {/* EMPTY STATE - Only show if not getting loading/error and truly 0 items */}
-            {!isLoading && !error && tribes.length === 0 && (
-                <EmptyState>
-                    <h3>No Tribes Found</h3>
-                    <p>Be the first to start a community!</p>
-                </EmptyState>
-            )}
+            {/* CONTENT */}
+            {!isLoading && !error && (
+                <>
+                    {/* CASE 1: NO TRIBES AT ALL */}
+                    {tribes.length === 0 && (
+                        <EmptyState>
+                            <h3>No Tribes Found</h3>
+                            <p>Be the first to start a community!</p>
+                        </EmptyState>
+                    )}
 
-            {/* DATA GRID */}
-            <Grid>
-                {tribes.map(tribe => (
-                    <TribeCard key={tribe.id} tribe={tribe} currentUser={currentUser} />
-                ))}
-            </Grid>
+                    {/* CASE 2: HAS TRIBES */}
+                    {tribes.length > 0 && (
+                        <>
+                            {/* SECTION: YOUR TRIBES */}
+                            {myTribes.length > 0 && (
+                                <div style={{ marginBottom: 40 }}>
+                                    <h2 style={{ fontSize: '1.25rem', fontWeight: 600, marginBottom: 16 }}>Your Tribes</h2>
+                                    <Grid>
+                                        {myTribes.map(tribe => (
+                                            <TribeCard key={tribe.id} tribe={tribe} currentUser={currentUser} />
+                                        ))}
+                                    </Grid>
+                                </div>
+                            )}
+
+                            {/* SECTION: EXPLORE TRIBES */}
+                            {discoverTribes.length > 0 && (
+                                <div>
+                                    <h2 style={{ fontSize: '1.25rem', fontWeight: 600, marginBottom: 16 }}>Explore Tribes</h2>
+                                    <Grid>
+                                        {discoverTribes.map(tribe => (
+                                            <TribeCard key={tribe.id} tribe={tribe} currentUser={currentUser} />
+                                        ))}
+                                    </Grid>
+                                </div>
+                            )}
+
+                            {/* CASE: HAS TRIBES BUT NONE TO EXPLORE */}
+                            {discoverTribes.length === 0 && myTribes.length > 0 && (
+                                <div style={{ marginTop: 40, textAlign: 'center', color: '#888' }}>
+                                    <p>You've joined all available tribes! Create a new one?</p>
+                                </div>
+                            )}
+                        </>
+                    )}
+                </>
+            )}
 
             {/* MODALS */}
             {isCreateModalOpen && (

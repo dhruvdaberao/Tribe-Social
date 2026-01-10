@@ -55,7 +55,7 @@
 // //             user.bannerUrl = req.body.bannerUrl === null ? null : req.body.bannerUrl || user.bannerUrl;
 
 // //             const updatedUser = await user.save();
-            
+
 // //             req.io.emit('userUpdated', updatedUser.toJSON());
 
 // //             res.json(updatedUser);
@@ -75,9 +75,9 @@
 // //         if (!user) {
 // //             return res.status(404).json({ message: 'User not found' });
 // //         }
-        
+
 // //         await Post.deleteMany({ user: req.user.id });
-        
+
 // //         await User.updateMany(
 // //             { $or: [{ followers: req.user.id }, { following: req.user.id }, { blockedUsers: req.user.id }] },
 // //             { $pull: { followers: req.user.id, following: req.user.id, blockedUsers: req.user.id } }
@@ -106,7 +106,7 @@
 // //         if (req.params.id === req.user.id) {
 // //             return res.status(400).json({ message: 'You cannot follow yourself' });
 // //         }
-        
+
 // //         const isFollowing = currentUser.following.includes(userToFollow._id);
 
 // //         if (isFollowing) {
@@ -138,7 +138,7 @@
 // //                 });
 // //                 await notification.save();
 // //                 const populatedNotification = await notification.populate('sender', 'name username avatarUrl');
-                
+
 // //                 const recipientSocketId = req.onlineUsers.get(userToFollow._id.toString());
 // //                 if (recipientSocketId) {
 // //                     req.io.to(recipientSocketId).emit('newNotification', populatedNotification);
@@ -193,7 +193,7 @@
 
 // //         await currentUser.save();
 // //         await userToBlock.save();
-        
+
 // //         req.io.emit('userUpdated', currentUser.toJSON());
 // //         req.io.emit('userUpdated', userToBlock.toJSON());
 
@@ -263,7 +263,7 @@
 //             user.bio = req.body.bio ?? user.bio;
 //             user.avatarUrl = req.body.avatarUrl === null ? null : req.body.avatarUrl || user.avatarUrl;
 //             user.bannerUrl = req.body.bannerUrl === null ? null : req.body.bannerUrl || user.bannerUrl;
-            
+
 //             // Allow updating email
 //             if (req.body.email) {
 //                 user.email = req.body.email;
@@ -275,10 +275,10 @@
 //             }
 
 //             const updatedUser = await user.save();
-            
+
 //             // Don't send password back
 //             const userResponse = updatedUser.toJSON();
-            
+
 //             req.io.emit('userUpdated', userResponse);
 
 //             res.json(userResponse);
@@ -299,9 +299,9 @@
 //         if (!user) {
 //             return res.status(404).json({ message: 'User not found' });
 //         }
-        
+
 //         await Post.deleteMany({ user: req.user.id });
-        
+
 //         await User.updateMany(
 //             { $or: [{ followers: req.user.id }, { following: req.user.id }, { blockedUsers: req.user.id }] },
 //             { $pull: { followers: req.user.id, following: req.user.id, blockedUsers: req.user.id } }
@@ -330,7 +330,7 @@
 //         if (req.params.id === req.user.id) {
 //             return res.status(400).json({ message: 'You cannot follow yourself' });
 //         }
-        
+
 //         const isFollowing = currentUser.following.includes(userToFollow._id);
 
 //         if (isFollowing) {
@@ -362,7 +362,7 @@
 //                 });
 //                 await notification.save();
 //                 const populatedNotification = await notification.populate('sender', 'name username avatarUrl');
-                
+
 //                 const recipientSocketId = req.onlineUsers.get(userToFollow._id.toString());
 //                 if (recipientSocketId) {
 //                     req.io.to(recipientSocketId).emit('newNotification', populatedNotification);
@@ -417,7 +417,7 @@
 
 //         await currentUser.save();
 //         await userToBlock.save();
-        
+
 //         req.io.emit('userUpdated', currentUser.toJSON());
 //         req.io.emit('userUpdated', userToBlock.toJSON());
 
@@ -453,9 +453,9 @@ router.get('/', protect, async (req, res) => {
     try {
         const users = await User.find({})
             // Select followers and following to display correct counts on frontend cards
-            .select('name username avatarUrl bio followers following') 
+            .select('name username avatarUrl bannerUrl bio followers following')
             .sort({ createdAt: -1 })
-            .limit(20); 
+            .limit(20);
         res.json(users);
     } catch (error) {
         res.status(500).json({ message: 'Server error' });
@@ -490,7 +490,7 @@ router.put('/profile', protect, async (req, res) => {
             user.bio = req.body.bio ?? user.bio;
             user.avatarUrl = req.body.avatarUrl === null ? null : req.body.avatarUrl || user.avatarUrl;
             user.bannerUrl = req.body.bannerUrl === null ? null : req.body.bannerUrl || user.bannerUrl;
-            
+
             // Allow updating email
             if (req.body.email) {
                 user.email = req.body.email;
@@ -502,10 +502,10 @@ router.put('/profile', protect, async (req, res) => {
             }
 
             const updatedUser = await user.save();
-            
+
             // Don't send password back
             const userResponse = updatedUser.toJSON();
-            
+
             req.io.emit('userUpdated', userResponse);
 
             res.json(userResponse);
@@ -526,9 +526,9 @@ router.delete('/profile', protect, async (req, res) => {
         if (!user) {
             return res.status(404).json({ message: 'User not found' });
         }
-        
+
         await Post.deleteMany({ user: req.user.id });
-        
+
         await User.updateMany(
             { $or: [{ followers: req.user.id }, { following: req.user.id }, { blockedUsers: req.user.id }] },
             { $pull: { followers: req.user.id, following: req.user.id, blockedUsers: req.user.id } }
@@ -557,7 +557,7 @@ router.put('/:id/follow', protect, async (req, res) => {
         if (req.params.id === req.user.id) {
             return res.status(400).json({ message: 'You cannot follow yourself' });
         }
-        
+
         const isFollowing = currentUser.following.includes(userToFollow._id);
 
         if (isFollowing) {
@@ -589,7 +589,7 @@ router.put('/:id/follow', protect, async (req, res) => {
                 });
                 await notification.save();
                 const populatedNotification = await notification.populate('sender', 'name username avatarUrl');
-                
+
                 const recipientSocketId = req.onlineUsers.get(userToFollow._id.toString());
                 if (recipientSocketId) {
                     req.io.to(recipientSocketId).emit('newNotification', populatedNotification);
@@ -644,7 +644,7 @@ router.put('/:id/block', protect, async (req, res) => {
 
         await currentUser.save();
         await userToBlock.save();
-        
+
         req.io.emit('userUpdated', currentUser.toJSON());
         req.io.emit('userUpdated', userToBlock.toJSON());
 
