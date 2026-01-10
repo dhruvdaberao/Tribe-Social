@@ -4,6 +4,7 @@ import { Tribe, User } from '../../types';
 import * as api from '../../api';
 import TribeCard from './TribeCard';
 import CreateTribeModal from './CreateTribeModal';
+import EditTribeModal from './EditTribeModal';
 import { Plus } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 
@@ -53,14 +54,21 @@ const Grid = styled.div`
 
 const LoadingMessage = styled.div`
   display: flex;
+  flex-direction: column;
   justify-content: center;
   align-items: center;
   padding: 60px;
+  gap: 16px;
   
   img {
       width: 100px;
       height: 100px;
       object-fit: contain;
+  }
+
+  p {
+    color: ${({ theme }) => theme.textSecondary};
+    font-size: 1.1rem;
   }
 `;
 
@@ -90,13 +98,13 @@ const TribesPage: React.FC<TribesPageProps> = ({ currentUser, isLoadingProp }) =
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+    const [editingTribe, setEditingTribe] = useState<Tribe | null>(null);
 
     // FETCH TRIBES ON MOUNT
     useEffect(() => {
         let isMounted = true;
 
         const loadTribes = async () => {
-            // If App.tsx passed loading prop as false BUT we have no tribes, we force a fetch yourself.
             try {
                 // Check cache first for instant render
                 const cached = localStorage.getItem('tribe_storage_tribes');
@@ -104,7 +112,6 @@ const TribesPage: React.FC<TribesPageProps> = ({ currentUser, isLoadingProp }) =
                     const parsed = JSON.parse(cached);
                     if (Array.isArray(parsed) && parsed.length > 0) {
                         setTribes(parsed);
-                        // Don't verify loading false yet, wait for network verify
                     }
                 }
 
@@ -136,6 +143,21 @@ const TribesPage: React.FC<TribesPageProps> = ({ currentUser, isLoadingProp }) =
         setIsCreateModalOpen(false);
     };
 
+    const handleTribeUpdated = (updatedTribe: Tribe) => {
+        setTribes(prev => prev.map(t => t.id === updatedTribe.id ? updatedTribe : t));
+        setEditingTribe(null);
+    };
+
+    const handleTribeDeleted = async (tribeId: string) => {
+        try {
+            await api.deleteTribe(tribeId);
+            setTribes(prev => prev.filter(t => t.id !== tribeId));
+            setEditingTribe(null);
+        } catch (error) {
+            console.error("Failed to delete tribe", error);
+        }
+    };
+
     // Filter Tribes
     const myTribes = tribes.filter(t =>
         currentUser && (t.owner === currentUser.id || t.members.includes(currentUser.id))
@@ -165,7 +187,10 @@ const TribesPage: React.FC<TribesPageProps> = ({ currentUser, isLoadingProp }) =
 
             {/* LOADING STATE - Only show if NO tribes are visible (i.e. empty cache) */}
             {isLoading && tribes.length === 0 && (
-                <LoadingMessage>Finding your community...</LoadingMessage>
+                <LoadingMessage>
+                    <img src="/busstop.gif" alt="Loading..." />
+                    <p>Finding your community...</p>
+                </LoadingMessage>
             )}
 
             {/* CONTENT */}
@@ -188,7 +213,12 @@ const TribesPage: React.FC<TribesPageProps> = ({ currentUser, isLoadingProp }) =
                                     <h2 style={{ fontSize: '1.25rem', fontWeight: 600, marginBottom: 16 }}>Your Tribes</h2>
                                     <Grid>
                                         {myTribes.map(tribe => (
-                                            <TribeCard key={tribe.id} tribe={tribe} currentUser={currentUser} />
+                                            <TribeCard
+                                                key={tribe.id}
+                                                tribe={tribe}
+                                                currentUser={currentUser}
+                                                onEdit={(t) => setEditingTribe(t)}
+                                            />
                                         ))}
                                     </Grid>
                                 </div>
@@ -200,7 +230,11 @@ const TribesPage: React.FC<TribesPageProps> = ({ currentUser, isLoadingProp }) =
                                     <h2 style={{ fontSize: '1.25rem', fontWeight: 600, marginBottom: 16 }}>Explore Tribes</h2>
                                     <Grid>
                                         {discoverTribes.map(tribe => (
-                                            <TribeCard key={tribe.id} tribe={tribe} currentUser={currentUser} />
+                                            <TribeCard
+                                                key={tribe.id}
+                                                tribe={tribe}
+                                                currentUser={currentUser}
+                                            />
                                         ))}
                                     </Grid>
                                 </div>
@@ -222,6 +256,15 @@ const TribesPage: React.FC<TribesPageProps> = ({ currentUser, isLoadingProp }) =
                 <CreateTribeModal
                     onClose={() => setIsCreateModalOpen(false)}
                     onSuccess={handleTribeCreated}
+                />
+            )}
+
+            {editingTribe && (
+                <EditTribeModal
+                    tribe={editingTribe}
+                    onClose={() => setEditingTribe(null)}
+                    onSuccess={handleTribeUpdated}
+                    onDelete={handleTribeDeleted}
                 />
             )}
         </Container>

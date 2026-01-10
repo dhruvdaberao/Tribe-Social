@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import styled, { useTheme } from 'styled-components';
-import { X } from 'lucide-react';
+import { X, Camera } from 'lucide-react';
 import * as api from '../../api';
 
 const Overlay = styled.div`
@@ -11,6 +11,7 @@ const Overlay = styled.div`
   align-items: center;
   justify-content: center;
   z-index: 1000;
+  padding: 1rem;
 `;
 
 const Modal = styled.div`
@@ -18,8 +19,9 @@ const Modal = styled.div`
   width: 100%;
   max-width: 500px;
   border-radius: 12px;
-  padding: 24px;
+  padding: 2rem;
   position: relative;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.5);
 `;
 
 const Header = styled.div`
@@ -54,31 +56,35 @@ const Label = styled.label`
 
 const Input = styled.input`
   width: 100%;
-  padding: 12px;
+  padding: 12px 16px;
   border-radius: 8px;
   border: 1px solid ${({ theme }) => theme.borderColor};
-  background: ${({ theme }) => theme.inputBackground};
+  background: ${({ theme }) => theme.background};
   color: ${({ theme }) => theme.text};
+  font-size: 1rem;
   
   &:focus { outline: 2px solid ${({ theme }) => theme.primary}; border-color: transparent; }
+  &::placeholder { color: ${({ theme }) => theme.textSecondary}; }
 `;
 
 const TextArea = styled.textarea`
   width: 100%;
-  padding: 12px;
+  padding: 12px 16px;
   border-radius: 8px;
   border: 1px solid ${({ theme }) => theme.borderColor};
-  background: ${({ theme }) => theme.inputBackground};
+  background: ${({ theme }) => theme.background};
   color: ${({ theme }) => theme.text};
   min-height: 100px;
   resize: vertical;
+  font-size: 1rem;
   
   &:focus { outline: 2px solid ${({ theme }) => theme.primary}; border-color: transparent; }
+  &::placeholder { color: ${({ theme }) => theme.textSecondary}; }
 `;
 
 const Button = styled.button`
   background: ${({ theme }) => theme.primary};
-  color: white; // Or theme.cardBackground depending on contrast. White usually safe for dark brown.
+  color: white;
   padding: 14px;
   border-radius: 8px;
   border: none;
@@ -137,13 +143,13 @@ const CreateTribeModal: React.FC<CreateTribeModalProps> = ({ onClose, onSuccess 
                 border: `2px dashed ${theme.textSecondary}`,
                 display: 'flex', alignItems: 'center', justifyContent: 'center'
               }}>
-                {!avatarUrl && <span style={{ fontSize: 30 }}>📷</span>}
+                {!avatarUrl && <Camera size={40} color={theme.cardBackground} strokeWidth={1.5} />}
               </div>
               <div style={{
                 position: 'absolute', bottom: 0, right: 0,
                 background: theme.primary, borderRadius: '50%',
                 width: 30, height: 30, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                color: 'white', fontSize: 14
+                color: 'white', fontSize: 18, border: `1px solid ${theme.primary}`
               }}>+</div>
             </div>
           </div>

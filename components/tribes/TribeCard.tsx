@@ -2,6 +2,7 @@ import React from 'react';
 import styled from 'styled-components';
 import { Tribe, User } from '../../types';
 import { useNavigate } from 'react-router-dom';
+import { Edit2, Users } from 'lucide-react';
 
 const Card = styled.div`
   background: ${({ theme }) => theme.cardBackground};
@@ -16,6 +17,7 @@ const Card = styled.div`
   padding: 1.5rem; // 24px (Spec Global Padding)
   text-align: center;
   border: 1px solid ${({ theme }) => theme.border};
+  position: relative; // For absolute positioning of Edit icon
 
   &:hover {
     transform: translateY(-4px);
@@ -23,17 +25,40 @@ const Card = styled.div`
   }
 `;
 
-const AvatarCircle = styled.div<{ $src?: string | null }>`
+const EditIconWrapper = styled.div`
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  color: ${({ theme }) => theme.primary}; // Brown
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 50%;
+  z-index: 10;
+  
+  &:hover {
+    background: ${({ theme }) => theme.hoverBackground}; // Light hover
+  }
+`;
+
+const AvatarCircle = styled.div`
   width: 5rem; // 80px (Spec)
   height: 5rem; // 80px (Spec)
   border-radius: 50%;
   background-color: ${({ theme }) => theme.secondary};
-  background-image: ${({ $src }) => $src ? `url(${$src})` : 'none'};
-  background-size: cover;
-  background-position: center;
   margin-bottom: 1rem;
   border: 4px solid ${({ theme }) => theme.background};
   box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  position: relative;
+`;
+
+const AvatarImage = styled.img`
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 `;
 
 const TribeName = styled.h3`
@@ -103,21 +128,39 @@ const Button = styled.button<{ $variant?: 'primary' | 'secondary' }>`
 interface TribeCardProps {
   tribe: Tribe;
   currentUser: User | null;
+  onEdit?: (tribe: Tribe) => void;
 }
 
-const TribeCard: React.FC<TribeCardProps> = ({ tribe, currentUser }) => {
+const TribeCard: React.FC<TribeCardProps> = ({ tribe, currentUser, onEdit }) => {
   const navigate = useNavigate();
   const isMember = currentUser && tribe.members.includes(currentUser.id);
+  const isOwner = currentUser && tribe.owner === currentUser.id;
 
   const handleJoin = (e: React.MouseEvent) => {
     e.stopPropagation();
-    // Determine action based on membership (placeholder for now, action handled in Detail Page usually)
     navigate(`/tribes/${tribe.id}`);
+  };
+
+  const handleEditClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (onEdit) onEdit(tribe);
   };
 
   return (
     <Card onClick={() => navigate(`/tribes/${tribe.id}`)}>
-      <AvatarCircle $src={tribe.avatarUrl || '/default-tribe.png'} />
+      {isOwner && onEdit && (
+        <EditIconWrapper onClick={handleEditClick} title="Edit Tribe">
+          <Edit2 size={18} strokeWidth={2} />
+        </EditIconWrapper>
+      )}
+
+      <AvatarCircle>
+        {tribe.avatarUrl ? (
+          <AvatarImage src={tribe.avatarUrl} alt={tribe.name} />
+        ) : (
+          <Users size={32} color="#D6B9A0" /> // Minimalistic group icon, light brown
+        )}
+      </AvatarCircle>
 
       <TribeName>{tribe.name}</TribeName>
       <MemberCount>{tribe.members.length} members</MemberCount>
