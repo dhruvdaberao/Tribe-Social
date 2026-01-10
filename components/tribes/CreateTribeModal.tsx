@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import styled from 'styled-components';
+import styled, { useTheme } from 'styled-components';
 import { X } from 'lucide-react';
 import * as api from '../../api';
 
@@ -90,80 +90,102 @@ const Button = styled.button`
 `;
 
 interface CreateTribeModalProps {
-    onClose: () => void;
-    onSuccess: (newTribe: any) => void;
+  onClose: () => void;
+  onSuccess: (newTribe: any) => void;
 }
 
 const CreateTribeModal: React.FC<CreateTribeModalProps> = ({ onClose, onSuccess }) => {
-    const [name, setName] = useState('');
-    const [description, setDescription] = useState('');
-    const [avatarUrl, setAvatarUrl] = useState('');
-    const [isSubmitting, setIsSubmitting] = useState(false);
-    const [error, setError] = useState<string | null>(null);
+  const theme = useTheme();
+  const [name, setName] = useState('');
+  const [description, setDescription] = useState('');
+  const [avatarUrl, setAvatarUrl] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        setError(null);
-        setIsSubmitting(true);
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    setIsSubmitting(true);
 
-        try {
-            const { data } = await api.createTribe({ name, description, avatarUrl });
-            onSuccess(data);
-        } catch (err: any) {
-            console.error("Create tribe failed", err);
-            setError(err.response?.data?.message || "Failed to create tribe");
-            setIsSubmitting(false);
-        }
-    };
+    try {
+      const { data } = await api.createTribe({ name, description, avatarUrl });
+      onSuccess(data);
+    } catch (err: any) {
+      console.error("Create tribe failed", err);
+      setError(err.response?.data?.message || "Failed to create tribe");
+      setIsSubmitting(false);
+    }
+  };
 
-    return (
-        <Overlay onClick={onClose}>
-            <Modal onClick={e => e.stopPropagation()}>
-                <Header>
-                    <h2>Create New Tribe</h2>
-                    <CloseButton onClick={onClose}><X size={24} /></CloseButton>
-                </Header>
+  return (
+    <Overlay onClick={onClose}>
+      <Modal onClick={e => e.stopPropagation()}>
+        <Header>
+          <h2>Create New Tribe</h2>
+          <CloseButton onClick={onClose}><X size={24} /></CloseButton>
+        </Header>
 
-                <Form onSubmit={handleSubmit}>
-                    {error && <div style={{ color: 'red', marginBottom: 10 }}>{error}</div>}
+        <Form onSubmit={handleSubmit}>
+          {error && <div style={{ color: 'red', marginBottom: 10 }}>{error}</div>}
 
-                    <div>
-                        <Label>Tribe Name</Label>
-                        <Input
-                            placeholder="e.g. Developers, Artists..."
-                            value={name}
-                            onChange={e => setName(e.target.value)}
-                            required
-                        />
-                    </div>
+          {/* Visual Avatar Picker */}
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 20 }}>
+            <div style={{ position: 'relative', cursor: 'pointer' }} onClick={() => document.getElementById('avatar-url-input')?.focus()}>
+              <div style={{
+                width: 100, height: 100, borderRadius: '50%',
+                background: avatarUrl ? `url(${avatarUrl}) center/cover` : theme.secondary,
+                border: `2px dashed ${theme.textSecondary}`,
+                display: 'flex', alignItems: 'center', justifyContent: 'center'
+              }}>
+                {!avatarUrl && <span style={{ fontSize: 30 }}>📷</span>}
+              </div>
+              <div style={{
+                position: 'absolute', bottom: 0, right: 0,
+                background: theme.primary, borderRadius: '50%',
+                width: 30, height: 30, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                color: 'white', fontSize: 14
+              }}>+</div>
+            </div>
+          </div>
 
-                    <div>
-                        <Label>Description</Label>
-                        <TextArea
-                            placeholder="What is this community about?"
-                            value={description}
-                            onChange={e => setDescription(e.target.value)}
-                            required
-                        />
-                    </div>
+          <div style={{ textAlign: 'center', marginBottom: 20 }}>
+            <Label style={{ display: 'none' }}>Avatar URL</Label>
+            <Input
+              id="avatar-url-input"
+              placeholder="Paste Image URL here..."
+              value={avatarUrl}
+              onChange={e => setAvatarUrl(e.target.value)}
+              style={{ textAlign: 'center', background: 'transparent', border: 'none', borderBottom: `1px solid ${theme.borderColor}`, borderRadius: 0 }}
+            />
+          </div>
 
-                    <div>
-                        <Label>Avatar Image URL (Optional)</Label>
-                        <Input
-                            placeholder="https://..."
-                            value={avatarUrl}
-                            onChange={e => setAvatarUrl(e.target.value)}
-                        />
-                        <small style={{ color: '#888', marginTop: 4, display: 'block' }}>Supported: Imgur, Cloudinary links</small>
-                    </div>
+          <div>
+            <Label>Tribe Name</Label>
+            <Input
+              placeholder="e.g. Kasukabe Defence Group"
+              value={name}
+              onChange={e => setName(e.target.value)}
+              required
+            />
+          </div>
 
-                    <Button type="submit" disabled={isSubmitting}>
-                        {isSubmitting ? 'Creating...' : 'Create Tribe'}
-                    </Button>
-                </Form>
-            </Modal>
-        </Overlay>
-    );
+          <div>
+            <Label>Description</Label>
+            <TextArea
+              placeholder="Kasubake Defense Force, fire!"
+              value={description}
+              onChange={e => setDescription(e.target.value)}
+              required
+            />
+          </div>
+
+          <Button type="submit" disabled={isSubmitting}>
+            {isSubmitting ? 'Creating...' : 'Create Tribe'}
+          </Button>
+        </Form>
+      </Modal>
+    </Overlay>
+  );
 };
 
 export default CreateTribeModal;

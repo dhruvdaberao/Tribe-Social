@@ -10,5 +10,8 @@ declare module 'styled-components' {
         secondary: string;
         border: string;
         hover: string;
+        inputBackground: string;
+        borderColor: string;
+        hoverBackground: string;
     }
 }

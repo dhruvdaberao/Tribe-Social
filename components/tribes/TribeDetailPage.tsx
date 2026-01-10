@@ -8,8 +8,9 @@ import { ArrowLeft, Send, Image as ImageIcon, MoreVertical, Trash2, Edit2, LogOu
 import EditTribeModal from './EditTribeModal';
 
 // --- STYLED COMPONENTS ---
+// --- STYLED COMPONENTS ---
 const PageContainer = styled.div`
-  height: calc(100vh - 60px); // Adjust based on navbar height
+  height: calc(100vh - 60px); 
   display: flex;
   flex-direction: column;
   background: ${({ theme }) => theme.background};
@@ -21,8 +22,8 @@ const Header = styled.header`
   border-bottom: 1px solid ${({ theme }) => theme.borderColor};
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: 16px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 `;
 
 const BackButton = styled.button`
@@ -35,10 +36,32 @@ const BackButton = styled.button`
   &:hover { background: ${({ theme }) => theme.hoverBackground}; }
 `;
 
+const Avatar = styled.div<{ $src?: string | null }>`
+  width: 40px; 
+  height: 40px;
+  border-radius: 50%;
+  background: ${({ theme }) => theme.secondary} url(${({ $src }) => $src || '/default-tribe.png'}) center/cover;
+`;
+
 const HeaderInfo = styled.div`
   flex: 1;
-  h2 { margin: 0; font-size: 1.2rem; color: ${({ theme }) => theme.text}; }
-  p { margin: 4px 0 0; font-size: 0.85rem; color: ${({ theme }) => theme.textSecondary}; }
+  h2 { margin: 0; font-size: 1.1rem; color: ${({ theme }) => theme.text}; font-weight: 700; }
+  p { margin: 2px 0 0; font-size: 0.8rem; color: ${({ theme }) => theme.textSecondary}; }
+`;
+
+const HeaderActions = styled.div`
+  display: flex;
+  gap: 8px;
+`;
+
+const ActionButton = styled.button`
+  background: transparent;
+  color: ${({ theme }) => theme.textSecondary};
+  border: none;
+  padding: 8px;
+  cursor: pointer;
+  
+  &:hover { color: ${({ theme }) => theme.primary}; }
 `;
 
 const ChatArea = styled.div`
@@ -47,67 +70,90 @@ const ChatArea = styled.div`
   padding: 20px;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 8px; 
   background: ${({ theme }) => theme.background};
 `;
 
-const MessageBubble = styled.div<{ $isSelf: boolean }>`
-  align-self: ${({ $isSelf }) => $isSelf ? 'flex-end' : 'flex-start'};
-  max-width: 70%;
+const MessageRow = styled.div<{ $isSelf: boolean }>`
+    display: flex;
+    flex-direction: ${({ $isSelf }) => $isSelf ? 'row-reverse' : 'row'};
+    align-items: flex-end;
+    gap: 8px;
+    width: 100%;
+    margin-bottom: 4px;
+`;
+
+const AvatarSmall = styled.div<{ $src?: string | null }>`
+    width: 28px; height: 28px; borderRadius: 50%;
+    background: #ccc url(${({ $src }) => $src}) center/cover;
+    flex-shrink: 0;
+`;
+
+const MessageGroup = styled.div<{ $isSelf: boolean }>`
   display: flex;
   flex-direction: column;
   align-items: ${({ $isSelf }) => $isSelf ? 'flex-end' : 'flex-start'};
+  max-width: 80%;
 `;
 
-const BubbleContent = styled.div<{ $isSelf: boolean }>`
-  background: ${({ $isSelf, theme }) => $isSelf ? '#FF5722' : theme.cardBackground}; // Brand color for self
-  color: ${({ $isSelf, theme }) => $isSelf ? 'white' : theme.text};
-  padding: 10px 16px;
-  border-radius: 12px;
-  border-${({ $isSelf }) => $isSelf ? 'bottom-right' : 'bottom-left'}-radius: 2px;
-  box-shadow: 0 1px 2px rgba(0,0,0,0.1);
-  word-break: break-word;
+const MessageBubble = styled.div<{ $isSelf: boolean }>`
+  background: ${({ $isSelf, theme }) => $isSelf ? theme.primary : theme.cardBackground};
+  color: ${({ $isSelf, theme }) => $isSelf ? '#2c2522' : theme.text};
+  padding: 10px 14px;
+  border-radius: 18px;
+  font-size: 0.95rem;
+  line-height: 1.4;
+  box-shadow: 0 1px 1px rgba(0,0,0,0.05);
+  position: relative;
+  
+  ${({ $isSelf }) => $isSelf ? `
+    border-bottom-right-radius: 4px;
+    font-weight: 500;
+  ` : `
+    border-bottom-left-radius: 4px;
+  `}
 `;
 
 const SenderName = styled.span`
-  font-size: 0.75rem;
+  font-size: 0.7rem;
   color: ${({ theme }) => theme.textSecondary};
-  margin-bottom: 4px;
-  margin-left: 8px;
+  margin-bottom: 2px;
+  margin-left: 10px;
 `;
 
 const InputArea = styled.form`
-  padding: 16px 24px;
+  padding: 16px;
   background: ${({ theme }) => theme.cardBackground};
-  border-top: 1px solid ${({ theme }) => theme.borderColor};
   display: flex;
-  gap: 12px;
+  gap: 10px;
   align-items: center;
 `;
 
 const Input = styled.input`
   flex: 1;
-  padding: 12px;
-  border-radius: 24px;
-  border: 1px solid ${({ theme }) => theme.borderColor};
-  background: ${({ theme }) => theme.inputBackground};
+  padding: 12px 16px;
+  border-radius: 20px;
+  border: none;
+  background: ${({ theme }) => theme.background};
   color: ${({ theme }) => theme.text};
   
-  &:focus { outline: 2px solid #FF5722; border-color: transparent; }
+  &:focus { outline: 1px solid ${({ theme }) => theme.primary}; }
 `;
 
 const SendButton = styled.button`
-  background: #FF5722;
-  color: white;
+  background: ${({ theme }) => theme.primary};
+  color: #2c2522;
   border: none;
-  width: 44px;
-  height: 44px;
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  &:disabled { opacity: 0.5; cursor: not-allowed; }
+  flex-shrink: 0;
+  
+  &:disabled { opacity: 0.5; }
 `;
 
 interface TribeDetailPageProps {
@@ -175,10 +221,8 @@ const TribeDetailPage: React.FC<TribeDetailPageProps> = ({ currentUser, tribeId:
     if (!socket || !id) return;
 
     const handleNewMessage = (msg: TribeMessage) => {
-      // Only add if belongs to this tribe (safety check)
-      // Note: msg.tribe might be an object or string ID depending on population
-      const msgTribeId = typeof msg.tribe === 'object' ? msg.tribe.id : msg.tribe;
-      if (msgTribeId === id) {
+      // Use tribeId from socket message
+      if (msg.tribeId === id) {
         setMessages(prev => [...prev, msg]);
         scrollToBottom();
       }
@@ -205,29 +249,38 @@ const TribeDetailPage: React.FC<TribeDetailPageProps> = ({ currentUser, tribeId:
 
     setIsSending(true);
     try {
-      await api.sendTribeMessage(id, newMessage);
+      await api.sendTribeMessage(id, { text: newMessage });
       setNewMessage('');
-      // Message update handled by socket usually, but for instant UI we can append optimistic?
-      // Phase 1 implementation emits socket event from backend, so we wait for that to avoid dups.
     } catch (err) {
       console.error("Failed to send", err);
-      // Optionally show toast error
     } finally {
       setIsSending(false);
     }
   };
 
-  const handleJoinLeave = async () => {
+  const handleJoinTribe = async () => {
     if (!tribe || !id || !currentUser) return;
     try {
-      const { data: updatedTribe } = await api.joinLeaveTribe(id);
+      const { data: updatedTribe } = await api.joinTribe(id); // Use correct API
       setTribe(updatedTribe);
     } catch (err) {
-      console.error("Join/Leave failed", err);
+      console.error("Join failed", err);
     }
   };
 
-  const handleDelete = async () => {
+  const handleLeaveTribe = async () => {
+    // Re-use join endpoint as toggle if backend supports it, otherwise check API.
+    // Backend (tribeRoutes.js) implementation of /:id/join usually toggles.
+    if (!tribe || !id || !currentUser) return;
+    try {
+      const { data: updatedTribe } = await api.joinTribe(id);
+      setTribe(updatedTribe);
+    } catch (err) {
+      console.error("Leave failed", err);
+    }
+  };
+
+  const handleDeleteTribe = async () => {
     if (!tribe || !id || !window.confirm("Are you sure? This will delete the tribe and all messages forever.")) return;
     try {
       await api.deleteTribe(id);
@@ -237,75 +290,97 @@ const TribeDetailPage: React.FC<TribeDetailPageProps> = ({ currentUser, tribeId:
     }
   };
 
-  if (isLoading) return <PageContainer><div style={{ padding: 20 }}>Loading conversation...</div></PageContainer>;
-  if (error || !tribe) return <PageContainer><div style={{ padding: 20 }}>Error: {error}</div></PageContainer>;
+  if (isLoading) return <PageContainer><div style={{ padding: 40, textAlign: 'center', opacity: 0.6 }}>Loading conversation...</div></PageContainer>;
+  if (error || !tribe) return (
+    <div style={{ padding: 40, textAlign: 'center', color: '#ff5722' }}>
+      <h3>{error || "Tribe not found"}</h3>
+      <button onClick={() => navigate('/tribes')} style={{ marginTop: 20, padding: '10px 20px', borderRadius: 8, border: 'none', background: '#333', color: 'white' }}>Back to Tribes</button>
+    </div>
+  );
 
   const isMember = currentUser && tribe.members.includes(currentUser.id);
-  const isOwner = currentUser && tribe.owner === currentUser.id;
 
   return (
     <PageContainer>
       <Header>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <BackButton onClick={() => navigate('/tribes')}><ArrowLeft /></BackButton>
-          <img
-            src={tribe.avatarUrl || '/default-tribe.png'}
-            style={{ width: 40, height: 40, borderRadius: '50%', objectFit: 'cover' }}
-          />
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <BackButton onClick={() => navigate('/tribes')}><ArrowLeft size={20} /></BackButton>
+          <Avatar $src={tribe.avatarUrl} />
           <HeaderInfo>
             <h2>{tribe.name}</h2>
             <p>{tribe.members.length} members</p>
           </HeaderInfo>
         </div>
-
-        <div style={{ display: 'flex', gap: 10 }}>
-          {!isMember && (
-            <button onClick={handleJoinLeave} style={{ padding: '8px 16px', borderRadius: 20, background: '#FF5722', color: 'white', border: 'none', cursor: 'pointer' }}>
-              Join Tribe
-            </button>
-          )}
-          {isMember && !isOwner && (
-            <button onClick={handleJoinLeave} title="Leave Tribe" style={{ background: 'none', border: 'none', cursor: 'pointer' }}>
-              <LogOut size={20} color="#666" />
-            </button>
-          )}
-          {isOwner && (
+        <HeaderActions>
+          {/* Admin Actions */}
+          {currentUser && tribe.owner === currentUser.id && (
             <>
-              <button onClick={() => setIsEditModalOpen(true)} style={{ background: 'none', border: 'none', cursor: 'pointer' }}><Edit2 size={20} color="#666" /></button>
-              <button onClick={handleDelete} style={{ background: 'none', border: 'none', cursor: 'pointer' }}><Trash2 size={20} color="red" /></button>
+              <ActionButton onClick={() => setIsEditModalOpen(true)} title="Edit Tribe"><Edit2 size={18} /></ActionButton>
+              <ActionButton onClick={handleDeleteTribe} title="Delete Tribe"><Trash2 size={18} /></ActionButton>
             </>
           )}
-        </div>
+          {/* Join/Leave */}
+          {currentUser && tribe.owner !== currentUser.id && (
+            tribe.members.includes(currentUser.id) ? (
+              <ActionButton onClick={handleLeaveTribe} title="Leave Tribe"><LogOut size={18} /></ActionButton>
+            ) : (
+              <button
+                onClick={handleJoinTribe}
+                style={{ background: '#d4a373', border: 'none', padding: '6px 16px', borderRadius: 20, fontWeight: 'bold' }}
+              >
+                Join
+              </button>
+            )
+          )}
+        </HeaderActions>
       </Header>
 
       <ChatArea>
-        {messages.map((msg, idx) => {
-          const isSelf = currentUser ? msg.sender.id === currentUser.id : false;
+        {messages.map((msg, index) => {
+          // Helper to check if same sender as prev message
+          const isSelf = currentUser?.id === (msg.senderId || msg.sender?.id);
+          const showAvatar = !isSelf && (index === 0 || messages[index - 1].senderId !== msg.senderId);
+          const sender = msg.sender || { name: 'Unknown', avatarUrl: null }; // Fallback
+
           return (
-            <MessageBubble key={msg.id || idx} $isSelf={isSelf}>
-              {!isSelf && <SenderName>{msg.sender.name}</SenderName>}
-              <BubbleContent $isSelf={isSelf}>{msg.text}</BubbleContent>
-            </MessageBubble>
-          );
+            <MessageRow key={msg.id || index} $isSelf={isSelf} style={{ marginBottom: showAvatar ? 12 : 2 }}>
+              {!isSelf && (
+                <div style={{ width: 28 }}>
+                  {showAvatar && <AvatarSmall $src={sender.avatarUrl || '/default-user.png'} />}
+                </div>
+              )}
+
+              <MessageGroup $isSelf={isSelf}>
+                {!isSelf && showAvatar && <SenderName>{sender.name}</SenderName>}
+                <MessageBubble $isSelf={isSelf}>
+                  {msg.imageUrl && (
+                    <img src={msg.imageUrl} alt="Shared" style={{ maxWidth: '100%', borderRadius: 8, marginBottom: msg.text ? 8 : 0 }} />
+                  )}
+                  {msg.text}
+                </MessageBubble>
+              </MessageGroup>
+            </MessageRow>
+          )
         })}
         <div ref={messagesEndRef} />
       </ChatArea>
 
-      {isMember ? (
+      {/* Only show input if member */}
+      {currentUser && tribe.members.includes(currentUser.id) ? (
         <InputArea onSubmit={handleSendMessage}>
+          <ActionButton type="button" title="Upload Image"><ImageIcon size={20} /></ActionButton>
           <Input
             value={newMessage}
             onChange={e => setNewMessage(e.target.value)}
-            placeholder="Type a message..."
-            disabled={isSending}
+            placeholder={`Message ${tribe.name}...`}
           />
-          <SendButton type="submit" disabled={isSending || !newMessage.trim()}>
-            <Send size={20} />
+          <SendButton type="submit" disabled={!newMessage.trim() && !isSending}>
+            <Send size={18} />
           </SendButton>
         </InputArea>
       ) : (
-        <div style={{ padding: 20, textAlign: 'center', color: '#888', background: '#f5f5f5' }}>
-          Join this tribe to start chatting
+        <div style={{ padding: 20, textAlign: 'center', background: '#2c2522', color: '#888' }}>
+          Join this tribe to chat!
         </div>
       )}
 

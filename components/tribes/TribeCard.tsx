@@ -2,124 +2,135 @@ import React from 'react';
 import styled from 'styled-components';
 import { Tribe, User } from '../../types';
 import { useNavigate } from 'react-router-dom';
-import { Users, Shield } from 'lucide-react';
 
 const Card = styled.div`
   background: ${({ theme }) => theme.cardBackground};
-  border-radius: 12px;
+  border-radius: 20px;
   overflow: hidden;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-  transition: transform 0.2s, box-shadow 0.2s;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  transition: transform 0.2s;
   cursor: pointer;
   display: flex;
   flex-direction: column;
-  height: 100%;
+  align-items: center;
+  padding: 24px;
+  text-align: center;
+  border: 1px solid ${({ theme }) => theme.border};
 
   &:hover {
     transform: translateY(-4px);
-    box-shadow: 0 8px 12px rgba(0, 0, 0, 0.15);
+    border-color: ${({ theme }) => theme.primary};
   }
 `;
 
-const CoverImage = styled.div<{ $src?: string | null }>`
-  height: 140px;
-  background-color: ${({ theme }) => theme.borderColor}; // Fallback grey
-  background-image: ${({ $src }) => $src ? `url(${$src})` : 'none'};
-  background-size: cover;
-  background-position: center;
-  position: relative;
-`;
-
 const AvatarCircle = styled.div<{ $src?: string | null }>`
-  width: 60px;
-  height: 60px;
+  width: 100px;
+  height: 100px;
   border-radius: 50%;
-  background-color: #ddd;
+  background-color: ${({ theme }) => theme.secondary};
   background-image: ${({ $src }) => $src ? `url(${$src})` : 'none'};
   background-size: cover;
   background-position: center;
-  border: 4px solid ${({ theme }) => theme.cardBackground};
-  position: absolute;
-  bottom: -20px;
-  left: 20px;
-`;
-
-const Content = styled.div`
-  padding: 24px 20px 20px; // Extra top padding for avatar overlap
-  flex: 1;
-  display: flex;
-  flex-direction: column;
+  margin-bottom: 16px;
+  border: 4px solid ${({ theme }) => theme.background};
+  box-shadow: 0 4px 8px rgba(0,0,0,0.3);
 `;
 
 const TribeName = styled.h3`
-  margin: 10px 0 8px;
-  font-size: 1.2rem;
+  margin: 0 0 8px;
+  font-size: 1.4rem;
+  font-weight: 700;
   color: ${({ theme }) => theme.text};
 `;
 
-const Description = styled.p`
-  color: ${({ theme }) => theme.textSecondary};
+const MemberCount = styled.p`
+  margin: 0 0 16px;
   font-size: 0.9rem;
+  color: ${({ theme }) => theme.textSecondary};
+`;
+
+const Quote = styled.p`
+  color: ${({ theme }) => theme.text};
+  font-style: italic;
+  font-size: 0.95rem;
+  margin-bottom: 24px;
+  opacity: 0.9;
   line-height: 1.4;
-  flex: 1;
-  margin-bottom: 16px;
+  
   display: -webkit-box;
-  -webkit-line-clamp: 3;
+  -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
 `;
 
-const Footer = styled.div`
+const ButtonGroup = styled.div`
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding-top: 12px;
-  border-top: 1px solid ${({ theme }) => theme.borderColor};
-  font-size: 0.85rem;
-  color: ${({ theme }) => theme.textSecondary};
+  gap: 12px;
+  width: 100%;
+  margin-top: auto;
 `;
 
-const Stat = styled.div`
+const Button = styled.button<{ $variant?: 'primary' | 'secondary' }>`
+  flex: 1;
+  padding: 10px;
+  border-radius: 12px;
+  font-weight: 600;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: opacity 0.2s;
   display: flex;
   align-items: center;
-  gap: 6px;
+  justify-content: center;
+
+  ${({ $variant, theme }) => $variant === 'primary' ? `
+    background: ${theme.primary};
+    color: #2c2522; // Dark text on beige button looks premium
+    border: none;
+  ` : `
+    background: transparent;
+    border: 1px solid ${theme.textSecondary};
+    color: ${theme.text};
+  `}
+
+  &:hover {
+    opacity: 0.9;
+  }
 `;
 
 interface TribeCardProps {
-    tribe: Tribe;
-    currentUser: User | null;
+  tribe: Tribe;
+  currentUser: User | null;
 }
 
 const TribeCard: React.FC<TribeCardProps> = ({ tribe, currentUser }) => {
-    const navigate = useNavigate();
-    const isMember = currentUser && tribe.members.includes(currentUser.id);
+  const navigate = useNavigate();
+  const isMember = currentUser && tribe.members.includes(currentUser.id);
 
-    return (
-        <Card onClick={() => navigate(`/tribes/${tribe.id}`)}>
-            <CoverImage>
-                {/* Fallback pattern or color if no cover. For now using avatar as cover bg is common or just a color */}
-            </CoverImage>
+  const handleJoin = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    // Determine action based on membership (placeholder for now, action handled in Detail Page usually)
+    navigate(`/tribes/${tribe.id}`);
+  };
 
-            <AvatarCircle $src={tribe.avatarUrl || '/default-tribe.png'} />
+  return (
+    <Card onClick={() => navigate(`/tribes/${tribe.id}`)}>
+      <AvatarCircle $src={tribe.avatarUrl || '/default-tribe.png'} />
 
-            <Content>
-                <TribeName>{tribe.name}</TribeName>
-                <Description>{tribe.description}</Description>
+      <TribeName>{tribe.name}</TribeName>
+      <MemberCount>{tribe.members.length} members</MemberCount>
 
-                <Footer>
-                    <Stat>
-                        <Users size={16} />
-                        {tribe.members.length} {tribe.members.length === 1 ? 'Member' : 'Members'}
-                    </Stat>
-                    {isMember && (
-                        <Stat style={{ color: '#4CAF50', fontWeight: 'bold' }}>
-                            ✓ Joined
-                        </Stat>
-                    )}
-                </Footer>
-            </Content>
-        </Card>
-    );
+      <Quote>"{tribe.description}"</Quote>
+
+      <ButtonGroup>
+        <Button $variant="secondary" onClick={(e) => { e.stopPropagation(); navigate(`/tribes/${tribe.id}`); }}>
+          Chat
+        </Button>
+        <Button $variant="primary" onClick={handleJoin}>
+          {isMember ? 'Joined' : 'Join'}
+        </Button>
+      </ButtonGroup>
+    </Card>
+  );
 };
 
 export default TribeCard;
