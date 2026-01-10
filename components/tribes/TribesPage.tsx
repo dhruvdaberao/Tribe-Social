@@ -10,23 +10,36 @@ interface TribesPageProps {
     onCreateTribe: (name: string, description: string, avatarUrl?: string) => void;
     onViewTribe: (tribe: Tribe) => void;
     onEditTribe: (tribe: Tribe) => void;
+    isLoading: boolean;
 }
 
-const TribesPage: React.FC<TribesPageProps> = ({ tribes, currentUser, onJoinToggle, onCreateTribe, onViewTribe, onEditTribe }) => {
+const TribesPage: React.FC<TribesPageProps> = ({ tribes, currentUser, onJoinToggle, onCreateTribe, onViewTribe, onEditTribe, isLoading }) => {
     const [isCreateModalOpen, setCreateModalOpen] = useState(false);
 
     const myTribes = tribes.filter(c => c.members.includes(currentUser.id));
     const otherTribes = tribes.filter(c => !c.members.includes(currentUser.id));
 
-    if (!tribes || tribes.length === 0) {
+    // Only show full loading screen if we have NO data AND we are currently loading
+    if ((!tribes || tribes.length === 0) && isLoading) {
         return (
             <div className="flex flex-col items-center justify-center min-h-[50vh] text-center p-8 space-y-4">
-                {/* Using a simple SVG spinner if specific Loader not available, or just text as requested */}
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
                 <h3 className="text-xl font-bold text-primary">Loading tribes...</h3>
                 <p className="text-secondary">Finding your community</p>
             </div>
         );
+    }
+
+    // If we have no data and are NOT loading, show specific empty state (likely API failure or actually 0 tribes)
+    if (!tribes || tribes.length === 0) {
+        return (
+            <div className="flex flex-col items-center justify-center min-h-[50vh] text-center p-8 space-y-4">
+                <div className="text-4xl">🏝️</div>
+                <h3 className="text-xl font-bold text-primary">No Tribes Found</h3>
+                <p className="text-secondary">We couldn't load any tribes. Please check your internet connection.</p>
+                <button onClick={() => window.location.reload()} className="text-accent font-semibold hover:underline">Retry</button>
+            </div>
+        )
     }
 
 

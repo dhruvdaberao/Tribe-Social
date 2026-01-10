@@ -138,7 +138,7 @@ const App: React.FC = () => {
 
     const fetchData = useCallback(async () => {
         // Allow fetch if enough time passed OR if we have no posts yet (first load situation)
-        if (isFetching || (Date.now() - lastFetchTimestamp.current < 10000 && posts.length > 0)) return;
+        if (isFetching || (Date.now() - lastFetchTimestamp.current < 10000)) return;
 
         if (!currentUser) {
             setIsDataLoaded(false);
@@ -204,7 +204,7 @@ const App: React.FC = () => {
         } finally {
             setIsFetching(false);
         }
-    }, [currentUser, populatePost, setNotifications, isFetching, posts.length]);
+    }, [currentUser, populatePost, setNotifications, isFetching]);
 
     const fetchAllPostsForDiscover = useCallback(async () => {
         if (isAllPostsLoaded) return;
@@ -750,7 +750,17 @@ const App: React.FC = () => {
             case 'Messages':
                 return <ChatPage currentUser={currentUser} allUsers={visibleUsers} chukUser={CHUK_AI_USER} initialTargetUser={chatTarget} onViewProfile={handleViewProfile} onSharePost={handleSharePost} />;
             case 'Tribes':
-                return <TribesPage tribes={tribes} currentUser={currentUser} onJoinToggle={handleJoinToggle} onCreateTribe={handleCreateTribe} onViewTribe={handleViewTribe} onEditTribe={(tribe) => setEditingTribe(tribe)} />;
+                return (
+                    <TribesPage
+                        tribes={tribes}
+                        currentUser={currentUser!}
+                        onJoinToggle={handleJoinToggle}
+                        onCreateTribe={handleCreateTribe}
+                        onViewTribe={handleViewTribe}
+                        onEditTribe={handleEditTribe}
+                        isLoading={isFetching}
+                    />
+                );
             case 'TribeDetail':
                 if (!viewedTribe) return <div className="text-center p-8">Tribe not found. Go back to discover more tribes.</div>;
                 return <TribeDetailPage tribe={viewedTribe} currentUser={currentUser} userMap={userMap} onSendMessage={handleSendTribeMessage} onDeleteMessage={handleDeleteTribeMessage} onDeleteTribe={handleDeleteTribe} onBack={() => setActiveNavItem('Tribes')} onViewProfile={handleViewProfile} onEditTribe={(tribe) => setEditingTribe(tribe)} onJoinToggle={handleJoinToggle} />;
