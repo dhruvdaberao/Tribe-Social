@@ -14,30 +14,42 @@ interface TribesPageProps {
 
 const TribesPage: React.FC<TribesPageProps> = ({ tribes, currentUser, onJoinToggle, onCreateTribe, onViewTribe, onEditTribe }) => {
     const [isCreateModalOpen, setCreateModalOpen] = useState(false);
-    
+
     const myTribes = tribes.filter(c => c.members.includes(currentUser.id));
     const otherTribes = tribes.filter(c => !c.members.includes(currentUser.id));
+
+    if (!tribes || tribes.length === 0) {
+        return (
+            <div className="flex flex-col items-center justify-center min-h-[50vh] text-center p-8 space-y-4">
+                {/* Using a simple SVG spinner if specific Loader not available, or just text as requested */}
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+                <h3 className="text-xl font-bold text-primary">Loading tribes...</h3>
+                <p className="text-secondary">Finding your community</p>
+            </div>
+        );
+    }
+
 
     return (
         <div>
             <div className="flex flex-col sm:flex-row justify-between sm:items-center mb-6 gap-4">
                 <h1 className="text-2xl font-bold text-primary font-display">Tribes</h1>
-                <button 
+                <button
                     onClick={() => setCreateModalOpen(true)}
                     className="bg-accent text-accent-text font-semibold px-5 py-2 rounded-lg hover:bg-accent-hover transition-colors flex items-center justify-center space-x-2 shadow-sm hover:shadow-md"
                 >
                     {/* FIX: PlusIcon was used but not defined. */}
-                    <PlusIcon/>
+                    <PlusIcon />
                     <span>Create Tribe</span>
                 </button>
             </div>
 
             {myTribes.length > 0 && (
-                 <div className="mb-8">
+                <div className="mb-8">
                     <h2 className="text-xl font-bold text-primary mb-4 font-display">Your Tribes</h2>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                         {myTribes.map(tribe => (
-                            <TribeCard 
+                            <TribeCard
                                 key={tribe.id}
                                 tribe={tribe}
                                 currentUser={currentUser}
@@ -50,12 +62,12 @@ const TribesPage: React.FC<TribesPageProps> = ({ tribes, currentUser, onJoinTogg
                     </div>
                 </div>
             )}
-           
+
             <div>
                 <h2 className="text-xl font-bold text-primary mb-4 font-display">Discover Tribes</h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {otherTribes.map(tribe => (
-                        <TribeCard 
+                        <TribeCard
                             key={tribe.id}
                             tribe={tribe}
                             currentUser={currentUser}
@@ -66,15 +78,15 @@ const TribesPage: React.FC<TribesPageProps> = ({ tribes, currentUser, onJoinTogg
                         />
                     ))}
                 </div>
-                 {otherTribes.length === 0 && (
+                {otherTribes.length === 0 && (
                     <div className="bg-surface p-8 text-center rounded-2xl border border-border col-span-full shadow-md">
                         <p className="text-secondary">No other tribes to join right now.</p>
                     </div>
-                 )}
+                )}
             </div>
 
             {isCreateModalOpen && (
-                <CreateTribeModal 
+                <CreateTribeModal
                     onClose={() => setCreateModalOpen(false)}
                     onCreate={onCreateTribe}
                 />

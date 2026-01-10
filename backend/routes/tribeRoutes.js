@@ -978,11 +978,26 @@ router.post('/', protect, async (req, res) => {
 
 // @route   GET /api/tribes
 // @desc    Get all tribes
+// @route   GET /api/tribes
+// @desc    Get all tribes
 router.get('/', protect, async (req, res) => {
     try {
-        const tribes = await Tribe.find({}).sort({ createdAt: -1 });
+        console.log("----------------------------------");
+        console.log("🔍 GET /api/tribes - Fetching tribes...");
+        
+        const query = {}; // Fetch ALL tribes (no filtering yet)
+        console.log("❓ Query:", JSON.stringify(query));
+
+        const tribes = await Tribe.find(query).sort({ createdAt: -1 });
+        console.log(`✅ Found ${tribes.length} tribes.`);
+        
+        if (tribes.length === 0) {
+            console.warn("⚠️ WARNING: No tribes found in DB. Returning empty array.");
+        }
+
         res.json(tribes);
     } catch (error) {
+        console.error("❌ Error fetching tribes:", error);
         res.status(500).json({ message: 'Server Error' });
     }
 });

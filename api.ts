@@ -104,6 +104,7 @@ export const deleteAccount = () => API.delete('/users/profile');
 export const fetchPost = (id: string) => API.get(`/posts/${id}`);
 export const fetchPosts = () => API.get('/posts');
 export const fetchFeedPosts = () => API.get('/posts/feed');
+export const fetchUserPosts = (userId: string) => API.get(`/posts/user/${userId}`);
 export const createPost = (newPost: any) => API.post('/posts', newPost);
 export const deletePost = (id: string) => API.delete(`/posts/${id}`);
 export const likePost = (id: string) => API.put(`/posts/${id}/like`);
