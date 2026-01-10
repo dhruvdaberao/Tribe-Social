@@ -30,10 +30,11 @@ const App: React.FC = () => {
     const { currentUser, logout, isLoading: isAuthLoading } = useAuth();
     const { socket, notifications, setNotifications, unreadMessageCount, unreadTribeCount, unreadNotificationCount } = useSocket();
     
-    const [users, setUsers] = useState<User[]>([]);
-    const [posts, setPosts] = useState<Post[]>([]);
+    // Hydrate from LocalStorage if available to prevent blank screens on slow network
+    const [users, setUsers] = useState<User[]>(() => JSON.parse(localStorage.getItem('cached_users') || '[]'));
+    const [posts, setPosts] = useState<Post[]>(() => JSON.parse(localStorage.getItem('cached_posts') || '[]'));
     const [profilePosts, setProfilePosts] = useState<Post[]>([]);
-    const [tribes, setTribes] = useState<Tribe[]>([]);
+    const [tribes, setTribes] = useState<Tribe[]>(() => JSON.parse(localStorage.getItem('cached_tribes') || '[]'));
     const [myStories, setMyStories] = useState<Story[]>([]);
     const [followingUserStories, setFollowingUserStories] = useState<{ user: User, stories: Story[] }[]>([]);
     
@@ -43,19 +44,22 @@ const App: React.FC = () => {
     const [viewedTribe, setViewedTribe] = useState<Tribe | null>(null);
 
     const userMap = useMemo(() => {
-        const map = new Map(users.map((user: User) => [user.id, user]));
+        const map = new Map(users.map((u: User) => [u.id, u]));
         map.set(CHUK_AI_USER.id, CHUK_AI_USER);
         return map;
     }, [users]);
 
     const normalizePost = useCallback((p: any): Post => {
-        const author = p.author || p.user || { name: 'Member', id: 'unknown', username: 'member' };
+        // Fix for undefined ID bug: map _id to id immediately
+        const author = p.author || p.user || { name: 'Member', id: 'deleted', username: 'member' };
         return {
             ...p,
-            id: p.id || p._id,
-            author: author,
+            id: p.id || p._id || `temp-${Math.random()}`,
+            author: { ...author, id: author.id || author._id },
+            likes: Array.isArray(p.likes) ? p.likes.map((l: any) => typeof l === 'string' ? l : l._id) : [],
             comments: (p.comments || []).map((c: any) => ({ 
                 ...c, 
+                id: c.id || c._id,
                 author: c.author || c.user || { name: 'User', id: 'deleted' } 
             }))
         };
@@ -71,11 +75,20 @@ const App: React.FC = () => {
                 api.fetchMyStories().catch(() => ({ data: [] })),
                 api.fetchFollowingStories().catch(() => ({ data: [] }))
             ]);
+            
+            const normalizedPosts = (fRes.data || []).map(normalizePost);
+            
             setUsers(uRes.data || []);
-            setPosts((fRes.data || []).map(normalizePost));
+            setPosts(normalizedPosts);
             setTribes(tRes.data || []);
             setMyStories(sRes.data || []);
             setFollowingUserStories(fsRes.data || []);
+            
+            // Sync cache
+            localStorage.setItem('cached_users', JSON.stringify(uRes.data || []));
+            localStorage.setItem('cached_posts', JSON.stringify(normalizedPosts));
+            localStorage.setItem('cached_tribes', JSON.stringify(tRes.data || []));
+            
             setIsDataLoaded(true);
         } catch (e) {
             console.error("Critical Load Error:", e);
@@ -83,27 +96,46 @@ const App: React.FC = () => {
     }, [currentUser, normalizePost]);
 
     const handleViewProfile = async (user: User) => {
+        const userId = user.id || (user as any)._id;
         setViewedUser(user);
         setActiveNavItem('Profile');
         setProfilePosts([]); 
         try {
-            const { data } = await api.fetchUserPosts(user.id);
-            setProfilePosts(data.map(normalizePost));
+            const { data } = await api.fetchUserPosts(userId);
+            if (data && data.length > 0) {
+                setProfilePosts(data.map(normalizePost));
+            } else {
+                // Fallback: Filter from global feed if API returns empty
+                setProfilePosts(posts.filter(p => p.author?.id === userId));
+            }
         } catch (e) {
-            setProfilePosts(posts.filter(p => p.author?.id === user.id));
+            setProfilePosts(posts.filter(p => p.author?.id === userId));
         }
     };
 
     const handleLikePost = async (postId: string) => {
+        if (!postId || postId.includes('temp-')) return;
+        
+        // Optimistic UI
+        setPosts(prev => prev.map(p => {
+            if (p.id !== postId) return p;
+            const isLiked = p.likes.includes(currentUser!.id);
+            return {
+                ...p,
+                likes: isLiked ? p.likes.filter(id => id !== currentUser!.id) : [...p.likes, currentUser!.id]
+            };
+        }));
+
         try {
-            const { data } = await api.likePost(postId);
-            const updated = normalizePost(data);
-            setPosts(prev => prev.map(p => p.id === postId ? updated : p));
-            setProfilePosts(prev => prev.map(p => p.id === postId ? updated : p));
-        } catch (e) { toast.error("Like failed"); }
+            await api.likePost(postId);
+        } catch (e) {
+            toast.error("Like failed, syncing...");
+            fetchData(); // Rollback/Sync
+        }
     };
 
     const handleCommentPost = async (postId: string, text: string) => {
+        if (!postId) return;
         try {
             const { data } = await api.commentOnPost(postId, { text });
             const updated = normalizePost(data);
@@ -124,13 +156,13 @@ const App: React.FC = () => {
         return () => { socket.off('newPost'); };
     }, [socket, normalizePost]);
 
-    if (isAuthLoading) return <div className="h-screen bg-background flex items-center justify-center"><img src="/duckload.gif" className="w-16" /></div>;
+    if (isAuthLoading) return <div className="h-screen bg-[#2A2320] flex items-center justify-center"><img src="/duckload.gif" className="w-16" /></div>;
     if (!currentUser) return <LoginPage />;
     
+    // Safety check for blockedUsers length/existence
+    const safeBlocked = currentUser.blockedUsers ?? [];
     const visiblePosts = posts.filter(p => 
-        p && 
-        p.author?.id && 
-        !(currentUser.blockedUsers || []).includes(p.author.id)
+        p && p.author?.id && !safeBlocked.includes(p.author.id)
     );
 
     return (
@@ -147,13 +179,12 @@ const App: React.FC = () => {
                 unreadTribeCount={unreadTribeCount} 
                 unreadNotificationCount={unreadNotificationCount} 
             />
-            <main className="pt-16 pb-16 md:pb-0 h-screen overflow-y-auto">
+            <main className="pt-16 pb-16 md:pb-0 h-screen overflow-y-auto hide-scrollbar">
                 <div className={['Messages', 'TribeDetail', 'Settings', 'Notifications', 'Chuk'].includes(activeNavItem) ? 'h-full' : 'max-w-2xl mx-auto px-4 md:px-6 pt-6 pb-24 md:pb-8'}>
                     {activeNavItem === 'Home' && (
                         <>
                             <CreatePost currentUser={currentUser} allUsers={users} myStories={myStories} onAddPost={fetchData} isPosting={false} onOpenStoryCreator={()=>{}} onViewUserStories={()=>{}} />
                             <StoryFeed myStories={myStories} followingUserStories={followingUserStories} currentUser={currentUser} seenStoryAuthors={new Set()} onViewUserStories={()=>{}} />
-                            {visiblePosts.length === 0 && isDataLoaded && <div className="text-center py-20 text-secondary font-semibold">No tracks in your tribe yet. Check Discover! 🐣</div>}
                             <FeedPage posts={visiblePosts} currentUser={currentUser} allUsers={users} allTribes={tribes} onLikePost={handleLikePost} onCommentPost={handleCommentPost} onDeletePost={()=>{}} onDeleteComment={()=>{}} onViewProfile={handleViewProfile} onSharePost={()=>{}} />
                         </>
                     )}

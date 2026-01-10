@@ -4,7 +4,7 @@ const API_URL = 'https://tribe-social-backend.onrender.com';
 
 const API = axios.create({ 
   baseURL: `${API_URL}/api`,
-  timeout: 90000 // 90 seconds to survive heavy cold starts on Render
+  timeout: 90000 // 90s to survive Render's spin-up time
 });
 
 API.interceptors.request.use((req) => {
@@ -13,17 +13,17 @@ API.interceptors.request.use((req) => {
   return req;
 });
 
-// Automatic Retry Logic for GET requests
+// Retry Logic for GET requests to mitigate transient network drops
 API.interceptors.response.use(
   response => response,
   async error => {
     const { config, code } = error;
     if (config && config.method === 'get' && !config._retry && (code === 'ECONNABORTED' || !error.response)) {
       config._retry = true;
-      console.warn(`Retrying ${config.url} due to timeout/network error...`);
+      console.warn(`Retrying ${config.url} due to timeout...`);
       return API(config);
     }
-    console.error(`API Error [${config?.url}]:`, error.message);
+    console.error(`[API ERROR] ${config?.url}:`, error.message);
     return Promise.reject(error);
   }
 );
