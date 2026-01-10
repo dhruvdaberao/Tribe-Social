@@ -47,7 +47,7 @@ export const sendMessage = (receiverId: string, messageData: any) => API.post(`/
 
 // Tribes
 export const fetchTribes = () => API.get('/tribes');
-export const fetchTribe = (id: string) => API.get(`/tribes/${id}`);
+export const fetchTribe = (id: string) => API.get(`/tribes/${id}`); // Specific tribe fetch
 export const createTribe = (tribeData: any) => API.post('/tribes', tribeData);
 export const updateTribe = (id: string, tribeData: any) => API.put(`/tribes/${id}`, tribeData);
 export const deleteTribe = (id: string) => API.delete(`/tribes/${id}`);

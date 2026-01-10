@@ -33,6 +33,22 @@ router.get('/', protect, async (req, res) => {
     }
 });
 
+// @route   GET /api/tribes/:id
+// @desc    Get specific tribe by ID
+// @access  Private
+router.get('/:id', protect, async (req, res) => {
+    try {
+        const tribe = await Tribe.findById(req.params.id);
+        if (!tribe) {
+            return res.status(404).json({ message: 'Tribe not found' });
+        }
+        res.json(tribe);
+    } catch (error) {
+        console.error("❌ GET /api/tribes/:id ERROR:", error);
+        res.status(500).json({ message: 'Server Error fetching tribe' });
+    }
+});
+
 // @route   POST /api/tribes
 // @desc    Create a new tribe
 // @access  Private

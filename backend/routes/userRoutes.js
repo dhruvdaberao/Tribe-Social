@@ -452,12 +452,15 @@ const router = express.Router();
 router.get('/', protect, async (req, res) => {
     try {
         const users = await User.find({})
-            // Select followers and following to display correct counts on frontend cards
-            .select('name username avatarUrl bannerUrl bio followers following')
+            // Optimize: Exclude heavy arrays 'followers' and 'following' to prevent timeouts.
+            // Frontend usually only needs basic info for Discover cards.
+            // If counts are needed, we should project size, but for now let's just minimal select.
+            .select('name username avatarUrl bio')
             .sort({ createdAt: -1 })
             .limit(20);
         res.json(users);
     } catch (error) {
+        console.error("Fetch users error:", error);
         res.status(500).json({ message: 'Server error' });
     }
 });

@@ -192,18 +192,9 @@ const TribeDetailPage: React.FC<TribeDetailPageProps> = ({ currentUser, tribeId:
 
     const fetchDetails = async () => {
       try {
-        // 1. Fetch Tribe Info (Usually fast if cached in list, but we fetch fresh)
-        // Note: We might want to pass tribe via location state to skip this, but for reliability we fetch.
-        // Assuming we might have a getTribeById endpoint or we filter from list. 
-        // Since Phase 1 didn't explicitly mandate getTribeById, let's assuming we might need to fetch all or we added it.
-        // WAIT: Phase 1 implementation didn't include `GET /api/tribes/:id`.
-        // FIX: We will fetch ALL tribes and find ours, or just implement the endpoint quickly if missing.
-        // Given the instructions said "GET /api/tribes MUST return ALL", we can use that if :id endpoint missing.
-        // BUT better practice: Let's assume frontend logic to find it or fetch specifically. 
-        // For now, let's try reading from existing cache first for instant load.
-
-        const { data: allTribes } = await api.fetchTribes();
-        const foundTribe = allTribes.find((t: Tribe) => t.id === id);
+        setIsLoading(true); // Ensure loading state starts true
+        // Direct fetch by ID
+        const { data: foundTribe } = await api.fetchTribe(id);
 
         if (foundTribe) {
           setTribe(foundTribe);
@@ -213,11 +204,15 @@ const TribeDetailPage: React.FC<TribeDetailPageProps> = ({ currentUser, tribeId:
         } else {
           setError("Tribe not found.");
         }
-        setIsLoading(false);
-
-      } catch (err) {
+      } catch (err: any) {
         console.error("Failed to load tribe details", err);
-        setError("Failed to load conversation.");
+        // Handle 404 specifically if possible, otherwise generic error
+        if (err.response && err.response.status === 404) {
+          setError("Tribe not found.");
+        } else {
+          setError("Failed to load conversation.");
+        }
+      } finally {
         setIsLoading(false);
       }
     };
