@@ -14,9 +14,10 @@ const POPULATE_CONFIG = [
     { path: 'comments.user', select: MINIMAL_USER }
 ];
 
-// Recovery-first Feed: Falls back to global posts if following query fails or returns empty
+// @route   GET /api/posts/feed
+// Recovery logic: Returns personal feed, but falls back to global if empty to prevent blank screens
 router.get('/feed', protect, async (req, res) => {
-    console.log(`[GET] /posts/feed - User: ${req.user.id}`);
+    console.log(`[QUERY] Fetching feed for user: ${req.user.id}`);
     try {
         const currentUser = await User.findById(req.user.id).select('following').lean();
         const userIds = [req.user.id, ...(currentUser?.following || [])];
@@ -25,13 +26,15 @@ router.get('/feed', protect, async (req, res) => {
             $or: [{ author: { $in: userIds } }, { user: { $in: userIds } }] 
         })
         .sort({ createdAt: -1 })
-        .limit(30)
+        .limit(50)
         .populate(POPULATE_CONFIG)
-        .maxTimeMS(8000) // Phase 1: Prevent hanging queries
+        .maxTimeMS(8000)
         .lean();
 
+        console.log(`[RESULT] Found ${posts?.length || 0} feed posts`);
+
         if (!posts || posts.length === 0) {
-            // Fallback to global discovery to avoid blank screen
+            // FALLBACK: Return global newest to ensure content is visible
             const fallback = await Post.find().sort({ createdAt: -1 }).limit(10).populate(POPULATE_CONFIG).lean();
             return res.json(fallback || []);
         }
@@ -44,9 +47,9 @@ router.get('/feed', protect, async (req, res) => {
     }
 });
 
-// Fixed Profile Visibility: Scoped query specifically to target user
+// @route   GET /api/posts/user/:userId
 router.get('/user/:userId', protect, async (req, res) => {
-    console.log(`[GET] /posts/user/${req.params.userId}`);
+    console.log(`[QUERY] Profile posts for: ${req.params.userId}`);
     try {
         const posts = await Post.find({ 
             $or: [{ author: req.params.userId }, { user: req.params.userId }] 
@@ -58,6 +61,7 @@ router.get('/user/:userId', protect, async (req, res) => {
         
         res.json(posts || []);
     } catch (error) {
+        console.error("Profile query fail:", error.message);
         res.status(200).json([]); 
     }
 });
@@ -76,10 +80,16 @@ router.get('/', protect, async (req, res) => {
     }
 });
 
-// Scoped atomic update to fix "liking all posts" bug
+// Atomic Like with full object return for UI sync
 router.put('/:id/like', protect, async (req, res) => {
+    const postId = req.params.id;
+    if (!postId || postId === 'undefined') {
+        console.error("[BUG] Attempted to like 'undefined' post ID");
+        return res.status(400).json({ message: 'Invalid Post ID' });
+    }
+
     try {
-        const post = await Post.findById(req.params.id);
+        const post = await Post.findById(postId);
         if (!post) return res.status(404).json({ message: 'Post not found' });
 
         const isLiked = post.likes.includes(req.user.id);

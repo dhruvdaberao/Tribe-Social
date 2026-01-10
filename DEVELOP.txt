@@ -1,3 +1,387 @@
+
+# Tribe Social - The Developer's Bible
+**Full-Stack Documentation & Interview Preparation Guide**
+
+---
+
+## PART 1: ARCHITECTURE & TECH STACK
+
+### 1. High-Level Architecture
+Tribe Social follows a **Monolithic Client-Server Architecture** decoupled via API.
+
+*   **Frontend (The Client):** A Single Page Application (SPA) built with React. It handles all presentation logic, state management, and user interaction. It loads once and fetches data dynamically.
+*   **Backend (The Server):** A Node.js/Express REST API. It serves as the "brain," handling business logic, database queries, and AI processing.
+*   **Real-Time Layer:** A generic WebSocket layer powered by **Socket.IO**. This runs alongside the HTTP server to enable bi-directional, event-based communication (chats, notifications).
+*   **Database:** **MongoDB Atlas** (Cloud). We use a NoSQL document model which allows flexible schema design, perfect for JSON-heavy data like social media posts and nested comments.
+
+### 2. Technology Stack
+*   **Frontend:**
+    *   **React 19:** Utilizing Functional Components and Hooks (`useState`, `useEffect`, `useContext`, `useCallback`, `useMemo`).
+    *   **TypeScript:** Enforces type safety (Interfaces for `User`, `Post`, `Tribe`) to prevent runtime errors.
+    *   **TailwindCSS:** Utility-first styling for rapid, responsive UI development.
+    *   **Vite:** Next-generation build tool for instant HMR (Hot Module Replacement) and optimized production builds.
+*   **Backend:**
+    *   **Node.js & Express:** Lightweight, non-blocking I/O server.
+    *   **Mongoose:** ODM (Object Data Modeling) library to interact with MongoDB.
+    *   **JWT (JSON Web Token):** Stateless authentication mechanism.
+    *   **Bcryptjs:** Salting and hashing passwords for security.
+*   **External APIs:**
+    *   **Google Gemini API:** Generative AI for the "Chuk" assistant.
+
+---
+
+## PART 2: DETAILED FEATURE WORKFLOWS
+
+### 1. Authentication (Login/Register)
+*   **Flow:**
+    1.  User submits form (Email/Pass).
+    2.  **Backend:** Checks DB. If registering, hashes password with `bcrypt`. If logging in, compares hash.
+    3.  **Token Generation:** If valid, backend signs a `JWT` containing the User ID and sends it back.
+    4.  **Frontend:** Stores the `token` in `localStorage`.
+    5.  **Context:** `AuthContext` reads this token on app load. If present, it sets the `currentUser`.
+*   **Security:** Passwords are never stored in plain text. Routes are protected via middleware that verifies the JWT signature.
+
+### 2. The Feed (Home & Discover)
+*   **Data Fetching:** On load, `App.tsx` calls `api.fetchFeedPosts()`.
+*   **Performance Optimization:**
+    *   **Pagination:** The backend limits results (`.limit(50)`) to prevent server crashes (502 errors) on the free tier.
+    *   **Population:** We use Mongoose `.populate('author')` to join User data into the Post object efficiently.
+*   **UI Logic:**
+    *   **Optimistic UI:** When you "Like" a post, the UI turns the heart red *instantly* before the server confirms. If the request fails, we revert the color. This makes the app feel zero-latency.
+    *   **Image Handling:** CSS `object-fit: cover` and `max-height` ensure images look good on both Mobile (cropped center) and Desktop.
+
+### 3. Real-Time Chat (Direct Messages)
+*   **Architecture:** Uses **Socket.IO Rooms**.
+    *   Room ID format: `dm-[UserID_A]-[UserID_B]` (IDs are sorted alphabetically so A->B and B->A join the same room).
+*   **Flow:**
+    1.  User A sends message.
+    2.  **Optimistic:** Message appears instantly on User A's right side.
+    3.  **Network:** POST request sent to DB.
+    4.  **Socket:** Backend emits `newMessage` event to the Room.
+    5.  **User B:** Listens for `newMessage`, verifies sender ID, and updates UI.
+    6.  **Echo Prevention:** User A ignores the socket event for the message they just sent to prevent duplicates.
+
+### 4. Tribes (Group Communities)
+*   **Structure:** A `Tribe` document contains an array of `members` (User IDs).
+*   **Logic:**
+    *   Chat logic is identical to DMs, but Room ID is `tribe-[TribeID]`.
+    *   **Membership Check:** The backend middleware checks if `req.user.id` exists in the `tribe.members` array before allowing a message POST.
+    *   **Live Updates:** Uses `socket.to(tribeRoom).emit(...)` to broadcast messages to all members.
+
+### 5. Stories (Snapchat-style Editor)
+*   **The "Story Creator" (Complex Feature):**
+    *   **Canvas:** A `div` acts as the canvas.
+    *   **Interactions:** Custom mouse/touch event handlers calculate:
+        *   **Drag:** Delta X/Y from start position.
+        *   **Rotate:** `Math.atan2` calculates the angle between mouse and element center.
+        *   **Scale:** Distance formula determines resize factor.
+*   **WYSIWYG (What You See Is What You Get):**
+    *   We save the *exact* CSS transform values (rotation deg, scale, x/y percentage) to the database.
+    *   The `StoryViewer` applies these exact styles, recreating the scene pixel-perfectly for the viewer.
+*   **Auto-Expiry:** MongoDB TTL (Time-To-Live) index on `createdAt` automatically deletes stories after 24 hours.
+
+### 6. "Chuk" The AI Assistant
+*   **Integration:**
+    *   Chuk is a "virtual" user in the frontend (ID: `chuk-ai`).
+    *   When sending a message to Chuk, the frontend hits a specific endpoint: `/api/ai/chat`.
+    *   **Backend:** Instantiates Google GenAI client -> Sends prompt + "System Instruction" (You are a quirky chicken...) -> Returns text.
+    *   **Frontend:** Displays the AI response as a standard chat message bubble.
+
+---
+
+## PART 3: CHALLENGES FACED & SOLUTIONS
+
+### 1. The "White Screen of Death" (QuotaExceededError)
+*   **Problem:** We were caching the entire User list (including huge Base64 avatar strings) in `localStorage`. This hit the 5MB browser limit, causing the React app to crash on load.
+*   **Solution:**
+    1.  **Removed User Caching:** Stopped saving the heavy user list to local storage.
+    2.  **SessionStorage:** Switched to `sessionStorage` for posts/tribes (clears on tab close).
+    3.  **Safe Wrapper:** Wrote a `try-catch` block around all storage `setItem` calls to fail silently instead of crashing the app.
+
+### 2. 502 Bad Gateway / Server Crashes
+*   **Problem:** The backend is hosted on Render's Free Tier (512MB RAM). Fetching 100+ posts with high-res images caused the Node process to run out of memory (OOM) and crash.
+*   **Solution:**
+    1.  **Strict Limits:** Reduced database queries to `.limit(50)` for posts and `.limit(20)` for users.
+    2.  **Lean Queries:** Used `.select('-password -__v')` to fetch only necessary fields, reducing payload size.
+
+### 3. Blank Chat Bubbles / "Unknown User"
+*   **Problem:** In Tribe Chat, real-time messages appeared with "Unknown User" because the Socket event sent the raw Message object (where `sender` is just an ID string), but the UI expected a populated User object (Name, Avatar).
+*   **Solution:** In the Backend POST route, we added `await message.populate('sender')` **before** emitting the socket event. This ensures the live payload contains the full profile data.
+
+### 4. Duplicate Messages ("Echo" Bug)
+*   **Problem:** When sending a message, it appeared twice: once from the Optimistic UI update, and once when the Socket server broadcasted it back to the sender.
+*   **Solution:** In the `socket.on('newMessage')` listener, added: `if (message.senderId === currentUser.id) return;`. This tells the app to ignore incoming messages if *you* were the one who sent them.
+
+---
+
+## PART 4: INTERVIEW PREPARATION (30 Q&A)
+
+### General & Tech Stack
+**1. Why did you choose the MERN stack for this project?**
+*   **Answer:** I chose MERN for its uniformity; using JavaScript/TypeScript on both frontend and backend streamlines development. MongoDB's flexible schema is perfect for social data (posts/comments), and Node.js's non-blocking I/O is ideal for real-time features like chat.
+
+**2. What is the benefit of using TypeScript over JavaScript?**
+*   **Answer:** TypeScript prevents runtime errors (like "Cannot read property of undefined") by catching type mismatches during development. It also provides excellent IntelliSense, making the code self-documenting and easier to maintain.
+
+**3. Explain the difference between `localStorage` and `sessionStorage`.**
+*   **Answer:** `localStorage` persists data even after the browser closes. `sessionStorage` only persists data while the tab is open. I switched to `sessionStorage` for caching to prevent "Quota Exceeded" errors while maintaining a snappy experience during a session.
+
+**4. Why use Vite instead of Create React App (CRA)?**
+*   **Answer:** Vite uses native ES modules in the browser, making the dev server start instantly regardless of app size. It is significantly faster than Webpack-based CRA.
+
+**5. How does TailwindCSS improve your workflow?**
+*   **Answer:** It allows for rapid UI development without context-switching between JSX and CSS files. It also handles responsive design (`md:`, `lg:`) and dark mode cleanly.
+
+### Architecture & Backend
+**6. How do you handle Authentication?**
+*   **Answer:** I use JWT (JSON Web Tokens). When a user logs in, the backend signs a token with a secret. The frontend attaches this token to the `Authorization` header of every request. The backend `protect` middleware verifies the signature to allow access.
+
+**7. How do you secure user passwords?**
+*   **Answer:** Passwords are hashed using `bcryptjs` before being saved to the database. We never store plain-text passwords.
+
+**8. What is the role of Mongoose?**
+*   **Answer:** Mongoose is an ODM that provides a schema-based solution to model application data. It handles validation, type casting, and query building (like `.populate()`) for MongoDB.
+
+**9. Explain the "Blank Chat Bubble" bug you fixed.**
+*   **Answer:** The frontend expected a full User object for the sender, but the live socket event only sent the User ID. I fixed it by forcing the backend to `.populate('sender')` the message document before broadcasting it via Socket.IO.
+
+**10. How did you handle the 502 Server Errors?**
+*   **Answer:** The free tier server ran out of memory when fetching too much data. I optimized this by implementing pagination limits (fetching only 15-50 items) and optimizing queries to select only necessary fields.
+
+**11. How does the AI integration work securely?**
+*   **Answer:** I proxy the requests. The frontend sends the prompt to my backend. The backend (which holds the secret API Key in `.env`) talks to Google Gemini and returns the result. This keeps the API key hidden from the browser.
+
+### Real-Time & Sockets
+**12. What is Socket.IO and why use it?**
+*   **Answer:** It's a library that enables low-latency, bi-directional communication between client and server. I used it for instant chat messages and live notifications.
+
+**13. How do you handle Private Messaging vs. Group Chat in Sockets?**
+*   **Answer:** I use "Rooms". For DMs, the room ID is a sorted combination of two user IDs. For Tribes, the room ID is the Tribe's unique database ID.
+
+**14. What is "Optimistic UI"?**
+*   **Answer:** It's updating the UI immediately assuming the server request will succeed. For example, when you delete a post, I remove it from the screen instantly. If the API call fails, I revert the change and show an error toast.
+
+**15. How do you prevent the "Echo" effect in chat?**
+*   **Answer:** Since I update the UI optimistically when sending, I filter incoming socket messages. If the `senderId` matches the current user, I ignore the socket event to prevent displaying the message twice.
+
+### Database (MongoDB)
+**16. Why use a NoSQL database like MongoDB?**
+*   **Answer:** Social media data is unstructured and hierarchical. A Post can have an array of Comment objects nested inside it. NoSQL handles this document structure much more naturally than a SQL table join.
+
+**17. What is `ref` in Mongoose?**
+*   **Answer:** It tells Mongoose that a field stores an `ObjectId` that points to another collection (e.g., a Post has a `user` field referencing the `User` collection). This allows us to use `.populate()`.
+
+**18. How did you implement Story Expiry?**
+*   **Answer:** I used MongoDB's **TTL (Time-To-Live) Index**. I set an `expires: '24h'` property on the `createdAt` field in the Story schema. MongoDB automatically deletes the document after that time.
+
+### Frontend Specifics
+**19. How did you implement the Story Creator (Drag/Rotate)?**
+*   **Answer:** I used vector math. For rotation, I calculated the `Math.atan2` angle between the mouse position and the center of the element. For scaling, I calculated the distance delta. I saved these transform values to the DB to render the exact same view later.
+
+**20. How did you handle Mobile Responsiveness for images?**
+*   **Answer:** I used a combination of `w-full`, `h-auto` for natural height, but added `max-h-[500px]` with `object-cover` and `object-center`. This ensures tall images don't take up the whole screen on phones while keeping the subject visible.
+
+**21. What is the purpose of `useMemo` in your code?**
+*   **Answer:** I used `useMemo` to cache expensive calculations, like filtering the user list for search results or creating the `userMap`. This prevents re-calculation on every render, improving performance.
+
+**22. How does the Theme Switcher work?**
+*   **Answer:** It toggles a `dark` class on the `<html>` element and persists the preference in `localStorage`. TailwindCSS is configured with `darkMode: 'class'` to style elements accordingly.
+
+**23. Why did you use `useRef` in the Chat component?**
+*   **Answer:** I used `useRef` for the `messagesEndRef`. This allows me to imperatively scroll the chat container to the bottom whenever a new message arrives, ensuring the latest message is visible.
+
+### Behavioral & Problem Solving
+**24. What was the hardest bug you faced?**
+*   **Answer:** The "QuotaExceededError" that caused a White Screen of Death. It was tricky because it only happened after using the app for a while. I realized I was storing base64 images in localStorage. I fixed it by removing the user cache and switching to sessionStorage.
+
+**25. How did you debug the 500 errors on the Feed?**
+*   **Answer:** I checked the server logs and saw crashes when accessing properties of `null`. This happened because some posts referenced deleted users. I added a filter in the backend: `posts.filter(p => p.user !== null)` to make the feed robust.
+
+**26. Why did you choose to build a custom API instead of using Firebase?**
+*   **Answer:** I wanted full control over the backend logic and to demonstrate my ability to build a scalable Node.js/Express architecture from scratch, which is a core requirement for full-stack roles.
+
+**27. How would you scale this app if it got 10,000 users?**
+*   **Answer:**
+    1.  Offload images to Cloudinary/S3 instead of Base64 strings.
+    2.  Implement Redis for caching feeds and sessions.
+    3.  Use MongoDB Indexing more aggressively for search.
+    4.  Scale the Node.js server horizontally using a Load Balancer.
+
+**28. How does the search functionality work?**
+*   **Answer:** It's a client-side filter using `useMemo`. It checks if the search term exists in the username, name, or post content. For a larger app, I would move this to a Backend API query with MongoDB Text Search.
+
+**29. What would you improve if you had more time?**
+*   **Answer:** I would add read receipts for messages, push notifications using a service worker, and video upload support using a cloud provider.
+
+**30. What did you learn from this project?**
+*   **Answer:** I learned the importance of **Data Sanitization** (handling deleted users), **Memory Management** (pagination on free tier servers), and the complexity of **Real-time State Management** (syncing Optimistic UI with Socket events).
+
+---
+
+## PART 5: PROJECT DIRECTORY STRUCTURE
+
+```
+/
+├── backend/
+│   ├── config/
+│   │   └── db.js
+│   ├── middleware/
+│   │   └── authMiddleware.js
+│   ├── models/
+│   │   ├── clanMessageModel.js
+│   │   ├── clanModel.js
+│   │   ├── messageModel.js
+│   │   ├── notificationModel.js
+│   │   ├── postModel.js
+│   │   ├── storyModel.js
+│   │   ├── tribeMessageModel.js
+│   │   ├── tribeModel.js
+│   │   └── userModel.js
+│   ├── routes/
+│   │   ├── aiRoutes.js
+│   │   ├── authRoutes.js
+│   │   ├── clanRoutes.js
+│   │   ├── messageRoutes.js
+│   │   ├── notificationRoutes.js
+│   │   ├── postRoutes.js
+│   │   ├── storyRoutes.js
+│   │   ├── tribeRoutes.js
+│   │   └── userRoutes.js
+│   ├── scripts/
+│   │   └── migrate-images-to-cloudinary.js
+│   ├── package.json
+│   ├── server.js
+│   └── socketManager.js
+├── components/
+│   ├── auth/
+│   │   └── LoginPage.tsx
+│   ├── chat/
+│   │   ├── ChatPage.tsx
+│   │   ├── ConversationList.tsx
+│   │   ├── MessageArea.tsx
+│   │   └── NewMessageModal.tsx
+│   ├── clans/
+│   │   ├── ClanCard.tsx
+│   │   ├── ClanDetailPage.tsx
+│   │   ├── ClansPage.tsx
+│   │   ├── CreateClanModal.tsx
+│   │   └── EditTribeModal.tsx
+│   ├── common/
+│   │   ├── MarkdownRenderer.tsx
+│   │   ├── ShareButton.tsx
+│   │   ├── ShareModal.tsx
+│   │   ├── Toast.tsx
+│   │   └── UserAvatar.tsx
+│   ├── discover/
+│   │   └── DiscoverPage.tsx
+│   ├── feed/
+│   │   ├── CreatePost.tsx
+│   │   ├── FeedPage.tsx
+│   │   ├── ImageCropModal.tsx
+│   │   └── PostCard.tsx
+│   ├── layout/
+│   │   ├── FloatingActionButton.tsx
+│   │   └── Sidebar.tsx
+│   ├── notifications/
+│   │   └── NotificationsPage.tsx
+│   ├── profile/
+│   │   ├── BlockedListModal.tsx
+│   │   ├── FollowListModal.tsx
+│   │   ├── PostGridItem.tsx
+│   │   ├── PostViewModal.tsx
+│   │   └── ProfilePage.tsx
+│   ├── settings/
+│   │   ├── AboutUsPage.tsx
+│   │   ├── HelpPage.tsx
+│   │   └── SettingsPage.tsx
+│   ├── stories/
+│   │   ├── StoryCreator.tsx
+│   │   ├── StoryFeed.tsx
+│   │   └── StoryViewer.tsx
+│   ├── tribals/
+│   │   ├── TribalsPage.tsx
+│   │   └── UserCard.tsx
+│   ├── tribes/
+│   │   ├── CreateTribeModal.tsx
+│   │   ├── EditTribeModal.tsx
+│   │   ├── TribeCard.tsx
+│   │   ├── TribeDetailPage.tsx
+│   │   ├── TribeMembersModal.tsx
+│   │   └── TribesPage.tsx
+│   └── users/
+│       ├── DevNotesPage.tsx
+│       └── UserCard.tsx
+├── contexts/
+│   ├── AuthContext.tsx
+│   ├── SocketContext.tsx
+│   └── ThemeContext.tsx
+├── storage/
+│   └── safeStorage.ts
+├── tests/
+│   └── stubs.test.js
+├── api.ts
+├── App.tsx
+├── CHANGELOG-AI-FIXES.md
+├── BlockedListModal.tsx
+├── BlockListModal.tsx
+├── develop.txt
+├── index.css
+├── index.html
+├── index.tsx
+├── loader.svg
+├── manifest.json
+├── metadata.json
+├── package-lock.json
+├── package.json
+├── postcss.config.js
+├── POST-MERGE-CHECKLIST.md
+├── README.md
+├── README.txt
+├── README-scaling.md
+├── tailwind.config.js
+├── tsconfig.json
+├── tsconfig.node.json
+├── types.d.ts
+├── types.ts
+├── untitled-2.tsx
+├── untitled.tsx
+└── vite.config.ts
+```
+
+---
+
+## PART 6: MAJOR UPDATES & DEPLOYMENT ACTIONS (POST-OPTIMIZATION)
+
+Recent AI optimizations have introduced performance fixes (Cursor Pagination, Safe Storage, Security Headers). Here is what you must do to apply them:
+
+### 1. Local Development
+1.  **Backend Dependencies:** You MUST install the new security packages.
+    ```bash
+    cd backend
+    npm install
+    # Installs: compression, helmet, express-rate-limit
+    ```
+2.  **Restart Server:** Stop and restart `npm run server` to load the new middleware.
+3.  **Frontend:** No new installs required. Just reload the browser to pick up the `safeStorage` logic.
+
+### 2. Render (Backend Deployment)
+1.  **Push Code:** Commit and push the `backend/package.json` and `backend/server.js` changes.
+2.  **Verify Build:** Render will automatically detect the `package.json` change and run `npm install`. Monitor the logs to ensure `helmet` and `compression` install correctly.
+3.  **Environment Variables:** If you plan to use the image migration tool later, add `CLOUDINARY_URL` to your Render Environment Variables. Otherwise, no changes needed.
+
+### 3. Vercel (Frontend Deployment)
+1.  **Push Code:** Pushing the changes will trigger an automatic redeploy.
+2.  **Verify:** Open the live site console. You should no longer see `QuotaExceededError`.
+
+### 4. Database Maintenance (Optional)
+*   If your database is large (>50MB) or slow, run the new migration script locally to identify heavy images:
+    ```bash
+    node backend/scripts/migrate-images-to-cloudinary.js --dry-run
+    ```
+
+
+
+
 # Technical Report: OTP-Based Account Recovery (Forgot Password)
 **Project:** Tribe Social | **Lead Developer:** Dhruv Daberao
 

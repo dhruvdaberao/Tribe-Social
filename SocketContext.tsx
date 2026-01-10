@@ -4,11 +4,11 @@
 import React, { createContext, useContext, useEffect, useState, ReactNode, useCallback } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { useAuth } from './contexts/AuthContext';
-import { Notification, Message, TribeMessage, User } from '../tribe-social2/types';
-import { toast } from '../tribe-social2/components/common/Toast';
+import { Notification, Message, TribeMessage, User } from '../Tribe-Social/types';
+import { toast } from '..//Tribe-Social/components/common/Toast';
 
 // Hardcoded the backend URL to remove the dependency on the problematic config file.
-const SOCKET_URL = 'https://tribe-social2.onrender.com';
+const SOCKET_URL = 'https://tribe-social-backend.onrender.com';
 
 // FIX: Added typed interfaces for socket events to resolve '.on' and '.off' errors.
 // FIX: Added 'connect' to ServerToClientEvents to handle the socket connection event.
