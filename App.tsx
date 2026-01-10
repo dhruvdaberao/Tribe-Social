@@ -221,7 +221,7 @@ const App: React.FC = () => {
         } finally {
             setIsFetching(false);
         }
-    }, [currentUser, populatePost, setNotifications, isFetching]);
+    }, [currentUser, populatePost, setNotifications]);
 
     const fetchAllPostsForDiscover = useCallback(async () => {
         if (isAllPostsLoaded) return;
