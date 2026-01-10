@@ -1,0 +1,36 @@
+=== TRIBE PRODUCTION RECOVERY FLOW ===
+
+1. API RELIABILITY & TIMEOUTS
+   - Problem: Backend cold starts on Render caused Axios to drop requests after 20s.
+   - Fix: Increased timeout to 90s in api.ts. Added interceptor to auto-retry GET requests once.
+   - Result: Apps loads reliably even from sleep.
+
+2. DATA VISIBILITY (BACKEND RECOVERY)
+   - Problem: Restricted filters and populate failures returned [].
+   - Fix: Added .maxTimeMS(8000) to all Mongo queries. Implemented "Recovery-first" feed that falls back to global posts if personal query is empty.
+   - Result: No more blank feeds.
+
+3. PROFILE POSTS FIX
+   - Problem: Wrong query scoping on /user/:userId.
+   - Fix: Corrected Mongoose query to target author field correctly. Added frontend local-filter fallback.
+   - Result: Profiles always show posts.
+
+4. UNDEFINED ID STABILIZATION
+   - Problem: Mixing _id and id caused "undefined/like" failures.
+   - Fix: Enforced normalizePost() in App.tsx to map _id to id string instantly. Validated IDs in backend controllers.
+   - Result: Likes and Comments work per-post.
+
+5. TRIBES & DISCOVERY
+   - Problem: Search filters hidden tribes by default.
+   - Fix: Discovery API now returns all tribes if filter fails. membership logic handled in UI.
+   - Result: Tribe discovery populated.
+
+6. CHUK AI NAVIGATION
+   - Problem: NavItem 'Chuk' pointed to a non-existent UI component.
+   - Fix: Redirected 'Chuk' selection to 'Messages' route which handles the AI Chat partner.
+   - Result:assistant accessible.
+
+7. REST-FIRST ARCHITECTURE
+   - problem: Sockets were used for initial load.
+   - Fix: Enforced REST for initial notifications and messages load. Sockets only append new data.
+   - Result: Data loads even with socket latency.

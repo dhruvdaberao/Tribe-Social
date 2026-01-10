@@ -1,74 +1,3 @@
-// import express from 'express';
-// import jwt from 'jsonwebtoken';
-// import User from '../models/userModel.js';
-
-// const router = express.Router();
-
-// // Generate JWT
-// const generateToken = (id) => {
-//   return jwt.sign({ id }, process.env.JWT_SECRET, {
-//     expiresIn: '30d',
-//   });
-// };
-
-// // @route   POST /api/auth/register
-// router.post('/register', async (req, res) => {
-//   const { name, username, email, password } = req.body;
-
-//   try {
-//     const userExists = await User.findOne({ email });
-//     if (userExists) {
-//       return res.status(400).json({ message: 'An account with this email already exists.' });
-//     }
-
-//     const usernameExists = await User.findOne({ username });
-//     if (usernameExists) {
-//         return res.status(400).json({ message: 'This username is already taken.' });
-//     }
-
-//     const user = await User.create({ name, username, email, password });
-
-//     if (user) {
-//       res.status(201).json({
-//         token: generateToken(user._id),
-//         user: user,
-//       });
-//     } else {
-//       res.status(400).json({ message: 'Invalid user data' });
-//     }
-//   } catch (error) {
-//     console.error("Registration Error:", error);
-//     res.status(500).json({ message: 'Server error during registration.' });
-//   }
-// });
-
-// // @route   POST /api/auth/login
-// router.post('/login', async (req, res) => {
-//   const { email, password } = req.body;
-
-//   try {
-//     const user = await User.findOne({ email });
-
-//     if (user && (await user.matchPassword(password))) {
-//       res.json({
-//         token: generateToken(user._id),
-//         user: user,
-//       });
-//     } else {
-//       res.status(401).json({ message: 'Invalid email or password' });
-//     }
-//   } catch (error) {
-//     res.status(500).json({ message: 'Server error' });
-//   }
-// });
-
-// export default router;
-
-
-
-
-
-
 
 import express from 'express';
 import jwt from 'jsonwebtoken';
@@ -103,6 +32,7 @@ router.post('/register', async (req, res) => {
       res.status(400).json({ message: 'Invalid user data' });
     }
   } catch (error) {
+    console.error("Registration error:", error);
     res.status(500).json({ message: 'Server error during registration.' });
   }
 });
@@ -112,13 +42,17 @@ router.post('/login', async (req, res) => {
   const { email, password } = req.body;
   try {
     const user = await User.findOne({ email });
+    
+    // Check user and password
     if (user && (await user.matchPassword(password))) {
       res.json({ token: generateToken(user._id), user: user });
     } else {
-      res.status(401).json({ message: 'Invalid email or password' });
+      // Explicitly return 401 with a descriptive message
+      res.status(401).json({ message: 'Invalid email or password. Please try again.' });
     }
   } catch (error) {
-    res.status(500).json({ message: 'Server error' });
+    console.error("Login server error:", error);
+    res.status(500).json({ message: 'An unexpected server error occurred.' });
   }
 });
 
@@ -141,11 +75,11 @@ router.post('/forgot-password', async (req, res) => {
       expiresAt: new Date(Date.now() + 5 * 60 * 1000)
     });
 
-    // Send Email via Resend API (Uses Port 443 - Not blocked by Render)
+    // Send Email via Resend API
     if (process.env.RESEND_API_KEY) {
       try {
         const { data, error } = await resend.emails.send({
-          from: 'Tribe Social <onboarding@resend.dev>', // Use verified domain in production
+          from: 'Tribe Social <onboarding@resend.dev>',
           to: [email],
           subject: 'Your Login OTP',
           html: `
@@ -173,7 +107,6 @@ router.post('/forgot-password', async (req, res) => {
         res.status(500).json({ message: 'Failed to send OTP.' });
       }
     } else {
-      // DEBUG MODE: If no API Key is set, log it to console so dev can see it in Render Logs
       console.log("------------------------------------------");
       console.log(`⚠️ NO RESEND_API_KEY FOUND IN ENV`);
       console.log(`🔑 OTP FOR ${email}: ${otpValue}`);

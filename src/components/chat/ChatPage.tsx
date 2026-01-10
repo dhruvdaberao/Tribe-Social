@@ -1,6 +1,3 @@
-
-
-
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Conversation, User, Message, Post } from '../../types';
 import ConversationList from './ConversationList';
@@ -204,7 +201,8 @@ const ChatPage: React.FC<ChatPageProps> = ({ currentUser, allUsers, chukUser, in
   };
   
   return (
-    <div className="h-full bg-surface md:rounded-2xl md:border md:border-border md:shadow-lg flex overflow-hidden relative">
+    // Removed rounded corners here (md:rounded-2xl)
+    <div className="h-full bg-surface md:border md:border-border md:shadow-lg flex overflow-hidden relative">
        <div 
         className={`w-full md:w-[320px] lg:w-[380px] flex-shrink-0 flex flex-col transition-transform duration-300 ease-in-out md:static absolute inset-0 z-10 md:border-r md:border-border bg-surface ${
           isMessageAreaVisible ? '-translate-x-full' : 'translate-x-0'

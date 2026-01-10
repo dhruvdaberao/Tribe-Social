@@ -1,6 +1,5 @@
 import axios from 'axios';
 
-// Standardized backend URL to prevent module loading failures
 const API_URL = 'https://tribe-social-backend.onrender.com';
 
 const API = axios.create({ 
@@ -14,11 +13,12 @@ API.interceptors.request.use((req) => {
   return req;
 });
 
-// Automatic Retry Logic for GET requests to mitigate transient network/DB failures
+// Automatic Retry Logic for GET requests
 API.interceptors.response.use(
   response => response,
   async error => {
     const { config, code } = error;
+    // Retry once on timeout or network error for GET requests
     if (config && config.method === 'get' && !config._retry && (code === 'ECONNABORTED' || !error.response)) {
       config._retry = true;
       console.warn(`Retrying ${config.url} due to timeout/network error...`);
@@ -40,17 +40,17 @@ export const fetchUsers = () => API.get('/users');
 export const fetchUser = (id: string) => API.get(`/users/${id}`);
 export const updateProfile = (profileData: any) => API.put('/users/profile', profileData);
 export const toggleFollow = (id: string) => API.put(`/users/${id}/follow`);
-export const toggleBlock = (id: string) => API.put(`/users/${id}/block`);
 export const deleteAccount = () => API.delete('/users/profile');
 
 // Posts
-export const fetchFeedPosts = (page = 1, limit = 20) => API.get(`/posts/feed?page=${page}&limit=${limit}`);
+export const fetchPost = (id: string) => API.get(`/posts/${id}`);
 export const fetchPosts = (page = 1, limit = 20) => API.get(`/posts?page=${page}&limit=${limit}`);
+export const fetchFeedPosts = (page = 1, limit = 20) => API.get(`/posts/feed?page=${page}&limit=${limit}`);
 export const fetchUserPosts = (userId: string) => API.get(`/posts/user/${userId}`);
 export const createPost = (newPost: any) => API.post('/posts', newPost);
+export const deletePost = (id: string) => API.delete(`/posts/${id}`);
 export const likePost = (id: string) => API.put(`/posts/${id}/like`);
 export const commentOnPost = (id: string, data: any) => API.post(`/posts/${id}/comments`, data);
-export const deletePost = (id: string) => API.delete(`/posts/${id}`);
 
 // Messages
 export const fetchConversations = () => API.get('/messages/conversations');

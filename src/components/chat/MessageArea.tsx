@@ -1,5 +1,3 @@
-
-
 import React, { useState, useRef, useEffect } from 'react';
 import { Conversation, User, Message } from '../../types';
 import UserAvatar from '../common/UserAvatar';
@@ -54,12 +52,10 @@ export const MessageArea: React.FC<MessageAreaProps> = ({ conversation, messages
     setInputText(e.target.value);
     if (socket && otherParticipantId) {
       if (!typingTimeoutRef.current) {
-        // FIX: Added 'userName' to the 'typing' event payload to match server expectations.
         socket.emit('typing', { roomId: `dm-${[currentUser.id, otherParticipantId].sort().join('-')}`, userId: currentUser.id, userName: currentUser.name });
       }
       if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
       typingTimeoutRef.current = setTimeout(() => {
-        // FIX: Added 'userName' to the 'stopTyping' event payload to match server expectations.
         socket.emit('stopTyping', { roomId: `dm-${[currentUser.id, otherParticipantId].sort().join('-')}`, userId: currentUser.id, userName: currentUser.name });
         typingTimeoutRef.current = null;
       }, 2000);
@@ -73,7 +69,6 @@ export const MessageArea: React.FC<MessageAreaProps> = ({ conversation, messages
       setInputText('');
       if (socket && otherParticipantId) {
         if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
-        // FIX: Added 'userName' to the 'stopTyping' event payload to match server expectations.
         socket.emit('stopTyping', { roomId: `dm-${[currentUser.id, otherParticipantId].sort().join('-')}`, userId: currentUser.id, userName: currentUser.name });
         typingTimeoutRef.current = null;
       }
@@ -97,6 +92,7 @@ export const MessageArea: React.FC<MessageAreaProps> = ({ conversation, messages
   }
 
   return (
+    // Removed rounded corners from the outer container
     <div className="flex flex-col h-full bg-background">
       <div className="flex items-center p-3 border-b border-border bg-surface flex-shrink-0 z-10">
         <button onClick={onBack} className="md:hidden p-2 mr-2 text-primary">
@@ -137,7 +133,8 @@ export const MessageArea: React.FC<MessageAreaProps> = ({ conversation, messages
                         </div>
                     )}
                     <div className={`flex flex-col w-full max-w-xs lg:max-w-md ${isCurrentUser ? 'items-end' : 'items-start'}`}>
-                        <div className={`px-4 py-2.5 rounded-xl ${isCurrentUser ? 'bg-accent text-accent-text' : 'bg-surface text-primary shadow-sm'}`}>
+                        {/* Modified rounded classes for proper chat bubble look */}
+                        <div className={`px-4 py-2.5 ${isCurrentUser ? 'bg-accent text-accent-text rounded-2xl rounded-tr-none' : 'bg-surface text-primary shadow-sm rounded-2xl rounded-tl-none'}`}>
                             {message.imageUrl && <img src={message.imageUrl} alt="Shared content" className="mb-2 rounded-lg w-full" />}
                             <div className="text-sm leading-relaxed">
                                 {sender?.id === 'chuk-ai' ? (
@@ -172,9 +169,10 @@ export const MessageArea: React.FC<MessageAreaProps> = ({ conversation, messages
             value={inputText}
             onChange={handleInputChange}
             placeholder="Type a message..."
-            className="flex-1 bg-surface border border-border rounded-full px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-accent text-primary min-w-0"
+            className="flex-1 bg-surface border border-border rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-accent text-primary min-w-0"
           />
-          <button type="submit" className="bg-accent text-accent-text rounded-full w-11 h-11 flex-shrink-0 flex items-center justify-center hover:bg-accent-hover transition-colors disabled:opacity-50" disabled={!inputText.trim() || isSending}>
+          {/* Changed rounded-full to rounded-lg */}
+          <button type="submit" className="bg-accent text-accent-text rounded-lg w-12 h-11 flex-shrink-0 flex items-center justify-center hover:bg-accent-hover transition-colors disabled:opacity-50" disabled={!inputText.trim() || isSending}>
             {isSending ? <div className="w-5 h-5 border-2 border-accent-text border-t-transparent rounded-full animate-spin"></div> : <SendIcon />}
           </button>
         </form>

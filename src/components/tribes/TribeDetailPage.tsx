@@ -1,10 +1,8 @@
-
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { Tribe, User, TribeMessage } from '../../types';
 import UserAvatar from '../common/UserAvatar';
 import { useSocket } from '../../contexts/SocketContext';
 import TribeMembersModal from './TribeMembersModal';
-import * as api from '../../api.ts'; // Assumed in root based on instruction
 
 interface TribeDetailPageProps {
   tribe: Tribe;
@@ -37,64 +35,26 @@ const TribeDetailPage: React.FC<TribeDetailPageProps> = (props) => {
   const [typingUsers, setTypingUsers] = useState<string[]>([]);
   const [isMembersModalOpen, setMembersModalOpen] = useState(false);
   const [localMessages, setLocalMessages] = useState<TribeMessage[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const { socket, clearUnreadTribe } = useSocket();
   const isMember = tribe.members.includes(currentUser.id);
 
-  // Fetch messages immediately on mount
+  // Sync props messages with local state
   useEffect(() => {
-    const fetchHistory = async () => {
-        setIsLoading(true);
-        try {
-            const { data } = await api.fetchTribeMessages(tribe.id);
-            // Ensure data is array
-            if (Array.isArray(data)) {
-                setLocalMessages(data);
-            }
-        } catch (error) {
-            console.error("Failed to load tribe messages", error);
-        } finally {
-            setIsLoading(false);
-        }
-    };
-    fetchHistory();
-  }, [tribe.id]);
+    setLocalMessages(tribe.messages);
+  }, [tribe.messages]);
 
   useEffect(() => {
-    if (!isLoading) {
-        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-    }
-  }, [localMessages, isLoading]);
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [localMessages]);
 
   useEffect(() => {
     clearUnreadTribe(tribe.id);
   }, [tribe.id, clearUnreadTribe]);
 
-  // Listen for new messages specifically for this tribe
   useEffect(() => {
     if (!socket) return;
-    
-    const handleNewTribeMessage = (message: TribeMessage) => {
-        if (message.tribeId === tribe.id) {
-             setLocalMessages(prev => {
-                if (prev.some(m => m.id === message.id)) return prev;
-                return [...prev, message];
-            });
-        }
-    };
-
-    const handleTribeMessageDeleted = ({ tribeId, messageId }: { tribeId: string, messageId: string }) => {
-        if (tribeId === tribe.id) {
-            setLocalMessages(prev => prev.filter(m => m.id !== messageId));
-        }
-    };
-
-    socket.on('newTribeMessage', handleNewTribeMessage);
-    socket.on('tribeMessageDeleted', handleTribeMessageDeleted);
-
-    // Also need typing listeners
     const handleTyping = ({ userName }: { userName: string }) => {
         setTypingUsers(prev => [...new Set([...prev, userName])]);
     };
@@ -105,12 +65,10 @@ const TribeDetailPage: React.FC<TribeDetailPageProps> = (props) => {
     socket.on('userStoppedTyping', handleStopTyping);
 
     return () => {
-      socket.off('newTribeMessage', handleNewTribeMessage);
-      socket.off('tribeMessageDeleted', handleTribeMessageDeleted);
       socket.off('userTyping');
       socket.off('userStoppedTyping');
     };
-  }, [socket, tribe.id]);
+  }, [socket]);
   
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setInputText(e.target.value);
@@ -142,6 +100,7 @@ const TribeDetailPage: React.FC<TribeDetailPageProps> = (props) => {
             timestamp: new Date().toISOString(),
         };
         
+        // Update local state instantly to show message
         setLocalMessages(prev => [...prev, tempMessage]);
 
         // Send to backend
@@ -170,6 +129,7 @@ const TribeDetailPage: React.FC<TribeDetailPageProps> = (props) => {
 
   return (
     <>
+      {/* Removed rounded-2xl to remove curved vertices from the main container */}
       <div className="flex flex-col h-full bg-surface border border-border shadow-md overflow-hidden">
         {/* Header */}
         <div className="flex items-center p-3 border-b border-border flex-shrink-0">
@@ -211,68 +171,56 @@ const TribeDetailPage: React.FC<TribeDetailPageProps> = (props) => {
 
         {/* Messages */}
         <div className="flex-1 overflow-y-auto p-4 bg-background">
-          {isLoading ? (
-              <div className="w-full h-full flex flex-col items-center justify-center">
-                  <img src="/busstop.gif" alt="Loading chats..." className="w-32 h-auto mb-4" />
-                  <p className="text-secondary text-sm">Loading conversations...</p>
-              </div>
-          ) : (
-            <div className="flex flex-col space-y-2">
-                {localMessages.map(message => {
-                // Ensure we check ID robustly (handle object vs string)
-                const msgSenderId = typeof message.senderId === 'string' ? message.senderId : message.sender?.id;
-                // If sender object exists, use its ID, otherwise use senderId string
-                const actualSenderId = message.sender?.id || msgSenderId;
-                const isCurrentUser = String(actualSenderId) === String(currentUser.id);
-                
-                // Get sender details: Prioritize the 'sender' object (populated by backend)
-                // If not available, check userMap, otherwise fall back to a safe object.
-                const sender = message.sender && message.sender.name ? message.sender : (userMap.get(actualSenderId || '') || { name: 'Anonymous', avatarUrl: null, id: 'unknown', username: 'unknown' });
+          <div className="flex flex-col space-y-2">
+            {localMessages.map(message => {
+              const isCurrentUser = message.sender?.id === currentUser.id || message.senderId === currentUser.id;
+              // Handle potential missing sender data in optimistic updates or partial data
+              const sender = message.sender || userMap.get(message.senderId || '') || currentUser; 
 
-                return (
-                    <div key={message.id} className={`flex items-end gap-2.5 group ${isCurrentUser ? 'justify-end' : 'justify-start'}`}>
-                    {!isCurrentUser && (
-                        <div 
-                            className="w-8 h-8 rounded-full cursor-pointer self-start flex-shrink-0"
-                            onClick={() => sender.id !== 'unknown' && onViewProfile(sender as User)}
-                        >
-                            <UserAvatar user={sender as User} className="w-full h-full" />
-                        </div>
-                    )}
-                    {isCurrentUser && (
-                        <button onClick={() => onDeleteMessage(tribe.id, message.id)} className="text-secondary p-1 rounded-full hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <TrashIcon className="h-4 w-4" />
-                        </button>
-                    )}
-                    <div className={`flex flex-col w-full max-w-xs lg:max-w-md ${isCurrentUser ? 'items-end' : 'items-start'}`}>
-                        {!isCurrentUser && (
-                            <p 
-                                className="text-xs text-secondary mb-1 ml-3 cursor-pointer hover:underline"
-                                onClick={() => sender.id !== 'unknown' && onViewProfile(sender as User)}
-                            >
-                                {sender.name}
-                            </p>
-                        )}
-                        <div className={`px-4 py-2.5 text-sm break-words ${isCurrentUser ? 'bg-accent text-accent-text rounded-2xl rounded-tr-none' : 'bg-surface text-primary shadow-sm rounded-2xl rounded-tl-none'}`}>
-                            {message.imageUrl && (
-                                <img src={message.imageUrl} alt="Shared content" className="mb-2 rounded-lg w-full" />
-                            )}
-                            <p className="leading-relaxed whitespace-pre-wrap">{message.text}</p>
-                        </div>
-                        <p className="text-xs text-secondary mt-1.5 px-1">{new Date(message.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
-                    </div>
-                    </div>
-                );
-                })}
-                {localMessages.length === 0 && (
-                    <div className="text-center text-secondary p-8">
-                        <p>Welcome to #{tribe.name}!</p>
-                        <p className="text-sm">Be the first one to send a message.</p>
-                    </div>
-                )}
-                <div ref={messagesEndRef} />
-            </div>
-          )}
+              return (
+                <div key={message.id} className={`flex items-end gap-2.5 group ${isCurrentUser ? 'justify-end' : 'justify-start'}`}>
+                  {!isCurrentUser && (
+                      <div 
+                          className="w-8 h-8 rounded-full cursor-pointer self-start flex-shrink-0"
+                          onClick={() => onViewProfile(sender)}
+                      >
+                          <UserAvatar user={sender} className="w-full h-full" />
+                      </div>
+                  )}
+                  {isCurrentUser && (
+                      <button onClick={() => onDeleteMessage(tribe.id, message.id)} className="text-secondary p-1 rounded-full hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <TrashIcon className="h-4 w-4" />
+                      </button>
+                  )}
+                  <div className={`flex flex-col w-full max-w-xs lg:max-w-md ${isCurrentUser ? 'items-end' : 'items-start'}`}>
+                      {!isCurrentUser && (
+                          <p 
+                              className="text-xs text-secondary mb-1 ml-3 cursor-pointer hover:underline"
+                              onClick={() => onViewProfile(sender)}
+                          >
+                              {sender.name}
+                          </p>
+                      )}
+                      {/* Modified rounded classes for proper chat bubble look */}
+                      <div className={`px-4 py-2.5 text-sm break-words ${isCurrentUser ? 'bg-accent text-accent-text rounded-2xl rounded-tr-none' : 'bg-surface text-primary shadow-sm rounded-2xl rounded-tl-none'}`}>
+                          {message.imageUrl && (
+                            <img src={message.imageUrl} alt="Shared content" className="mb-2 rounded-lg w-full" />
+                          )}
+                          <p className="leading-relaxed whitespace-pre-wrap">{message.text}</p>
+                      </div>
+                      <p className="text-xs text-secondary mt-1.5 px-1">{new Date(message.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
+                  </div>
+                </div>
+              );
+            })}
+            {localMessages.length === 0 && (
+                <div className="text-center text-secondary p-8">
+                    <p>Welcome to #{tribe.name}!</p>
+                    <p className="text-sm">Be the first one to send a message.</p>
+                </div>
+            )}
+            <div ref={messagesEndRef} />
+          </div>
         </div>
 
         {/* Input */}
@@ -286,6 +234,7 @@ const TribeDetailPage: React.FC<TribeDetailPageProps> = (props) => {
               className="flex-1 bg-background border border-border rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-accent text-primary min-w-0"
               disabled={!isMember}
             />
+            {/* Changed from rounded-full to rounded-lg */}
             <button type="submit" className="bg-accent text-accent-text rounded-lg w-12 h-11 flex-shrink-0 flex items-center justify-center hover:bg-accent-hover transition-colors disabled:opacity-50" disabled={!inputText.trim() || !isMember}>
               <SendIcon />
             </button>

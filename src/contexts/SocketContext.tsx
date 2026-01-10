@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useEffect, useState, ReactNode, useCallback, useRef } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { useAuth } from './AuthContext';
@@ -6,7 +5,7 @@ import { Notification, Message, TribeMessage, User } from '../types';
 import { toast } from '../components/common/Toast';
 
 // Hardcoded the backend URL to remove the dependency on the problematic config file.
-const SOCKET_URL = 'https://tribe-social-backend.onrender.com';
+const SOCKET_URL = 'https://tribe-social2.onrender.com';
 
 interface ServerToClientEvents {
   [key: string]: (...args: any[]) => void;
@@ -135,10 +134,7 @@ export const SocketProvider: React.FC<{ children: ReactNode }> = ({ children }) 
 
     socket.on('newTribeMessage', (message: TribeMessage) => {
         // Only increment unread if I am NOT the sender
-        // Handle both object populated sender and string senderId
-        const senderId = typeof message.senderId === 'string' ? message.senderId : (message.senderId as any)?._id;
-        
-        if(senderId && senderId !== currentUser.id) {
+        if(message.senderId && message.senderId !== currentUser.id) {
             setUnreadCounts(prev => ({
                 ...prev,
                 tribes: {
