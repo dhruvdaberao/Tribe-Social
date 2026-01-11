@@ -112,7 +112,23 @@ API.interceptors.request.use(req => {
 const normalizeId = <T extends { _id?: string }>(obj: T) => {
   if (!obj) return obj;
   const { _id, ...rest } = obj as any;
-  return { id: _id, ...rest };
+
+  // Convert the main _id
+  const normalized: any = { id: _id?.toString() || _id, ...rest };
+
+  // Convert owner if it's an ObjectId
+  if (normalized.owner) {
+    normalized.owner = normalized.owner.toString();
+  }
+
+  // Convert members array if present (ObjectIds → strings)
+  if (Array.isArray(normalized.members)) {
+    normalized.members = normalized.members.map((m: any) =>
+      typeof m === 'object' && m._id ? m._id.toString() : m.toString()
+    );
+  }
+
+  return normalized;
 };
 
 const normalizeArray = <T extends { _id?: string }>(arr: T[]) =>
