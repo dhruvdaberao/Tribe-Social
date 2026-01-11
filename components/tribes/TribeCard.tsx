@@ -158,9 +158,14 @@ const TribeCard: React.FC<TribeCardProps> = ({ tribe, currentUser, allUsers, onE
 
     setIsJoining(true);
     try {
-      await api.joinTribe(tribe.id);
-      toast.success(`Joined ${tribe.name}!`);
-      setTimeout(() => window.location.reload(), 500);
+      if (onJoinToggle) {
+        await onJoinToggle(tribe.id);
+        toast.success(`Joined ${tribe.name}!`);
+      } else {
+        await api.joinTribe(tribe.id);
+        toast.success(`Joined ${tribe.name}!`);
+        setTimeout(() => window.location.reload(), 500);
+      }
     } catch (error) {
       console.error('Join error:', error);
       toast.error('Failed to join tribe');
@@ -175,9 +180,14 @@ const TribeCard: React.FC<TribeCardProps> = ({ tribe, currentUser, allUsers, onE
 
     setIsJoining(true);
     try {
-      await api.joinTribe(tribe.id);
-      toast.success(`Left ${tribe.name}`);
-      setTimeout(() => window.location.reload(), 500);
+      if (onJoinToggle) {
+        await onJoinToggle(tribe.id);
+        toast.success(`Left ${tribe.name}`);
+      } else {
+        await api.joinTribe(tribe.id);
+        toast.success(`Left ${tribe.name}`);
+        setTimeout(() => window.location.reload(), 500);
+      }
     } catch (error) {
       console.error('Leave error:', error);
       toast.error('Failed to leave tribe');
