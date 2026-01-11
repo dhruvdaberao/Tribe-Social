@@ -115,12 +115,24 @@ const TribeDetailPage: React.FC<Props> = ({ currentUser }) => {
           .then(({ data }) => setAllUsers(data))
           .catch(err => console.error('Failed to load users:', err));
 
-      } catch (err) {
+      } catch (err: any) {
         console.error('Failed to load tribe:', err);
-        setError('Tribe not found');
-        // Redirect back after showing error
-        setTimeout(() => navigate('/tribes'), 2000);
+
+        if (err.code === 'ECONNABORTED') {
+          setError('Server is waking up (cold start). Retrying in 5 seconds...');
+          // Auto-retry after timeout
+          setTimeout(() => {
+            window.location.reload();
+          }, 5000);
+        } else if (err.response?.status === 404) {
+          setError('Tribe not found');
+          setTimeout(() => navigate('/tribes'), 2000);
+        } else {
+          setError('Failed to load tribe. Redirecting...');
+          setTimeout(() => navigate('/tribes'), 2000);
+        }
       } finally {
+        // 🔥 CRITICAL: Always clear loading state
         setIsLoading(false);
       }
     };

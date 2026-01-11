@@ -113,7 +113,7 @@ const EditTribeModal: React.FC<EditTribeModalProps> = ({ tribe, onClose, onSucce
     e.preventDefault();
     setIsSubmitting(true);
     try {
-      const { data } = await api.updateTribe(tribe._id, { name, description, avatarUrl });
+      const { data } = await api.updateTribe(tribe.id, { name, description, avatarUrl });
       onSuccess(data);
     } catch (err) {
       console.error("Update failed", err);
@@ -126,7 +126,7 @@ const EditTribeModal: React.FC<EditTribeModalProps> = ({ tribe, onClose, onSucce
     // Confirmation handled here ONLY.
     if (window.confirm("Are you sure you want to delete this tribe? This cannot be undone.")) {
       if (onDelete) {
-        onDelete(tribe._id);
+        onDelete(tribe.id);
       } else {
         console.error("Delete handler not provided to modal");
         alert("Delete functionality unavailable.");
@@ -160,9 +160,10 @@ const EditTribeModal: React.FC<EditTribeModalProps> = ({ tribe, onClose, onSucce
               onClick={() => fileInputRef.current?.click()}
             >
               <img
-                src={avatarUrl || '/default-tribe.png'}
+                src={avatarUrl || '/tribe-placeholder.svg'}
                 alt="Tribe Avatar"
                 style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover', border: '3px solid #333' }}
+                onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
               />
               <div style={{
                 position: 'absolute', bottom: 0, right: 0,
