@@ -88,7 +88,7 @@ const TribesPage: React.FC<TribesPageProps> = ({ currentUser }) => {
           setTribes(parsed);
           setIsLoading(false);
         }
-      } catch {}
+      } catch { }
     }
 
     // 2️⃣ Fetch fresh data in background
@@ -137,7 +137,7 @@ const TribesPage: React.FC<TribesPageProps> = ({ currentUser }) => {
 
   const handleTribeUpdated = (updated: Tribe) => {
     setTribes(prev => {
-      const updatedList = prev.map(t => t._id === updated._id ? updated : t);
+      const updatedList = prev.map(t => t.id === updated.id ? updated : t);
       localStorage.setItem('tribe_storage_tribes', JSON.stringify(updatedList));
       return updatedList;
     });
@@ -147,7 +147,7 @@ const TribesPage: React.FC<TribesPageProps> = ({ currentUser }) => {
   const handleTribeDeleted = async (tribeId: string) => {
     await api.deleteTribe(tribeId);
     setTribes(prev => {
-      const updated = prev.filter(t => t._id !== tribeId);
+      const updated = prev.filter(t => t.id !== tribeId);
       localStorage.setItem('tribe_storage_tribes', JSON.stringify(updated));
       return updated;
     });
@@ -196,7 +196,7 @@ const TribesPage: React.FC<TribesPageProps> = ({ currentUser }) => {
           <Grid>
             {myTribes.map(tribe => (
               <TribeCard
-                key={tribe._id}
+                key={tribe.id}
                 tribe={tribe}
                 currentUser={currentUser}
                 allUsers={allUsers}
@@ -213,7 +213,7 @@ const TribesPage: React.FC<TribesPageProps> = ({ currentUser }) => {
           <Grid>
             {discoverTribes.map(tribe => (
               <TribeCard
-                key={tribe._id}
+                key={tribe.id}
                 tribe={tribe}
                 currentUser={currentUser}
                 allUsers={allUsers}
