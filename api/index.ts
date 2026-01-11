@@ -97,6 +97,7 @@ const API_URL = 'https://tribe-social-backend.onrender.com';
 
 const API = axios.create({
   baseURL: `${API_URL}/api`,
+  timeout: 60000, // 60 seconds for Render cold starts
 });
 
 API.interceptors.request.use(req => {
