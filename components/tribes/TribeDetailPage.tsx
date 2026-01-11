@@ -95,11 +95,15 @@ const TribeDetailPage: React.FC<TribeDetailPageProps> = ({ currentUser, tribeId:
 
   // Initial Fetch
   useEffect(() => {
-    if (!id) return;
+    // CRITICAL FIX: Do not fetch if ID is undefined or 'undefined' string
+    if (!id || id === 'undefined') {
+      // console.log("TribeDetailPage: ID is missing, skipping fetch.");
+      return;
+    }
 
     const fetchDetails = async () => {
       try {
-        setIsLoading(true); // Ensure loading state starts true
+        setIsLoading(true);
 
         // Parallel Fetch: Tribe, Messages, Users (for modal)
         const [tribeRes, messagesRes, usersRes] = await Promise.all([
@@ -117,7 +121,6 @@ const TribeDetailPage: React.FC<TribeDetailPageProps> = ({ currentUser, tribeId:
         }
       } catch (err: any) {
         console.error("Failed to load tribe details", err);
-        // Handle 404 specifically if possible, otherwise generic error
         if (err.response && err.response.status === 404) {
           setError("Tribe not found.");
         } else {
@@ -133,7 +136,7 @@ const TribeDetailPage: React.FC<TribeDetailPageProps> = ({ currentUser, tribeId:
 
   // Socket Listener
   useEffect(() => {
-    if (!socket || !id) return;
+    if (!socket || !id || id === 'undefined') return;
 
     const handleNewMessage = (msg: TribeMessage) => {
       // Use tribeId from socket message
@@ -162,14 +165,12 @@ const TribeDetailPage: React.FC<TribeDetailPageProps> = ({ currentUser, tribeId:
     return new Map(allUsers.map(u => [u.id, u]));
   }, [allUsers]);
 
-  const handleSendMessage = async (text: string) => { // Updated sig
-    // e.preventDefault();
+  const handleSendMessage = async (text: string) => {
     if (!text.trim() || !id) return;
 
     setIsSending(true);
     try {
       await api.sendTribeMessage(id, { text });
-      // setNewMessage(''); // Handled in MessageArea
     } catch (err) {
       console.error("Failed to send", err);
     } finally {
@@ -180,7 +181,7 @@ const TribeDetailPage: React.FC<TribeDetailPageProps> = ({ currentUser, tribeId:
   const handleJoinTribe = async () => {
     if (!tribe || !id || !currentUser) return;
     try {
-      const { data: updatedTribe } = await api.joinTribe(id); // Use correct API
+      const { data: updatedTribe } = await api.joinTribe(id);
       setTribe(updatedTribe);
     } catch (err) {
       console.error("Join failed", err);
@@ -188,8 +189,6 @@ const TribeDetailPage: React.FC<TribeDetailPageProps> = ({ currentUser, tribeId:
   };
 
   const handleLeaveTribe = async () => {
-    // Re-use join endpoint as toggle if backend supports it, otherwise check API.
-    // Backend (tribeRoutes.js) implementation of /:id/join usually toggles.
     if (!tribe || !id || !currentUser) return;
     try {
       const { data: updatedTribe } = await api.joinTribe(id);
@@ -199,7 +198,19 @@ const TribeDetailPage: React.FC<TribeDetailPageProps> = ({ currentUser, tribeId:
     }
   };
 
+  // This handles the delete action directly, to be passed to modal
+  const handleDeleteFromModal = async (tribeId: string) => {
+    try {
+      await api.deleteTribe(tribeId);
+      navigate('/tribes');
+    } catch (err) {
+      console.error("Failed to delete tribe via modal", err);
+      alert("Failed to delete tribe. Please try again.");
+    }
+  };
+
   const handleDeleteTribe = async () => {
+    // Legacy handler if called from header (kept for safety, but header now uses modal usually)
     if (!tribe || !id || !window.confirm("Are you sure? This will delete the tribe and all messages forever.")) return;
     try {
       await api.deleteTribe(id);
@@ -212,7 +223,7 @@ const TribeDetailPage: React.FC<TribeDetailPageProps> = ({ currentUser, tribeId:
   if (isLoading) return (
     <PageContainer>
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
-        <img src="/d2.gif" alt="Loading..." style={{ width: 80, height: 80, borderRadius: '50%' }} />
+        <img src="/busstop.gif" alt="Loading..." style={{ width: 120, height: 120, borderRadius: '50%', objectFit: 'cover' }} />
         <p style={{ marginTop: 16, color: '#888' }}>Entering tribe territory...</p>
       </div>
     </PageContainer>
@@ -304,6 +315,7 @@ const TribeDetailPage: React.FC<TribeDetailPageProps> = ({ currentUser, tribeId:
           tribe={tribe}
           onClose={() => setIsEditModalOpen(false)}
           onSuccess={(updated) => { setTribe(updated); setIsEditModalOpen(false); }}
+          onDelete={handleDeleteFromModal}
         />
       )}
 

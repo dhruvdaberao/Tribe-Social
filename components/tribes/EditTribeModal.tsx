@@ -107,6 +107,7 @@ const EditTribeModal: React.FC<EditTribeModalProps> = ({ tribe, onClose, onSucce
   const [description, setDescription] = useState(tribe.description);
   const [avatarUrl, setAvatarUrl] = useState(tribe.avatarUrl || '');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -122,8 +123,25 @@ const EditTribeModal: React.FC<EditTribeModalProps> = ({ tribe, onClose, onSucce
   };
 
   const handleDelete = () => {
+    // Confirmation handled here ONLY.
     if (window.confirm("Are you sure you want to delete this tribe? This cannot be undone.")) {
-      if (onDelete) onDelete(tribe.id);
+      if (onDelete) {
+        onDelete(tribe.id);
+      } else {
+        console.error("Delete handler not provided to modal");
+        alert("Delete functionality unavailable.");
+      }
+    }
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setAvatarUrl(reader.result as string);
+      };
+      reader.readAsDataURL(file);
     }
   };
 
@@ -135,9 +153,39 @@ const EditTribeModal: React.FC<EditTribeModalProps> = ({ tribe, onClose, onSucce
           <button style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'inherit' }} onClick={onClose}><X size={24} /></button>
         </Header>
         <Form onSubmit={handleSubmit}>
+          {/* Avatar Uploader */}
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 16 }}>
+            <div
+              style={{ position: 'relative', width: 100, height: 100, borderRadius: '50%', cursor: 'pointer' }}
+              onClick={() => fileInputRef.current?.click()}
+            >
+              <img
+                src={avatarUrl || '/default-tribe.png'}
+                alt="Tribe Avatar"
+                style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover', border: '3px solid #333' }}
+              />
+              <div style={{
+                position: 'absolute', bottom: 0, right: 0,
+                background: '#d4a373', borderRadius: '50%',
+                width: 32, height: 32, display: 'flex',
+                alignItems: 'center', justifyContent: 'center',
+                border: '2px solid #2A2320'
+              }}>
+                <span style={{ fontSize: 20, color: 'white', fontWeight: 'bold' }}>+</span>
+              </div>
+              <input
+                type="file"
+                ref={fileInputRef}
+                onChange={handleFileChange}
+                accept="image/*"
+                style={{ display: 'none' }}
+              />
+            </div>
+          </div>
+
           <Input value={name} onChange={e => setName(e.target.value)} placeholder="Tribe Name" required />
           <TextArea value={description} onChange={e => setDescription(e.target.value)} placeholder="Description" required />
-          <Input value={avatarUrl} onChange={e => setAvatarUrl(e.target.value)} placeholder="Avatar URL" />
+          {/* <Input value={avatarUrl} onChange={e => setAvatarUrl(e.target.value)} placeholder="Avatar URL" />  Removed in favor of uploader */}
 
           <Button type="submit" disabled={isSubmitting}>{isSubmitting ? 'Saving...' : 'Save Changes'}</Button>
         </Form>
