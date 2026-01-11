@@ -295,25 +295,26 @@ const TribeDetailPage: React.FC<TribeDetailPageProps> = ({ currentUser, tribeId:
         <HeaderActions>
           <ActionButton onClick={() => setIsMembersModalOpen(true)} title="View Members">
             <Users size={18} />
+          </ActionButton>
 
-            {/* Admin Actions - ONLY Edit here, Delete is inside Edit Modal */}
-            {currentUser && tribe.owner === currentUser.id && (
-              <ActionButton onClick={() => setIsEditModalOpen(true)} title="Edit Tribe"><Edit2 size={18} /></ActionButton>
-            )}
+          {/* Admin Actions - ONLY Edit here, Delete is inside Edit Modal */}
+          {currentUser && tribe.owner === currentUser.id && (
+            <ActionButton onClick={() => setIsEditModalOpen(true)} title="Edit Tribe"><Edit2 size={18} /></ActionButton>
+          )}
 
-            {/* Join/Leave */}
-            {currentUser && tribe.owner !== currentUser.id && (
-              tribe.members.includes(currentUser.id) ? (
-                <ActionButton onClick={handleJoinTribe} title="Leave Tribe"><LogOut size={18} /></ActionButton>
-              ) : (
-                <button
-                  onClick={handleJoinTribe}
-                  style={{ background: '#d4a373', border: 'none', padding: '6px 16px', borderRadius: 20, fontWeight: 'bold', color: '#2A2320', cursor: 'pointer' }}
-                >
-                  Join
-                </button>
-              )
-            )}
+          {/* Join/Leave */}
+          {currentUser && tribe.owner !== currentUser.id && (
+            tribe.members.includes(currentUser.id) ? (
+              <ActionButton onClick={handleJoinTribe} title="Leave Tribe"><LogOut size={18} /></ActionButton>
+            ) : (
+              <button
+                onClick={handleJoinTribe}
+                style={{ background: '#d4a373', border: 'none', padding: '6px 16px', borderRadius: 20, fontWeight: 'bold', color: '#2A2320', cursor: 'pointer' }}
+              >
+                Join
+              </button>
+            )
+          )}
         </HeaderActions>
       </Header>
 
