@@ -251,31 +251,7 @@ const TribeDetailPage: React.FC<Props> = ({ currentUser }) => {
     [allUsers]
   );
 
-  /* ───────────── LOADING STATE ───────────── */
-  if (isLoading) {
-    return (
-      <PageContainer>
-        <Header>
-          <BackButton onClick={() => navigate('/tribes')}>
-            <ArrowLeft size={20} />
-          </BackButton>
-          <h3>Loading tribe...</h3>
-        </Header>
-        <div style={{
-          flex: 1,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          flexDirection: 'column',
-          gap: 16
-        }}>
-          <img src="/busstop.gif" alt="Loading" style={{ width: 80 }} />
-          <p>Loading tribe details...</p>
-        </div>
-      </PageContainer>
-    );
-  }
-
+  /* ───────────── SHOW ERROR IF EXISTS ───────────── */
   if (error) {
     return (
       <PageContainer>
@@ -290,6 +266,7 @@ const TribeDetailPage: React.FC<Props> = ({ currentUser }) => {
     );
   }
 
+  /* ───────────── ALWAYS SHOW CHAT UI (NO LOADING SCREEN) ───────────── */
   return (
     <PageContainer>
       <Header>
@@ -302,28 +279,28 @@ const TribeDetailPage: React.FC<Props> = ({ currentUser }) => {
         </Avatar>
 
         <HeaderInfo>
-          <h2>{tribe?.name || 'Loading…'}</h2>
-          <p onClick={() => setIsMembersOpen(true)}>
-            {tribe?.members.length || 0} members
-          </p>
+          <h2>{tribe?.name || 'Loading...'}</h2>
+          <MemberCountBadge onClick={() => setIsMembersOpen(true)}>
+            <Users size={14} />
+            <span>{tribe?.members?.length || 0} members</span>
+          </MemberCountBadge>
         </HeaderInfo>
 
         <HeaderActions>
           <ActionButton onClick={() => setIsMembersOpen(true)}>
             <Users size={18} />
-          </ActionButton>
 
-          {currentUser && tribe?.owner === currentUser.id && (
-            <ActionButton onClick={() => setIsEditOpen(true)}>
-              <Edit2 size={18} />
-            </ActionButton>
-          )}
+            {currentUser && tribe?.owner === currentUser.id && (
+              <ActionButton onClick={() => setIsEditOpen(true)}>
+                <Edit2 size={18} />
+              </ActionButton>
+            )}
 
-          {currentUser && tribe?.owner !== currentUser.id && (
-            <ActionButton onClick={handleJoinToggle}>
-              {isMember ? <LogOut size={18} /> : <LogIn size={18} />}
-            </ActionButton>
-          )}
+            {currentUser && tribe?.owner !== currentUser.id && (
+              <ActionButton onClick={handleJoinToggle}>
+                {isMember ? <LogOut size={18} /> : <LogIn size={18} />}
+              </ActionButton>
+            )}
         </HeaderActions>
       </Header>
 
