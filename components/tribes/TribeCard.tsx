@@ -188,12 +188,23 @@ const TribeCard: React.FC<TribeCardProps> = ({ tribe, currentUser, allUsers, onE
         <Quote>"{tribe.description}"</Quote>
 
         <ButtonGroup>
-          <Button $variant="secondary" onClick={(e) => { e.stopPropagation(); navigate(`/tribes/${tribe._id}`); }}>
-            Chat
-          </Button>
-          <Button $variant="primary" onClick={handleJoin}>
-            {isMember ? 'Joined' : 'Join'}
-          </Button>
+          {(isMember || isOwner) && (
+            <Button $variant="secondary" onClick={(e) => { e.stopPropagation(); navigate(`/tribes/${tribe._id}`); }}>
+              Chat
+            </Button>
+          )}
+
+          {!isMember && (
+            <Button $variant="primary" onClick={handleJoin}>
+              Join
+            </Button>
+          )}
+
+          {isMember && !isOwner && (
+            <Button $variant="primary" style={{ opacity: 0.7, cursor: 'default' }}>
+              Joined
+            </Button>
+          )}
         </ButtonGroup>
       </Card>
 

@@ -94,28 +94,40 @@ const TribeDetailPage: React.FC<TribeDetailPageProps> = ({ currentUser, tribeId:
   const [allUsers, setAllUsers] = useState<User[]>([]);
 
   // Initial Fetch
+  // Initial Fetch
   useEffect(() => {
-    // CRITICAL FIX: Do not fetch if ID is undefined or 'undefined' string
-    if (!id || id === 'undefined') {
-      // console.log("TribeDetailPage: ID is missing, skipping fetch.");
-      return;
-    }
+    if (!id || id === 'undefined') return;
 
     const fetchDetails = async () => {
       try {
         setIsLoading(true);
 
-        // Parallel Fetch: Tribe, Messages, Users (for modal)
-        const [tribeRes, messagesRes, usersRes] = await Promise.all([
+        // 1. Fetch Tribe Details & Users FIRST (Public info)
+        const [tribeRes, usersRes] = await Promise.all([
           api.fetchTribe(id),
-          api.fetchTribeMessages(id),
           api.fetchUsers()
         ]);
 
         if (tribeRes.data) {
-          setTribe(tribeRes.data);
-          setMessages(messagesRes.data);
+          const fetchedTribe = tribeRes.data;
+          setTribe(fetchedTribe);
           setAllUsers(usersRes.data);
+
+          // 2. Check Membership
+          const isMember = currentUser && fetchedTribe.members.includes(currentUser.id);
+          const isOwner = currentUser && fetchedTribe.owner === currentUser.id;
+
+          // 3. Fetch Messages ONLY if member/owner
+          if (isMember || isOwner) {
+            try {
+              const messagesRes = await api.fetchTribeMessages(id);
+              setMessages(messagesRes.data);
+            } catch (msgErr) {
+              console.warn("Could not fetch messages (likely not a member yet)", msgErr);
+              // Do not fail the whole page, just empty messages
+              setMessages([]);
+            }
+          }
         } else {
           setError("Tribe not found.");
         }
@@ -124,7 +136,7 @@ const TribeDetailPage: React.FC<TribeDetailPageProps> = ({ currentUser, tribeId:
         if (err.response && err.response.status === 404) {
           setError("Tribe not found.");
         } else {
-          setError("Failed to load conversation.");
+          setError("Failed to load tribe data.");
         }
       } finally {
         setIsLoading(false);
@@ -132,7 +144,7 @@ const TribeDetailPage: React.FC<TribeDetailPageProps> = ({ currentUser, tribeId:
     };
 
     fetchDetails();
-  }, [id]);
+  }, [id, currentUser?.id]); // Re-run if user changes (rare but safe)
 
   // Socket Listener
   useEffect(() => {
@@ -166,13 +178,31 @@ const TribeDetailPage: React.FC<TribeDetailPageProps> = ({ currentUser, tribeId:
   }, [allUsers]);
 
   const handleSendMessage = async (text: string) => {
-    if (!text.trim() || !id) return;
+    if (!text.trim() || !id || !currentUser) return;
 
+    // OPTIMISTIC UPDATE
+    const tempId = Date.now().toString();
+    const optimisticMsg: TribeMessage = {
+      _id: tempId,
+      tribeId: id,
+      sender: currentUser,
+      senderId: currentUser.id,
+      text: text,
+      timestamp: new Date().toISOString()
+    };
+
+    setMessages(prev => [...prev, optimisticMsg]);
     setIsSending(true);
+
     try {
-      await api.sendTribeMessage(id, { text });
+      const { data: sentMsg } = await api.sendTribeMessage(id, { text });
+      // Replace optimistic message with real one
+      setMessages(prev => prev.map(m => m._id === tempId ? sentMsg : m));
     } catch (err) {
       console.error("Failed to send", err);
+      // Rollback
+      setMessages(prev => prev.filter(m => m._id !== tempId));
+      alert("Failed to send message");
     } finally {
       setIsSending(false);
     }
@@ -180,27 +210,44 @@ const TribeDetailPage: React.FC<TribeDetailPageProps> = ({ currentUser, tribeId:
 
   const handleJoinTribe = async () => {
     if (!tribe || !id || !currentUser) return;
+
+    // OPTIMISTIC UPDATE
+    // Determine new state
+    const alreadyMember = tribe.members.includes(currentUser.id);
+    const newMembers = alreadyMember
+      ? tribe.members.filter(m => m !== currentUser.id)
+      : [...tribe.members, currentUser.id];
+
+    // Create optimistic tribe object
+    const optimisticTribe = { ...tribe, members: newMembers };
+    setTribe(optimisticTribe);
+
     try {
       const { data: updatedTribe } = await api.joinTribe(id);
       setTribe(updatedTribe);
+
+      // If we just joined, we should fetch messages
+      if (!alreadyMember) {
+        const msgRes = await api.fetchTribeMessages(id);
+        setMessages(msgRes.data);
+      }
     } catch (err) {
       console.error("Join failed", err);
+      // Revert on failure
+      setTribe(tribe);
+      alert("Failed to join tribe");
     }
   };
+  // ... handleLeaveTribe (can use same logic or keep separate) ...
 
   const handleLeaveTribe = async () => {
-    if (!tribe || !id || !currentUser) return;
-    try {
-      const { data: updatedTribe } = await api.joinTribe(id);
-      setTribe(updatedTribe);
-    } catch (err) {
-      console.error("Leave failed", err);
-    }
+    await handleJoinTribe(); // Compose into one logic since API is a toggle usually, or keep explicit if preferred
   };
 
   // This handles the delete action directly, to be passed to modal
   const handleDeleteFromModal = async (tribeId: string) => {
     try {
+      if (!tribe || !id) return;
       await api.deleteTribe(tribeId);
       navigate('/tribes');
     } catch (err) {
@@ -209,41 +256,10 @@ const TribeDetailPage: React.FC<TribeDetailPageProps> = ({ currentUser, tribeId:
     }
   };
 
-  const handleDeleteTribe = async () => {
-    // Legacy handler if called from header (kept for safety, but header now uses modal usually)
-    if (!tribe || !id || !window.confirm("Are you sure? This will delete the tribe and all messages forever.")) return;
-    try {
-      await api.deleteTribe(id);
-      navigate('/tribes');
-    } catch (err) {
-      console.error("Delete failed", err);
-    }
-  };
+  // ... rest of delete logic ... 
 
-  if (isLoading) return (
-    <PageContainer>
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
-        <img src="/busstop.gif" alt="Loading..." style={{ width: 120, height: 120, borderRadius: '50%', objectFit: 'cover' }} />
-        <p style={{ marginTop: 16, color: '#888' }}>Entering tribe territory...</p>
-      </div>
-    </PageContainer>
-  );
-
-  if (error || !tribe) return (
-    <PageContainer>
-      <Header>
-        <BackButton onClick={() => navigate('/tribes')}><ArrowLeft size={20} /></BackButton>
-        <h2 style={{ marginLeft: 10 }}>Error</h2>
-      </Header>
-      <div style={{ padding: 40, textAlign: 'center', color: '#b19786ff' }}>
-        <h3>{error || "Tribe not found"}</h3>
-        <button onClick={() => navigate('/tribes')} style={{ marginTop: 20, padding: '10px 20px', borderRadius: 8, border: 'none', background: '#333', color: 'white', cursor: 'pointer' }}>Back to Tribes</button>
-      </div>
-    </PageContainer>
-  );
-
-  const isMember = currentUser && tribe.members.includes(currentUser.id);
-
+  // Inside Render > HeaderActions
+  // REMOVED delete button from here. Kept only Edit.
   return (
     <PageContainer>
       <Header>
@@ -258,24 +274,21 @@ const TribeDetailPage: React.FC<TribeDetailPageProps> = ({ currentUser, tribeId:
         <HeaderActions>
           <ActionButton onClick={() => setIsMembersModalOpen(true)} title="View Members">
             <Users size={18} />
-            <span style={{ fontSize: '0.8rem', display: 'none' }} className="md:inline">Members</span>
           </ActionButton>
 
-          {/* Admin Actions */}
+          {/* Admin Actions - ONLY Edit here, Delete is inside Edit Modal */}
           {currentUser && tribe.owner === currentUser.id && (
-            <>
-              <ActionButton onClick={() => setIsEditModalOpen(true)} title="Edit Tribe"><Edit2 size={18} /></ActionButton>
-              <ActionButton onClick={handleDeleteTribe} title="Delete Tribe"><Trash2 size={18} /></ActionButton>
-            </>
+            <ActionButton onClick={() => setIsEditModalOpen(true)} title="Edit Tribe"><Edit2 size={18} /></ActionButton>
           )}
+
           {/* Join/Leave */}
           {currentUser && tribe.owner !== currentUser.id && (
             tribe.members.includes(currentUser.id) ? (
-              <ActionButton onClick={handleLeaveTribe} title="Leave Tribe"><LogOut size={18} /></ActionButton>
+              <ActionButton onClick={handleJoinTribe} title="Leave Tribe"><LogOut size={18} /></ActionButton>
             ) : (
               <button
                 onClick={handleJoinTribe}
-                style={{ background: '#d4a373', border: 'none', padding: '6px 16px', borderRadius: 20, fontWeight: 'bold' }}
+                style={{ background: '#d4a373', border: 'none', padding: '6px 16px', borderRadius: 20, fontWeight: 'bold', color: '#2A2320', cursor: 'pointer' }}
               >
                 Join
               </button>
