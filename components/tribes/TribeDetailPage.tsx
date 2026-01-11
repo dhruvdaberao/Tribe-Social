@@ -64,6 +64,17 @@ const HeaderActions = styled.div`
   gap: 6px;
 `;
 
+const MemberCountBadge = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.8rem;
+  opacity: 0.7;
+  cursor: pointer;
+  
+  &:hover { opacity: 1; }
+`;
+
 const ActionButton = styled.button`
   background: none;
   border: none;
@@ -289,18 +300,19 @@ const TribeDetailPage: React.FC<Props> = ({ currentUser }) => {
         <HeaderActions>
           <ActionButton onClick={() => setIsMembersOpen(true)}>
             <Users size={18} />
+          </ActionButton>
 
-            {currentUser && tribe?.owner === currentUser.id && (
-              <ActionButton onClick={() => setIsEditOpen(true)}>
-                <Edit2 size={18} />
-              </ActionButton>
-            )}
+          {currentUser && tribe?.owner === currentUser.id && (
+            <ActionButton onClick={() => setIsEditOpen(true)}>
+              <Edit2 size={18} />
+            </ActionButton>
+          )}
 
-            {currentUser && tribe?.owner !== currentUser.id && (
-              <ActionButton onClick={handleJoinToggle}>
-                {isMember ? <LogOut size={18} /> : <LogIn size={18} />}
-              </ActionButton>
-            )}
+          {currentUser && tribe?.owner !== currentUser.id && (
+            <ActionButton onClick={handleJoinToggle}>
+              {isMember ? <LogOut size={18} /> : <LogIn size={18} />}
+            </ActionButton>
+          )}
         </HeaderActions>
       </Header>
 
