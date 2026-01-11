@@ -209,7 +209,7 @@ const TribesPage: React.FC<TribesPageProps> = ({ currentUser, isLoadingProp }) =
             {/* LOADING STATE - Only show if NO tribes are visible (i.e. empty cache) */}
             {isLoading && tribes.length === 0 && (
                 <LoadingMessage>
-                    <img src="/busstop.gif" alt="Loading..." style={{ borderRadius: '50%', width: 100, height: 100, objectFit: 'cover' }} />
+                    <img src="/busstop.gif" alt="Loading..." style={{ borderRadius: '0.5%', width: 100, height: 100, objectFit: 'cover' }} />
                     <p>Summoning the Tribes...</p>
                 </LoadingMessage>
             )}

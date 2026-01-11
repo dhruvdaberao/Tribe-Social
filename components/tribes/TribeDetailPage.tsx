@@ -224,12 +224,13 @@ const TribeDetailPage: React.FC<TribeDetailPageProps> = ({ currentUser, tribeId:
 
     try {
       const { data: updatedTribe } = await api.joinTribe(id);
-      setTribe(updatedTribe);
-
-      // If we just joined, we should fetch messages
-      if (!alreadyMember) {
-        const msgRes = await api.fetchTribeMessages(id);
-        setMessages(msgRes.data);
+      if (updatedTribe) {
+        setTribe(updatedTribe);
+        // If we just joined, we should fetch messages
+        if (!alreadyMember) {
+          const msgRes = await api.fetchTribeMessages(id);
+          setMessages(msgRes.data);
+        }
       }
     } catch (err) {
       console.error("Join failed", err);
@@ -256,44 +257,63 @@ const TribeDetailPage: React.FC<TribeDetailPageProps> = ({ currentUser, tribeId:
     }
   };
 
-  // ... rest of delete logic ... 
+  if (isLoading) return (
+    <PageContainer>
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
+        <img src="/busstop.gif" alt="Loading..." style={{ width: 120, height: 120, borderRadius: '50%', objectFit: 'cover' }} />
+        <p style={{ marginTop: 16, color: '#888' }}>Entering tribe territory...</p>
+      </div>
+    </PageContainer>
+  );
 
-  // Inside Render > HeaderActions
-  // REMOVED delete button from here. Kept only Edit.
+  if (error || !tribe) return (
+    <PageContainer>
+      <Header>
+        <BackButton onClick={() => navigate('/tribes')}><ArrowLeft size={20} /></BackButton>
+        <h2 style={{ marginLeft: 10 }}>Error</h2>
+      </Header>
+      <div style={{ padding: 40, textAlign: 'center', color: '#b19786ff' }}>
+        <h3>{error || "Tribe not found"}</h3>
+        <button onClick={() => navigate('/tribes')} style={{ marginTop: 20, padding: '10px 20px', borderRadius: 8, border: 'none', background: '#333', color: 'white', cursor: 'pointer' }}>Back to Tribes</button>
+      </div>
+    </PageContainer>
+  );
+
+  const isMember = currentUser && tribe.members.includes(currentUser.id);
+
   return (
     <PageContainer>
       <Header>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <BackButton onClick={() => navigate('/tribes')}><ArrowLeft size={20} /></BackButton>
-          <Avatar $src={tribe.avatarUrl} />
+          <Avatar $src={tribe?.avatarUrl} />
           <HeaderInfo>
-            <h2>{tribe.name}</h2>
-            <p style={{ cursor: 'pointer', textDecoration: 'underline' }} onClick={() => setIsMembersModalOpen(true)}>{tribe.members.length} members</p>
+            <h2>{tribe?.name}</h2>
+            <p style={{ cursor: 'pointer', textDecoration: 'underline' }} onClick={() => setIsMembersModalOpen(true)}>{tribe?.members?.length || 0} members</p>
           </HeaderInfo>
         </div>
         <HeaderActions>
           <ActionButton onClick={() => setIsMembersModalOpen(true)} title="View Members">
             <Users size={18} />
-          </ActionButton>
 
-          {/* Admin Actions - ONLY Edit here, Delete is inside Edit Modal */}
-          {currentUser && tribe.owner === currentUser.id && (
-            <ActionButton onClick={() => setIsEditModalOpen(true)} title="Edit Tribe"><Edit2 size={18} /></ActionButton>
-          )}
+            {/* Admin Actions - ONLY Edit here, Delete is inside Edit Modal */}
+            {currentUser && tribe.owner === currentUser.id && (
+              <ActionButton onClick={() => setIsEditModalOpen(true)} title="Edit Tribe"><Edit2 size={18} /></ActionButton>
+            )}
 
-          {/* Join/Leave */}
-          {currentUser && tribe.owner !== currentUser.id && (
-            tribe.members.includes(currentUser.id) ? (
-              <ActionButton onClick={handleJoinTribe} title="Leave Tribe"><LogOut size={18} /></ActionButton>
-            ) : (
-              <button
-                onClick={handleJoinTribe}
-                style={{ background: '#d4a373', border: 'none', padding: '6px 16px', borderRadius: 20, fontWeight: 'bold', color: '#2A2320', cursor: 'pointer' }}
-              >
-                Join
-              </button>
-            )
-          )}
+            {/* Join/Leave */}
+            {currentUser && tribe.owner !== currentUser.id && (
+              tribe.members.includes(currentUser.id) ? (
+                <ActionButton onClick={handleJoinTribe} title="Leave Tribe"><LogOut size={18} /></ActionButton>
+              ) : (
+                <button
+                  onClick={handleJoinTribe}
+                  style={{ background: '#d4a373', border: 'none', padding: '6px 16px', borderRadius: 20, fontWeight: 'bold', color: '#2A2320', cursor: 'pointer' }}
+                >
+                  Join
+                </button>
+              )
+            )}
         </HeaderActions>
       </Header>
 

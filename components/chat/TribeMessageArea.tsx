@@ -51,7 +51,7 @@ export const TribeMessageArea: React.FC<TribeMessageAreaProps> = ({ tribe, messa
                 {isLoading && messages.length === 0 ? (
                     <div className="w-full h-full flex flex-col items-center justify-center opacity-70">
                         {/* Using the busstop gif as requested for consistency */}
-                        <img src="/busstop.gif" alt="Loading messages..." className="w-24 h-24 rounded-full object-cover mb-4" />
+                        <img src="/busstop.gif" alt="Loading messages..." className="w-24 h-auto mb-2" />
                         <p className="text-secondary text-sm">Loading legacy...</p>
                     </div>
                 ) : (
