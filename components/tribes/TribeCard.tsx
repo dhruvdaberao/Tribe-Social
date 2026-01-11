@@ -208,7 +208,7 @@ const TribeCard: React.FC<TribeCardProps> = ({ tribe, currentUser, allUsers, onE
 
   return (
     <>
-      <Card onClick={() => navigate(`/tribes/${tribe.id}`)}>
+      <Card onClick={() => navigate(`/tribes/${tribe.id}`, { state: { tribe } })}>
         {isOwner && onEdit && (
           <EditIconWrapper onClick={handleEditClick} title="Edit Tribe">
             <Edit2 size={18} strokeWidth={2} />
@@ -233,7 +233,10 @@ const TribeCard: React.FC<TribeCardProps> = ({ tribe, currentUser, allUsers, onE
         <ButtonGroup>
           {isMember && (
             <>
-              <Button $variant="secondary" onClick={(e) => { e.stopPropagation(); navigate(`/tribes/${tribe.id}`); }}>
+              <Button $variant="secondary" onClick={(e) => {
+                e.stopPropagation();
+                navigate(`/tribes/${tribe.id}`, { state: { tribe } });
+              }}>
                 Chat
               </Button>
               {!isOwner && (

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import styled from 'styled-components';
 import { Tribe, TribeMessage, User } from '../../types';
 import * as api from '../../api';
@@ -91,10 +91,14 @@ interface Props {
 const TribeDetailPage: React.FC<Props> = ({ currentUser }) => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const { socket, joinRoom, leaveRoom, clearUnreadTribe } = useSocket();
 
-  const [tribe, setTribe] = useState<Tribe | null>(null);
+  // Optimistic init from navigation state
+  const initialTribe = location.state?.tribe || null;
+  const [tribe, setTribe] = useState<Tribe | null>(initialTribe);
+
   const [messages, setMessages] = useState<TribeMessage[]>([]);
   const [areMessagesLoading, setAreMessagesLoading] = useState(false);
   const [isSending, setIsSending] = useState(false);
