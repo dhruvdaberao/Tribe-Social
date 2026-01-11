@@ -164,6 +164,20 @@ const TribesPage: React.FC<TribesPageProps> = ({ currentUser }) => {
     setEditingTribe(null);
   };
 
+  const handleJoinToggle = async (tribeId: string) => {
+    try {
+      const { data: updatedTribe } = await api.joinTribe(tribeId);
+      setTribes(prev => {
+        const updated = prev.map(t => t.id === tribeId ? updatedTribe : t);
+        localStorage.setItem('tribe_storage_tribes', JSON.stringify(updated));
+        return updated;
+      });
+    } catch (error) {
+      console.error('Failed to join/leave tribe:', error);
+      throw error;
+    }
+  };
+
   // ───────────── FILTERING ─────────────
   const myTribes = tribes.filter(
     t => currentUser && (t.owner === currentUser.id || t.members.includes(currentUser.id))
@@ -211,6 +225,7 @@ const TribesPage: React.FC<TribesPageProps> = ({ currentUser }) => {
                 currentUser={currentUser}
                 allUsers={allUsers}
                 onEdit={setEditingTribe}
+                onJoinToggle={handleJoinToggle}
               />
             ))}
           </Grid>
@@ -227,6 +242,7 @@ const TribesPage: React.FC<TribesPageProps> = ({ currentUser }) => {
                 tribe={tribe}
                 currentUser={currentUser}
                 allUsers={allUsers}
+                onJoinToggle={handleJoinToggle}
               />
             ))}
           </Grid>

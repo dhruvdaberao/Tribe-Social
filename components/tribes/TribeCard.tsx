@@ -134,9 +134,10 @@ interface TribeCardProps {
   allUsers: User[];
   onEdit?: (tribe: Tribe) => void;
   onViewProfile?: (user: User) => void;
+  onJoinToggle?: (tribeId: string) => Promise<void>;
 }
 
-const TribeCard: React.FC<TribeCardProps> = ({ tribe, currentUser, allUsers, onEdit, onViewProfile }) => {
+const TribeCard: React.FC<TribeCardProps> = ({ tribe, currentUser, allUsers, onEdit, onViewProfile, onJoinToggle }) => {
   const navigate = useNavigate();
   const isMember = currentUser && tribe.members.includes(currentUser.id);
   const isOwner = currentUser && tribe.owner === currentUser.id;
