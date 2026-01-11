@@ -99,43 +99,64 @@ const TribesPage: React.FC<TribesPageProps> = ({ currentUser, isLoadingProp }) =
     const [error, setError] = useState<string | null>(null);
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
     const [editingTribe, setEditingTribe] = useState<Tribe | null>(null);
+    const [allUsers, setAllUsers] = useState<User[]>([]);
 
-    // FETCH TRIBES ON MOUNT
+    // FETCH TRIBES & USERS ON MOUNT
     useEffect(() => {
         let isMounted = true;
 
-        const loadTribes = async () => {
+        const loadData = async () => {
             try {
                 // Check cache first for instant render
-                const cached = localStorage.getItem('tribe_storage_tribes');
-                if (cached) {
-                    const parsed = JSON.parse(cached);
+                const cachedTribes = localStorage.getItem('tribe_storage_tribes');
+
+                // Show cached immediately if available
+                if (cachedTribes) {
+                    const parsed = JSON.parse(cachedTribes);
                     if (Array.isArray(parsed) && parsed.length > 0) {
                         setTribes(parsed);
+                        // Delay loading false just a bit so we don't flash if re-fetching
                     }
                 }
 
-                console.log("🔍 TribesPage: Fetching tribes from API...");
-                const response = await api.fetchTribes();
+                console.log("🔍 TribesPage: Fetching data from API...");
+                const [tribesRes, usersRes] = await Promise.all([
+                    api.fetchTribes(),
+                    api.fetchUsers()
+                ]);
 
                 if (isMounted) {
-                    setTribes(response.data);
+                    setTribes(tribesRes.data);
+                    // We need to store users in a map or context, but for now passing them down 
+                    // via props or a local efficient lookup would be best. 
+                    // However, TribesPage doesn't have a userMap prop. 
+                    // We will just store the users locally in state to pass to TribeCard (via modal).
+                    // Actually, wait, `TribeCard` just needs to show the modal with `userMap`.
+                    // We'll add `allUsers` to state.
+                    setAllUsers(usersRes.data);
+
                     setIsLoading(false);
                     // Update cache
-                    localStorage.setItem('tribe_storage_tribes', JSON.stringify(response.data));
+                    localStorage.setItem('tribe_storage_tribes', JSON.stringify(tribesRes.data));
                 }
             } catch (err) {
-                console.error("❌ TribesPage: Failed to load tribes", err);
+                console.error("❌ TribesPage: Failed to load data", err);
                 if (isMounted) {
-                    setError("Failed to load tribes. Please try again.");
+                    setError("Failed to load community data.");
                     setIsLoading(false);
                 }
             }
         };
 
-        loadTribes();
+        // Minimum 2 second loading timer as requested by user for "feature"
+        const timer = setTimeout(() => {
+            loadData();
+        }, 2000);
 
-        return () => { isMounted = false; };
+        return () => {
+            isMounted = false;
+            clearTimeout(timer);
+        };
     }, []);
 
     const handleTribeCreated = (newTribe: Tribe) => {
@@ -188,8 +209,8 @@ const TribesPage: React.FC<TribesPageProps> = ({ currentUser, isLoadingProp }) =
             {/* LOADING STATE - Only show if NO tribes are visible (i.e. empty cache) */}
             {isLoading && tribes.length === 0 && (
                 <LoadingMessage>
-                    <img src="/busstop.gif" alt="Loading..." />
-                    <p>Finding your community...</p>
+                    <img src="/d2.gif" alt="Loading..." style={{ borderRadius: '50%' }} />
+                    <p>Summoning the Tribes...</p>
                 </LoadingMessage>
             )}
 
@@ -217,6 +238,7 @@ const TribesPage: React.FC<TribesPageProps> = ({ currentUser, isLoadingProp }) =
                                                 key={tribe.id}
                                                 tribe={tribe}
                                                 currentUser={currentUser}
+                                                allUsers={allUsers}
                                                 onEdit={(t) => setEditingTribe(t)}
                                             />
                                         ))}
@@ -234,6 +256,7 @@ const TribesPage: React.FC<TribesPageProps> = ({ currentUser, isLoadingProp }) =
                                                 key={tribe.id}
                                                 tribe={tribe}
                                                 currentUser={currentUser}
+                                                allUsers={allUsers}
                                             />
                                         ))}
                                     </Grid>

@@ -3,6 +3,7 @@ import styled from 'styled-components';
 import { Tribe, User } from '../../types';
 import { useNavigate } from 'react-router-dom';
 import { Edit2, Users } from 'lucide-react';
+import TribeMembersModal from './TribeMembersModal';
 
 const Card = styled.div`
   background: ${({ theme }) => theme.cardBackground};
@@ -128,13 +129,24 @@ const Button = styled.button<{ $variant?: 'primary' | 'secondary' }>`
 interface TribeCardProps {
   tribe: Tribe;
   currentUser: User | null;
+  allUsers: User[];
   onEdit?: (tribe: Tribe) => void;
+  onViewProfile?: (user: User) => void;
 }
 
-const TribeCard: React.FC<TribeCardProps> = ({ tribe, currentUser, onEdit }) => {
+const TribeCard: React.FC<TribeCardProps> = ({ tribe, currentUser, allUsers, onEdit, onViewProfile }) => {
   const navigate = useNavigate();
   const isMember = currentUser && tribe.members.includes(currentUser.id);
   const isOwner = currentUser && tribe.owner === currentUser.id;
+  const [isMembersModalOpen, setIsMembersModalOpen] = React.useState(false);
+
+  const userMap = React.useMemo(() => {
+    return new Map(allUsers.map(u => [u.id, u]));
+  }, [allUsers]);
+
+  // We need a userMap for the modal. Since we don't have it passed down from TribesPage yet,
+  // we will accept it as a prop.
+  // Note: TribesPage needs to pass `allUsers` map or array.
 
   const handleJoin = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -146,36 +158,56 @@ const TribeCard: React.FC<TribeCardProps> = ({ tribe, currentUser, onEdit }) => 
     if (onEdit) onEdit(tribe);
   };
 
+  const handleMembersClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setIsMembersModalOpen(true);
+  }
+
   return (
-    <Card onClick={() => navigate(`/tribes/${tribe.id}`)}>
-      {isOwner && onEdit && (
-        <EditIconWrapper onClick={handleEditClick} title="Edit Tribe">
-          <Edit2 size={18} strokeWidth={2} />
-        </EditIconWrapper>
-      )}
-
-      <AvatarCircle>
-        {tribe.avatarUrl ? (
-          <AvatarImage src={tribe.avatarUrl} alt={tribe.name} />
-        ) : (
-          <Users size={32} color="#D6B9A0" /> // Minimalistic group icon, light brown
+    <>
+      <Card onClick={() => navigate(`/tribes/${tribe.id}`)}>
+        {isOwner && onEdit && (
+          <EditIconWrapper onClick={handleEditClick} title="Edit Tribe">
+            <Edit2 size={18} strokeWidth={2} />
+          </EditIconWrapper>
         )}
-      </AvatarCircle>
 
-      <TribeName>{tribe.name}</TribeName>
-      <MemberCount>{tribe.members.length} members</MemberCount>
+        <AvatarCircle>
+          {tribe.avatarUrl ? (
+            <AvatarImage src={tribe.avatarUrl} alt={tribe.name} />
+          ) : (
+            <Users size={32} color="#D6B9A0" /> // Minimalistic group icon, light brown
+          )}
+        </AvatarCircle>
 
-      <Quote>"{tribe.description}"</Quote>
+        <TribeName>{tribe.name}</TribeName>
+        <MemberCount onClick={handleMembersClick} style={{ cursor: 'pointer', textDecoration: 'underline' }}>
+          {tribe.members.length} members
+        </MemberCount>
 
-      <ButtonGroup>
-        <Button $variant="secondary" onClick={(e) => { e.stopPropagation(); navigate(`/tribes/${tribe.id}`); }}>
-          Chat
-        </Button>
-        <Button $variant="primary" onClick={handleJoin}>
-          {isMember ? 'Joined' : 'Join'}
-        </Button>
-      </ButtonGroup>
-    </Card>
+        <Quote>"{tribe.description}"</Quote>
+
+        <ButtonGroup>
+          <Button $variant="secondary" onClick={(e) => { e.stopPropagation(); navigate(`/tribes/${tribe.id}`); }}>
+            Chat
+          </Button>
+          <Button $variant="primary" onClick={handleJoin}>
+            {isMember ? 'Joined' : 'Join'}
+          </Button>
+        </ButtonGroup>
+      </Card>
+
+      <TribeMembersModal
+        isOpen={isMembersModalOpen}
+        onClose={() => setIsMembersModalOpen(false)}
+        memberIds={tribe.members}
+        userMap={userMap}
+        onViewProfile={(user) => {
+          setIsMembersModalOpen(false);
+          if (onViewProfile) onViewProfile(user);
+        }}
+      />
+    </>
   );
 };
 
