@@ -37,8 +37,11 @@ const Avatar = styled.div<{ $src?: string | null }>`
   width: 40px;
   height: 40px;
   border-radius: 50%;
-  background: ${({ theme }) => theme.secondary}
-    url(${({ $src }) => $src || '/default-tribe.png'}) center/cover;
+  background: ${({ theme, $src }) => $src ? `url(${$src}) center/cover` : theme.secondary};
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
 `;
 
 const HeaderInfo = styled.div`
@@ -244,7 +247,9 @@ const TribeDetailPage: React.FC<Props> = ({ currentUser }) => {
           <ArrowLeft size={20} />
         </BackButton>
 
-        <Avatar $src={tribe?.avatarUrl} />
+        <Avatar $src={tribe?.avatarUrl}>
+          {!tribe?.avatarUrl && <Users size={20} color="#D6B9A0" />}
+        </Avatar>
 
         <HeaderInfo>
           <h2>{tribe?.name || 'Loading…'}</h2>
