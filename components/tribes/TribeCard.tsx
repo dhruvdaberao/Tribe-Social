@@ -150,7 +150,7 @@ const TribeCard: React.FC<TribeCardProps> = ({ tribe, currentUser, allUsers, onE
 
   const handleJoin = (e: React.MouseEvent) => {
     e.stopPropagation();
-    navigate(`/tribes/${tribe.id}`);
+    navigate(`/tribes/${tribe._id}`);
   };
 
   const handleEditClick = (e: React.MouseEvent) => {
@@ -165,7 +165,7 @@ const TribeCard: React.FC<TribeCardProps> = ({ tribe, currentUser, allUsers, onE
 
   return (
     <>
-      <Card onClick={() => navigate(`/tribes/${tribe.id}`)}>
+      <Card onClick={() => navigate(`/tribes/${tribe._id}`)}>
         {isOwner && onEdit && (
           <EditIconWrapper onClick={handleEditClick} title="Edit Tribe">
             <Edit2 size={18} strokeWidth={2} />
@@ -188,7 +188,7 @@ const TribeCard: React.FC<TribeCardProps> = ({ tribe, currentUser, allUsers, onE
         <Quote>"{tribe.description}"</Quote>
 
         <ButtonGroup>
-          <Button $variant="secondary" onClick={(e) => { e.stopPropagation(); navigate(`/tribes/${tribe.id}`); }}>
+          <Button $variant="secondary" onClick={(e) => { e.stopPropagation(); navigate(`/tribes/${tribe._id}`); }}>
             Chat
           </Button>
           <Button $variant="primary" onClick={handleJoin}>

@@ -235,7 +235,7 @@ const TribeDetailPage: React.FC<TribeDetailPageProps> = ({ currentUser, tribeId:
         <BackButton onClick={() => navigate('/tribes')}><ArrowLeft size={20} /></BackButton>
         <h2 style={{ marginLeft: 10 }}>Error</h2>
       </Header>
-      <div style={{ padding: 40, textAlign: 'center', color: '#ff5722' }}>
+      <div style={{ padding: 40, textAlign: 'center', color: '#b19786ff' }}>
         <h3>{error || "Tribe not found"}</h3>
         <button onClick={() => navigate('/tribes')} style={{ marginTop: 20, padding: '10px 20px', borderRadius: 8, border: 'none', background: '#333', color: 'white', cursor: 'pointer' }}>Back to Tribes</button>
       </div>

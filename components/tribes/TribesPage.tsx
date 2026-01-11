@@ -165,14 +165,14 @@ const TribesPage: React.FC<TribesPageProps> = ({ currentUser, isLoadingProp }) =
     };
 
     const handleTribeUpdated = (updatedTribe: Tribe) => {
-        setTribes(prev => prev.map(t => t.id === updatedTribe.id ? updatedTribe : t));
+        setTribes(prev => prev.map(t => t._id === updatedTribe._id ? updatedTribe : t));
         setEditingTribe(null);
     };
 
     const handleTribeDeleted = async (tribeId: string) => {
         try {
             await api.deleteTribe(tribeId);
-            setTribes(prev => prev.filter(t => t.id !== tribeId));
+            setTribes(prev => prev.filter(t => t._id !== tribeId));
             setEditingTribe(null);
         } catch (error) {
             console.error("Failed to delete tribe", error);
@@ -209,7 +209,7 @@ const TribesPage: React.FC<TribesPageProps> = ({ currentUser, isLoadingProp }) =
             {/* LOADING STATE - Only show if NO tribes are visible (i.e. empty cache) */}
             {isLoading && tribes.length === 0 && (
                 <LoadingMessage>
-                    <img src="/d2.gif" alt="Loading..." style={{ borderRadius: '50%' }} />
+                    <img src="/busstop.gif" alt="Loading..." style={{ borderRadius: '50%', width: 100, height: 100, objectFit: 'cover' }} />
                     <p>Summoning the Tribes...</p>
                 </LoadingMessage>
             )}
@@ -235,7 +235,7 @@ const TribesPage: React.FC<TribesPageProps> = ({ currentUser, isLoadingProp }) =
                                     <Grid>
                                         {myTribes.map(tribe => (
                                             <TribeCard
-                                                key={tribe.id}
+                                                key={tribe._id}
                                                 tribe={tribe}
                                                 currentUser={currentUser}
                                                 allUsers={allUsers}
@@ -253,7 +253,7 @@ const TribesPage: React.FC<TribesPageProps> = ({ currentUser, isLoadingProp }) =
                                     <Grid>
                                         {discoverTribes.map(tribe => (
                                             <TribeCard
-                                                key={tribe.id}
+                                                key={tribe._id}
                                                 tribe={tribe}
                                                 currentUser={currentUser}
                                                 allUsers={allUsers}

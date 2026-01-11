@@ -55,7 +55,7 @@ export const TribeMessageArea: React.FC<TribeMessageAreaProps> = ({ tribe, messa
             <div className="flex-1 overflow-y-auto p-4">
                 {isLoading ? (
                     <div className="w-full h-full flex items-center justify-center">
-                        <img src="/d2.gif" alt="Loading messages..." className="w-16 h-16 rounded-full" />
+                        <img src="/busstop.gif" alt="Loading messages..." className="w-24 h-24 rounded-full object-cover" />
                     </div>
                 ) : (
                     <div className="flex flex-col space-y-2">
@@ -71,7 +71,7 @@ export const TribeMessageArea: React.FC<TribeMessageAreaProps> = ({ tribe, messa
                             const sentAt = new Date(message.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
 
                             return (
-                                <div key={message.id || index} className={`flex items-end gap-2.5 ${isCurrentUser ? 'justify-end' : 'justify-start'}`} style={{ marginTop: showAvatar ? 8 : 2 }}>
+                                <div key={message._id || index} className={`flex items-end gap-2.5 ${isCurrentUser ? 'justify-end' : 'justify-start'}`} style={{ marginTop: showAvatar ? 8 : 2 }}>
                                     {!isCurrentUser && (
                                         <div className="w-8 h-8 rounded-full flex-shrink-0 self-start">
                                             {showAvatar ? (

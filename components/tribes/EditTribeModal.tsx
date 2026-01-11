@@ -113,7 +113,7 @@ const EditTribeModal: React.FC<EditTribeModalProps> = ({ tribe, onClose, onSucce
     e.preventDefault();
     setIsSubmitting(true);
     try {
-      const { data } = await api.updateTribe(tribe.id, { name, description, avatarUrl });
+      const { data } = await api.updateTribe(tribe._id, { name, description, avatarUrl });
       onSuccess(data);
     } catch (err) {
       console.error("Update failed", err);
@@ -126,7 +126,7 @@ const EditTribeModal: React.FC<EditTribeModalProps> = ({ tribe, onClose, onSucce
     // Confirmation handled here ONLY.
     if (window.confirm("Are you sure you want to delete this tribe? This cannot be undone.")) {
       if (onDelete) {
-        onDelete(tribe.id);
+        onDelete(tribe._id);
       } else {
         console.error("Delete handler not provided to modal");
         alert("Delete functionality unavailable.");

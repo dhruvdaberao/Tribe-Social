@@ -119,7 +119,7 @@ export interface Comment {
 }
 
 export interface Post {
-  id:string;
+  id: string;
   author: User;
   content: string;
   imageUrl?: string;
@@ -146,7 +146,7 @@ export interface Conversation {
 }
 
 export interface TribeMessage {
-  id: string;
+  _id: string; // Changed from id to _id
   tribeId?: string; // Added for socket events
   sender: User;
   senderId?: string; // Added for socket events
@@ -156,7 +156,7 @@ export interface TribeMessage {
 }
 
 export interface Tribe {
-  id: string;
+  _id: string; // Changed from id to _id to match MongoDB
   name: string;
   avatarUrl: string | null;
   description: string;
@@ -180,7 +180,7 @@ export interface Notification {
 
 export interface Story {
   id: string;
-  author: User; 
+  author: User;
   user: string; // User ID
   imageUrl?: string;
   text?: string;
