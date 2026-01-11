@@ -3,6 +3,8 @@ import styled from 'styled-components';
 import { Tribe, User } from '../../types';
 import { useNavigate } from 'react-router-dom';
 import { Edit2, Users } from 'lucide-react';
+import * as api from '../../api';
+import { toast } from '../common/Toast';
 import TribeMembersModal from './TribeMembersModal';
 
 const Card = styled.div`
@@ -139,6 +141,7 @@ const TribeCard: React.FC<TribeCardProps> = ({ tribe, currentUser, allUsers, onE
   const isMember = currentUser && tribe.members.includes(currentUser.id);
   const isOwner = currentUser && tribe.owner === currentUser.id;
   const [isMembersModalOpen, setIsMembersModalOpen] = React.useState(false);
+  const [isJoining, setIsJoining] = React.useState(false);
 
   const userMap = React.useMemo(() => {
     return new Map(allUsers.map(u => [u.id, u]));
@@ -148,9 +151,38 @@ const TribeCard: React.FC<TribeCardProps> = ({ tribe, currentUser, allUsers, onE
   // we will accept it as a prop.
   // Note: TribesPage needs to pass `allUsers` map or array.
 
-  const handleJoin = (e: React.MouseEvent) => {
+  const handleJoin = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    navigate(`/tribes/${tribe.id}`);
+    if (!tribe.id) return;
+
+    setIsJoining(true);
+    try {
+      await api.joinTribe(tribe.id);
+      toast.success(`Joined ${tribe.name}!`);
+      setTimeout(() => window.location.reload(), 500);
+    } catch (error) {
+      console.error('Join error:', error);
+      toast.error('Failed to join tribe');
+    } finally {
+      setIsJoining(false);
+    }
+  };
+
+  const handleLeave = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!tribe.id || !confirm(`Leave ${tribe.name}?`)) return;
+
+    setIsJoining(true);
+    try {
+      await api.joinTribe(tribe.id);
+      toast.success(`Left ${tribe.name}`);
+      setTimeout(() => window.location.reload(), 500);
+    } catch (error) {
+      console.error('Leave error:', error);
+      toast.error('Failed to leave tribe');
+    } finally {
+      setIsJoining(false);
+    }
   };
 
   const handleEditClick = (e: React.MouseEvent) => {
@@ -188,21 +220,31 @@ const TribeCard: React.FC<TribeCardProps> = ({ tribe, currentUser, allUsers, onE
         <Quote>"{tribe.description}"</Quote>
 
         <ButtonGroup>
-          {(isMember || isOwner) && (
-            <Button $variant="secondary" onClick={(e) => { e.stopPropagation(); navigate(`/tribes/${tribe.id}`); }}>
-              Chat
-            </Button>
+          {isMember && (
+            <>
+              <Button $variant="secondary" onClick={(e) => { e.stopPropagation(); navigate(`/tribes/${tribe.id}`); }}>
+                Chat
+              </Button>
+              {!isOwner && (
+                <Button
+                  $variant="primary"
+                  onClick={handleLeave}
+                  disabled={isJoining}
+                  style={{ background: '#8B4513' }}
+                >
+                  {isJoining ? 'Leaving...' : 'Leave'}
+                </Button>
+              )}
+            </>
           )}
 
           {!isMember && (
-            <Button $variant="primary" onClick={handleJoin}>
-              Join
-            </Button>
-          )}
-
-          {isMember && !isOwner && (
-            <Button $variant="primary" style={{ opacity: 0.7, cursor: 'default' }}>
-              Joined
+            <Button
+              $variant="primary"
+              onClick={handleJoin}
+              disabled={isJoining}
+            >
+              {isJoining ? 'Joining...' : 'Join'}
             </Button>
           )}
         </ButtonGroup>
