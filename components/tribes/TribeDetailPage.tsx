@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
 import { Tribe, TribeMessage, User } from '../../types';
@@ -7,362 +7,308 @@ import { useSocket } from '../../contexts/SocketContext';
 import TribeMessageArea from '../chat/TribeMessageArea';
 import TribeMembersModal from './TribeMembersModal';
 import EditTribeModal from './EditTribeModal';
-import { Users, ArrowLeft, Edit2, Trash2, LogOut } from 'lucide-react';
+import { Users, ArrowLeft, Edit2, LogIn, LogOut } from 'lucide-react';
 
-// --- STYLED COMPONENTS ---
+/* ───────────── STYLES ───────────── */
 const PageContainer = styled.div`
-  height: calc(100vh - 60px); 
+  height: 100dvh;
   display: flex;
   flex-direction: column;
   background: ${({ theme }) => theme.background};
 `;
 
 const Header = styled.header`
-  padding: 16px 24px;
+  padding: 14px;
   background: ${({ theme }) => theme.cardBackground};
   border-bottom: 1px solid ${({ theme }) => theme.borderColor};
   display: flex;
   align-items: center;
-  gap: 16px;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  gap: 12px;
 `;
 
 const BackButton = styled.button`
   background: none;
   border: none;
-  color: ${({ theme }) => theme.text};
   cursor: pointer;
-  padding: 8px;
-  border-radius: 50%;
-  &:hover { background: ${({ theme }) => theme.hoverBackground}; }
+  padding: 6px;
 `;
 
 const Avatar = styled.div<{ $src?: string | null }>`
-  width: 40px; 
+  width: 40px;
   height: 40px;
   border-radius: 50%;
-  background: ${({ theme }) => theme.secondary} url(${({ $src }) => $src || '/default-tribe.png'}) center/cover;
+  background: ${({ theme }) => theme.secondary}
+    url(${({ $src }) => $src || '/default-tribe.png'}) center/cover;
 `;
 
 const HeaderInfo = styled.div`
   flex: 1;
-  h2 { margin: 0; font-size: 1.1rem; color: ${({ theme }) => theme.text}; font-weight: 700; }
-  p { margin: 2px 0 0; font-size: 0.8rem; color: ${({ theme }) => theme.textSecondary}; }
+  h2 {
+    margin: 0;
+    font-size: 1.1rem;
+    font-weight: 700;
+  }
+  p {
+    margin: 2px 0 0;
+    font-size: 0.8rem;
+    opacity: 0.7;
+    cursor: pointer;
+  }
 `;
 
 const HeaderActions = styled.div`
   display: flex;
-  gap: 8px;
+  gap: 6px;
 `;
 
 const ActionButton = styled.button`
-  background: transparent;
-  color: ${({ theme }) => theme.textSecondary};
+  background: none;
   border: none;
-  padding: 8px;
   cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  
-  &:hover { color: ${({ theme }) => theme.primary}; }
+  padding: 6px;
+  color: ${({ theme }) => theme.textSecondary};
 `;
 
-
-
-interface TribeDetailPageProps {
+/* ───────────── COMPONENT ───────────── */
+interface Props {
   currentUser: User | null;
-  tribeId?: string; // Optional prop override
 }
 
-const TribeDetailPage: React.FC<TribeDetailPageProps> = ({ currentUser, tribeId: propTribeId }) => {
-  const { id: paramId } = useParams<{ id: string }>();
+const TribeDetailPage: React.FC<Props> = ({ currentUser }) => {
+  const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { socket } = useSocket();
-  const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Use prop if available, otherwise param
-  const id = propTribeId || paramId;
+  const { socket, joinRoom, leaveRoom, clearUnreadTribe } = useSocket();
+
   const [tribe, setTribe] = useState<Tribe | null>(null);
   const [messages, setMessages] = useState<TribeMessage[]>([]);
-  // const [newMessage, setNewMessage] = useState(''); // Moved to MessageArea
-  const [isLoading, setIsLoading] = useState(true);
+  const [areMessagesLoading, setAreMessagesLoading] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [isMembersModalOpen, setIsMembersModalOpen] = useState(false);
+
+  const [isEditOpen, setIsEditOpen] = useState(false);
+  const [isMembersOpen, setIsMembersOpen] = useState(false);
   const [allUsers, setAllUsers] = useState<User[]>([]);
 
-  // Initial Fetch
-  // Initial Fetch
+  const bottomRef = useRef<HTMLDivElement>(null);
+
+  /* ───────────── LOAD TRIBE ───────────── */
   useEffect(() => {
-    if (!id || id === 'undefined') return;
+    if (!id) return;
 
-    const fetchDetails = async () => {
+    const load = async () => {
       try {
-        setIsLoading(true);
-
-        // 1. Fetch Tribe Details & Users FIRST (Public info)
         const [tribeRes, usersRes] = await Promise.all([
           api.fetchTribe(id),
           api.fetchUsers()
         ]);
+        setTribe(tribeRes.data);
+        setAllUsers(usersRes.data);
+      } catch {
+        setError('Failed to load tribe');
+      }
+    };
 
-        if (tribeRes.data) {
-          const fetchedTribe = tribeRes.data;
-          setTribe(fetchedTribe);
-          setAllUsers(usersRes.data);
+    load();
+  }, [id]);
 
-          // 2. Check Membership
-          const isMember = currentUser && fetchedTribe.members.includes(currentUser.id);
-          const isOwner = currentUser && fetchedTribe.owner === currentUser.id;
+  const isMember =
+    !!tribe &&
+    !!currentUser &&
+    (tribe.owner === currentUser.id ||
+      tribe.members.includes(currentUser.id));
 
-          // 3. Fetch Messages ONLY if member/owner
-          if (isMember || isOwner) {
-            try {
-              const messagesRes = await api.fetchTribeMessages(id);
-              setMessages(messagesRes.data);
-            } catch (msgErr) {
-              console.warn("Could not fetch messages (likely not a member yet)", msgErr);
-              // Do not fail the whole page, just empty messages
-              setMessages([]);
-            }
-          }
-        } else {
-          setError("Tribe not found.");
-        }
-      } catch (err: any) {
-        console.error("Failed to load tribe details", err);
-        if (err.response && err.response.status === 404) {
-          setError("Tribe not found.");
-        } else {
-          setError("Failed to load tribe data.");
-        }
+  /* ───────────── LOAD MESSAGES ───────────── */
+  useEffect(() => {
+    if (!id || !isMember) return;
+
+    const loadMessages = async () => {
+      try {
+        setAreMessagesLoading(true);
+        const res = await api.fetchTribeMessages(id);
+        setMessages(res.data);
+        clearUnreadTribe(id);
       } finally {
-        setIsLoading(false);
+        setAreMessagesLoading(false);
       }
     };
 
-    fetchDetails();
-  }, [id, currentUser?.id]); // Re-run if user changes (rare but safe)
+    loadMessages();
+  }, [id, isMember, clearUnreadTribe]);
 
-  // Socket Listener
+  /* ───────────── JOIN SOCKET ROOM (CRITICAL) ───────────── */
   useEffect(() => {
-    if (!socket || !id || id === 'undefined') return;
+    if (!id || !isMember) return;
 
-    const handleNewMessage = (msg: TribeMessage) => {
-      // Use tribeId from socket message
-      if (msg.tribeId === id) {
-        setMessages(prev => [...prev, msg]);
-        scrollToBottom();
-      }
+    const room = id;
+    joinRoom(room);
+    return () => leaveRoom(room);
+  }, [id, isMember, joinRoom, leaveRoom]);
+
+  /* ───────────── REAL-TIME RECEIVE ───────────── */
+  useEffect(() => {
+    if (!socket || !id || !isMember) return;
+
+    const handleIncoming = (message: TribeMessage) => {
+      if (message.tribeId !== id) return;
+
+      setMessages(prev =>
+        prev.some(m => m.id === message.id)
+          ? prev
+          : [...prev, message]
+      );
     };
 
-    socket.on('newTribeMessage', handleNewMessage);
-
+    socket.on('newTribeMessage', handleIncoming);
     return () => {
-      socket.off('newTribeMessage', handleNewMessage);
+      socket.off('newTribeMessage', handleIncoming);
     };
-  }, [socket, id]);
-
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  };
+  }, [socket, id, isMember]);
 
   useEffect(() => {
-    scrollToBottom();
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  const userMap = React.useMemo(() => {
-    return new Map(allUsers.map(u => [u.id, u]));
-  }, [allUsers]);
-
-  const handleSendMessage = async (text: string) => {
+  /* ───────────── SEND MESSAGE ───────────── */
+  const handleSend = async (text: string) => {
     if (!text.trim() || !id || !currentUser) return;
 
-    // OPTIMISTIC UPDATE
-    const tempId = Date.now().toString();
-    const optimisticMsg: TribeMessage = {
-      _id: tempId,
+    const tempId = `temp-${Date.now()}`;
+    const optimistic: TribeMessage = {
+      id: tempId,
       tribeId: id,
       sender: currentUser,
       senderId: currentUser.id,
-      text: text,
+      text,
       timestamp: new Date().toISOString()
     };
 
-    setMessages(prev => [...prev, optimisticMsg]);
+    setMessages(prev => [...prev, optimistic]);
     setIsSending(true);
 
     try {
-      const { data: sentMsg } = await api.sendTribeMessage(id, { text });
-      // Replace optimistic message with real one
-      setMessages(prev => prev.map(m => m._id === tempId ? sentMsg : m));
-    } catch (err) {
-      console.error("Failed to send", err);
-      // Rollback
-      setMessages(prev => prev.filter(m => m._id !== tempId));
-      alert("Failed to send message");
+      const { data } = await api.sendTribeMessage(id, { text });
+      setMessages(prev => prev.map(m => (m.id === tempId ? data : m)));
+    } catch {
+      setMessages(prev => prev.filter(m => m.id !== tempId));
+      alert('Failed to send');
     } finally {
       setIsSending(false);
     }
   };
 
-  const handleJoinTribe = async () => {
-    if (!tribe || !id || !currentUser) return;
+  /* ───────────── JOIN / LEAVE ───────────── */
+  const handleJoinToggle = async () => {
+    if (!id || !tribe || !currentUser) return;
 
-    // OPTIMISTIC UPDATE
-    // Determine new state
-    const alreadyMember = tribe.members.includes(currentUser.id);
-    const newMembers = alreadyMember
-      ? tribe.members.filter(m => m !== currentUser.id)
-      : [...tribe.members, currentUser.id];
+    const optimistic = {
+      ...tribe,
+      members: tribe.members.includes(currentUser.id)
+        ? tribe.members.filter(m => m !== currentUser.id)
+        : [...tribe.members, currentUser.id]
+    };
 
-    // Create optimistic tribe object
-    const optimisticTribe = { ...tribe, members: newMembers };
-    setTribe(optimisticTribe);
+    setTribe(optimistic);
 
     try {
-      const { data: updatedTribe } = await api.joinTribe(id);
-      if (updatedTribe) {
-        setTribe(updatedTribe);
-        // If we just joined, we should fetch messages
-        if (!alreadyMember) {
-          const msgRes = await api.fetchTribeMessages(id);
-          setMessages(msgRes.data);
-        }
-      }
-    } catch (err) {
-      console.error("Join failed", err);
-      // Revert on failure
+      const { data } = await api.joinTribe(id);
+      setTribe(data);
+    } catch {
       setTribe(tribe);
-      alert("Failed to join tribe");
-    }
-  };
-  // ... handleLeaveTribe (can use same logic or keep separate) ...
-
-  const handleLeaveTribe = async () => {
-    await handleJoinTribe(); // Compose into one logic since API is a toggle usually, or keep explicit if preferred
-  };
-
-  // This handles the delete action directly, to be passed to modal
-  const handleDeleteFromModal = async (tribeId: string) => {
-    try {
-      if (!tribe || !id) return;
-      await api.deleteTribe(tribeId);
-      navigate('/tribes');
-    } catch (err) {
-      console.error("Failed to delete tribe via modal", err);
-      alert("Failed to delete tribe. Please try again.");
     }
   };
 
-  if (isLoading) return (
-    <PageContainer>
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
-        <img src="/busstop.gif" alt="Loading..." style={{ width: 120, height: 120, borderRadius: '50%', objectFit: 'cover' }} />
-        <p style={{ marginTop: 16, color: '#888' }}>Entering tribe territory...</p>
-      </div>
-    </PageContainer>
+  const userMap = useMemo(
+    () => new Map(allUsers.map(u => [u.id, u])),
+    [allUsers]
   );
 
-  if (error || !tribe) return (
-    <PageContainer>
-      <Header>
-        <BackButton onClick={() => navigate('/tribes')}><ArrowLeft size={20} /></BackButton>
-        <h2 style={{ marginLeft: 10 }}>Error</h2>
-      </Header>
-      <div style={{ padding: 40, textAlign: 'center', color: '#b19786ff' }}>
-        <h3>{error || "Tribe not found"}</h3>
-        <button onClick={() => navigate('/tribes')} style={{ marginTop: 20, padding: '10px 20px', borderRadius: 8, border: 'none', background: '#333', color: 'white', cursor: 'pointer' }}>Back to Tribes</button>
-      </div>
-    </PageContainer>
-  );
-
-  const isMember = currentUser && tribe.members.includes(currentUser.id);
+  if (error) {
+    return (
+      <PageContainer>
+        <Header>
+          <BackButton onClick={() => navigate('/tribes')}>
+            <ArrowLeft size={20} />
+          </BackButton>
+          <h3>Error</h3>
+        </Header>
+        <div style={{ padding: 40 }}>{error}</div>
+      </PageContainer>
+    );
+  }
 
   return (
     <PageContainer>
       <Header>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <BackButton onClick={() => navigate('/tribes')}><ArrowLeft size={20} /></BackButton>
-          <Avatar $src={tribe?.avatarUrl} />
-          <HeaderInfo>
-            <h2>{tribe?.name}</h2>
-            <p style={{ cursor: 'pointer', textDecoration: 'underline' }} onClick={() => setIsMembersModalOpen(true)}>{tribe?.members?.length || 0} members</p>
-          </HeaderInfo>
-        </div>
+        <BackButton onClick={() => navigate('/tribes')}>
+          <ArrowLeft size={20} />
+        </BackButton>
+
+        <Avatar $src={tribe?.avatarUrl} />
+
+        <HeaderInfo>
+          <h2>{tribe?.name || 'Loading…'}</h2>
+          <p onClick={() => setIsMembersOpen(true)}>
+            {tribe?.members.length || 0} members
+          </p>
+        </HeaderInfo>
+
         <HeaderActions>
-          <ActionButton onClick={() => setIsMembersModalOpen(true)} title="View Members">
+          <ActionButton onClick={() => setIsMembersOpen(true)}>
             <Users size={18} />
           </ActionButton>
 
-          {/* Admin Actions - ONLY Edit here, Delete is inside Edit Modal */}
-          {currentUser && tribe.owner === currentUser.id && (
-            <ActionButton onClick={() => setIsEditModalOpen(true)} title="Edit Tribe"><Edit2 size={18} /></ActionButton>
+          {currentUser && tribe?.owner === currentUser.id && (
+            <ActionButton onClick={() => setIsEditOpen(true)}>
+              <Edit2 size={18} />
+            </ActionButton>
           )}
 
-          {/* Join/Leave */}
-          {currentUser && tribe.owner !== currentUser.id && (
-            tribe.members.includes(currentUser.id) ? (
-              <ActionButton onClick={handleJoinTribe} title="Leave Tribe"><LogOut size={18} /></ActionButton>
-            ) : (
-              <button
-                onClick={handleJoinTribe}
-                style={{ background: '#d4a373', border: 'none', padding: '6px 16px', borderRadius: 20, fontWeight: 'bold', color: '#2A2320', cursor: 'pointer' }}
-              >
-                Join
-              </button>
-            )
+          {currentUser && tribe?.owner !== currentUser.id && (
+            <ActionButton onClick={handleJoinToggle}>
+              {isMember ? <LogOut size={18} /> : <LogIn size={18} />}
+            </ActionButton>
           )}
         </HeaderActions>
       </Header>
 
-      {/* MESSAGE AREA */}
-      {currentUser && tribe.members.includes(currentUser.id) ? (
+      {isMember ? (
         <TribeMessageArea
-          tribe={tribe}
+          tribe={tribe!}
           messages={messages}
-          isLoading={isLoading}
-          currentUser={currentUser}
+          isLoading={areMessagesLoading}
+          currentUser={currentUser!}
           isSending={isSending}
-          onSendMessage={handleSendMessage}
-          onViewProfile={(user) => {
-            // Navigate to profile? For now just log or do nothing, or maybe show modal
-            // navigate(`/profile/${user.id}`); 
-          }}
+          onSendMessage={handleSend}
         />
       ) : (
-        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', color: '#888', gap: 16 }}>
-          <p>Join this tribe to start chatting!</p>
-          <button
-            onClick={handleJoinTribe}
-            style={{ background: '#d4a373', border: 'none', padding: '10px 24px', borderRadius: 20, fontWeight: 'bold', fontSize: '1.1rem', cursor: 'pointer' }}
-          >
-            Join Tribe
-          </button>
+        <div className="flex-1 flex flex-col items-center justify-center gap-4">
+          <p>Join this tribe to start chatting</p>
+          <button onClick={handleJoinToggle}>Join Tribe</button>
         </div>
       )}
 
-      {isEditModalOpen && (
+      <div ref={bottomRef} />
+
+      {isEditOpen && tribe && (
         <EditTribeModal
           tribe={tribe}
-          onClose={() => setIsEditModalOpen(false)}
-          onSuccess={(updated) => { setTribe(updated); setIsEditModalOpen(false); }}
-          onDelete={handleDeleteFromModal}
+          onClose={() => setIsEditOpen(false)}
+          onSuccess={t => {
+            setTribe(t);
+            setIsEditOpen(false);
+          }}
         />
       )}
 
-      <TribeMembersModal
-        isOpen={isMembersModalOpen}
-        onClose={() => setIsMembersModalOpen(false)}
-        memberIds={tribe.members}
-        userMap={userMap}
-        onViewProfile={(user) => {
-          setIsMembersModalOpen(false);
-          // navigate(`/profile/${user.id}`); 
-        }}
-      />
+      {tribe && (
+        <TribeMembersModal
+          isOpen={isMembersOpen}
+          onClose={() => setIsMembersOpen(false)}
+          memberIds={tribe.members}
+          userMap={userMap}
+        />
+      )}
     </PageContainer>
   );
 };

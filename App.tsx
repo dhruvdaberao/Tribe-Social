@@ -198,10 +198,11 @@ const App: React.FC = () => {
                         // Return empty for now so we resolve
                         return [];
                     } else {
-                        const populatedTribes = data.map((tribe: any) => ({ ...tribe, messages: [] }));
-                        setTribes(populatedTribes);
-                        saveToCache('tribes', populatedTribes);
-                        return populatedTribes;
+                      setTribes(data);
+                      saveToCache('tribes', data);
+                      return data;
+
+
                     }
                 })
                 .catch(e => console.error("Failed to fetch tribes", e));
@@ -263,21 +264,21 @@ const App: React.FC = () => {
     }, [fetchData, isAuthLoading, currentUser]);
 
     // Socket Setup
-    useEffect(() => {
-        if (socket && tribes.length > 0 && currentUser) {
-            const myTribeIds = tribes.filter(t => t.members.includes(currentUser.id)).map(t => t.id);
-            myTribeIds.forEach(tribeId => {
-                socket.emit('joinRoom', `tribe-${tribeId}`);
-            });
-        }
-    }, [socket, tribes, currentUser]);
+    // useEffect(() => {
+    //     if (socket && tribes.length > 0 && currentUser) {
+    //         const myTribeIds = tribes.filter(t => t.members.includes(currentUser.id)).map(t => t.id);
+    //         myTribeIds.forEach(tribeId => {
+    //             socket.emit('joinRoom', `tribe-${tribeId}`);
+    //         });
+    //     }
+    // }, [socket, tribes, currentUser]);
 
-    useEffect(() => {
-        if (!socket || !viewedTribe) return;
-        const room = `tribe-${viewedTribe.id}`;
-        socket.emit('joinRoom', room);
-        return () => { socket.emit('leaveRoom', room); };
-    }, [socket, viewedTribe?.id]);
+    // useEffect(() => {
+    //     if (!socket || !viewedTribe) return;
+    //     const room = `tribe-${viewedTribe.id}`;
+    //     socket.emit('joinRoom', room);
+    //     return () => { socket.emit('leaveRoom', room); };
+    // }, [socket, viewedTribe?.id]);
 
     useEffect(() => {
         if (!socket || !userMap.size) return;
@@ -309,18 +310,26 @@ const App: React.FC = () => {
                 // Ensure sender object is used if available, or fallback to userMap
                 const sender = message.sender || userMap.get(message.senderId!);
 
-                if (sender) {
-                    setViewedTribe(prev => {
-                        if (!prev) return null;
-                        if (prev.messages.some(m => m.id === message.id)) return prev;
-                        return { ...prev, messages: [...prev.messages, { ...message, sender }] };
-                    });
-                }
+                // if (sender) {
+                //     setViewedTribe(prev => {
+                //         if (!prev) return null;
+                //         if (prev.messages.some(m => m.id === message.id)) return prev;
+                //         return { ...prev, messages: [...prev.messages, { ...message, sender }] };
+                //     });
+                // }
+                // ✅ Do NOTHING here for messages
+// Tribe messages are handled exclusively in TribeDetailPage.tsx
+
             }
         };
-        const handleTribeMessageDeleted = ({ tribeId, messageId }: { tribeId: string, messageId: string }) => {
-            if (viewedTribe && viewedTribe.id === tribeId) setViewedTribe(prev => prev ? { ...prev, messages: prev.messages.filter(m => m.id !== messageId) } : null);
-        };
+        // const handleTribeMessageDeleted = ({ tribeId, messageId }: { tribeId: string, messageId: string }) => {
+        //     if (viewedTribe && viewedTribe.id === tribeId) setViewedTribe(prev => prev ? { ...prev, messages: prev.messages.filter(m => m.id !== messageId) } : null);
+        // };
+        const handleTribeMessageDeleted = ({ tribeId }: { tribeId: string }) => {
+    // ✅ Do nothing here
+    // Tribe messages are handled entirely inside TribeDetailPage.tsx
+};
+
         const handleUserUpdated = (updatedUser: User) => {
             setUsers(prev => prev.map(u => u.id === updatedUser.id ? updatedUser : u));
             if (currentUser?.id === updatedUser.id) setCurrentUser(updatedUser);
@@ -339,7 +348,7 @@ const App: React.FC = () => {
         socket.on('postUpdated', handlePostUpdated);
         socket.on('postDeleted', handlePostDeleted);
         socket.on('newTribeMessage', handleNewTribeMessage);
-        socket.on('tribeMessageDeleted', handleTribeMessageDeleted);
+        // socket.on('tribeMessageDeleted', handleTribeMessageDeleted);
         socket.on('userUpdated', handleUserUpdated);
         socket.on('tribeDeleted', handleTribeDeleted);
 
@@ -348,7 +357,7 @@ const App: React.FC = () => {
             socket.off('postUpdated', handlePostUpdated);
             socket.off('postDeleted', handlePostDeleted);
             socket.off('newTribeMessage', handleNewTribeMessage);
-            socket.off('tribeMessageDeleted', handleTribeMessageDeleted);
+            // socket.off('tribeMessageDeleted', handleTribeMessageDeleted);
             socket.off('userUpdated', handleUserUpdated);
             socket.off('tribeDeleted', handleTribeDeleted);
         };
@@ -611,24 +620,37 @@ const App: React.FC = () => {
     const handleCreateTribe = async (name: string, description: string, avatarUrl?: string) => {
         try {
             const { data: newTribe } = await api.createTribe({ name, description, avatarUrl });
-            setTribes(prev => [{ ...newTribe, messages: [] }, ...prev]);
+            // setTribes(prev => [{ ...newTribe, messages: [] }, ...prev]);
+            setTribes(prev => [newTribe, ...prev]);
+
             toast.success(`Tribe "${name}" created!`);
         } catch (error) {
             console.error("Failed to create tribe:", error);
         }
     };
 
+    // const handleViewTribe = async (tribe: Tribe) => {
+    //     try {
+    //         clearUnreadTribe(tribe.id);
+    //         // Don't rely on global state for messages, just set the tribe object
+    //         // The TribeDetailPage component will fetch its own messages on mount
+    //         setViewedTribe({ ...tribe, messages: [] });
+    //         setActiveNavItem('TribeDetail');
+    //     } catch (error) {
+    //         console.error("Failed to set tribe view:", error);
+    //     }
+    // };
     const handleViewTribe = async (tribe: Tribe) => {
-        try {
-            clearUnreadTribe(tribe.id);
-            // Don't rely on global state for messages, just set the tribe object
-            // The TribeDetailPage component will fetch its own messages on mount
-            setViewedTribe({ ...tribe, messages: [] });
-            setActiveNavItem('TribeDetail');
-        } catch (error) {
-            console.error("Failed to set tribe view:", error);
-        }
-    };
+    try {
+        clearUnreadTribe(tribe.id);
+        // ✅ Only set the tribe itself — NO messages here
+        setViewedTribe(tribe);
+        setActiveNavItem('TribeDetail');
+    } catch (error) {
+        console.error("Failed to set tribe view:", error);
+    }
+};
+
 
     const handleEditTribe = async (tribeId: string, name: string, description: string, avatarUrl?: string | null) => {
         try {
@@ -644,26 +666,35 @@ const App: React.FC = () => {
         }
     };
 
-    const handleSendTribeMessage = async (tribeId: string, text: string, imageUrl?: string) => {
-        if (!currentUser || !viewedTribe) return;
-        try {
-            await api.sendTribeMessage(tribeId, { text, imageUrl });
-        } catch (error) {
-            console.error("Failed to send tribe message:", error);
-        }
-    };
+    // const handleSendTribeMessage = async (tribeId: string, text: string, imageUrl?: string) => {
+    //     if (!currentUser || !viewedTribe) return;
+    //     try {
+    //         await api.sendTribeMessage(tribeId, { text, imageUrl });
+    //     } catch (error) {
+    //         console.error("Failed to send tribe message:", error);
+    //     }
+    // };
 
+    // const handleDeleteTribeMessage = async (tribeId: string, messageId: string) => {
+    //     const originalMessages = viewedTribe?.messages || [];
+    //     if (viewedTribe) setViewedTribe(prev => prev ? { ...prev, messages: prev.messages.filter(m => m.id !== messageId) } : null);
+    //     try {
+    //         await api.deleteTribeMessage(tribeId, messageId);
+    //     } catch (error) {
+    //         console.error("Failed to delete tribe message", error);
+    //         toast.error("Could not delete message.");
+    //         if (viewedTribe) setViewedTribe(prev => prev ? { ...prev, messages: originalMessages } : null);
+    //     }
+    // }
     const handleDeleteTribeMessage = async (tribeId: string, messageId: string) => {
-        const originalMessages = viewedTribe?.messages || [];
-        if (viewedTribe) setViewedTribe(prev => prev ? { ...prev, messages: prev.messages.filter(m => m.id !== messageId) } : null);
-        try {
-            await api.deleteTribeMessage(tribeId, messageId);
-        } catch (error) {
-            console.error("Failed to delete tribe message", error);
-            toast.error("Could not delete message.");
-            if (viewedTribe) setViewedTribe(prev => prev ? { ...prev, messages: originalMessages } : null);
-        }
+    try {
+        await api.deleteTribeMessage(tribeId, messageId);
+    } catch (error) {
+        console.error("Failed to delete tribe message", error);
+        toast.error("Could not delete message.");
     }
+};
+
 
     const handleDeleteTribe = async (tribeId: string) => {
         try {
@@ -798,7 +829,7 @@ const App: React.FC = () => {
                 return (
                     <TribesPage
                         currentUser={currentUser!}
-                        isLoadingProp={isFetching}
+                        // isLoadingProp={isFetching}
                     />
                 );
             case 'TribeDetail':
@@ -809,7 +840,7 @@ const App: React.FC = () => {
 
                 return <TribeDetailPage
                     currentUser={currentUser}
-                    tribeId={effectiveTribeId}
+                   // tribeId={effectiveTribeId}
                 />;
             case 'Notifications':
                 return <NotificationsPage notifications={notifications} allTribes={tribes} onViewProfile={handleViewProfile} onViewMessage={handleStartConversation} onViewPost={handleViewPost} onViewTribe={handleViewTribe} onViewStory={handleViewUserStories} />;
@@ -843,15 +874,20 @@ const App: React.FC = () => {
                     {renderContent()}
                 </div>
             </main>
-            {editingTribe && <EditTribeModal
-                tribe={editingTribe}
-                onClose={() => setEditingTribe(null)}
-                onSuccess={(updatedTribe) => {
-                    setTribes(prev => prev.map(t => t.id === updatedTribe.id ? { ...updatedTribe, messages: t.messages } : t));
-                    setEditingTribe(null);
-                    toast.success("Tribe updated successfully");
-                }}
-            />}
+           {editingTribe && (
+    <EditTribeModal
+        tribe={editingTribe}
+        onClose={() => setEditingTribe(null)}
+        onSuccess={(updatedTribe) => {
+            setTribes(prev =>
+                prev.map(t => (t.id === updatedTribe.id ? updatedTribe : t))
+            );
+            setEditingTribe(null);
+            toast.success("Tribe updated successfully");
+        }}
+    />
+)}
+
             {isCreatingStory && <StoryCreator onClose={() => setIsCreatingStory(false)} onCreate={handleCreateStory} />}
             {viewingUserStories && <StoryViewer userStories={viewingUserStories} currentUser={currentUser} allUsers={visibleUsers} allTribes={tribes} onClose={() => setViewingUserStories(null)} onDelete={handleDeleteStory} onLike={handleLikeStory} onSharePost={handleSharePost} />}
             {viewingPost && <PostViewModal post={viewingPost} currentUser={currentUser} allUsers={visibleUsers} allTribes={tribes} onLike={handleLikePost} onComment={handleCommentPost} onDeletePost={handleDeletePost} onDeleteComment={handleDeleteComment} onViewProfile={handleViewProfile} onSharePost={handleSharePost} onClose={() => setViewingPost(null)} />}

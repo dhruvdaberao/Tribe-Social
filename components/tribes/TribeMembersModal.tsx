@@ -7,7 +7,8 @@ interface TribeMembersModalProps {
   onClose: () => void;
   memberIds: string[];
   userMap: Map<string, User>;
-  onViewProfile: (user: User) => void;
+ onViewProfile?: (user: User) => void;
+
 }
 
 const TribeMembersModal: React.FC<TribeMembersModalProps> = ({ isOpen, onClose, memberIds, userMap, onViewProfile }) => {
@@ -51,7 +52,7 @@ const TribeMembersModal: React.FC<TribeMembersModalProps> = ({ isOpen, onClose, 
               {filteredMembers.map(user => (
                 <div
                   key={user.id}
-                  onClick={() => onViewProfile(user)}
+                  onClick={() => onViewProfile?.(user)}
                   className="p-4 flex items-center cursor-pointer hover:bg-background transition-colors"
                 >
                   <UserAvatar user={user} className="w-10 h-10 flex-shrink-0" />
