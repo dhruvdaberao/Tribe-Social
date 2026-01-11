@@ -95,25 +95,38 @@ const TribeDetailPage: React.FC<Props> = ({ currentUser }) => {
 
   const bottomRef = useRef<HTMLDivElement>(null);
 
-  /* ───────────── LOAD TRIBE ───────────── */
+  const [isLoading, setIsLoading] = useState(true);
+
+  /* ───────────── LOAD TRIBE FIRST ───────────── */
   useEffect(() => {
     if (!id) return;
 
-    const load = async () => {
+    const loadTribe = async () => {
       try {
-        const [tribeRes, usersRes] = await Promise.all([
-          api.fetchTribe(id),
-          api.fetchUsers()
-        ]);
+        setIsLoading(true);
+        setError(null);
+
+        // 🔥 CRITICAL: Fetch tribe FIRST (don't block on users)
+        const tribeRes = await api.fetchTribe(id);
         setTribe(tribeRes.data);
-        setAllUsers(usersRes.data);
-      } catch {
-        setError('Failed to load tribe');
+
+        // Then fetch users in background (non-blocking)
+        api.fetchUsers()
+          .then(({ data }) => setAllUsers(data))
+          .catch(err => console.error('Failed to load users:', err));
+
+      } catch (err) {
+        console.error('Failed to load tribe:', err);
+        setError('Tribe not found');
+        // Redirect back after showing error
+        setTimeout(() => navigate('/tribes'), 2000);
+      } finally {
+        setIsLoading(false);
       }
     };
 
-    load();
-  }, [id]);
+    loadTribe();
+  }, [id, navigate]);
 
   const isMember =
     !!tribe &&
@@ -225,6 +238,31 @@ const TribeDetailPage: React.FC<Props> = ({ currentUser }) => {
     () => new Map(allUsers.map(u => [u.id, u])),
     [allUsers]
   );
+
+  /* ───────────── LOADING STATE ───────────── */
+  if (isLoading) {
+    return (
+      <PageContainer>
+        <Header>
+          <BackButton onClick={() => navigate('/tribes')}>
+            <ArrowLeft size={20} />
+          </BackButton>
+          <h3>Loading tribe...</h3>
+        </Header>
+        <div style={{
+          flex: 1,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          flexDirection: 'column',
+          gap: 16
+        }}>
+          <img src="/busstop.gif" alt="Loading" style={{ width: 80 }} />
+          <p>Loading tribe details...</p>
+        </div>
+      </PageContainer>
+    );
+  }
 
   if (error) {
     return (
