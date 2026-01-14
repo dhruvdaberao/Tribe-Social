@@ -120,13 +120,13 @@ export const sendMessage = (receiverId: string, messageData: any) =>
 /* ───────────── TRIBES ───────────── */
 export const fetchTribes = async () => {
   const res = await API.get('/tribes');
-  return { data: res.data };
+  return { data: normalizeArray(res.data) };
 };
 
 
 export const fetchTribe = async (id: string) => {
   const res = await API.get(`/tribes/${id}`);
-  return { data: res.data };
+  return { data: normalizeId(res.data) };
 };
 
 
@@ -145,7 +145,7 @@ export const deleteTribe = (id: string) =>
 
 export const joinTribe = async (id: string) => {
   const res = await API.put(`/tribes/${id}/join`);
-  return { data: res.data };
+  return { data: normalizeId(res.data) };
 };
 
 

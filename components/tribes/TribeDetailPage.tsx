@@ -130,7 +130,14 @@ const TribeDetailPage: React.FC<Props> = ({ currentUser }) => {
 
   /* ───────────── LOAD TRIBE FIRST ───────────── */
   useEffect(() => {
-    if (!id) return;
+    // Handle missing ID
+    if (!id) {
+      console.error('Tribe ID is undefined');
+      setError('Invalid tribe link');
+      setIsLoading(false);
+      setTimeout(() => navigate('/tribes'), 2000);
+      return;
+    }
 
     const loadTribe = async () => {
       try {
