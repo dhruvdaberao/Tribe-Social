@@ -328,7 +328,7 @@ const TribeDetailPage: React.FC<Props> = ({ currentUser }) => {
             </ActionButton>
           )}
 
-          {currentUser && tribe?.owner !== currentUser.id && (
+          {currentUser && tribe && tribe.owner !== currentUser.id && (
             <ActionButton onClick={handleJoinToggle}>
               {isMember ? <LogOut size={18} /> : <LogIn size={18} />}
             </ActionButton>
@@ -336,7 +336,15 @@ const TribeDetailPage: React.FC<Props> = ({ currentUser }) => {
         </HeaderActions>
       </Header>
 
-      {isMember ? (
+      {/* Show loading spinner while tribe loads */}
+      {isLoading && !tribe ? (
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-center">
+            <div className="w-16 h-16 border-4 border-accent border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+            <p className="text-secondary">Loading tribe...</p>
+          </div>
+        </div>
+      ) : isMember ? (
         <TribeMessageArea
           tribe={tribe!}
           messages={messages}
