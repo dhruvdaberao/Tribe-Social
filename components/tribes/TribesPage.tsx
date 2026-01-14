@@ -79,27 +79,18 @@ const TribesPage: React.FC<TribesPageProps> = ({ currentUser }) => {
   useEffect(() => {
     let mounted = true;
 
-    // 1️⃣ Load cached tribes instantly (with migration)
+    // Load cached tribes instantly (only if they use `id` format)
     const cached = localStorage.getItem('tribe_storage_tribes');
     if (cached) {
       try {
         const parsed = JSON.parse(cached);
-        if (Array.isArray(parsed)) {
-          // 🔥 MIGRATION: Convert old _id format to id format
-          const migrated = parsed.map(tribe => {
-            if (tribe._id && !tribe.id) {
-              const { _id, ...rest } = tribe;
-              return { id: _id, ...rest };
-            }
-            return tribe;
-          });
-          setTribes(migrated);
+        if (Array.isArray(parsed) && parsed.every(t => t.id)) {
+          setTribes(parsed);
           setIsLoading(false);
-          // Update cache with migrated format
-          localStorage.setItem('tribe_storage_tribes', JSON.stringify(migrated));
         }
       } catch { }
     }
+
 
     // 2️⃣ Fetch fresh data in background
     const fetchData = async () => {

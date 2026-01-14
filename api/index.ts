@@ -1,93 +1,3 @@
-// import axios from 'axios';
-
-// // Backend URL
-// const API_URL = 'https://tribe-social-backend.onrender.com';
-
-// // Axios instance
-// const API = axios.create({
-//   baseURL: `${API_URL}/api`,
-// });
-
-// // Attach auth token automatically
-// API.interceptors.request.use((req) => {
-//   const token = localStorage.getItem('token');
-//   if (token) {
-//     req.headers.Authorization = `Bearer ${token}`;
-//   }
-//   return req;
-// });
-
-// /* ───────────── AUTH ───────────── */
-// export const login = (formData: any) => API.post('/auth/login', formData);
-// export const register = (formData: any) => API.post('/auth/register', formData);
-
-// /* ───────────── USERS ───────────── */
-// export const fetchUsers = () => API.get('/users');
-// export const fetchUser = (id: string) => API.get(`/users/${id}`);
-// export const updateProfile = (profileData: any) =>
-//   API.put('/users/profile', profileData);
-// export const toggleFollow = (id: string) =>
-//   API.put(`/users/${id}/follow`);
-// export const toggleBlock = (id: string) =>
-//   API.put(`/users/${id}/block`);
-// export const deleteAccount = () =>
-//   API.delete('/users/profile');
-
-// /* ───────────── POSTS ───────────── */
-// export const fetchPost = (id: string) => API.get(`/posts/${id}`);
-// export const fetchPosts = () => API.get('/posts');
-// export const fetchFeedPosts = () => API.get('/posts/feed');
-// export const createPost = (newPost: any) =>
-//   API.post('/posts', newPost);
-// export const deletePost = (id: string) =>
-//   API.delete(`/posts/${id}`);
-// export const likePost = (id: string) =>
-//   API.put(`/posts/${id}/like`);
-// export const commentOnPost = (id: string, commentData: any) =>
-//   API.post(`/posts/${id}/comments`, commentData);
-// export const deleteComment = (postId: string, commentId: string) =>
-//   API.delete(`/posts/${postId}/comments/${commentId}`);
-
-// /* ───────────── DIRECT MESSAGES ───────────── */
-// export const fetchConversations = () =>
-//   API.get('/messages/conversations');
-// export const fetchMessages = (otherUserId: string) =>
-//   API.get(`/messages/${otherUserId}`);
-// export const sendMessage = (receiverId: string, messageData: any) =>
-//   API.post(`/messages/send/${receiverId}`, messageData);
-
-// /* ───────────── TRIBES ───────────── */
-// export const fetchTribes = () => API.get('/tribes');
-// export const fetchTribe = (id: string) =>
-//   API.get(`/tribes/${id}`);
-// export const createTribe = (tribeData: any) =>
-//   API.post('/tribes', tribeData);
-// export const updateTribe = (id: string, tribeData: any) =>
-//   API.put(`/tribes/${id}`, tribeData);
-// export const deleteTribe = (id: string) =>
-//   API.delete(`/tribes/${id}`);
-// export const joinTribe = (id: string) =>
-//   API.put(`/tribes/${id}/join`);
-// export const fetchTribeMessages = (id: string) =>
-//   API.get(`/tribes/${id}/messages`);
-// export const sendTribeMessage = (id: string, messageData: any) =>
-//   API.post(`/tribes/${id}/messages`, messageData);
-// export const deleteTribeMessage = (tribeId: string, messageId: string) =>
-//   API.delete(`/tribes/${tribeId}/messages/${messageId}`);
-
-// /* ───────────── AI CHAT ───────────── */
-// export const generateAiChat = (promptData: { prompt: string }) =>
-//   API.post('/ai/chat', promptData);
-
-// /* ───────────── NOTIFICATIONS ───────────── */
-// export const fetchNotifications = () =>
-//   API.get('/notifications');
-// export const markNotificationsRead = () =>
-//   API.put('/notifications/read');
-
-
-
-
 
 
 
@@ -109,20 +19,19 @@ API.interceptors.request.use(req => {
 });
 
 /* ───────────── HELPERS (NORMALIZATION) ───────────── */
-
 const normalizeId = <T extends { _id?: string }>(obj: T) => {
-  if (!obj) return obj;
+  if (!obj) return obj as any;
   const { _id, ...rest } = obj as any;
 
-  // Convert the main _id
-  const normalized: any = { id: _id?.toString() || _id, ...rest };
+  const normalized: any = {
+    id: _id?.toString(),
+    ...rest,
+  };
 
-  // Convert owner if it's an ObjectId
   if (normalized.owner) {
     normalized.owner = normalized.owner.toString();
   }
 
-  // Convert members array if present (ObjectIds → strings)
   if (Array.isArray(normalized.members)) {
     normalized.members = normalized.members.map((m: any) =>
       typeof m === 'object' && m._id ? m._id.toString() : m.toString()
@@ -134,6 +43,7 @@ const normalizeId = <T extends { _id?: string }>(obj: T) => {
 
 const normalizeArray = <T extends { _id?: string }>(arr: T[]) =>
   arr.map(normalizeId);
+
 
 /* ───────────── AUTH ───────────── */
 export const login = (formData: any) => API.post('/auth/login', formData);
@@ -210,13 +120,15 @@ export const sendMessage = (receiverId: string, messageData: any) =>
 /* ───────────── TRIBES ───────────── */
 export const fetchTribes = async () => {
   const res = await API.get('/tribes');
-  return { data: normalizeArray(res.data) };
+  return { data: res.data };
 };
+
 
 export const fetchTribe = async (id: string) => {
   const res = await API.get(`/tribes/${id}`);
-  return { data: normalizeId(res.data) };
+  return { data: res.data };
 };
+
 
 export const createTribe = async (tribeData: any) => {
   const res = await API.post('/tribes', tribeData);
@@ -233,8 +145,9 @@ export const deleteTribe = (id: string) =>
 
 export const joinTribe = async (id: string) => {
   const res = await API.put(`/tribes/${id}/join`);
-  return { data: normalizeId(res.data) };
+  return { data: res.data };
 };
+
 
 export const fetchTribeMessages = async (id: string) => {
   const res = await API.get(`/tribes/${id}/messages`);

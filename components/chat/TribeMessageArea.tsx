@@ -88,9 +88,8 @@ const TribeMessageArea: React.FC<TribeMessageAreaProps> = ({
             return (
               <div
                 key={message.id}
-                className={`flex items-end gap-2 ${
-                  isCurrentUser ? 'justify-end' : 'justify-start'
-                }`}
+                className={`flex items-end gap-2 ${isCurrentUser ? 'justify-end' : 'justify-start'
+                  }`}
               >
                 {/* AVATAR */}
                 {!isCurrentUser && (
@@ -112,9 +111,8 @@ const TribeMessageArea: React.FC<TribeMessageAreaProps> = ({
 
                 {/* MESSAGE BUBBLE */}
                 <div
-                  className={`max-w-[75%] flex flex-col ${
-                    isCurrentUser ? 'items-end' : 'items-start'
-                  }`}
+                  className={`max-w-[75%] flex flex-col ${isCurrentUser ? 'items-end' : 'items-start'
+                    }`}
                 >
                   {!isCurrentUser && showAvatar && (
                     <span className="text-xs text-secondary mb-1">
@@ -123,11 +121,10 @@ const TribeMessageArea: React.FC<TribeMessageAreaProps> = ({
                   )}
 
                   <div
-                    className={`px-4 py-2 rounded-2xl shadow-sm ${
-                      isCurrentUser
+                    className={`px-4 py-2 rounded-2xl shadow-sm ${isCurrentUser
                         ? 'bg-accent text-accent-text rounded-tr-none'
                         : 'bg-surface text-primary rounded-tl-none'
-                    }`}
+                      }`}
                   >
                     {message.imageUrl && (
                       <img
@@ -174,8 +171,10 @@ const TribeMessageArea: React.FC<TribeMessageAreaProps> = ({
           bg-surface
           sticky bottom-0
           z-20
-          safe-area-bottom
         "
+        style={{
+          paddingBottom: 'max(0.5rem, env(safe-area-inset-bottom))'
+        }}
       >
         <input
           type="text"
@@ -190,7 +189,11 @@ const TribeMessageArea: React.FC<TribeMessageAreaProps> = ({
             bg-background
             text-sm
             focus:outline-none
+            focus:ring-2 focus:ring-accent
           "
+          style={{
+            fontSize: '16px' // Prevents zoom on iOS
+          }}
         />
 
         <button
@@ -198,11 +201,13 @@ const TribeMessageArea: React.FC<TribeMessageAreaProps> = ({
           disabled={!inputText.trim() || isSending}
           className="
             w-11 h-11
+            flex-shrink-0
             rounded-full
             bg-accent
             text-accent-text
             flex items-center justify-center
             disabled:opacity-50
+            transition-opacity
           "
         >
           {isSending ? (

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { useParams, useNavigate, useLocation } from 'react-router-dom';
+// import { useParams, useNavigate, useLocation } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
 import { Tribe, TribeMessage, User } from '../../types';
 import * as api from '../../api';
@@ -24,6 +25,20 @@ const Header = styled.header`
   display: flex;
   align-items: center;
   gap: 12px;
+  
+  /* Mobile: Sticky header that stays at top */
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  
+  /* Safe area support for notched devices */
+  padding-top: max(14px, env(safe-area-inset-top));
+  
+  @media (max-width: 640px) {
+    padding: 10px;
+    padding-top: max(10px, env(safe-area-inset-top));
+    gap: 8px;
+  }
 `;
 
 const BackButton = styled.button`
@@ -91,13 +106,14 @@ interface Props {
 const TribeDetailPage: React.FC<Props> = ({ currentUser }) => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const location = useLocation();
+  // const location = useLocation();
 
   const { socket, joinRoom, leaveRoom, clearUnreadTribe } = useSocket();
 
   // Optimistic init from navigation state
-  const initialTribe = location.state?.tribe || null;
-  const [tribe, setTribe] = useState<Tribe | null>(initialTribe);
+  // const initialTribe = location.state?.tribe || null;
+  const [tribe, setTribe] = useState<Tribe | null>(null);
+
 
   const [messages, setMessages] = useState<TribeMessage[]>([]);
   const [areMessagesLoading, setAreMessagesLoading] = useState(false);

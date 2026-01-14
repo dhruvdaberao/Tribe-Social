@@ -152,49 +152,40 @@ const TribeCard: React.FC<TribeCardProps> = ({ tribe, currentUser, allUsers, onE
   // we will accept it as a prop.
   // Note: TribesPage needs to pass `allUsers` map or array.
 
-  const handleJoin = async (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (!tribe.id) return;
+const handleJoin = async (e: React.MouseEvent) => {
+  e.stopPropagation();
+  if (!tribe.id || !onJoinToggle) return;
 
-    setIsJoining(true);
-    try {
-      if (onJoinToggle) {
-        await onJoinToggle(tribe.id);
-        toast.success(`Joined ${tribe.name}!`);
-      } else {
-        await api.joinTribe(tribe.id);
-        toast.success(`Joined ${tribe.name}!`);
-        setTimeout(() => window.location.reload(), 500);
-      }
-    } catch (error) {
-      console.error('Join error:', error);
-      toast.error('Failed to join tribe');
-    } finally {
-      setIsJoining(false);
-    }
-  };
+  setIsJoining(true);
+  try {
+    await onJoinToggle(tribe.id);
+    toast.success(`Joined ${tribe.name}!`);
+  } catch (error) {
+    console.error('Join error:', error);
+    toast.error('Failed to join tribe');
+  } finally {
+    setIsJoining(false);
+  }
+};
 
-  const handleLeave = async (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (!tribe.id || !confirm(`Leave ${tribe.name}?`)) return;
 
-    setIsJoining(true);
-    try {
-      if (onJoinToggle) {
-        await onJoinToggle(tribe.id);
-        toast.success(`Left ${tribe.name}`);
-      } else {
-        await api.joinTribe(tribe.id);
-        toast.success(`Left ${tribe.name}`);
-        setTimeout(() => window.location.reload(), 500);
-      }
-    } catch (error) {
-      console.error('Leave error:', error);
-      toast.error('Failed to leave tribe');
-    } finally {
-      setIsJoining(false);
-    }
-  };
+const handleLeave = async (e: React.MouseEvent) => {
+  e.stopPropagation();
+  if (!tribe.id || !onJoinToggle) return;
+  if (!confirm(`Leave ${tribe.name}?`)) return;
+
+  setIsJoining(true);
+  try {
+    await onJoinToggle(tribe.id);
+    toast.success(`Left ${tribe.name}`);
+  } catch (error) {
+    console.error('Leave error:', error);
+    toast.error('Failed to leave tribe');
+  } finally {
+    setIsJoining(false);
+  }
+};
+
 
   const handleEditClick = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -208,7 +199,7 @@ const TribeCard: React.FC<TribeCardProps> = ({ tribe, currentUser, allUsers, onE
 
   return (
     <>
-      <Card onClick={() => navigate(`/tribes/${tribe.id}`, { state: { tribe } })}>
+   <Card>
         {isOwner && onEdit && (
           <EditIconWrapper onClick={handleEditClick} title="Edit Tribe">
             <Edit2 size={18} strokeWidth={2} />
@@ -235,7 +226,7 @@ const TribeCard: React.FC<TribeCardProps> = ({ tribe, currentUser, allUsers, onE
             <>
               <Button $variant="secondary" onClick={(e) => {
                 e.stopPropagation();
-                navigate(`/tribes/${tribe.id}`, { state: { tribe } });
+                navigate(`/tribes/${tribe.id}`);
               }}>
                 Chat
               </Button>

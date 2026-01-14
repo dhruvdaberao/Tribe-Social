@@ -291,6 +291,8 @@ const ChatPage: React.FC<ChatPageProps> = ({ currentUser, allUsers, chukUser, in
     try {
       const { data } = await api.fetchConversations();
       setConversations(data);
+      // Update cache
+      localStorage.setItem('tribe_storage_conversations', JSON.stringify(data));
       return data;
     } catch (error) {
       console.error("Failed to fetch conversations", error);
@@ -301,7 +303,28 @@ const ChatPage: React.FC<ChatPageProps> = ({ currentUser, allUsers, chukUser, in
   }, []);
 
   useEffect(() => {
-    fetchConversations();
+    let mounted = true;
+
+    // 1️⃣ Load cached conversations instantly
+    const cached = localStorage.getItem('tribe_storage_conversations');
+    if (cached) {
+      try {
+        const parsed = JSON.parse(cached);
+        if (Array.isArray(parsed)) {
+          setConversations(parsed);
+          setIsLoadingConversations(false);
+        }
+      } catch { }
+    }
+
+    // 2️⃣ Fetch fresh data in background
+    fetchConversations().then(() => {
+      if (!mounted) return;
+    });
+
+    return () => {
+      mounted = false;
+    };
   }, [fetchConversations]);
 
   // Listen for new messages via socket
