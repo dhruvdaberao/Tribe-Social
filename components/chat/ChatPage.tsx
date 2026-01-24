@@ -273,6 +273,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ currentUser, allUsers, chukUser, in
   return (
     // Removed rounded corners here (md:rounded-2xl)
     <div className="h-full bg-surface md:border md:border-border md:shadow-lg flex overflow-hidden relative">
+      <div className="absolute bottom-0 right-0 p-1 text-xs text-red-500 z-50 pointer-events-none opacity-50">v4.1 Debug</div>
       <div
         className={`w-full md:w-[320px] lg:w-[380px] flex-shrink-0 flex flex-col transition-transform duration-300 ease-in-out md:static absolute inset-0 z-10 md:border-r md:border-border bg-surface ${isMessageAreaVisible ? '-translate-x-full' : 'translate-x-0'
           } md:translate-x-0`}

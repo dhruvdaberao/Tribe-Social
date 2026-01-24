@@ -20,18 +20,28 @@ const protect = async (req, res, next) => {
 
       if (!req.user) {
         console.error("Auth Middleware: User not found for ID:", decoded.id);
-        return res.status(401).json({ message: 'Not authorized, user not found' });
+        return res.status(401).json({
+          message: 'Not authorized, user not found',
+          receivedToken: token ? `${token.substring(0, 5)}...` : 'null'
+        });
       }
 
       next();
     } catch (error) {
       console.error("Auth Middleware Error:", error.message);
-      return res.status(401).json({ message: 'Not authorized, token failed', error: error.message });
+      return res.status(401).json({
+        message: 'Not authorized, token failed',
+        error: error.message,
+        receivedHeader: req.headers.authorization // Echo back the header to debug stripping
+      });
     }
   }
 
   if (!token) {
-    res.status(401).json({ message: 'Not authorized, no token' });
+    res.status(401).json({
+      message: 'Not authorized, no token',
+      receivedHeader: req.headers.authorization || 'MISSING' // Echo back emptiness
+    });
   }
 };
 
