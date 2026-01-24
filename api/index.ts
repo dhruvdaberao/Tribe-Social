@@ -19,6 +19,21 @@ API.interceptors.request.use(req => {
   return req;
 });
 
+API.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response && error.response.status === 401) {
+      console.warn("Session expired or unauthorized. Logging out...");
+      localStorage.removeItem('token');
+      localStorage.removeItem('currentUser');
+      if (window.location.pathname !== '/' && window.location.pathname !== '/login') {
+        window.location.href = '/';
+      }
+    }
+    return Promise.reject(error);
+  }
+);
+
 /* ───────────── HELPERS (NORMALIZATION) ───────────── */
 const normalizeId = <T extends { _id?: string }>(obj: T) => {
   if (!obj) return obj as any;
