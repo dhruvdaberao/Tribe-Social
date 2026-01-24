@@ -3,7 +3,7 @@
 import React, { useEffect, useCallback, useState } from 'react';
 import { Notification, User, Tribe } from '../../types';
 import UserAvatar from '../common/UserAvatar';
-import * as api from '../../api.ts';
+import * as api from '../../api';
 import { useSocket } from '../../contexts/SocketContext';
 
 interface NotificationsPageProps {

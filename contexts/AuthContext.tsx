@@ -1,6 +1,6 @@
 import React, { createContext, useState, useContext, ReactNode, useEffect, useCallback, useMemo } from 'react';
 import { User } from '../types';
-import * as api from '../api.ts';
+import * as api from '../api';
 
 interface AuthContextType {
   currentUser: User | null;
@@ -14,13 +14,13 @@ interface AuthContextType {
 export const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 const normalizeUser = (user: any): User | null => {
-    if (!user) return null;
-    return {
-        ...user,
-        followers: user.followers || [],
-        following: user.following || [],
-        blockedUsers: user.blockedUsers || [],
-    };
+  if (!user) return null;
+  return {
+    ...user,
+    followers: user.followers || [],
+    following: user.following || [],
+    blockedUsers: user.blockedUsers || [],
+  };
 };
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -37,9 +37,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           const user = JSON.parse(userJson);
           setCurrentUser(normalizeUser(user));
         } catch (error) {
-           console.error("Failed to parse stored user:", error);
-           localStorage.removeItem('token');
-           localStorage.removeItem('currentUser');
+          console.error("Failed to parse stored user:", error);
+          localStorage.removeItem('token');
+          localStorage.removeItem('currentUser');
         }
       }
       setIsLoading(false);
@@ -68,7 +68,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.setItem('token', data.token);
     setCurrentUser(normalizeUser(data.user));
   }, []);
-  
+
   const logout = useCallback(() => {
     setCurrentUser(null);
     localStorage.removeItem('token');
@@ -78,12 +78,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const value = useMemo(() => ({
-      currentUser,
-      setCurrentUser,
-      login,
-      register,
-      logout,
-      isLoading
+    currentUser,
+    setCurrentUser,
+    login,
+    register,
+    logout,
+    isLoading
   }), [currentUser, isLoading, login, register, logout]);
 
   return (
