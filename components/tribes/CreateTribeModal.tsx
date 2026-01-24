@@ -134,9 +134,34 @@ const CreateTribeModal: React.FC<CreateTribeModalProps> = ({ onClose, onSuccess 
         <Form onSubmit={handleSubmit}>
           {error && <div style={{ color: 'red', marginBottom: 10 }}>{error}</div>}
 
+          {/* Hidden File Input */}
+          <input
+            type="file"
+            id="file-input"
+            accept="image/*"
+            style={{ display: 'none' }}
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) {
+                if (file.size > 5 * 1024 * 1024) { // 5MB limit
+                  alert("File too large. Max 5MB");
+                  return;
+                }
+                const reader = new FileReader();
+                reader.onloadend = () => {
+                  setAvatarUrl(reader.result as string);
+                };
+                reader.readAsDataURL(file);
+              }
+            }}
+          />
+
           {/* Visual Avatar Picker */}
           <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 20 }}>
-            <div style={{ position: 'relative', cursor: 'pointer' }} onClick={() => document.getElementById('avatar-url-input')?.focus()}>
+            <div
+              style={{ position: 'relative', cursor: 'pointer' }}
+              onClick={() => document.getElementById('file-input')?.click()}
+            >
               <div style={{
                 width: 100, height: 100, borderRadius: '50%',
                 background: avatarUrl ? `url(${avatarUrl}) center/cover` : theme.secondary,
@@ -153,16 +178,8 @@ const CreateTribeModal: React.FC<CreateTribeModalProps> = ({ onClose, onSuccess 
               }}>+</div>
             </div>
           </div>
-
-          <div style={{ textAlign: 'center', marginBottom: 20 }}>
-            <Label style={{ display: 'none' }}>Avatar URL</Label>
-            <Input
-              id="avatar-url-input"
-              placeholder="Paste Image URL here..."
-              value={avatarUrl}
-              onChange={e => setAvatarUrl(e.target.value)}
-              style={{ textAlign: 'center', background: 'transparent', border: 'none', borderBottom: `1px solid ${theme.borderColor}`, borderRadius: 0 }}
-            />
+          <div style={{ textAlign: 'center', marginBottom: 20, color: theme.textSecondary, fontSize: '0.9rem' }}>
+            Tap to upload image
           </div>
 
           <div>
