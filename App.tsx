@@ -118,6 +118,18 @@ const App: React.FC = () => {
 
     // Initialize from SessionStorage for instant load
     useEffect(() => {
+        // PERMANENT FIX: Force clear storage if version mismatch to remove bad tokens
+        const APP_VERSION = 'v3'; // Increment this to force logout everyone
+        const currentVersion = localStorage.getItem('app_version');
+
+        if (currentVersion !== APP_VERSION) {
+            console.log("⚠️ Upgrading App Version: Clearing potentially corrupted storage...");
+            localStorage.clear();
+            localStorage.setItem('app_version', APP_VERSION);
+            window.location.reload();
+            return;
+        }
+
         const loadCachedData = () => {
             const cachedPosts = loadFromCache('posts');
             const cachedTribes = loadFromCache('tribes');

@@ -14,8 +14,9 @@ const API = axios.create({
 API.interceptors.request.use(req => {
   const rawToken = localStorage.getItem('token');
   if (rawToken) {
-    const token = rawToken.replace(/"/g, '');
+    const token = rawToken.replace(/"/g, '').trim(); // Sanitized
     req.headers.Authorization = `Bearer ${token}`;
+    console.log("🔐 Attaching Auth Token:", `${token.substring(0, 10)}... (Length: ${token.length})`);
   }
   return req;
 });
