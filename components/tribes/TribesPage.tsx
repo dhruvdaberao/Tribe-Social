@@ -156,15 +156,26 @@ const TribesPage: React.FC<TribesPageProps> = ({ currentUser }) => {
   };
 
   const handleJoinToggle = async (tribeId: string) => {
+    console.log('handleJoinToggle called with tribeId:', tribeId);
+
     try {
+      console.log('Calling API to join/leave tribe:', tribeId);
       const { data: updatedTribe } = await api.joinTribe(tribeId);
+      console.log('API response - Updated tribe:', updatedTribe);
+
       setTribes(prev => {
         const updated = prev.map(t => t.id === tribeId ? updatedTribe : t);
         localStorage.setItem('tribe_storage_tribes', JSON.stringify(updated));
+        console.log('Updated tribes state with new membership');
         return updated;
       });
     } catch (error) {
       console.error('Failed to join/leave tribe:', error);
+      console.error('Error details:', {
+        tribeId,
+        errorMessage: error instanceof Error ? error.message : 'Unknown error',
+        errorStack: error instanceof Error ? error.stack : undefined
+      });
       throw error;
     }
   };

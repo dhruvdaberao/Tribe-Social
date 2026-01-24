@@ -92,6 +92,8 @@ const App: React.FC = () => {
 
     // Navigation & Modal State
     const [activeNavItem, setActiveNavItem] = useState<NavItem>('Home');
+    const [prevNavItem, setPrevNavItem] = useState<NavItem>('Home');
+    const [isTransitioning, setIsTransitioning] = useState(false);
     const [viewedUser, setViewedUser] = useState<User | null>(null);
 
     // URL Sync for Tribes
@@ -361,12 +363,17 @@ const App: React.FC = () => {
             return;
         }
 
+        // Start transition
+        setIsTransitioning(true);
+        setPrevNavItem(activeNavItem);
+
         setChatTarget(null);
         if (item === 'Profile') {
             // Logic for profile can be complex (own profile vs others), but if we click "Profile" in nav, usually means own profile.
             // If we are already on own profile, scroll to top.
             if (activeNavItem === 'Profile' && viewedUser?.id === currentUser?.id) {
                 window.scrollTo({ top: 0, behavior: 'smooth' });
+                setIsTransitioning(false);
                 return;
             }
             setViewedUser(currentUser);
@@ -376,10 +383,16 @@ const App: React.FC = () => {
         if (item !== 'TribeDetail') setViewedTribe(null);
         if (item === 'Chuk') {
             handleStartConversation(CHUK_AI_USER);
+            setIsTransitioning(false);
             return;
         }
         setActiveNavItem(item);
         window.scrollTo({ top: 0, behavior: 'smooth' }); // Also scroll to top on new navigation
+
+        // End transition after a brief delay
+        setTimeout(() => {
+            setIsTransitioning(false);
+        }, 100);
     };
 
     const handleViewProfile = (user: User) => {

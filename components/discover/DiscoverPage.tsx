@@ -27,12 +27,41 @@ const DiscoverPage: React.FC<DiscoverPageProps> = (props) => {
     const { posts, users, tribes, currentUser, onToggleFollow, onViewProfile, onLikePost, onCommentPost, onDeletePost, onDeleteComment, onViewTribe, onJoinToggle, onEditTribe, onSharePost, onLoadMore } = props;
     const [searchTerm, setSearchTerm] = useState('');
     const [activeTab, setActiveTab] = useState<'users' | 'posts' | 'tribes'>('users');
+    const [cachedUsers, setCachedUsers] = useState<User[]>([]);
+
+    // Load cached users immediately on mount
+    useEffect(() => {
+        const cached = localStorage.getItem('tribe_storage_discover_users');
+        if (cached) {
+            try {
+                const parsed = JSON.parse(cached);
+                if (Array.isArray(parsed)) {
+                    setCachedUsers(parsed);
+                }
+            } catch (error) {
+                console.error('Failed to parse cached discover users', error);
+            }
+        }
+    }, []);
+
+    // Update cache when users change
+    useEffect(() => {
+        if (users.length > 0) {
+            try {
+                localStorage.setItem('tribe_storage_discover_users', JSON.stringify(users.slice(0, 50)));
+            } catch (error) {
+                console.error('Failed to cache discover users', error);
+            }
+        }
+    }, [users]);
 
     useEffect(() => {
         onLoadMore();
     }, [onLoadMore]);
 
-    const otherUsers = useMemo(() => users.filter(u => u.id !== currentUser.id), [users, currentUser.id]);
+    // Use cached users as fallback if real users haven't loaded yet
+    const displayUsers = users.length > 0 ? users : cachedUsers;
+    const otherUsers = useMemo(() => displayUsers.filter(u => u.id !== currentUser.id), [displayUsers, currentUser.id]);
 
     const filteredResults = useMemo(() => {
         const term = searchTerm.toLowerCase().trim();

@@ -204,19 +204,35 @@ const TribeDetailPage: React.FC<Props> = ({ currentUser }) => {
 
   /* ───────────── JOIN SOCKET ROOM (CRITICAL) ───────────── */
   useEffect(() => {
-    if (!id || !isMember) return;
+    if (!id || !isMember) {
+      console.log('Skipping socket room join:', { id, isMember });
+      return;
+    }
 
     const room = id;
+    console.log('Joining tribe socket room:', room);
     joinRoom(room);
-    return () => leaveRoom(room);
+
+    return () => {
+      console.log('Leaving tribe socket room:', room);
+      leaveRoom(room);
+    };
   }, [id, isMember, joinRoom, leaveRoom]);
 
   /* ───────────── REAL-TIME RECEIVE ───────────── */
   useEffect(() => {
-    if (!socket || !id || !isMember) return;
+    if (!socket || !id || !isMember) {
+      console.log('Skipping message listener setup:', { hasSocket: !!socket, id, isMember });
+      return;
+    }
 
     const handleIncoming = (message: TribeMessage) => {
-      if (message.tribeId !== id) return;
+      console.log('Received tribe message:', message);
+
+      if (message.tribeId !== id) {
+        console.log('Message for different tribe, ignoring:', message.tribeId, 'expected:', id);
+        return;
+      }
 
       setMessages(prev =>
         prev.some(m => m.id === message.id)
@@ -225,8 +241,11 @@ const TribeDetailPage: React.FC<Props> = ({ currentUser }) => {
       );
     };
 
+    console.log('Setting up newTribeMessage listener for tribe:', id);
     socket.on('newTribeMessage', handleIncoming);
+
     return () => {
+      console.log('Removing newTribeMessage listener for tribe:', id);
       socket.off('newTribeMessage', handleIncoming);
     };
   }, [socket, id, isMember]);
@@ -237,7 +256,10 @@ const TribeDetailPage: React.FC<Props> = ({ currentUser }) => {
 
   /* ───────────── SEND MESSAGE ───────────── */
   const handleSend = async (text: string) => {
-    if (!text.trim() || !id || !currentUser) return;
+    if (!text.trim() || !id || !currentUser) {
+      console.warn('Cannot send message:', { hasText: !!text.trim(), id, hasCurrentUser: !!currentUser });
+      return;
+    }
 
     const tempId = `temp-${Date.now()}`;
     const optimistic: TribeMessage = {
@@ -249,13 +271,17 @@ const TribeDetailPage: React.FC<Props> = ({ currentUser }) => {
       timestamp: new Date().toISOString()
     };
 
+    console.log('Sending tribe message:', { text, tribeId: id });
     setMessages(prev => [...prev, optimistic]);
     setIsSending(true);
 
     try {
+      console.log('Calling API to send tribe message');
       const { data } = await api.sendTribeMessage(id, { text });
+      console.log('Message sent successfully, received response:', data);
       setMessages(prev => prev.map(m => (m.id === tempId ? data : m)));
-    } catch {
+    } catch (error) {
+      console.error('Failed to send message:', error);
       setMessages(prev => prev.filter(m => m.id !== tempId));
       alert('Failed to send');
     } finally {

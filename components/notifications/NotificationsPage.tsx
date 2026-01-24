@@ -1,6 +1,6 @@
 
 
-import React, { useEffect, useCallback } from 'react';
+import React, { useEffect, useCallback, useState } from 'react';
 import { Notification, User, Tribe } from '../../types';
 import UserAvatar from '../common/UserAvatar';
 import * as api from '../../api.ts';
@@ -137,6 +137,35 @@ const NotificationItem: React.FC<{ notification: Notification; allTribes: Tribe[
 
 const NotificationsPage: React.FC<NotificationsPageProps> = ({ notifications, allTribes, onViewProfile, onViewMessage, onViewPost, onViewTribe, onViewStory }) => {
   const { setNotifications } = useSocket();
+  const [cachedNotifications, setCachedNotifications] = useState<Notification[]>([]);
+  const [isLoadingFromCache, setIsLoadingFromCache] = useState(true);
+
+  // Load from cache immediately on mount
+  useEffect(() => {
+    const cached = localStorage.getItem('tribe_storage_notifications');
+    if (cached) {
+      try {
+        const parsed = JSON.parse(cached);
+        if (Array.isArray(parsed)) {
+          setCachedNotifications(parsed);
+        }
+      } catch (error) {
+        console.error('Failed to parse cached notifications', error);
+      }
+    }
+    setIsLoadingFromCache(false);
+  }, []);
+
+  // Update cache when notifications change
+  useEffect(() => {
+    if (notifications.length > 0) {
+      try {
+        localStorage.setItem('tribe_storage_notifications', JSON.stringify(notifications.slice(0, 50)));
+      } catch (error) {
+        console.error('Failed to cache notifications', error);
+      }
+    }
+  }, [notifications]);
 
   const markAsRead = useCallback(async () => {
     try {
@@ -154,12 +183,15 @@ const NotificationsPage: React.FC<NotificationsPageProps> = ({ notifications, al
     }
   }, [notifications, markAsRead]);
 
+  // Use cached notifications if available and real notifications haven't loaded yet
+  const displayNotifications = notifications.length > 0 ? notifications : cachedNotifications;
+
   return (
     <div className="max-w-3xl mx-auto">
       <h1 className="text-2xl font-bold text-primary mb-6 font-display">Notifications</h1>
       <div className="space-y-3">
-        {notifications.length > 0 ? (
-          notifications.map(notification => (
+        {displayNotifications.length > 0 ? (
+          displayNotifications.map(notification => (
             <NotificationItem
               key={notification.id}
               notification={notification}
@@ -173,7 +205,7 @@ const NotificationsPage: React.FC<NotificationsPageProps> = ({ notifications, al
           ))
         ) : (
           <div className="bg-surface rounded-2xl border border-border shadow-md text-center text-secondary p-8">
-            <p>You have no notifications yet.</p>
+            <p>{isLoadingFromCache ? 'Loading notifications...' : 'You have no notifications yet.'}</p>
           </div>
         )}
       </div>
