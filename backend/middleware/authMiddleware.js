@@ -10,7 +10,8 @@ const protect = async (req, res, next) => {
       token = req.headers.authorization.split(' ')[1];
 
       // Verify token
-      const getJwtSecret = () => process.env.JWT_SECRET || 'tribe_temp_fallback_secret_2024';
+      // DEBUG: Force hardcoded secret to rule out Env Var corruption
+      const getJwtSecret = () => 'tribe_temp_fallback_secret_2024';
       const decoded = jwt.verify(token, getJwtSecret());
 
       // Get user from the token

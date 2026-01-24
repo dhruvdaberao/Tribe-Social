@@ -253,9 +253,10 @@ const ChatPage: React.FC<ChatPageProps> = ({ currentUser, allUsers, chukUser, in
           });
         }
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Failed to send message", error);
-      toast.error("Message failed to send. Please check connection.");
+      const serverMsg = error.response?.data?.message || "Connection failed";
+      toast.error(`Send Failed: ${serverMsg}`);
       setMessages(prev => prev.filter(m => m.id !== tempMessage.id));
     } finally {
       setIsSending(false);
