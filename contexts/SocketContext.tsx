@@ -68,6 +68,7 @@ interface SocketContextType {
 
   joinRoom: (roomId: string) => void;
   leaveRoom: (roomId: string) => void;
+  setActiveChatPartnerId: (partnerId: string | null) => void;
 }
 
 const SocketContext = createContext<SocketContextType | undefined>(undefined);
@@ -88,6 +89,7 @@ export const SocketProvider: React.FC<{ children: ReactNode }> = ({ children }) 
 
   const [onlineUsers, setOnlineUsers] = useState<string[]>([]);
   const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [activeChatPartnerId, setActiveChatPartnerId] = useState<string | null>(null); // 🔥 New State
 
   const [unreadCounts, setUnreadCounts] = useState({
     messages: {} as Record<string, number>,
@@ -123,17 +125,24 @@ export const SocketProvider: React.FC<{ children: ReactNode }> = ({ children }) 
       });
 
       /* ───────────── DIRECT MESSAGE UNREAD ───────────── */
+      /* ───────────── DIRECT MESSAGE UNREAD ───────────── */
       socket.on('newMessage', message => {
         if (message.senderId === currentUser.id) return;
 
-        setUnreadCounts(prev => ({
-          ...prev,
-          messages: {
-            ...prev.messages,
-            [message.senderId]:
-              (prev.messages[message.senderId] || 0) + 1
-          }
-        }));
+        // Use functional state update or ref to check current active partner
+        setActiveChatPartnerId(current => {
+          if (current === message.senderId) return current; // Don't increment if open
+
+          setUnreadCounts(prev => ({
+            ...prev,
+            messages: {
+              ...prev.messages,
+              [message.senderId]:
+                (prev.messages[message.senderId] || 0) + 1
+            }
+          }));
+          return current;
+        });
       });
 
       /* ───────────── 🔥 TRIBE UNREAD (OPTION B) ───────────── */
@@ -203,7 +212,8 @@ export const SocketProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         clearUnreadMessages,
         clearUnreadTribe,
         joinRoom,
-        leaveRoom
+        leaveRoom,
+        setActiveChatPartnerId
       }}
     >
       {children}

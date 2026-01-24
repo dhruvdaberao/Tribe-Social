@@ -116,14 +116,14 @@ const TribeMessageArea: React.FC<TribeMessageAreaProps> = ({
                 >
                   {!isCurrentUser && showAvatar && (
                     <span className="text-xs text-secondary mb-1">
-                      {sender?.name}
+                      {sender?.name || 'Unknown'}
                     </span>
                   )}
 
                   <div
                     className={`px-4 py-2 rounded-2xl shadow-sm ${isCurrentUser
-                        ? 'bg-accent text-accent-text rounded-tr-none'
-                        : 'bg-surface text-primary rounded-tl-none'
+                      ? 'bg-accent text-accent-text rounded-tr-none'
+                      : 'bg-surface text-primary rounded-tl-none'
                       }`}
                   >
                     {message.imageUrl && (

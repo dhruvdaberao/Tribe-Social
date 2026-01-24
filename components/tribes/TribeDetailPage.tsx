@@ -234,10 +234,19 @@ const TribeDetailPage: React.FC<Props> = ({ currentUser }) => {
         return;
       }
 
+      // Ensure sender is populated
+      const fullMessage = { ...message };
+      if (!fullMessage.sender || !fullMessage.sender.name) {
+        const foundUser = userMap.get(message.senderId);
+        if (foundUser) {
+          fullMessage.sender = foundUser;
+        }
+      }
+
       setMessages(prev =>
         prev.some(m => m.id === message.id)
           ? prev
-          : [...prev, message]
+          : [...prev, fullMessage]
       );
     };
 

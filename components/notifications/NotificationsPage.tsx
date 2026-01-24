@@ -104,8 +104,8 @@ const NotificationItem: React.FC<{ notification: Notification; allTribes: Tribe[
     <div className={`bg-surface rounded-2xl border shadow-sm p-4 transition-colors ${!notification.read ? 'border-accent/50' : 'border-border'}`}>
       <div className="flex items-start space-x-4">
         <div className="relative flex-shrink-0">
-          <div className="w-12 h-12 cursor-pointer" onClick={(e) => { e.stopPropagation(); onViewProfile(sender); }}>
-            <UserAvatar user={sender} />
+          <div className="w-12 h-12 cursor-pointer" onClick={(e) => { e.stopPropagation(); if (sender) onViewProfile(sender); }}>
+            {sender && <UserAvatar user={sender} />}
           </div>
           <div className="absolute -bottom-1 -right-1 bg-surface p-0.5 rounded-full ring-2 ring-surface">
             <div className="w-5 h-5 text-accent">
@@ -116,8 +116,8 @@ const NotificationItem: React.FC<{ notification: Notification; allTribes: Tribe[
 
         <div className="flex-1">
           <p className="text-primary text-sm leading-relaxed">
-            <strong className="hover:underline cursor-pointer" onClick={(e) => { e.stopPropagation(); onViewProfile(sender); }}>{sender.name}</strong>
-            <span className="text-secondary"> @{sender.username} </span>
+            <strong className="hover:underline cursor-pointer" onClick={(e) => { e.stopPropagation(); if (sender) onViewProfile(sender); }}>{sender ? sender.name : 'Unknown User'}</strong>
+            <span className="text-secondary"> @{sender ? sender.username : '...'} </span>
             {renderText()}
           </p>
           <p className="text-xs text-secondary mt-1">{timeAgo(timestamp)}</p>

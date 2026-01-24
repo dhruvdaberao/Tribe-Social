@@ -121,9 +121,17 @@ const App: React.FC = () => {
         const loadCachedData = () => {
             const cachedPosts = loadFromCache('posts');
             const cachedTribes = loadFromCache('tribes');
+            const cachedUsers = loadFromCache('users');
+            const cachedNotifications = loadFromCache('notifications');
+            const cachedMyStories = loadFromCache('myStories');
+            const cachedFollowingStories = loadFromCache('followingStories');
 
             if (cachedPosts && Array.isArray(cachedPosts)) setPosts(cachedPosts);
             if (cachedTribes && Array.isArray(cachedTribes)) setTribes(cachedTribes);
+            if (cachedUsers && Array.isArray(cachedUsers)) setUsers(cachedUsers);
+            if (cachedNotifications && Array.isArray(cachedNotifications)) setNotifications(cachedNotifications);
+            if (cachedMyStories && Array.isArray(cachedMyStories)) setMyStories(cachedMyStories);
+            if (cachedFollowingStories && Array.isArray(cachedFollowingStories)) setFollowingUserStories(cachedFollowingStories);
 
             // Story seen status is small and important, keep in localStorage
             const seen = localStorage.getItem('seenStoryAuthors');
@@ -170,7 +178,10 @@ const App: React.FC = () => {
             // This prevents a slow request (e.g. Feed) from blocking a fast request (e.g. Tribes).
 
             const usersPromise = api.fetchUsers()
-                .then(({ data }) => setUsers(data))
+                .then(({ data }) => {
+                    setUsers(data);
+                    saveToCache('users', data);
+                })
                 .catch(e => console.error("Failed to fetch users", e));
 
             const postsPromise = api.fetchFeedPosts()
@@ -209,15 +220,24 @@ const App: React.FC = () => {
                 .catch(e => console.error("Failed to fetch tribes", e));
 
             const notificationsPromise = api.fetchNotifications()
-                .then(({ data }) => setNotifications(data))
+                .then(({ data }) => {
+                    setNotifications(data);
+                    saveToCache('notifications', data);
+                })
                 .catch(e => console.error("Failed to fetch notifications", e));
 
             const myStoriesPromise = api.fetchMyStories()
-                .then(({ data }) => setMyStories(data))
+                .then(({ data }) => {
+                    setMyStories(data);
+                    saveToCache('myStories', data);
+                })
                 .catch(e => console.error("Failed to fetch my stories", e));
 
             const followingStoriesPromise = api.fetchFollowingStories()
-                .then(({ data }) => setFollowingUserStories(data))
+                .then(({ data }) => {
+                    setFollowingUserStories(data);
+                    saveToCache('followingStories', data);
+                })
                 .catch(e => console.error("Failed to fetch stories", e));
 
             // Wait for all to finish only to set "isFetching" to false and "Data Loaded" to true.
