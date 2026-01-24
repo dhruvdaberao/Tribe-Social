@@ -12,6 +12,7 @@ import { MessageArea } from './MessageArea';
 import NewMessageModal from './NewMessageModal';
 import * as api from '../../api';
 import { useSocket } from '../../contexts/SocketContext';
+import { toast } from '../common/Toast';
 
 interface ChatPageProps {
   currentUser: User;
@@ -254,6 +255,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ currentUser, allUsers, chukUser, in
       }
     } catch (error) {
       console.error("Failed to send message", error);
+      toast.error("Message failed to send. Please check connection.");
       setMessages(prev => prev.filter(m => m.id !== tempMessage.id));
     } finally {
       setIsSending(false);

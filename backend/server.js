@@ -38,8 +38,16 @@ const startServer = async () => {
     const httpServer = createServer(app);
 
     // Dynamic CORS configuration to allow multiple origins easily
+    const allowedOrigins = ['http://localhost:5173', 'http://localhost:3000', 'https://tribe-social.vercel.app'];
     const corsOptions = {
-      origin: true, // Allow request origin (dynamically reflects the Origin header) to support Vercel/Localhost/Anywhere
+      origin: (origin, callback) => {
+        if (!origin || allowedOrigins.includes(origin) || origin.endsWith('.vercel.app')) {
+          callback(null, true);
+        } else {
+          console.warn(`CORS Warning: Origin ${origin} not in whitelist.`);
+          callback(null, true); // Fallback to allow for now
+        }
+      },
       credentials: true,
       methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
       allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin', 'Access-Control-Request-Method', 'Access-Control-Request-Headers']
