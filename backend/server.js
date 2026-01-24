@@ -41,8 +41,8 @@ const startServer = async () => {
     const corsOptions = {
       origin: true, // Allow request origin (dynamically reflects the Origin header) to support Vercel/Localhost/Anywhere
       credentials: true,
-      methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-      allowedHeaders: ['Content-Type', 'Authorization']
+      methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+      allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin', 'Access-Control-Request-Method', 'Access-Control-Request-Headers']
     };
 
     console.log("2. Configuring CORS and Express middleware...");

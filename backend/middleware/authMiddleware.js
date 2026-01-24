@@ -15,6 +15,10 @@ const protect = async (req, res, next) => {
       // Get user from the token
       req.user = await User.findById(decoded.id).select('-password');
 
+      if (!req.user) {
+        throw new Error('User not found in database');
+      }
+
       next();
     } catch (error) {
       console.error(error);
