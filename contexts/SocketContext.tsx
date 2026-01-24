@@ -12,7 +12,7 @@ import { useAuth } from './AuthContext';
 import { Notification, Message, TribeMessage, User } from '../types';
 import { toast } from '../components/common/Toast';
 
-const SOCKET_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+const SOCKET_URL = (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'))
   ? 'http://localhost:5001'
   : 'https://tribe-social-backend.onrender.com';
 

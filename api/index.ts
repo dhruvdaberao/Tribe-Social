@@ -1,9 +1,8 @@
 
 
-
 import axios from 'axios';
 
-const API_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+const API_URL = (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'))
   ? 'http://localhost:5001'
   : 'https://tribe-social-backend.onrender.com';
 
@@ -98,6 +97,22 @@ export const deletePost = (id: string) =>
 
 export const likePost = (id: string) =>
   API.put(`/posts/${id}/like`);
+
+// Stories
+export const createStory = (storyData: any) => API.post('/stories', storyData);
+
+export const fetchMyStories = async () => {
+  const res = await API.get('/stories/my-stories');
+  return { data: normalizeArray(res.data) };
+};
+
+export const fetchFollowingStories = async () => {
+  const res = await API.get('/stories/feed');
+  return { data: normalizeArray(res.data) };
+};
+
+export const deleteStory = (id: string) => API.delete(`/stories/${id}`);
+export const likeStory = (id: string) => API.put(`/stories/${id}/like`);
 
 export const commentOnPost = (id: string, commentData: any) =>
   API.post(`/posts/${id}/comments`, commentData);
