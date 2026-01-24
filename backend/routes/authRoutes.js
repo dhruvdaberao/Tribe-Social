@@ -82,8 +82,10 @@ const router = express.Router();
 // Initialize Resend with API Key from .env
 const resend = new Resend(process.env.RESEND_API_KEY);
 
+const getJwtSecret = () => process.env.JWT_SECRET || 'tribe_temp_fallback_secret_2024';
+
 const generateToken = (id) => {
-  return jwt.sign({ id }, process.env.JWT_SECRET, {
+  return jwt.sign({ id }, getJwtSecret(), {
     expiresIn: '30d',
   });
 };
@@ -134,7 +136,7 @@ router.post('/forgot-password', async (req, res) => {
     const hashedOtp = await bcrypt.hash(otpValue, 10);
 
     // Save to DB (expires in 5 mins)
-    await OTP.deleteMany({ email }); 
+    await OTP.deleteMany({ email });
     await OTP.create({
       email,
       otp: hashedOtp,

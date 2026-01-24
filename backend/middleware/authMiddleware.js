@@ -10,19 +10,21 @@ const protect = async (req, res, next) => {
       token = req.headers.authorization.split(' ')[1];
 
       // Verify token
-      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      const getJwtSecret = () => process.env.JWT_SECRET || 'tribe_temp_fallback_secret_2024';
+      const decoded = jwt.verify(token, getJwtSecret());
 
       // Get user from the token
       req.user = await User.findById(decoded.id).select('-password');
 
       if (!req.user) {
-        throw new Error('User not found in database');
+        console.error("Auth Middleware: User not found for ID:", decoded.id);
+        return res.status(401).json({ message: 'Not authorized, user not found' });
       }
 
       next();
     } catch (error) {
-      console.error(error);
-      res.status(401).json({ message: 'Not authorized, token failed:' });
+      console.error("Auth Middleware Error:", error.message);
+      return res.status(401).json({ message: 'Not authorized, token failed', error: error.message });
     }
   }
 

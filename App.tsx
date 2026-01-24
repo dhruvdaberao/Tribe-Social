@@ -119,7 +119,7 @@ const App: React.FC = () => {
     // Initialize from SessionStorage for instant load
     useEffect(() => {
         // PERMANENT FIX: Force clear storage if version mismatch to remove bad tokens
-        const APP_VERSION = 'v3'; // Increment this to force logout everyone
+        const APP_VERSION = 'v4'; // Increment this to force logout everyone
         const currentVersion = localStorage.getItem('app_version');
 
         if (currentVersion !== APP_VERSION) {
