@@ -22,7 +22,10 @@ API.interceptors.request.use(req => {
 API.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response && error.response.status === 401) {
+    // Prevent infinite loop: Don't redirect if 401 happens on login page or during login request
+    const isLoginRequest = error.config?.url?.includes('/auth/login');
+
+    if (error.response && error.response.status === 401 && !isLoginRequest) {
       console.warn("Session expired or unauthorized. Logging out...");
       localStorage.removeItem('token');
       localStorage.removeItem('currentUser');
