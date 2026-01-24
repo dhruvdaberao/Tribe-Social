@@ -243,7 +243,14 @@ const ChatPage: React.FC<ChatPageProps> = ({ currentUser, allUsers, chukUser, in
       if (activeConversation.id.startsWith('temp-')) {
         const newConversations = await fetchConversations();
         const newConvo = newConversations.find((c: Conversation) => c.participants.some(p => p.id === otherUserId));
-        if (newConvo) setActiveConversation(newConvo);
+        if (newConvo) {
+          // CRITICAL FIX: Update active conversation ID but PRESERVE the current messages state
+          // to prevent the "vanishing message" effect caused by re-fetching/re-setting messages.
+          setActiveConversation({
+            ...newConvo,
+            messages: messages // Keep the optimistic/sent messages
+          });
+        }
       }
     } catch (error) {
       console.error("Failed to send message", error);
