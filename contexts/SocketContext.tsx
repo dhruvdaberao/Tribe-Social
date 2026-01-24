@@ -12,7 +12,7 @@ import { useAuth } from './AuthContext';
 import { Notification, Message, TribeMessage, User } from '../types';
 import { toast } from '../components/common/Toast';
 
-const SOCKET_URL = 'https://tribe-social-backend.onrender.com';
+const SOCKET_URL = 'http://localhost:5001';
 
 /* ───────────── SOCKET EVENT TYPES ───────────── */
 
@@ -29,6 +29,7 @@ interface ServerToClientEvents {
 
   // 🔥 OPTION B: USER-SCOPED UNREAD EVENTS
   tribeUnread: (data: { tribeId: string }) => void;
+  tribeMessageDeleted: (data: { tribeId: string; messageId: string }) => void;
 
   // Other app-wide events
   newPost: (post: any) => void;

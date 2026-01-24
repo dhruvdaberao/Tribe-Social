@@ -75,7 +75,7 @@
 
 import axios from 'axios';
 
-const API_URL = 'https://tribe-social-backend.onrender.com';
+const API_URL = 'http://localhost:5001';
 const API = axios.create({ baseURL: `${API_URL}/api`, timeout: 20000 });
 
 API.interceptors.request.use((req) => {

@@ -65,6 +65,7 @@ export interface Tribe {
   owner: string;
   members: string[];
   createdAt?: string;
+  messages?: TribeMessage[];
 }
 
 /* ===================== TRIBE MESSAGES ===================== */
@@ -87,12 +88,12 @@ export interface Notification {
   recipient: string;
   sender: User;
   type:
-    | 'like'
-    | 'comment'
-    | 'follow'
-    | 'message'
-    | 'story_like'
-    | 'tribe_join';
+  | 'like'
+  | 'comment'
+  | 'follow'
+  | 'message'
+  | 'story_like'
+  | 'tribe_join';
   read: boolean;
   postId?: string;
   storyId?: string;

@@ -275,7 +275,7 @@ const App: React.FC = () => {
     }, [socket, tribes, currentUser]);
 
     useEffect(() => {
-        if (!socket || !viewedTribe) return;
+        if (!socket || !viewedTribe || !viewedTribe.id) return;
         const room = `tribe-${viewedTribe.id}`;
         socket.emit('joinRoom', room);
         return () => { socket.emit('leaveRoom', room); };
@@ -637,7 +637,7 @@ const App: React.FC = () => {
             // Don't rely on global state for messages, just set the tribe object
             // The TribeDetailPage component will fetch its own messages on mount
             setViewedTribe({ ...tribe, messages: [] });
-            setActiveNavItem('TribeDetail');
+            navigate(`/tribes/${tribe.id}`);
         } catch (error) {
             console.error("Failed to set tribe view:", error);
         }
@@ -811,7 +811,6 @@ const App: React.FC = () => {
                 return (
                     <TribesPage
                         currentUser={currentUser!}
-                        isLoadingProp={isFetching}
                     />
                 );
             case 'TribeDetail':
@@ -822,7 +821,6 @@ const App: React.FC = () => {
 
                 return <TribeDetailPage
                     currentUser={currentUser}
-                    tribeId={effectiveTribeId}
                 />;
             case 'Notifications':
                 return <NotificationsPage notifications={notifications} allTribes={tribes} onViewProfile={handleViewProfile} onViewMessage={handleStartConversation} onViewPost={handleViewPost} onViewTribe={handleViewTribe} onViewStory={handleViewUserStories} />;
