@@ -130,6 +130,14 @@ const App: React.FC = () => {
             return;
         }
 
+        // ZOMBIE CHECK: If currentUser exists but token is missing, logout immediately
+        if (localStorage.getItem('currentUser') && !localStorage.getItem('token')) {
+            console.warn("🧟 Zombie Session Detected: User exists but Token missing. Logging out...");
+            localStorage.clear();
+            window.location.href = '/login';
+            return;
+        }
+
         const loadCachedData = () => {
             const cachedPosts = loadFromCache('posts');
             const cachedTribes = loadFromCache('tribes');
