@@ -39,18 +39,7 @@ const startServer = async () => {
 
     // Dynamic CORS configuration to allow multiple origins easily
     const corsOptions = {
-      origin: (origin, callback) => {
-        // Allow requests with no origin (like mobile apps or curl requests)
-        if (!origin) return callback(null, true);
-
-        // Allow localhost and Vercel deployments
-        if (origin.startsWith('http://localhost') || origin.endsWith('.vercel.app')) {
-          return callback(null, true);
-        }
-
-        console.warn(`CORS Warning: Origin ${origin} not explicitly allowed, but allowing for now to prevent blocking.`);
-        callback(null, true);
-      },
+      origin: true, // Allow request origin (dynamically reflects the Origin header) to support Vercel/Localhost/Anywhere
       credentials: true,
       methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
       allowedHeaders: ['Content-Type', 'Authorization']
