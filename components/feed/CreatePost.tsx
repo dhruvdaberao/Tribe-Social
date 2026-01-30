@@ -228,6 +228,7 @@ const CreatePost: React.FC<CreatePostProps> = ({ currentUser, allUsers, myStorie
   const [mentionQuery, setMentionQuery] = useState('');
   const [showMentions, setShowMentions] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
 
   const hasStory = myStories.length > 0;
 
