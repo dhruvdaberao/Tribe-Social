@@ -282,8 +282,8 @@ const CreatePost: React.FC<CreatePostProps> = ({ currentUser, allUsers, myStorie
           video.preload = 'metadata';
           video.onloadedmetadata = function () {
             window.URL.revokeObjectURL(video.src);
-            if (video.duration > 32) { // 32s buffer for 30s limit
-              toast.error("Video duration must be 30 seconds or less.");
+            if (video.duration > 122) { // 122s buffer for 120s (2 minute) limit
+              toast.error("Video duration must be 2 minutes or less.");
               setImagePreview(null);
               setMediaType('image');
               if (fileInputRef.current) fileInputRef.current.value = "";

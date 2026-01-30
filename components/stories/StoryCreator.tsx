@@ -231,8 +231,8 @@ const StoryCreator: React.FC<StoryCreatorProps> = ({ onClose, onCreate }) => {
                     video.preload = 'metadata';
                     video.onloadedmetadata = function () {
                         window.URL.revokeObjectURL(video.src);
-                        if (video.duration > 32) {
-                            toast.error("Video duration must be 30 seconds or less.");
+                        if (video.duration > 122) {
+                            toast.error("Video duration must be 2 minutes or less.");
                             setImage(null);
                             e.target.value = '';
                         } else {

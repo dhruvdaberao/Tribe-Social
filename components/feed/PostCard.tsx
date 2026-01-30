@@ -682,6 +682,7 @@ import { Post, User, Tribe, Comment } from '../../types';
 import UserAvatar from '../common/UserAvatar';
 import ShareModal from '../common/ShareModal';
 import ShareButton from '../common/ShareButton';
+import VideoPlayer from '../common/VideoPlayer';
 
 const timeAgo = (dateString: string) => {
   if (!dateString) return '';
@@ -877,18 +878,11 @@ const PostCard: React.FC<PostCardProps> = (props) => {
             )}
 
             {post.mediaType === 'video' ? (
-              <div className="relative w-full flex justify-center bg-black">
-                <video
-                  src={post.imageUrl}
-                  className={`w-full h-auto max-h-[600px] object-contain transition-opacity duration-300 ${isImageLoading ? 'opacity-0' : 'opacity-100'}`}
-                  onLoadStart={() => setIsImageLoading(true)}
-                  onLoadedData={() => setIsImageLoading(false)}
-                  onError={() => { setIsImageLoading(false); setImageError(true); }}
-                  controls
-                  playsInline
-                  preload="metadata"
-                />
-              </div>
+              <VideoPlayer
+                src={post.imageUrl}
+                className={`transition-opacity duration-300 ${isImageLoading ? 'opacity-0' : 'opacity-100'}`}
+                onPlay={() => setIsImageLoading(false)}
+              />
             ) : (
               <img
                 src={post.imageUrl}
