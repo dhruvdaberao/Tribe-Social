@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import styled from 'styled-components';
-import { X, Trash2 } from 'lucide-react'; // Import Trash2
+import { X, Trash2, Users } from 'lucide-react'; // Import Trash2
 import * as api from '../../api';
 import { Tribe } from '../../types';
 
@@ -159,12 +159,22 @@ const EditTribeModal: React.FC<EditTribeModalProps> = ({ tribe, onClose, onSucce
               style={{ position: 'relative', width: 100, height: 100, borderRadius: '50%', cursor: 'pointer' }}
               onClick={() => fileInputRef.current?.click()}
             >
-              <img
-                src={avatarUrl || '/tribe-placeholder.svg'}
-                alt="Tribe Avatar"
-                style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover', border: '3px solid #333' }}
-                onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
-              />
+              {avatarUrl ? (
+                <img
+                  src={avatarUrl}
+                  alt="Tribe Avatar"
+                  style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover', border: '3px solid #333' }}
+                />
+              ) : (
+                <div style={{
+                  width: '100%', height: '100%', borderRadius: '50%',
+                  background: '#2A2320', border: '3px solid #333',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center'
+                }}>
+                  <Users size={40} color="#8E7C74" />
+                </div>
+              )}
+
               <div style={{
                 position: 'absolute', bottom: 0, right: 0,
                 background: '#d4a373', borderRadius: '50%',

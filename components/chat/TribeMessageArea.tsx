@@ -139,6 +139,40 @@ const TribeMessageArea: React.FC<TribeMessageAreaProps> = ({
                     <p className="text-sm whitespace-pre-wrap break-words">
                       {message.text}
                     </p>
+
+                    {/* 🔥 Feature: Detect Links/Shared Posts */}
+                    {(() => {
+                      const urlMatch = message.text.match(/(https?:\/\/[^\s]+)/g);
+                      const isSharedPost = message.text.startsWith('[Shared Post');
+
+                      if (urlMatch || isSharedPost) {
+                        const targetUrl = urlMatch ? urlMatch[0] : null;
+                        return (
+                          <div className={`mt-2 pt-2 border-t ${isCurrentUser ? 'border-accent-text/20' : 'border-border'}`}>
+                            {isSharedPost && (
+                              <span className="text-[10px] uppercase tracking-wider opacity-70 block mb-1">
+                                Shared Content
+                              </span>
+                            )}
+                            {targetUrl && (
+                              <a
+                                href={targetUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className={`
+                                    inline-flex items-center gap-1 text-xs font-bold underline 
+                                    ${isCurrentUser ? 'text-accent-text' : 'text-accent'}
+                                  `}
+                              >
+                                Visit Link &rarr;
+                              </a>
+                            )}
+                          </div>
+                        );
+                      }
+                      return null;
+                    })()}
+
                   </div>
 
                   <span className="text-[10px] opacity-60 mt-1 ml-1">

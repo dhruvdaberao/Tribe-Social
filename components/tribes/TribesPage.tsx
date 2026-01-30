@@ -44,6 +44,7 @@ const Grid = styled.div`
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
   gap: 24px;
+  justify-content: center; /* 🔥 Fix: Center items if they don't fill row */
 `;
 
 const LoadingMessage = styled.div`
