@@ -112,6 +112,11 @@ export const fetchFeedPosts = async () => {
   return { data: normalizeArray(res.data) };
 };
 
+export const fetchUserPosts = async (userId: string) => {
+  const res = await API.get(`/posts/user/${userId}`);
+  return { data: normalizeArray(res.data) };
+};
+
 export const createPost = (newPost: any) =>
   API.post('/posts', newPost);
 
