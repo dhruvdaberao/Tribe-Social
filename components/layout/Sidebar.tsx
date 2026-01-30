@@ -203,8 +203,8 @@ const Sidebar: React.FC<SidebarProps> = ({ activeItem, onSelectItem, currentUser
       key={item.name}
       onClick={() => onSelectItem(item.name)}
       className={`relative px-4 py-2 rounded-lg text-sm font-semibold transition-colors ${activeItem === item.name
-        ? 'text-primary bg-surface shadow-sm'
-        : 'text-accent-text/80 hover:bg-black/10'
+        ? 'text-primary bg-primary/5 shadow-sm'
+        : 'text-secondary hover:text-primary hover:bg-primary/5'
         }`}
     >
       {item.name}
@@ -229,15 +229,15 @@ const Sidebar: React.FC<SidebarProps> = ({ activeItem, onSelectItem, currentUser
   return (
     <>
       {/* Top Header */}
-      <header className="fixed top-0 left-0 right-0 h-16 bg-accent shadow-md z-50 flex items-center justify-between px-4 md:px-6">
+      <header className="fixed top-0 left-0 right-0 h-16 bg-surface border-b border-border/50 shadow-sm z-50 flex items-center justify-between px-4 md:px-6 transition-colors duration-200">
         {/* Left Side: Logo & Desktop Nav */}
         <div className="flex items-center space-x-6">
           <div
-            className="flex items-center space-x-3 cursor-pointer"
+            className="flex items-center gap-[10px] cursor-pointer"
             onClick={() => onSelectItem('Home')}
           >
-            <img src="/tribe.png" alt="Tribe Logo" className="w-10 h-10 flex-shrink-0" />
-            <span className="text-2xl font-bold font-display text-accent-text sm:inline">Tribe</span>
+            <img src={theme === 'light' ? '/Light1.png' : '/dark1.png'} alt="Tribe Logo" className="h-[20px] w-auto object-contain flex-shrink-0" />
+            <span className="text-[20px] font-bold tracking-tight text-primary hidden sm:inline">Tribe</span>
           </div>
           <nav className="hidden md:flex items-center space-x-2">
             {mainNavItems.map(item => (
@@ -250,23 +250,23 @@ const Sidebar: React.FC<SidebarProps> = ({ activeItem, onSelectItem, currentUser
         <div className="flex items-center space-x-2">
           <button
             onClick={toggleTheme}
-            className="text-accent-text/80 hover:text-accent-text hover:bg-black/10 rounded-full p-2 flex-shrink-0"
+            className="text-secondary hover:text-primary hover:bg-primary/5 rounded-full p-2 flex-shrink-0 transition-colors"
             aria-label="Toggle theme"
           >
             {theme === 'light' ? <MoonIcon /> : <SunIcon />}
           </button>
           <button
             onClick={() => onSelectItem('Chuk')}
-            className="text-accent-text/80 hover:text-accent-text hover:bg-black/10 rounded-full p-2 flex-shrink-0"
+            className="text-secondary hover:text-primary hover:bg-primary/5 rounded-full p-2 flex-shrink-0 transition-colors"
             aria-label="Open Chuk AI Assistant"
           >
             <ChukIcon />
           </button>
-          <button onClick={() => onSelectItem('Profile')} aria-label="View Profile" className="flex items-center space-x-3 rounded-full hover:bg-black/10 p-1 transition-colors">
-            <UserAvatar user={currentUser} className="w-10 h-10 flex-shrink-0" />
+          <button onClick={() => onSelectItem('Profile')} aria-label="View Profile" className="flex items-center space-x-3 rounded-full hover:bg-primary/5 p-1 transition-colors">
+            <UserAvatar user={currentUser} className="w-9 h-9 flex-shrink-0" />
             <div className="hidden lg:block text-left">
-              <p className="font-semibold text-accent-text text-sm leading-tight truncate">{currentUser?.name}</p>
-              <p className="text-accent-text/80 text-xs leading-tight truncate">@{currentUser?.username}</p>
+              <p className="font-bold text-primary text-sm leading-tight truncate">{currentUser?.name}</p>
+              <p className="text-secondary text-xs leading-tight truncate">@{currentUser?.username}</p>
             </div>
           </button>
         </div>

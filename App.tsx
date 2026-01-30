@@ -846,7 +846,7 @@ const App: React.FC = () => {
     if (!currentUser) return <LoginPage />;
 
     if (!isDataLoaded && isFetching && posts.length === 0) {
-        return <div className="min-h-screen bg-background flex flex-col items-center justify-center"><img src="/duckload.gif" alt="Loading..." className="w-24 h-24" /><h1 className="mt-4 text-xl font-semibold text-primary">Waking up the server...</h1></div>;
+        return <div className="min-h-screen bg-background flex flex-col items-center justify-center"><img src="/duckload.gif" alt="Loading..." className="w-24 h-24" /><h1 className="mt-4 text-xl font-semibold text-primary">Loading...</h1></div>;
     }
 
     const isFullHeightPage = ['Messages', 'TribeDetail', 'Settings'].includes(activeNavItem);
