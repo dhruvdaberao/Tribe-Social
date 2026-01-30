@@ -137,8 +137,9 @@ const TribeDetailPage: React.FC<Props> = ({ currentUser, tribeId: propTribeId })
       console.error('Tribe ID is undefined');
       setError('Invalid tribe link');
       setIsLoading(false);
-      setTimeout(() => navigate('/tribes'), 2000);
-      return;
+      // Give user a chance to read the error before redirecting
+      const timer = setTimeout(() => navigate('/tribes'), 3000);
+      return () => clearTimeout(timer);
     }
 
     const loadTribe = async () => {

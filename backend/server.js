@@ -11,6 +11,7 @@ import dotenv from 'dotenv';
 import cors from 'cors';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
+import path from 'path';
 import connectDB from './config/db.js';
 
 import authRoutes from './routes/authRoutes.js';
@@ -37,6 +38,7 @@ const startServer = async () => {
     const app = express();
     const httpServer = createServer(app);
 
+    // Dynamic CORS configuration to allow multiple origins easily
     // Dynamic CORS configuration to allow multiple origins easily
     const allowedOrigins = [
       'http://localhost:5173',
@@ -74,6 +76,11 @@ const startServer = async () => {
       }
       next();
     });
+
+    // 🔥 FIX: Serve Uploads Folder (Profile Pictures, Banners, etc.)
+    const uploadsPath = path.join(process.cwd(), 'uploads');
+    app.use('/uploads', express.static(uploadsPath));
+    console.log(`📂 Serving static files from: ${uploadsPath}`);
 
     console.log("✅ Middleware configured.");
 

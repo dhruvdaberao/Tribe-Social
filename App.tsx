@@ -854,8 +854,11 @@ const App: React.FC = () => {
                     />
                 );
             case 'TribeDetail':
-                const urlTribeId = location.pathname.split('/').pop();
-                const effectiveTribeId = urlTribeId || viewedTribe?.id;
+                // 🔥 FIX: Robust ID extraction
+                const pathParts = location.pathname.split('/');
+                const urlTribeId = pathParts[pathParts.length - 1] || pathParts[pathParts.length - 2]; // Handle trailing slash
+                // Ensure it's not "tribes" or empty
+                const effectiveTribeId = (urlTribeId && urlTribeId !== 'tribes') ? urlTribeId : viewedTribe?.id;
 
                 if (!effectiveTribeId) return <div className="text-center p-8">Tribe not found.</div>;
 
