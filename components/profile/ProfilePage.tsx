@@ -451,7 +451,13 @@ export const ProfilePage: React.FC<ProfilePageProps> = (props) => {
                 </div>
             ) : (
                 <div className="bg-surface p-8 text-center rounded-2xl border border-border">
-                    <p className="text-secondary">No posts yet.</p>
+                    <p className="text-secondary">
+                        {!isOwnProfile && !isFollowing ? (
+                            <>Follow <span className="font-bold text-primary">{profileUser.name.split(' ')[0]}</span> to see their posts</>
+                        ) : (
+                            "No posts yet."
+                        )}
+                    </p>
                 </div>
             )}
 
