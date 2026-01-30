@@ -82,8 +82,8 @@ const router = express.Router();
 // Initialize Resend with API Key from .env
 const resend = new Resend(process.env.RESEND_API_KEY);
 
-// DEBUG: Force hardcoded secret to rule out Env Var corruption
-const getJwtSecret = () => 'tribe_temp_fallback_secret_2024';
+// Use Env Var or Fallback
+const getJwtSecret = () => process.env.JWT_SECRET || 'tribe_temp_fallback_secret_2024';
 
 const generateToken = (id) => {
   return jwt.sign({ id }, getJwtSecret(), {

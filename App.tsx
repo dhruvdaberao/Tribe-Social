@@ -42,32 +42,8 @@ const CHUK_AI_USER: User = {
     blockedUsers: [],
 };
 
-// Use LocalStorage for persistence across reloads (Phase 1 & 2 requirement)
-const STORAGE_KEY_PREFIX = 'tribe_storage_';
-
-const saveToCache = (key: string, data: any) => {
-    try {
-        localStorage.setItem(STORAGE_KEY_PREFIX + key, JSON.stringify(data));
-    } catch (e) {
-        console.warn('Local storage full, clearing old cache to make space.');
-        try {
-            // specific strategy: clear only our app's keys if possible, but for now simplistic approach
-            localStorage.clear();
-            localStorage.setItem(STORAGE_KEY_PREFIX + key, JSON.stringify(data));
-        } catch (retryError) {
-            console.error('Failed to save to local storage even after clear', retryError);
-        }
-    }
-};
-
-const loadFromCache = (key: string) => {
-    try {
-        const item = localStorage.getItem(STORAGE_KEY_PREFIX + key);
-        return item ? JSON.parse(item) : null;
-    } catch (e) {
-        return null; // Fallback if parse fails
-    }
-}
+// Use LocalStorage Only for Preferences
+import { safeSet, safeGet } from './utils/storage';
 
 const App: React.FC = () => {
     const { currentUser, setCurrentUser, logout, isLoading: isAuthLoading } = useAuth();
@@ -138,26 +114,8 @@ const App: React.FC = () => {
             return;
         }
 
-        const loadCachedData = () => {
-            const cachedPosts = loadFromCache('posts');
-            const cachedTribes = loadFromCache('tribes');
-            const cachedUsers = loadFromCache('users');
-            const cachedNotifications = loadFromCache('notifications');
-            const cachedMyStories = loadFromCache('myStories');
-            const cachedFollowingStories = loadFromCache('followingStories');
-
-            if (cachedPosts && Array.isArray(cachedPosts)) setPosts(cachedPosts);
-            if (cachedTribes && Array.isArray(cachedTribes)) setTribes(cachedTribes);
-            if (cachedUsers && Array.isArray(cachedUsers)) setUsers(cachedUsers);
-            if (cachedNotifications && Array.isArray(cachedNotifications)) setNotifications(cachedNotifications);
-            if (cachedMyStories && Array.isArray(cachedMyStories)) setMyStories(cachedMyStories);
-            if (cachedFollowingStories && Array.isArray(cachedFollowingStories)) setFollowingUserStories(cachedFollowingStories);
-
-            // Story seen status is small and important, keep in localStorage
-            const seen = localStorage.getItem('seenStoryAuthors');
-            if (seen) setSeenStoryAuthors(new Set(JSON.parse(seen)));
-        };
-        loadCachedData();
+        // REMOVED CACHING LOGIC to prevent storage quota errors.
+        // Data is now fetched fresh on every load.
     }, []);
 
     const userMap = useMemo(() => {
@@ -200,7 +158,8 @@ const App: React.FC = () => {
             const usersPromise = api.fetchUsers()
                 .then(({ data }) => {
                     setUsers(data);
-                    saveToCache('users', data);
+                    setUsers(data);
+                    // saveToCache('users', data); // Removed
                 })
                 .catch(e => console.error("Failed to fetch users", e));
 
@@ -211,7 +170,8 @@ const App: React.FC = () => {
                     // For now, simple population. 'users' state update triggers re-render anyway.
                     const populatedPosts = data.map((post: any) => populatePost(post, new Map())).filter(Boolean);
                     setPosts(populatedPosts as Post[]);
-                    saveToCache('posts', populatedPosts.slice(0, 50));
+                    setPosts(populatedPosts as Post[]);
+                    // saveToCache('posts', populatedPosts.slice(0, 50)); // Removed
                 })
                 .catch(e => console.error("Failed to fetch posts", e));
 
@@ -224,7 +184,8 @@ const App: React.FC = () => {
                             api.fetchTribes().then(({ data: retryData }) => {
                                 const populated = retryData.map((tribe: any) => ({ ...tribe, messages: [] }));
                                 setTribes(populated);
-                                saveToCache('tribes', populated);
+                                setTribes(populated);
+                                // saveToCache('tribes', populated); // Removed
                                 if (retryData.length > 0) console.log("✅ Retry successful: Tribes loaded.");
                             }).catch(e => console.error("❌ Tribe retry failed", e));
                         }, 1500);
@@ -233,7 +194,8 @@ const App: React.FC = () => {
                     } else {
                         const populatedTribes = data.map((tribe: any) => ({ ...tribe, messages: [] }));
                         setTribes(populatedTribes);
-                        saveToCache('tribes', populatedTribes);
+                        setTribes(populatedTribes);
+                        // saveToCache('tribes', populatedTribes); // Removed
                         return populatedTribes;
                     }
                 })
@@ -242,21 +204,24 @@ const App: React.FC = () => {
             const notificationsPromise = api.fetchNotifications()
                 .then(({ data }) => {
                     setNotifications(data);
-                    saveToCache('notifications', data);
+                    setNotifications(data);
+                    // saveToCache('notifications', data); // Removed
                 })
                 .catch(e => console.error("Failed to fetch notifications", e));
 
             const myStoriesPromise = api.fetchMyStories()
                 .then(({ data }) => {
                     setMyStories(data);
-                    saveToCache('myStories', data);
+                    setMyStories(data);
+                    // saveToCache('myStories', data); // Removed
                 })
                 .catch(e => console.error("Failed to fetch my stories", e));
 
             const followingStoriesPromise = api.fetchFollowingStories()
                 .then(({ data }) => {
                     setFollowingUserStories(data);
-                    saveToCache('followingStories', data);
+                    setFollowingUserStories(data);
+                    // saveToCache('followingStories', data); // Removed
                 })
                 .catch(e => console.error("Failed to fetch stories", e));
 

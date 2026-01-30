@@ -162,8 +162,17 @@ const TribeMessageArea: React.FC<TribeMessageAreaProps> = ({
       </div>
 
       {/* ───────────── INPUT BAR (MOBILE SAFE) ───────────── */}
-      {/* ───────────── INPUT BAR (MATCHING DM STYLE) ───────────── */}
-      <div className="p-4 bg-transparent flex-shrink-0 z-20">
+      {/* ───────────── INPUT BAR (MOBILE OPTIMIZED) ───────────── */}
+      <div
+        className="
+          p-4 
+          bg-background 
+          border-t border-border
+          flex-shrink-0 
+          z-20
+          sticky bottom-0
+        "
+      >
         <form
           onSubmit={handleSend}
           className="flex items-center space-x-3"
@@ -177,8 +186,8 @@ const TribeMessageArea: React.FC<TribeMessageAreaProps> = ({
               flex-1
               bg-surface
               border border-border
-              rounded-lg
-              px-4 py-2.5
+              rounded-2xl
+              px-4 py-3
               focus:outline-none focus:ring-2 focus:ring-accent
               text-primary
               min-w-0
@@ -192,21 +201,22 @@ const TribeMessageArea: React.FC<TribeMessageAreaProps> = ({
             type="submit"
             disabled={!inputText.trim() || isSending}
             className="
-              w-12 h-11
+              w-12 h-12
               flex-shrink-0
-              rounded-lg
+              rounded-full
               bg-accent
               text-accent-text
               flex items-center justify-center
               hover:bg-accent-hover
               transition-colors
               disabled:opacity-50
+              shadow-md
             "
           >
             {isSending ? (
               <div className="w-5 h-5 border-2 border-accent-text border-t-transparent rounded-full animate-spin" />
             ) : (
-              <Send size={18} />
+              <Send size={20} />
             )}
           </button>
         </form>

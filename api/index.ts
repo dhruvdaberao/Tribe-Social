@@ -31,9 +31,10 @@ API.interceptors.response.use(
       console.warn("Session expired or unauthorized. Logging out...");
       localStorage.removeItem('token');
       localStorage.removeItem('currentUser');
-      if (window.location.pathname !== '/' && window.location.pathname !== '/login') {
-        window.location.href = '/';
-      }
+      // Prevent aggressive redirects. Let the UI handle the "logged out" state naturally (e.g., via App.tsx)
+      // if (window.location.pathname !== '/' && window.location.pathname !== '/login') {
+      //   window.location.href = '/';
+      // }
     }
     return Promise.reject(error);
   }
