@@ -98,9 +98,10 @@ const App: React.FC = () => {
     // Listen for custom "open-story" event from Chat
     useEffect(() => {
         const handleOpenStory = (e: any) => {
-            const userId = e.detail;
-            if (userId) {
-                handleViewUserStories(userId);
+            const payload = e.detail;
+            if (payload) {
+                const [userId, storyId] = payload.split(':');
+                handleViewUserStories(userId, undefined, storyId);
             }
         };
 
@@ -133,7 +134,7 @@ const App: React.FC = () => {
     const [editingTribe, setEditingTribe] = useState<Tribe | null>(null);
     const [chatTarget, setChatTarget] = useState<User | null>(null);
     const [isCreatingStory, setIsCreatingStory] = useState(false);
-    const [viewingUserStories, setViewingUserStories] = useState<{ user: User, stories: Story[] } | null>(null);
+    const [viewingUserStories, setViewingUserStories] = useState<{ user: User, stories: Story[], initialStoryId?: string } | null>(null);
 
     // Initialize from SessionStorage for instant load
     useEffect(() => {
@@ -549,7 +550,7 @@ const App: React.FC = () => {
         // Clean message format for shared content
         const messageText = post.content.startsWith('Shared Story')
             ? post.content // StoryViewer already formats it
-            : `Shared a post\n/post/${post.id}\n${post.content}`; // Post ID enables the "View Post" CTA
+            : `Shared Post\n/post/${post.id}\n${post.content}`; // Post ID enables the "View Post" CTA
 
         const messageData = {
             text: messageText,
@@ -807,13 +808,13 @@ const App: React.FC = () => {
         }
     };
 
-    const handleViewUserStories = (userId: string, stories?: Story[]) => {
+    const handleViewUserStories = (userId: string, stories?: Story[], initialStoryId?: string) => {
         let userStoryData;
         if (userId === currentUser?.id) {
-            userStoryData = { user: currentUser, stories: stories || myStories };
+            userStoryData = { user: currentUser, stories: stories || myStories, initialStoryId };
         } else {
             const foundUserStories = followingUserStories.find(us => us.user.id === userId);
-            if (foundUserStories) userStoryData = foundUserStories;
+            if (foundUserStories) userStoryData = { ...foundUserStories, initialStoryId };
         }
 
         if (userStoryData && userStoryData.stories.length > 0) {
@@ -934,7 +935,7 @@ const App: React.FC = () => {
                 }}
             />}
             {isCreatingStory && <StoryCreator onClose={() => setIsCreatingStory(false)} onCreate={handleCreateStory} />}
-            {viewingUserStories && <StoryViewer userStories={viewingUserStories} currentUser={currentUser} allUsers={visibleUsers} allTribes={tribes} onClose={() => setViewingUserStories(null)} onDelete={handleDeleteStory} onLike={handleLikeStory} onSharePost={handleSharePost} />}
+            {viewingUserStories && <StoryViewer userStories={viewingUserStories} currentUser={currentUser} allUsers={visibleUsers} allTribes={tribes} onClose={() => setViewingUserStories(null)} onDelete={handleDeleteStory} onLike={handleLikeStory} onSharePost={handleSharePost} initialStoryId={viewingUserStories.initialStoryId} />}
             {viewingPost && <PostViewModal post={viewingPost} currentUser={currentUser} allUsers={visibleUsers} allTribes={tribes} onLike={handleLikePost} onComment={handleCommentPost} onDeletePost={handleDeletePost} onDeleteComment={handleDeleteComment} onViewProfile={handleViewProfile} onSharePost={handleSharePost} onClose={() => setViewingPost(null)} />}
         </div>
     );

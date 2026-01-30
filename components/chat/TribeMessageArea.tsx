@@ -130,7 +130,7 @@ const TribeMessageArea: React.FC<TribeMessageAreaProps> = ({
                       }`}
                   >
                     {/* SHARED STORY CARD */}
-                    {(message.text.includes('Shared a story') || message.text.includes('[Shared Story]')) ? (
+                    {(message.text.includes('Shared a story') || message.text.includes('Shared Story') || message.text.includes('[Shared Story]')) ? (
                       <div className="flex flex-col min-w-[200px]">
                         <span className="text-[10px] font-bold opacity-60 uppercase mb-2 tracking-wider">Shared Story</span>
                         {message.imageUrl && (
@@ -140,7 +140,7 @@ const TribeMessageArea: React.FC<TribeMessageAreaProps> = ({
                         )}
                         <button
                           onClick={() => {
-                            const match = message.text.match(/\/story\/([a-zA-Z0-9]+)/);
+                            const match = message.text.match(/\/story\/([a-zA-Z0-9-:]+)/);
                             if (match) window.dispatchEvent(new CustomEvent('open-story', { detail: match[1] }));
                           }}
                           className={`mt-1 text-xs font-bold py-1.5 px-4 rounded-full self-start transition-opacity hover:opacity-90 shadow-sm ${isCurrentUser ? 'bg-surface text-primary' : 'bg-primary text-surface'}`}
@@ -148,7 +148,7 @@ const TribeMessageArea: React.FC<TribeMessageAreaProps> = ({
                           View Story
                         </button>
                       </div>
-                    ) : (message.text.includes('Shared a post') || message.text.includes('[Shared Post]')) ? (
+                    ) : (message.text.includes('Shared a post') || message.text.includes('Shared Post') || message.text.includes('[Shared Post]')) ? (
                       <div className="flex flex-col min-w-[200px]">
                         <span className="text-[10px] font-bold opacity-60 uppercase mb-2 tracking-wider">Shared Post</span>
                         {message.imageUrl && (
@@ -158,7 +158,7 @@ const TribeMessageArea: React.FC<TribeMessageAreaProps> = ({
                         )}
                         {/* Snippet for post text, cleaned of metadata */}
                         <p className="text-sm opacity-90 line-clamp-2 mb-3 italic">
-                          "{message.text.split('\n').filter(line => !line.includes('/post/') && !line.includes('Shared a post')).join(' ').trim()}"
+                          "{message.text.split('\n').filter(line => !line.includes('/post/') && !line.includes('Shared a post') && !line.includes('Shared Post')).join(' ').trim()}"
                         </p>
                         <button
                           onClick={() => {
@@ -240,7 +240,7 @@ const TribeMessageArea: React.FC<TribeMessageAreaProps> = ({
               flex-1
               bg-surface
               border border-border
-              rounded-lg
+              rounded-full
               px-4 py-2.5
               focus:outline-none focus:ring-2 focus:ring-accent
               text-primary
@@ -255,9 +255,9 @@ const TribeMessageArea: React.FC<TribeMessageAreaProps> = ({
             type="submit"
             disabled={!inputText.trim() || isSending}
             className="
-              w-12 h-11
+              w-11 h-11
               flex-shrink-0
-              rounded-lg
+              rounded-full
               bg-accent
               text-accent-text
               flex items-center justify-center

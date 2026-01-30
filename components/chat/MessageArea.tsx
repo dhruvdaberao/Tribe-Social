@@ -328,7 +328,7 @@ export const MessageArea: React.FC<MessageAreaProps> = ({ conversation, messages
                     <div className={`px-4 py-2.5 ${isCurrentUser ? 'bg-accent text-accent-text rounded-2xl rounded-tr-none' : 'bg-surface text-primary shadow-sm rounded-2xl rounded-tl-none'}`}>
 
                       {/* SHARED CONTENT LOGIC */}
-                      {(message.text.includes('Shared a story') || message.text.includes('[Shared Story]')) ? (
+                      {(message.text.includes('Shared a story') || message.text.includes('Shared Story') || message.text.includes('[Shared Story]')) ? (
                         <div className="flex flex-col min-w-[200px]">
                           <span className="text-[10px] font-bold opacity-60 uppercase mb-2 tracking-wider">Shared Story</span>
                           {message.imageUrl && (
@@ -338,7 +338,7 @@ export const MessageArea: React.FC<MessageAreaProps> = ({ conversation, messages
                           )}
                           <button
                             onClick={() => {
-                              const match = message.text.match(/\/story\/([a-zA-Z0-9]+)/);
+                              const match = message.text.match(/\/story\/([a-zA-Z0-9-:]+)/);
                               if (match) window.dispatchEvent(new CustomEvent('open-story', { detail: match[1] }));
                             }}
                             className={`mt-1 text-xs font-bold py-1.5 px-4 rounded-full self-start transition-opacity hover:opacity-90 shadow-sm ${isCurrentUser ? 'bg-surface text-primary' : 'bg-primary text-surface'}`}
@@ -346,7 +346,7 @@ export const MessageArea: React.FC<MessageAreaProps> = ({ conversation, messages
                             View Story
                           </button>
                         </div>
-                      ) : (message.text.includes('Shared a post') || message.text.includes('[Shared Post]')) ? (
+                      ) : (message.text.includes('Shared a post') || message.text.includes('Shared Post') || message.text.includes('[Shared Post]')) ? (
                         <div className="flex flex-col min-w-[200px]">
                           <span className="text-[10px] font-bold opacity-60 uppercase mb-2 tracking-wider">Shared Post</span>
                           {message.imageUrl && (
@@ -355,7 +355,7 @@ export const MessageArea: React.FC<MessageAreaProps> = ({ conversation, messages
                             </div>
                           )}
                           <p className="text-sm opacity-90 line-clamp-2 mb-3 italic">
-                            "{message.text.split('\n').filter(line => !line.includes('/post/') && !line.includes('Shared a post')).join(' ').trim()}"
+                            "{message.text.split('\n').filter(line => !line.includes('/post/') && !line.includes('Shared a post') && !line.includes('Shared Post')).join(' ').trim()}"
                           </p>
                           <button
                             onClick={() => {

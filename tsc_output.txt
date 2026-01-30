@@ -1,0 +1,6 @@
+components/auth/LoginPage.tsx(295,279): error TS2367: This comparison appears to be unintentional because the types '"login" | "register" | "forgot"' and '"otp"' have no overlap.
+components/tribes/EditTribeModal.tsx(134,52): error TS2339: Property 'img' does not exist on type 'Tribe'.
+components/tribes/EditTribeModal.tsx(173,17): error TS2345: Argument of type '{ data: any; }' is not assignable to parameter of type 'Tribe'.
+  Type '{ data: any; }' is missing the following properties from type 'Tribe': id, name, owner, members
+contexts/ThemeContext.tsx(46,28): error TS2322: Type '{ background: string; cardBackground: string; text: string; textSecondary: string; primary: string; secondary: string; border: string; hover: string; accentHover: string; accentText: string; }' is not assignable to type 'ThemeArgument'.
+  Type '{ background: string; cardBackground: string; text: string; textSecondary: string; primary: string; secondary: string; border: string; hover: string; accentHover: string; accentText: string; }' is missing the following properties from type 'DefaultTheme': inputBackground, borderColor, hoverBackground

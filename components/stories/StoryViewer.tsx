@@ -177,16 +177,24 @@ interface StoryViewerProps {
   onDelete: (storyId: string) => void;
   onLike: (storyId: string) => void;
   onSharePost: (post: any, destination: { type: 'tribe' | 'user', id: string }) => void;
+  initialStoryId?: string;
 }
 
-const StoryViewer: React.FC<StoryViewerProps> = ({ userStories, currentUser, allUsers, allTribes, onClose, onDelete, onLike, onSharePost }) => {
-  const [currentIndex, setCurrentIndex] = useState(0);
+const StoryViewer: React.FC<StoryViewerProps> = ({ userStories, currentUser, allUsers, allTribes, onClose, onDelete, onLike, onSharePost, initialStoryId }) => {
+  const { user, stories } = userStories;
+  const [currentIndex, setCurrentIndex] = useState(() => {
+    if (initialStoryId) {
+      const idx = stories.findIndex(s => s.id === initialStoryId);
+      return idx !== -1 ? idx : 0;
+    }
+    return 0;
+  });
   const [isPaused, setIsPaused] = useState(false);
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const progressRef = useRef<HTMLDivElement>(null);
 
-  const { user, stories } = userStories;
+  // const { user, stories } = userStories; // Removed duplicate
   const currentStory = stories[currentIndex];
 
   const goToNext = () => {
@@ -222,7 +230,7 @@ const StoryViewer: React.FC<StoryViewerProps> = ({ userStories, currentUser, all
   const handleShare = (destination: { type: 'tribe' | 'user', id: string }) => {
     onSharePost({
       author: user,
-      content: `Shared a story\n/story/${user.id}`,
+      content: `Shared Story\n/story/${user.id}:${currentStory.id}`,
       imageUrl: currentStory.imageUrl,
     }, destination);
   };
