@@ -22,6 +22,7 @@ import tribeRoutes from './routes/tribeRoutes.js';
 import notificationRoutes from './routes/notificationRoutes.js';
 import aiRoutes from './routes/aiRoutes.js';
 import storyRoutes from './routes/storyRoutes.js';
+import pushRoutes from './routes/pushRoutes.js';
 import { initializeSocket } from './socketManager.js';
 
 dotenv.config();
@@ -115,6 +116,7 @@ const startServer = async () => {
     app.use('/api/notifications', notificationRoutes);
     app.use('/api/ai', aiRoutes);
     app.use('/api/stories', storyRoutes);
+    app.use('/api/push', pushRoutes);
     console.log("✅ API routes registered.");
 
     app.get('/', (req, res) => {

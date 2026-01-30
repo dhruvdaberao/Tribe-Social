@@ -141,6 +141,7 @@ import User from '../models/userModel.js';
 import protect from '../middleware/authMiddleware.js';
 import mongoose from 'mongoose';
 import Notification from '../models/notificationModel.js';
+import { sendPushNotification, buildNotificationPayload } from '../services/pushNotificationService.js';
 
 const router = express.Router();
 
@@ -228,6 +229,22 @@ router.post('/send/:receiverId', protect, async (req, res) => {
             // This ensures they get it even if they aren't "in" the DM room explicitly yet
             const recipientRoom = `user-${receiverId}`;
             req.io.to(recipientRoom).emit('newMessage', responseMessage);
+        }
+
+        // Send push notification to receiver (if not online or not in chat)
+        const isReceiverOnline = req.onlineUsers?.get(receiverId.toString());
+        if (!isReceiverOnline) {
+            const sender = await User.findById(senderId).select('name');
+            const payload = buildNotificationPayload('message', {
+                senderName: sender?.name || 'Someone',
+                senderId: senderId.toString(),
+                messagePreview: message.slice(0, 50) + (message.length > 50 ? '...' : ''),
+                conversationId: `${senderId}-${receiverId}`
+            });
+
+            if (payload) {
+                await sendPushNotification(receiverId.toString(), payload, 'message');
+            }
         }
 
         res.status(201).json(responseMessage);
