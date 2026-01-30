@@ -1,5 +1,5 @@
 import React from 'react';
-import styled, { useTheme } from 'styled-components';
+import styled from 'styled-components';
 import { Tribe, User } from '../../types';
 import { useNavigate } from 'react-router-dom';
 import { Edit2, Users } from 'lucide-react';
@@ -138,7 +138,6 @@ interface TribeCardProps {
 }
 
 const TribeCard: React.FC<TribeCardProps> = ({ tribe, currentUser, allUsers, onEdit, onViewProfile, onJoinToggle }) => {
-  const theme = useTheme();
   const navigate = useNavigate();
   const isMember = currentUser && tribe.members.includes(currentUser.id);
   const isOwner = currentUser && tribe.owner === currentUser.id;
@@ -255,7 +254,7 @@ const TribeCard: React.FC<TribeCardProps> = ({ tribe, currentUser, allUsers, onE
                   $variant="primary"
                   onClick={handleLeave}
                   disabled={isJoining}
-                  style={{ color: theme.text }}
+                  style={{ background: '#8B4513' }}
                 >
                   {isJoining ? 'Leaving...' : 'Leave'}
                 </Button>

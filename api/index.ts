@@ -69,8 +69,6 @@ const normalizeArray = <T extends { _id?: string }>(arr: T[]) =>
 /* ───────────── AUTH ───────────── */
 export const login = (formData: any) => API.post('/auth/login', formData);
 export const register = (formData: any) => API.post('/auth/register', formData);
-export const forgotPassword = (email: string) => API.post('/auth/forgot-password', { email });
-export const verifyOtp = (email: string, otp: string) => API.post('/auth/verify-otp', { email, otp });
 
 /* ───────────── USERS ───────────── */
 export const fetchUsers = async () => {

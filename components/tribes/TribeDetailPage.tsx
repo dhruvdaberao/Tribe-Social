@@ -101,19 +101,17 @@ const ActionButton = styled.button`
 /* ───────────── COMPONENT ───────────── */
 interface Props {
   currentUser: User | null;
-  tribeId?: string; // 🔥 Added prop to receive ID from parent (App.tsx)
 }
 
-const TribeDetailPage: React.FC<Props> = ({ currentUser, tribeId: propTribeId }) => {
-  const params = useParams<{ id: string }>();
+const TribeDetailPage: React.FC<Props> = ({ currentUser }) => {
+  const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-
-  // Resolve ID: Prefer prop (from App.tsx manual routing) -> Then param (if used in Route)
-  const id = propTribeId || params.id;
+  // const location = useLocation();
 
   const { socket, joinRoom, leaveRoom, clearUnreadTribe } = useSocket();
 
   // Optimistic init from navigation state
+  // const initialTribe = location.state?.tribe || null;
   const [tribe, setTribe] = useState<Tribe | null>(null);
 
 
@@ -137,9 +135,8 @@ const TribeDetailPage: React.FC<Props> = ({ currentUser, tribeId: propTribeId })
       console.error('Tribe ID is undefined');
       setError('Invalid tribe link');
       setIsLoading(false);
-      // Give user a chance to read the error before redirecting
-      const timer = setTimeout(() => navigate('/tribes'), 3000);
-      return () => clearTimeout(timer);
+      setTimeout(() => navigate('/tribes'), 2000);
+      return;
     }
 
     const loadTribe = async () => {
