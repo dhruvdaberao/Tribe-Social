@@ -162,61 +162,55 @@ const TribeMessageArea: React.FC<TribeMessageAreaProps> = ({
       </div>
 
       {/* ───────────── INPUT BAR (MOBILE SAFE) ───────────── */}
-      <form
-        onSubmit={handleSend}
-        className="
-          flex items-center gap-2
-          px-3 py-2
-          border-t border-border
-          bg-surface
-          sticky bottom-0
-          z-20
-        "
-        style={{
-          paddingBottom: 'max(0.5rem, env(safe-area-inset-bottom))'
-        }}
-      >
-        <input
-          type="text"
-          value={inputText}
-          onChange={e => setInputText(e.target.value)}
-          placeholder={`Message ${tribe.name}…`}
-          className="
-            flex-1 min-w-0
-            px-4 py-3
-            rounded-full
-            border border-border
-            bg-background
-            text-sm
-            focus:outline-none
-            focus:ring-2 focus:ring-accent
-          "
-          style={{
-            fontSize: '16px' // Prevents zoom on iOS
-          }}
-        />
-
-        <button
-          type="submit"
-          disabled={!inputText.trim() || isSending}
-          className="
-            w-11 h-11
-            flex-shrink-0
-            rounded-full
-            bg-accent
-            text-accent-text
-            flex items-center justify-center
-            disabled:opacity-50
-            transition-opacity
-          "
+      {/* ───────────── INPUT BAR (MATCHING DM STYLE) ───────────── */}
+      <div className="p-4 bg-transparent flex-shrink-0 z-20">
+        <form
+          onSubmit={handleSend}
+          className="flex items-center space-x-3"
         >
-          {isSending ? (
-            <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-          ) : (
-            <Send size={18} />
-          )}
-        </button>
-      </form>
+          <input
+            type="text"
+            value={inputText}
+            onChange={e => setInputText(e.target.value)}
+            placeholder={`Message ${tribe.name}…`}
+            className="
+              flex-1
+              bg-surface
+              border border-border
+              rounded-lg
+              px-4 py-2.5
+              focus:outline-none focus:ring-2 focus:ring-accent
+              text-primary
+              min-w-0
+            "
+            style={{
+              fontSize: '16px' // Prevents zoom on iOS
+            }}
+          />
+
+          <button
+            type="submit"
+            disabled={!inputText.trim() || isSending}
+            className="
+              w-12 h-11
+              flex-shrink-0
+              rounded-lg
+              bg-accent
+              text-accent-text
+              flex items-center justify-center
+              hover:bg-accent-hover
+              transition-colors
+              disabled:opacity-50
+            "
+          >
+            {isSending ? (
+              <div className="w-5 h-5 border-2 border-accent-text border-t-transparent rounded-full animate-spin" />
+            ) : (
+              <Send size={18} />
+            )}
+          </button>
+        </form>
+      </div>
     </div>
   );
 };
