@@ -156,18 +156,18 @@ const TribeDetailPage: React.FC<Props> = ({ currentUser }) => {
       } catch (err: any) {
         console.error('Failed to load tribe:', err);
 
-        if (err.code === 'ECONNABORTED') {
-          setError('Server is waking up (cold start). Retrying in 5 seconds...');
-          // Auto-retry after timeout
-          setTimeout(() => {
-            window.location.reload();
-          }, 5000);
+        if (err.code === 'ECONNABORTED' || err.message === 'Network Error' || !err.response) {
+          // Likely a CORS or Network issue
+          setError('Connection failed. Please check your internet or try again.');
+          // Do NOT redirect automatically for network errors
         } else if (err.response?.status === 404) {
           setError('Tribe not found');
           setTimeout(() => navigate('/tribes'), 2000);
+        } else if (err.response?.status === 401) {
+          setError('You are not authorized to view this tribe.');
+          setTimeout(() => navigate('/login'), 2000);
         } else {
-          setError('Failed to load tribe. Redirecting...');
-          setTimeout(() => navigate('/tribes'), 2000);
+          setError('Something went wrong. Please try again.');
         }
       } finally {
         // 🔥 CRITICAL: Always clear loading state

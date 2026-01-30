@@ -38,14 +38,23 @@ const startServer = async () => {
     const httpServer = createServer(app);
 
     // Dynamic CORS configuration to allow multiple origins easily
-    const allowedOrigins = ['http://localhost:5173', 'http://localhost:3000', 'https://tribe-social.vercel.app'];
+    const allowedOrigins = [
+      'http://localhost:5173',
+      'http://localhost:3000',
+      'https://tribe-social.vercel.app',
+      'https://tribe-social.onrender.com'
+    ];
+
     const corsOptions = {
       origin: (origin, callback) => {
-        if (!origin || allowedOrigins.includes(origin) || origin.endsWith('.vercel.app')) {
+        // Allow requests with no origin (like mobile apps or curl requests)
+        if (!origin) return callback(null, true);
+
+        if (allowedOrigins.includes(origin) || origin.endsWith('.vercel.app')) {
           callback(null, true);
         } else {
-          console.warn(`CORS Warning: Origin ${origin} not in whitelist.`);
-          callback(null, true); // Fallback to allow for now
+          console.error(`❌ CORS Error: Origin ${origin} not allowed.`);
+          callback(new Error('Not allowed by CORS')); // Blocking unauthorized origins
         }
       },
       credentials: true,
