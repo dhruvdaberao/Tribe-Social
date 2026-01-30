@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import styled, { useTheme } from 'styled-components';
 import { X, Camera } from 'lucide-react';
 import * as api from '../../api';
 import { toast } from '../common/Toast';
+import MediaSelectionModal from '../common/MediaSelectionModal';
 
 const Overlay = styled.div`
   position: fixed;
@@ -109,6 +110,10 @@ const CreateTribeModal: React.FC<CreateTribeModalProps> = ({ onClose, onSuccess 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const [isMediaModalOpen, setIsMediaModalOpen] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
@@ -125,6 +130,23 @@ const CreateTribeModal: React.FC<CreateTribeModalProps> = ({ onClose, onSuccess 
     }
   };
 
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) { // 5MB limit
+        alert("File too large. Max 5MB");
+        return;
+      }
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setAvatarUrl(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+      // Clear value to allow re-selecting same file
+      e.target.value = '';
+    }
+  };
+
   return (
     <Overlay onClick={onClose}>
       <Modal onClick={e => e.stopPropagation()}>
@@ -136,33 +158,28 @@ const CreateTribeModal: React.FC<CreateTribeModalProps> = ({ onClose, onSuccess 
         <Form onSubmit={handleSubmit}>
           {error && <div style={{ color: 'red', marginBottom: 10 }}>{error}</div>}
 
-          {/* Hidden File Input */}
+          {/* Visualization inputs */}
           <input
             type="file"
-            id="file-input"
+            ref={fileInputRef}
             accept="image/*"
             style={{ display: 'none' }}
-            onChange={(e) => {
-              const file = e.target.files?.[0];
-              if (file) {
-                if (file.size > 5 * 1024 * 1024) { // 5MB limit
-                  alert("File too large. Max 5MB");
-                  return;
-                }
-                const reader = new FileReader();
-                reader.onloadend = () => {
-                  setAvatarUrl(reader.result as string);
-                };
-                reader.readAsDataURL(file);
-              }
-            }}
+            onChange={handleFileChange}
+          />
+          <input
+            type="file"
+            ref={cameraInputRef}
+            accept="image/*"
+            capture="environment"
+            style={{ display: 'none' }}
+            onChange={handleFileChange}
           />
 
           {/* Visual Avatar Picker */}
           <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 20 }}>
             <div
               style={{ position: 'relative', cursor: 'pointer' }}
-              onClick={() => document.getElementById('file-input')?.click()}
+              onClick={() => setIsMediaModalOpen(true)}
             >
               <div style={{
                 width: 100, height: 100, borderRadius: '50%',
@@ -209,6 +226,13 @@ const CreateTribeModal: React.FC<CreateTribeModalProps> = ({ onClose, onSuccess 
           </Button>
         </Form>
       </Modal>
+
+      <MediaSelectionModal
+        isOpen={isMediaModalOpen}
+        onClose={() => setIsMediaModalOpen(false)}
+        onSelectCamera={() => cameraInputRef.current?.click()}
+        onSelectGallery={() => fileInputRef.current?.click()}
+      />
     </Overlay>
   );
 };

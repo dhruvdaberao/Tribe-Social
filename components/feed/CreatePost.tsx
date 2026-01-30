@@ -212,6 +212,8 @@ import { User, Story } from '../../types';
 import UserAvatar from '../common/UserAvatar';
 import { toast } from '../common/Toast';
 
+import MediaSelectionModal from '../common/MediaSelectionModal';
+
 interface CreatePostProps {
   currentUser: User;
   allUsers: User[];
@@ -227,6 +229,7 @@ const CreatePost: React.FC<CreatePostProps> = ({ currentUser, allUsers, myStorie
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [mentionQuery, setMentionQuery] = useState('');
   const [showMentions, setShowMentions] = useState(false);
+  const [isMediaModalOpen, setIsMediaModalOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
 
@@ -354,7 +357,7 @@ const CreatePost: React.FC<CreatePostProps> = ({ currentUser, allUsers, myStorie
             <div>
               <button
                 type="button"
-                onClick={() => fileInputRef.current?.click()}
+                onClick={() => setIsMediaModalOpen(true)}
                 className="text-secondary hover:text-accent p-2 rounded-full transition-colors"
                 aria-label="Add image"
                 disabled={isPosting}
@@ -366,6 +369,15 @@ const CreatePost: React.FC<CreatePostProps> = ({ currentUser, allUsers, myStorie
                 ref={fileInputRef}
                 onChange={handleFileChange}
                 accept="image/*"
+                className="hidden"
+                disabled={isPosting}
+              />
+              <input
+                type="file"
+                ref={cameraInputRef}
+                onChange={handleFileChange}
+                accept="image/*"
+                capture="environment"
                 className="hidden"
                 disabled={isPosting}
               />
@@ -381,6 +393,13 @@ const CreatePost: React.FC<CreatePostProps> = ({ currentUser, allUsers, myStorie
           </div>
         </div>
       </div>
+
+      <MediaSelectionModal
+        isOpen={isMediaModalOpen}
+        onClose={() => setIsMediaModalOpen(false)}
+        onSelectCamera={() => cameraInputRef.current?.click()}
+        onSelectGallery={() => fileInputRef.current?.click()}
+      />
     </div>
   );
 };

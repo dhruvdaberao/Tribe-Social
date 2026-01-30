@@ -1,146 +1,191 @@
-import React, { useState } from 'react';
-import styled from 'styled-components';
-import { X, Trash2, Users, Camera } from 'lucide-react'; // Import Trash2
+import React, { useState, useRef } from 'react';
+import styled, { useTheme } from 'styled-components';
+import { X, Camera, Trash2 } from 'lucide-react';
 import * as api from '../../api';
-import { Tribe } from '../../types';
 import { toast } from '../common/Toast';
+import MediaSelectionModal from '../common/MediaSelectionModal';
+import { Tribe } from '../../types';
+
+interface EditTribeModalProps {
+  tribe: Tribe;
+  onClose: () => void;
+  onSuccess: (updatedTribe: Tribe) => void;
+  onDelete?: (tribeId: string) => void;
+}
 
 const Overlay = styled.div`
   position: fixed;
-  top: 0; left: 0; right: 0; bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 1000;
-  padding: 1rem;
 `;
 
 const Modal = styled.div`
-  background: ${({ theme }) => theme.cardBackground}; // #3B302B
-  width: 100%;
-  max-width: 500px;
-  border-radius: 12px;
+  background: ${props => props.theme.cardBackground};
   padding: 2rem;
-  box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+  border-radius: 12px;
+  width: 90%;
+  max-width: 500px;
+  max-height: 90vh;
+  overflow-y: auto;
+  position: relative;
+  border: 1px solid ${props => props.theme.border};
 `;
 
 const Header = styled.div`
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 24px;
-  h2 { margin: 0; font-size: 1.5rem; color: ${({ theme }) => theme.text}; }
+  margin-bottom: 2rem;
+  
+  h2 {
+    font-family: 'Outfit', sans-serif;
+    color: ${props => props.theme.text};
+    margin: 0;
+  }
+`;
+
+const CloseButton = styled.button`
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: ${props => props.theme.textSecondary};
+  padding: 5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  
+  &:hover {
+    color: ${props => props.theme.text};
+  }
 `;
 
 const Form = styled.form`
   display: flex;
   flex-direction: column;
-  gap: 16px;
-`;
-
-const Input = styled.input`
-  width: 100%;
-  padding: 12px 16px;
-  border-radius: 8px;
-  border: 1px solid ${({ theme }) => theme.borderColor}; // #504540
-  background: ${({ theme }) => theme.background}; // #2A2320
-  color: ${({ theme }) => theme.text};
-  font-size: 1rem;
-  
-  &:focus { outline: 2px solid ${({ theme }) => theme.primary}; border-color: transparent; }
+  gap: 1.5rem;
 `;
 
 const TextArea = styled.textarea`
   width: 100%;
-  padding: 12px 16px;
+  padding: 1rem;
   border-radius: 8px;
-  border: 1px solid ${({ theme }) => theme.borderColor};
-  background: ${({ theme }) => theme.background};
-  color: ${({ theme }) => theme.text};
-  min-height: 100px;
-  font-size: 1rem;
+  border: 1px solid ${props => props.theme.border};
+  background: ${props => props.theme.background};
+  color: ${props => props.theme.text};
+  font-family: 'Outfit', sans-serif;
   resize: vertical;
-  
-  &:focus { outline: 2px solid ${({ theme }) => theme.primary}; border-color: transparent; }
+  min-height: 100px;
+
+  &:focus {
+    outline: none;
+    border-color: ${props => props.theme.primary};
+  }
 `;
 
 const Button = styled.button`
-  background: ${({ theme }) => theme.primary};
-  color: white; // Contrast check: White on Brown is good.
-  padding: 14px;
-  border-radius: 8px;
+  background: ${props => props.theme.primary};
+  color: white;
   border: none;
+  padding: 1rem;
+  border-radius: 8px;
   font-weight: 600;
   cursor: pointer;
-  margin-top: 8px;
-  
-  &:disabled { opacity: 0.7; }
+  transition: opacity 0.2s;
+
+  &:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+  }
+
+  &:hover:not(:disabled) {
+    opacity: 0.9;
+  }
 `;
 
 const DeleteButton = styled.button`
-  background: transparent;
-  color: #ff6b6b; // Red/Pinkish for error/danger
-  border: 1px solid #ff6b6b;
-  padding: 10px;
-  border-radius: 8px;
-  font-weight: 600;
+  background: none;
+  border: none;
+  color: #ef4444; 
   cursor: pointer;
-  margin-top: 12px;
+  padding: 10px;
+  margin-top: 10px;
+  width: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
-  width: 100%; // Full width
+  font-weight: 500;
   
-  &:hover { background: rgba(255, 107, 107, 0.1); }
+  &:hover {
+    background: rgba(239, 68, 68, 0.1);
+    border-radius: 8px;
+  }
 `;
 
-interface EditTribeModalProps {
-  tribe: Tribe;
-  onClose: () => void;
-  onSuccess: (updatedTribe: Tribe) => void;
-  onDelete?: (tribeId: string) => void; // Optional delete handler
-}
-
 const EditTribeModal: React.FC<EditTribeModalProps> = ({ tribe, onClose, onSuccess, onDelete }) => {
-  const [name, setName] = useState(tribe.name);
   const [description, setDescription] = useState(tribe.description);
-  const [avatarUrl, setAvatarUrl] = useState(tribe.avatarUrl || '');
+  const [avatarUrl, setAvatarUrl] = useState(tribe.avatarUrl || ''); // Use avatarUrl property
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const fileInputRef = React.useRef<HTMLInputElement>(null);
-  const cameraInputRef = React.useRef<HTMLInputElement>(null);
+  const [error, setError] = useState('');
+  const [isMediaModalOpen, setIsMediaModalOpen] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsSubmitting(true);
-    try {
-      const { data } = await api.updateTribe(tribe.id, { name, description, avatarUrl });
-      onSuccess(data);
-    } catch (err) {
-      console.error("Update failed", err);
-      alert("Failed to update tribe");
-      setIsSubmitting(false);
-    }
-  };
-
-  const handleDelete = () => {
-    if (window.confirm("Are you sure you want to delete this tribe? This cannot be undone.")) {
-      if (onDelete) {
-        onDelete(tribe.id);
-        toast.success("Tribe deleted successfully");
-      }
-    }
-  };
+  const theme = useTheme();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        toast.error('Image size must be less than 5MB');
+        return;
+      }
+
       const reader = new FileReader();
       reader.onloadend = () => {
         setAvatarUrl(reader.result as string);
+        setIsMediaModalOpen(false); // Close modal after selection
       };
       reader.readAsDataURL(file);
+      e.target.value = ''; // Reset input
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    setError('');
+
+    try {
+      const updatedData = {
+        description,
+        avatarUrl
+      };
+
+      const updatedTribe = await api.updateTribe(tribe.id, updatedData);
+      onSuccess(updatedTribe.data);
+      onClose();
+      toast.success('Tribe updated successfully');
+    } catch (err) {
+      console.error('Failed to update tribe:', err);
+      setError('Failed to update tribe. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (window.confirm('Are you sure you want to delete this tribe? This action cannot be undone.')) {
+      if (onDelete) {
+        onDelete(tribe.id);
+      }
     }
   };
 
@@ -149,76 +194,68 @@ const EditTribeModal: React.FC<EditTribeModalProps> = ({ tribe, onClose, onSucce
       <Modal onClick={e => e.stopPropagation()}>
         <Header>
           <h2>Edit Tribe</h2>
-          <button style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'inherit' }} onClick={onClose}><X size={24} /></button>
+          <CloseButton onClick={onClose}><X size={24} /></CloseButton>
         </Header>
-        <Form onSubmit={handleSubmit}>
-          {/* Avatar Uploader */}
-          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 16 }}>
-            <div
-              style={{ position: 'relative', width: 100, height: 100, borderRadius: '50%', cursor: 'pointer' }}
-              onClick={() => fileInputRef.current?.click()}
-            >
-              {avatarUrl ? (
-                <img
-                  src={avatarUrl}
-                  alt="Tribe Avatar"
-                  style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover', border: '3px solid #333' }}
-                />
-              ) : (
-                <div style={{
-                  width: '100%', height: '100%', borderRadius: '50%',
-                  background: '#2A2320', border: '3px solid #333',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center'
-                }}>
-                  <Users size={40} color="#8E7C74" />
-                </div>
-              )}
 
+        <Form onSubmit={handleSubmit}>
+          {error && <div style={{ color: 'red', marginBottom: 10 }}>{error}</div>}
+
+          <input
+            type="file"
+            ref={fileInputRef}
+            accept="image/*"
+            style={{ display: 'none' }}
+            onChange={handleFileChange}
+          />
+          <input
+            type="file"
+            ref={cameraInputRef}
+            accept="image/*"
+            capture="environment"
+            style={{ display: 'none' }}
+            onChange={handleFileChange}
+          />
+
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 20 }}>
+            <div
+              style={{ position: 'relative', cursor: 'pointer' }}
+              onClick={() => setIsMediaModalOpen(true)}
+            >
+              <div style={{
+                width: 100, height: 100, borderRadius: '50%',
+                background: avatarUrl ? `url(${avatarUrl}) center / cover` : theme.secondary,
+                border: `2px dashed ${theme.textSecondary}`,
+                display: 'flex', alignItems: 'center', justifyContent: 'center'
+              }}>
+                {!avatarUrl && <Camera size={40} color={theme.cardBackground} strokeWidth={1.5} />}
+              </div>
               <div style={{
                 position: 'absolute', bottom: 0, right: 0,
-                background: '#d4a373', borderRadius: '50%',
-                width: 32, height: 32, display: 'flex',
-                alignItems: 'center', justifyContent: 'center',
-                border: '2px solid #2A2320',
-                cursor: 'pointer'
-              }}
-                onClick={(e) => { e.stopPropagation(); cameraInputRef.current?.click(); }}
-                title="Take Photo"
-              >
-                <Camera size={18} color="white" />
-              </div>
-              <input
-                type="file"
-                ref={fileInputRef}
-                onChange={handleFileChange}
-                accept="image/*"
-                style={{ display: 'none' }}
-              />
-              <input
-                type="file"
-                ref={cameraInputRef}
-                onChange={handleFileChange}
-                accept="image/*"
-                capture="environment"
-                style={{ display: 'none' }}
-              />
+                background: theme.primary, borderRadius: '50%',
+                width: 30, height: 30, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                color: 'white', fontSize: 18, border: `1px solid ${theme.primary}`
+              }}>+</div>
             </div>
           </div>
-
-          <Input value={name} onChange={e => setName(e.target.value)} placeholder="Tribe Name" required />
           <TextArea value={description} onChange={e => setDescription(e.target.value)} placeholder="Description" required />
-          {/* <Input value={avatarUrl} onChange={e => setAvatarUrl(e.target.value)} placeholder="Avatar URL" />  Removed in favor of uploader */}
 
           <Button type="submit" disabled={isSubmitting}>{isSubmitting ? 'Saving...' : 'Save Changes'}</Button>
-        </Form >
+        </Form>
 
         {onDelete && (
           <DeleteButton type="button" onClick={handleDelete}>
             <Trash2 size={18} /> Delete Tribe
           </DeleteButton>
         )}
-      </Modal >
-    </Overlay >
+      </Modal>
+
+      <MediaSelectionModal
+        isOpen={isMediaModalOpen}
+        onClose={() => setIsMediaModalOpen(false)}
+        onSelectCamera={() => cameraInputRef.current?.click()}
+        onSelectGallery={() => fileInputRef.current?.click()}
+      />
+    </Overlay>
   );
 };
 

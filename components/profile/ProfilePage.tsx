@@ -253,6 +253,7 @@ import ShareButton from '../common/ShareButton';
 import { toast } from '../common/Toast';
 import PostGridItem from './PostGridItem';
 import PostViewModal from './PostViewModal';
+import MediaSelectionModal from '../common/MediaSelectionModal';
 
 interface ProfilePageProps {
     user: User;
@@ -499,6 +500,9 @@ const EditProfileModal: React.FC<EditProfileModalProps> = ({ user, onClose, onSa
     const avatarCameraRef = useRef<HTMLInputElement>(null);
     const bannerCameraRef = useRef<HTMLInputElement>(null);
 
+    const [mediaTarget, setMediaTarget] = useState<'avatar' | 'banner' | null>(null);
+    const [isMediaModalOpen, setIsMediaModalOpen] = useState(false);
+
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, type: 'avatar' | 'banner') => {
         const file = e.target.files?.[0];
@@ -509,12 +513,19 @@ const EditProfileModal: React.FC<EditProfileModalProps> = ({ user, onClose, onSa
                 if (type === 'banner') setBannerPreview(reader.result as string);
             };
             reader.readAsDataURL(file);
+            // Clear inputs to allow re-selection of same file
+            if (e.target.value) e.target.value = '';
         }
     };
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         onSave({ ...formData, avatarUrl: avatarPreview, bannerUrl: bannerPreview });
         onClose();
+    };
+
+    const openMediaModal = (target: 'avatar' | 'banner') => {
+        setMediaTarget(target);
+        setIsMediaModalOpen(true);
     };
 
     return (
@@ -524,11 +535,19 @@ const EditProfileModal: React.FC<EditProfileModalProps> = ({ user, onClose, onSa
                 <div className="overflow-y-auto">
                     <div className="relative">
                         <div className="h-40 bg-background">{bannerPreview ? <img src={bannerPreview} alt="Banner preview" className="w-full h-full object-cover" /> : <div className="w-full h-full bg-gradient-to-br from-background via-surface to-background" />}</div>
-                        <div className="absolute inset-0 bg-black/30 flex items-center justify-center"><button onClick={() => bannerInputRef.current?.click()} className="bg-black/50 text-white rounded-full p-2 hover:bg-black/70"><CameraIcon /></button><input type="file" ref={bannerInputRef} onChange={(e) => handleFileChange(e, 'banner')} accept="image/*" className="hidden" /></div>
+                        <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
+                            <button onClick={() => openMediaModal('banner')} className="bg-black/50 text-white rounded-full p-2 hover:bg-black/70"><CameraIcon /></button>
+                            <input type="file" ref={bannerInputRef} onChange={(e) => handleFileChange(e, 'banner')} accept="image/*" className="hidden" />
+                            <input type="file" ref={bannerCameraRef} onChange={(e) => handleFileChange(e, 'banner')} accept="image/*" capture="environment" className="hidden" />
+                        </div>
                         <div className="absolute bottom-0 left-4 translate-y-1/2">
                             <div className="w-24 h-24 rounded-full border-4 border-surface bg-surface relative">
                                 <UserAvatar user={{ ...user, avatarUrl: avatarPreview }} className="w-full h-full" />
-                                <div className="absolute inset-0 bg-black/30 rounded-full flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity"><button onClick={() => avatarInputRef.current?.click()} className="bg-black/50 text-white rounded-full p-2"><CameraIcon /></button><input type="file" ref={avatarInputRef} onChange={(e) => handleFileChange(e, 'avatar')} accept="image/*" className="hidden" /></div>
+                                <div className="absolute inset-0 bg-black/30 rounded-full flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
+                                    <button onClick={() => openMediaModal('avatar')} className="bg-black/50 text-white rounded-full p-2"><CameraIcon /></button>
+                                    <input type="file" ref={avatarInputRef} onChange={(e) => handleFileChange(e, 'avatar')} accept="image/*" className="hidden" />
+                                    <input type="file" ref={avatarCameraRef} onChange={(e) => handleFileChange(e, 'avatar')} accept="image/*" capture="environment" className="hidden" />
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -540,6 +559,19 @@ const EditProfileModal: React.FC<EditProfileModalProps> = ({ user, onClose, onSa
                 </div>
                 <div className="p-4 flex justify-end items-center border-t border-border mt-auto"><button onClick={onClose} className="text-secondary font-semibold px-4 py-2 rounded-lg hover:bg-background">Cancel</button><button onClick={handleSubmit} className="bg-accent text-accent-text font-semibold px-6 py-2 rounded-lg hover:bg-accent-hover">Save</button></div>
             </div>
+
+            <MediaSelectionModal
+                isOpen={isMediaModalOpen}
+                onClose={() => setIsMediaModalOpen(false)}
+                onSelectCamera={() => {
+                    if (mediaTarget === 'avatar') avatarCameraRef.current?.click();
+                    if (mediaTarget === 'banner') bannerCameraRef.current?.click();
+                }}
+                onSelectGallery={() => {
+                    if (mediaTarget === 'avatar') avatarInputRef.current?.click();
+                    if (mediaTarget === 'banner') bannerInputRef.current?.click();
+                }}
+            />
         </div>
     );
 };

@@ -174,6 +174,8 @@ import React, { useState, useRef, useEffect } from 'react';
 import type { Story } from '../../types';
 import { toast } from '../common/Toast';
 
+import MediaSelectionModal from '../common/MediaSelectionModal';
+
 interface StoryCreatorProps {
     onClose: () => void;
     onCreate: (storyData: Omit<Story, 'id' | 'user' | 'createdAt' | 'author' | 'likes'>) => void;
@@ -189,6 +191,8 @@ const StoryCreator: React.FC<StoryCreatorProps> = ({ onClose, onCreate }) => {
     const [isEditingText, setIsEditingText] = useState(false);
     const [isPosting, setIsPosting] = useState(false);
     const [selectedElement, setSelectedElement] = useState<'text' | 'image' | null>(null);
+
+    const [isMediaModalOpen, setIsMediaModalOpen] = useState(false);
 
     const canvasRef = useRef<HTMLDivElement>(null);
     const cameraInputRef = useRef<HTMLInputElement>(null);
@@ -215,6 +219,8 @@ const StoryCreator: React.FC<StoryCreatorProps> = ({ onClose, onCreate }) => {
                 setSelectedElement('image');
             };
             reader.readAsDataURL(file);
+            // Clear inputs
+            e.target.value = '';
         }
     };
 
@@ -343,8 +349,7 @@ const StoryCreator: React.FC<StoryCreatorProps> = ({ onClose, onCreate }) => {
                 <div className="absolute top-0 left-0 right-0 p-4 z-30 flex justify-between pointer-events-none">
                     <button onClick={onClose} className="pointer-events-auto p-2 bg-black/20 backdrop-blur-md rounded-full text-white hover:bg-black/40"><BackIcon /></button>
                     <div className="flex space-x-2 pointer-events-auto">
-                        <button onClick={() => cameraInputRef.current?.click()} className="p-2 bg-black/20 backdrop-blur-md rounded-full text-white hover:bg-black/40"><CameraIcon /></button>
-                        <button onClick={() => galleryInputRef.current?.click()} className="p-2 bg-black/20 backdrop-blur-md rounded-full text-white hover:bg-black/40"><ImageIcon /></button>
+                        <button onClick={() => setIsMediaModalOpen(true)} className="p-2 bg-black/20 backdrop-blur-md rounded-full text-white hover:bg-black/40"><CameraIcon /></button>
                         <button onClick={handleAddText} className="p-2 bg-black/20 backdrop-blur-md rounded-full text-white hover:bg-black/40"><PenIcon /></button>
                     </div>
                 </div>
@@ -420,6 +425,13 @@ const StoryCreator: React.FC<StoryCreatorProps> = ({ onClose, onCreate }) => {
                 <input type="file" ref={cameraInputRef} onChange={handleFileChange} accept="image/*" capture="environment" className="hidden" />
                 <input type="file" ref={galleryInputRef} onChange={handleFileChange} accept="image/*" className="hidden" />
             </div>
+
+            <MediaSelectionModal
+                isOpen={isMediaModalOpen}
+                onClose={() => setIsMediaModalOpen(false)}
+                onSelectCamera={() => cameraInputRef.current?.click()}
+                onSelectGallery={() => galleryInputRef.current?.click()}
+            />
         </div>
     );
 };

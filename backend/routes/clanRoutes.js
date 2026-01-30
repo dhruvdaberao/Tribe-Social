@@ -48,6 +48,33 @@ router.get('/', protect, async (req, res) => {
     }
 });
 
+// @route   PUT /api/tribes/:id
+// @desc    Update a tribe
+router.put('/:id', protect, async (req, res) => {
+    try {
+        const { name, description, avatarUrl } = req.body;
+        const tribe = await Tribe.findById(req.params.id);
+
+        if (!tribe) {
+            return res.status(404).json({ message: 'Tribe not found' });
+        }
+
+        // Check ownership
+        if (!tribe.owner.equals(req.user.id)) {
+            return res.status(403).json({ message: 'Not authorized to update this tribe' });
+        }
+
+        if (name) tribe.name = name;
+        if (description) tribe.description = description;
+        if (avatarUrl !== undefined) tribe.avatarUrl = avatarUrl;
+
+        const updatedTribe = await tribe.save();
+        res.json(updatedTribe);
+    } catch (error) {
+        console.error('Error updating tribe:', error);
+        res.status(500).json({ message: 'Server Error' });
+    }
+});
 
 // @route   PUT /api/tribes/:id/join
 // @desc    Join or leave a tribe
@@ -62,7 +89,7 @@ router.put('/:id/join', protect, async (req, res) => {
 
         if (isMember) {
             // Leave tribe
-             if (tribe.owner.equals(req.user.id)) {
+            if (tribe.owner.equals(req.user.id)) {
                 return res.status(400).json({ message: 'Owner cannot leave the tribe' });
             }
             tribe.members = tribe.members.filter(memberId => !memberId.equals(req.user.id));
@@ -90,11 +117,11 @@ router.get('/:id/messages', protect, async (req, res) => {
         if (!tribe.members.some(memberId => memberId.equals(req.user.id))) {
             return res.status(403).json({ message: 'You must be a member to view messages' });
         }
-        
+
         const messages = await TribeMessage.find({ tribe: req.params.id })
             .populate('sender', 'name username avatarUrl')
             .sort({ createdAt: 'asc' });
-        
+
         res.json(messages);
 
     } catch (error) {
@@ -118,7 +145,7 @@ router.post('/:id/messages', protect, async (req, res) => {
         if (!tribe.members.some(memberId => memberId.equals(req.user.id))) {
             return res.status(403).json({ message: 'You must be a member to send messages' });
         }
-        
+
         const message = new TribeMessage({
             tribe: req.params.id,
             sender: req.user.id,
