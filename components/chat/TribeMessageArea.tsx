@@ -129,7 +129,7 @@ const TribeMessageArea: React.FC<TribeMessageAreaProps> = ({
                       : 'bg-surface text-primary rounded-tl-none'
                       }`}
                   >
-                    {message.imageUrl && (
+                    {message.imageUrl && !message.text.includes('[Shared Story]') && (
                       <img
                         src={message.imageUrl}
                         className="mb-2 rounded-lg w-full"

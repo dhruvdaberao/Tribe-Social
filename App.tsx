@@ -531,15 +531,26 @@ const App: React.FC = () => {
         }
     };
 
-    const handleSharePost = async (post: Post, destination: { type: 'tribe' | 'user', id: string }) => {
+    const handleSharePost = async (post: any, destination: { type: 'tribe' | 'user', id: string, name?: string }) => {
         if (!currentUser) return;
-        const formattedText = `[Shared Post by @${post.author.username}]:\n${post.content}`;
+
+        // 🔥 Fix: Don't add "Shared Post" prefix if it's a Shared Story (already has its own prefix)
+        const messageText = post.content.startsWith('[Shared Story]')
+            ? post.content
+            : `[Shared Post by @${post.author.username}]:\n${post.content}`;
+
+        const messageData = {
+            text: messageText,
+            imageUrl: post.imageUrl,
+            sender: currentUser,
+            timestamp: new Date().toISOString(),
+        };
         try {
             if (destination.type === 'tribe') {
-                await api.sendTribeMessage(destination.id, { text: formattedText, imageUrl: post.imageUrl });
+                await api.sendTribeMessage(destination.id, { text: messageData.text, imageUrl: messageData.imageUrl });
                 toast.success(`Post successfully shared to tribe!`);
             } else {
-                await api.sendMessage(destination.id, { message: formattedText, imageUrl: post.imageUrl });
+                await api.sendMessage(destination.id, { message: messageData.text, imageUrl: messageData.imageUrl });
                 toast.success(`Post successfully shared with user!`);
             }
         } catch (error) {
