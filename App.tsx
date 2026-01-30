@@ -861,6 +861,7 @@ const App: React.FC = () => {
 
                 return <TribeDetailPage
                     currentUser={currentUser}
+                    tribeId={effectiveTribeId}
                 />;
             case 'Notifications':
                 return <NotificationsPage notifications={notifications} allTribes={tribes} onViewProfile={handleViewProfile} onViewMessage={handleStartConversation} onViewPost={handleViewPost} onViewTribe={handleViewTribe} onViewStory={handleViewUserStories} />;
