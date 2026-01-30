@@ -871,7 +871,8 @@ const PostCard: React.FC<PostCardProps> = (props) => {
         )}
         {post.imageUrl && !imageError && (
           <div className="bg-background w-full flex justify-center items-center overflow-hidden relative min-h-[200px] group">
-            {isImageLoading && (
+            {/* Only show loading spinner for images, not videos */}
+            {isImageLoading && post.mediaType !== 'video' && (
               <div className="absolute inset-0 flex items-center justify-center bg-surface animate-pulse">
                 <div className="w-10 h-10 border-4 border-accent/30 border-t-accent rounded-full animate-spin"></div>
               </div>
@@ -880,8 +881,7 @@ const PostCard: React.FC<PostCardProps> = (props) => {
             {post.mediaType === 'video' ? (
               <VideoPlayer
                 src={post.imageUrl}
-                className={`transition-opacity duration-300 ${isImageLoading ? 'opacity-0' : 'opacity-100'}`}
-                onPlay={() => setIsImageLoading(false)}
+                className="transition-opacity duration-300"
               />
             ) : (
               <img
