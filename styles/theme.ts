@@ -5,14 +5,14 @@
  */
 
 export const lightTheme = {
-    background: '#FAF7F3',      // Warm Cream
-    cardBackground: '#F2ECE6',  // Card Cream
-    text: '#2C211B',            // Deep Cocoa
-    textSecondary: '#8C7A6A',   // Muted Brown
+    background: '#FAF6F1',      // Warm Off-White
+    cardBackground: '#F1E9E1',  // Warm Card Cream
+    text: '#2C211B',            // Deep Brown
+    textSecondary: '#6A5546',   // Warm Brown
     primary: '#B89A7A',         // Brand Brown
-    secondary: '#2C211B',       // Deep Cocoa
+    secondary: '#2C211B',       // Deep Brown
     border: '#E6DED6',          // Soft Divider
-    hover: '#EAE4E0',           // Soft hover
+    hover: '#E6DED6',           // Soft hover
     accentHover: '#9E8466',     // Darker Brand Brown
     accentText: '#FFFFFF',      // White on Brand
 };
