@@ -54,7 +54,6 @@ const AvatarCircle = styled.div`
   display: flex;
   align-items: center;
   justify-content: center;
-  overflow: hidden;
   position: relative;
 `;
 
@@ -62,6 +61,37 @@ const AvatarImage = styled.img`
   width: 100%;
   height: 100%;
   object-fit: cover;
+  border-radius: 50%;
+`;
+// ... (skip lines)
+
+const Button = styled.button<{ $variant?: 'primary' | 'secondary' }>`
+  flex: 1;
+  height: 2.5rem; // 40px (Spec)
+  padding: 0 1rem; // Vertical center, horizontal 1rem
+  border-radius: 0.75rem; // 12px (Spec Inner Component)
+  font-weight: 600;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: opacity 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  ${({ $variant, theme }) => $variant === 'primary' ? `
+    background: ${theme.primary};
+    color: #2A2320; // Dark Brown Text for Contrast
+    border: none;
+  ` : `
+    background: transparent;
+    border: 1px solid ${theme.textSecondary};
+    color: ${theme.text};
+  `}
+
+  &:hover {
+    opacity: 0.9;
+    background: ${({ $variant, theme }) => $variant === 'primary' ? theme.hover : 'transparent'};
+  }
 `;
 
 const TribeName = styled.h3`
@@ -99,34 +129,7 @@ const ButtonGroup = styled.div`
   margin-top: auto;
 `;
 
-const Button = styled.button<{ $variant?: 'primary' | 'secondary' }>`
-  flex: 1;
-  height: 2.5rem; // 40px (Spec)
-  padding: 0 1rem; // Vertical center, horizontal 1rem
-  border-radius: 0.75rem; // 12px (Spec Inner Component)
-  font-weight: 600;
-  font-size: 0.95rem;
-  cursor: pointer;
-  transition: opacity 0.2s;
-  display: flex;
-  align-items: center;
-  justify-content: center;
 
-  ${({ $variant, theme }) => $variant === 'primary' ? `
-    background: ${theme.primary};
-    color: #FFFFFF; // Accent Text (Spec)
-    border: none;
-  ` : `
-    background: transparent;
-    border: 1px solid ${theme.textSecondary};
-    color: ${theme.text};
-  `}
-
-  &:hover {
-    opacity: 0.9;
-    background: ${({ $variant, theme }) => $variant === 'primary' ? theme.hover : 'transparent'};
-  }
-`;
 
 interface TribeCardProps {
   tribe: Tribe;

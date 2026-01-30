@@ -206,10 +206,6 @@ const TribeMessageArea: React.FC<TribeMessageAreaProps> = ({
                         )}
                       </p>
                     )}
-
-                    <p className={`text-[10px] mt-1 text-right ${isCurrentUser ? 'text-accent-text/70' : 'text-secondary'}`}>
-                      {new Date(message.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                    </p>
                   </div>
 
                   <span className="text-[10px] opacity-60 mt-1 ml-1">
