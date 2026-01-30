@@ -47,7 +47,7 @@ import { safeSet, safeGet } from './utils/storage';
 
 const App: React.FC = () => {
     const { currentUser, setCurrentUser, logout, isLoading: isAuthLoading } = useAuth();
-    const { socket, notifications, setNotifications, unreadMessageCount, unreadTribeCount, unreadNotificationCount, clearUnreadTribe } = useSocket();
+    const { socket, notifications, setNotifications, unreadCounts, unreadMessageCount, unreadTribeCount, unreadNotificationCount, clearUnreadTribe } = useSocket();
 
     // Global State
     const [users, setUsers] = useState<User[]>([]);
@@ -816,6 +816,7 @@ const App: React.FC = () => {
                 return (
                     <TribesPage
                         currentUser={currentUser!}
+                        unreadTribeCount={unreadCounts.tribes}
                     />
                 );
             case 'TribeDetail':

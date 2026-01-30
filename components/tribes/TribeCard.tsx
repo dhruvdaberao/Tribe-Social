@@ -135,9 +135,10 @@ interface TribeCardProps {
   onEdit?: (tribe: Tribe) => void;
   onViewProfile?: (user: User) => void;
   onJoinToggle?: (tribeId: string) => Promise<void>;
+  unreadCount?: number;
 }
 
-const TribeCard: React.FC<TribeCardProps> = ({ tribe, currentUser, allUsers, onEdit, onViewProfile, onJoinToggle }) => {
+const TribeCard: React.FC<TribeCardProps> = ({ tribe, currentUser, allUsers, onEdit, onViewProfile, onJoinToggle, unreadCount }) => {
   const theme = useTheme();
   const navigate = useNavigate();
   const isMember = currentUser && tribe.members.includes(currentUser.id);
@@ -231,6 +232,27 @@ const TribeCard: React.FC<TribeCardProps> = ({ tribe, currentUser, allUsers, onE
             <AvatarImage src={tribe.avatarUrl} alt={tribe.name} />
           ) : (
             <Users size={32} color="#D6B9A0" /> // Minimalistic group icon, light brown
+          )}
+          {unreadCount !== undefined && unreadCount > 0 && (
+            <div style={{
+              position: 'absolute',
+              top: 0,
+              right: 0,
+              backgroundColor: '#ef4444', // Red 500
+              color: 'white',
+              fontSize: '10px',
+              fontWeight: 'bold',
+              minWidth: '20px',
+              height: '20px',
+              borderRadius: '10px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: '0 4px',
+              border: '2px solid white', // Contrast border
+            }}>
+              {unreadCount > 99 ? '99+' : unreadCount}
+            </div>
           )}
         </AvatarCircle>
 

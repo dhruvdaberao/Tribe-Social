@@ -66,9 +66,10 @@ const EmptyState = styled.div`
 // ───────────────────────── COMPONENT ─────────────────────────
 interface TribesPageProps {
   currentUser: User | null;
+  unreadTribeCount?: { [tribeId: string]: number };
 }
 
-const TribesPage: React.FC<TribesPageProps> = ({ currentUser }) => {
+const TribesPage: React.FC<TribesPageProps> = ({ currentUser, unreadTribeCount }) => {
   const [tribes, setTribes] = useState<Tribe[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -106,6 +107,7 @@ const TribesPage: React.FC<TribesPageProps> = ({ currentUser }) => {
         setTribes(tribesRes.data);
         setAllUsers(usersRes.data);
         setIsLoading(false);
+        setError(null); // 🔥 Fix: Clear error on success
 
         localStorage.setItem(
           'tribe_storage_tribes',
@@ -114,6 +116,8 @@ const TribesPage: React.FC<TribesPageProps> = ({ currentUser }) => {
       } catch (err) {
         console.error(err);
         if (mounted) {
+          // Only show error if we have ZERO tribes (otherwise we just failed refresh)
+          // But kept simple: just set error text, rendering logic handles visibility
           setError('Failed to load tribes');
           setIsLoading(false);
         }
@@ -201,7 +205,7 @@ const TribesPage: React.FC<TribesPageProps> = ({ currentUser }) => {
         </CreateButton>
       </Header>
 
-      {error && <LoadingMessage>{error}</LoadingMessage>}
+      {error && tribes.length === 0 && <LoadingMessage>{error}</LoadingMessage>}
 
       {isLoading && tribes.length === 0 && (
         <LoadingMessage>
@@ -229,6 +233,7 @@ const TribesPage: React.FC<TribesPageProps> = ({ currentUser }) => {
                 allUsers={allUsers}
                 onEdit={setEditingTribe}
                 onJoinToggle={handleJoinToggle}
+                unreadCount={unreadTribeCount?.[tribe.id] || 0}
               />
             ))}
           </Grid>
@@ -246,6 +251,7 @@ const TribesPage: React.FC<TribesPageProps> = ({ currentUser }) => {
                 currentUser={currentUser}
                 allUsers={allUsers}
                 onJoinToggle={handleJoinToggle}
+                unreadCount={unreadTribeCount?.[tribe.id] || 0}
               />
             ))}
           </Grid>
