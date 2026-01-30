@@ -233,11 +233,11 @@ const Sidebar: React.FC<SidebarProps> = ({ activeItem, onSelectItem, currentUser
         {/* Left Side: Logo & Desktop Nav */}
         <div className="flex items-center space-x-6">
           <div
-            className="flex items-center space-x-3 cursor-pointer"
+            className="flex items-center space-x-2 cursor-pointer"
             onClick={() => onSelectItem('Home')}
           >
-            <img src="/tribe.png" alt="Tribe Logo" className="w-10 h-10 flex-shrink-0" />
-            <span className="text-2xl font-bold font-display text-accent-text sm:inline">Tribe</span>
+            <img src={theme === 'dark' ? '/dark1.png' : '/Light1.png'} alt="Tribe" className="h-5 w-auto flex-shrink-0 select-none" />
+            <span className="text-[21px] font-bold font-display tracking-tight text-accent-text sm:inline leading-none pt-0.5">Tribe</span>
           </div>
           <nav className="hidden md:flex items-center space-x-2">
             {mainNavItems.map(item => (
