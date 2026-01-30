@@ -51,6 +51,7 @@ const TribeMessageArea: React.FC<TribeMessageAreaProps> = ({
           flex-1 overflow-y-auto
           px-4 py-3
           space-y-4
+          pb-40 md:pb-4 /* 🔥 Fix: Ensure last message clears the sticky input (Input + Mobile Nav) */
         "
       >
         {isLoading && messages.length === 0 && (
@@ -67,14 +68,16 @@ const TribeMessageArea: React.FC<TribeMessageAreaProps> = ({
         {!isLoading &&
           messages.map((message, index) => {
             const sender = message.sender;
-            const senderId =
-              message.senderId || (sender as any)?.id;
+            // 🔥 Fix: Robust ID check (handle _id or id)
+            const senderId = (sender as any)?._id || (sender as any)?.id || message.senderId;
+            const currentUserId = (currentUser as any)?._id || currentUser.id;
 
-            const isCurrentUser = senderId === currentUser.id;
+            const isCurrentUser = senderId === currentUserId;
 
             const prevSenderId =
-              messages[index - 1]?.senderId ||
-              (messages[index - 1]?.sender as any)?.id;
+              (messages[index - 1]?.sender as any)?._id ||
+              (messages[index - 1]?.sender as any)?.id ||
+              messages[index - 1]?.senderId;
 
             const showAvatar =
               !isCurrentUser &&
@@ -87,7 +90,7 @@ const TribeMessageArea: React.FC<TribeMessageAreaProps> = ({
 
             return (
               <div
-                key={message.id}
+                key={message.id || (message as any)._id || index}
                 className={`flex items-end gap-3 ${isCurrentUser ? 'justify-end' : 'justify-start'
                   }`}
               >

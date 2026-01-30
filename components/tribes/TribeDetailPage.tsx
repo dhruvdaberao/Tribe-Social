@@ -9,6 +9,7 @@ import TribeMessageArea from '../chat/TribeMessageArea';
 import TribeMembersModal from './TribeMembersModal';
 import EditTribeModal from './EditTribeModal';
 import { Users, ArrowLeft, Edit2, LogIn, LogOut } from 'lucide-react';
+import { toast } from '../common/Toast';
 
 /* ───────────── STYLES ───────────── */
 const PageContainer = styled.div`
@@ -187,6 +188,23 @@ const TribeDetailPage: React.FC<Props> = ({ currentUser, tribeId: propTribeId })
     (tribe.owner === currentUser.id ||
       tribe.members.includes(currentUser.id));
 
+  const userMap = useMemo(
+    () => new Map(allUsers.map(u => [u.id, u])),
+    [allUsers]
+  );
+
+  /* ───────────── DELETE HANDLER ───────────── */
+  const handleDeleteTribe = async (tribeId: string) => {
+    try {
+      await api.deleteTribe(tribeId);
+      toast.success('Tribe deleted successfully');
+      navigate('/tribes');
+    } catch (err) {
+      console.error('Failed to delete tribe:', err);
+      toast.error('Failed to delete tribe');
+    }
+  };
+
   /* ───────────── LOAD MESSAGES ───────────── */
   useEffect(() => {
     if (!id || !isMember) return;
@@ -235,42 +253,38 @@ const TribeDetailPage: React.FC<Props> = ({ currentUser, tribeId: propTribeId })
   /* ───────────── REAL-TIME RECEIVE ───────────── */
   useEffect(() => {
     if (!socket || !id || !isMember) {
-      console.log('Skipping message listener setup:', { hasSocket: !!socket, id, isMember });
       return;
     }
 
     const handleIncoming = (message: TribeMessage) => {
-      console.log('Received tribe message:', message);
+      // console.log('Received tribe message:', message);
 
-      if (message.tribeId !== id) {
-        console.log('Message for different tribe, ignoring:', message.tribeId, 'expected:', id);
-        return;
-      }
+      if (message.tribeId !== id) return;
 
       // Ensure sender is populated
       const fullMessage = { ...message };
-      if (!fullMessage.sender || !fullMessage.sender.name) {
+      // Fallback if sender is just an ID or missing name
+      if (!fullMessage.sender || typeof fullMessage.sender === 'string' || !fullMessage.sender.name) {
         const foundUser = userMap.get(message.senderId);
         if (foundUser) {
           fullMessage.sender = foundUser;
         }
       }
 
-      setMessages(prev =>
-        prev.some(m => m.id === message.id)
-          ? prev
-          : [...prev, fullMessage]
-      );
+      setMessages(prev => {
+        // 🔥 Fix: Deduplicate by ID and _id to prevent ghost messages
+        const exists = prev.some(m => m.id === message.id || (m as any)._id === (message as any)._id);
+        if (exists) return prev;
+        return [...prev, fullMessage];
+      });
     };
 
-    console.log('Setting up newTribeMessage listener for tribe:', id);
     socket.on('newTribeMessage', handleIncoming);
 
     return () => {
-      console.log('Removing newTribeMessage listener for tribe:', id);
       socket.off('newTribeMessage', handleIncoming);
     };
-  }, [socket, id, isMember]);
+  }, [socket, id, isMember, userMap]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -331,11 +345,6 @@ const TribeDetailPage: React.FC<Props> = ({ currentUser, tribeId: propTribeId })
       setTribe(tribe);
     }
   };
-
-  const userMap = useMemo(
-    () => new Map(allUsers.map(u => [u.id, u])),
-    [allUsers]
-  );
 
   /* ───────────── SHOW ERROR IF EXISTS ───────────── */
   if (error) {
@@ -425,6 +434,7 @@ const TribeDetailPage: React.FC<Props> = ({ currentUser, tribeId: propTribeId })
             setTribe(t);
             setIsEditOpen(false);
           }}
+          onDelete={handleDeleteTribe}
         />
       )}
 

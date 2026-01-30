@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import styled, { useTheme } from 'styled-components';
 import { X, Camera } from 'lucide-react';
 import * as api from '../../api';
+import { toast } from '../common/Toast';
 
 const Overlay = styled.div`
   position: fixed;
@@ -115,10 +116,11 @@ const CreateTribeModal: React.FC<CreateTribeModalProps> = ({ onClose, onSuccess 
 
     try {
       const { data } = await api.createTribe({ name, description, avatarUrl });
+      toast.success("Tribe created successfully");
       onSuccess(data);
     } catch (err: any) {
       console.error("Create tribe failed", err);
-      setError(err.response?.data?.message || "Failed to create tribe");
+      toast.error(err.response?.data?.message || "Failed to create tribe");
       setIsSubmitting(false);
     }
   };
