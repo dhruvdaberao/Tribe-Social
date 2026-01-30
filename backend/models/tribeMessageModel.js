@@ -2,31 +2,34 @@ import mongoose from 'mongoose';
 
 const tribeMessageSchema = mongoose.Schema(
   {
-    tribe: { 
-        type: mongoose.Schema.Types.ObjectId, 
-        ref: 'Tribe', 
-        required: true,
-        index: true
+    tribe: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Tribe',
+      required: true,
+      index: true
     },
-    sender: { 
-        type: mongoose.Schema.Types.ObjectId, 
-        ref: 'User', 
-        required: true,
-        index: true
+    sender: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      required: true,
+      index: true
     },
-    text: { 
-        type: String, 
-        required: true 
+    text: {
+      type: String,
+      required: true
     },
     imageUrl: {
-        type: String,
-        default: null
+      type: String,
+      default: null
     }
   },
   {
     timestamps: true,
   }
 );
+
+// Index for fast retrieval of tribe messages
+tribeMessageSchema.index({ tribe: 1, createdAt: -1 });
 
 tribeMessageSchema.set('toJSON', {
   transform: (document, returnedObject) => {

@@ -204,20 +204,30 @@ const TribeDetailPage: React.FC<Props> = ({ currentUser }) => {
 
   /* ───────────── JOIN SOCKET ROOM (CRITICAL) ───────────── */
   useEffect(() => {
-    if (!id || !isMember) {
-      console.log('Skipping socket room join:', { id, isMember });
+    // Only join if we have a valid ID, are a member, AND socket is connected
+    if (!id || !isMember || !socket || !socket.connected) {
+      // console.log('Skipping tribe room join (Waiting for connection/auth)...');
       return;
     }
 
     const room = id;
-    console.log('Joining tribe socket room:', room);
+    console.log(`🔌 joining tribe socket room: ${room}`);
     joinRoom(room);
 
-    return () => {
-      console.log('Leaving tribe socket room:', room);
-      leaveRoom(room);
+    // Re-join on reconnect (SocketContext mostly handles this, but explicit is safe)
+    const handleReconnect = () => {
+      console.log(`🔄 Re-joining tribe room after reconnect: ${room}`);
+      joinRoom(room);
     };
-  }, [id, isMember, joinRoom, leaveRoom]);
+
+    socket.on('connect', handleReconnect);
+
+    return () => {
+      console.log(`🔌 leaving tribe socket room: ${room}`);
+      leaveRoom(room);
+      socket.off('connect', handleReconnect);
+    };
+  }, [id, isMember, joinRoom, leaveRoom, socket]); // 🔥 Added socket dependency
 
   /* ───────────── REAL-TIME RECEIVE ───────────── */
   useEffect(() => {

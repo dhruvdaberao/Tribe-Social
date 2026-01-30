@@ -204,22 +204,29 @@ router.post('/:id/messages', protect, async (req, res) => {
             'name username avatarUrl'
         );
 
+        const responseMessage = {
+            id: populated._id.toString(),
+            tribeId: tribe._id.toString(),
+            sender: populated.sender,
+            senderId: req.user.id,
+            text: populated.text,
+            imageUrl: populated.imageUrl,
+            timestamp: populated.createdAt
+        };
+
         /* 🔥 REAL-TIME MESSAGE (DETAIL PAGE) */
         if (req.io) {
-            req.io.to(tribe._id.toString()).emit('newTribeMessage', {
-                id: populated._id.toString(),
-                tribeId: tribe._id.toString(),
-                sender: populated.sender,
-                senderId: req.user.id,
-                text: populated.text,
-                imageUrl: populated.imageUrl,
-                timestamp: populated.createdAt
-            });
+            // Broadcast to the SPECIFIC tribe room
+            const roomName = tribe._id.toString();
+            console.log(`📡 Emitting 'newTribeMessage' to room: ${roomName}`);
+            req.io.to(roomName).emit('newTribeMessage', responseMessage);
 
             /* 🔥 OPTION B — UNREAD COUNTS (USER-SCOPED) */
+            // Notify members who are NOT in the room (or just everyone, client filters)
             tribe.members.forEach(memberId => {
-                if (memberId.toString() !== req.user.id) {
-                    req.io.to(`user-${memberId}`).emit('tribeUnread', {
+                const mId = memberId.toString();
+                if (mId !== req.user.id) {
+                    req.io.to(`user-${mId}`).emit('tribeUnread', {
                         tribeId: tribe._id.toString()
                     });
                 }

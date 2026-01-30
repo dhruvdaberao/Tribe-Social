@@ -12,7 +12,7 @@
 // router.get('/conversations', protect, async (req, res) => {
 //     try {
 //         const userId = new mongoose.Types.ObjectId(req.user.id);
-        
+
 //         const messages = await Message.aggregate([
 //             { $match: { $or: [{ sender: userId }, { receiver: userId }] } },
 //             { $sort: { createdAt: -1 } },
@@ -40,7 +40,7 @@
 //             },
 //             { $sort: { timestamp: -1 } },
 //         ]);
-        
+
 //         const conversations = messages.map(msg => {
 //             const otherUserId = msg.conversationId.sender.equals(userId) ? msg.conversationId.receiver : msg.conversationId.sender;
 //             return {
@@ -91,12 +91,12 @@
 //         });
 //         await notification.save();
 //         const populatedNotification = await notification.populate('sender', 'id name username avatarUrl');
-        
+
 //         const recipientSocketId = req.onlineUsers.get(receiverId.toString());
 //         if (recipientSocketId) {
 //             req.io.to(recipientSocketId).emit('newNotification', populatedNotification);
 //         }
-        
+
 //         res.status(201).json(responseMessage);
 
 //     } catch (error) {
@@ -149,7 +149,7 @@ const router = express.Router();
 router.get('/conversations', protect, async (req, res) => {
     try {
         const userId = new mongoose.Types.ObjectId(req.user.id);
-        
+
         const messages = await Message.aggregate([
             { $match: { $or: [{ sender: userId }, { receiver: userId }] } },
             { $sort: { createdAt: -1 } },
@@ -167,7 +167,7 @@ router.get('/conversations', protect, async (req, res) => {
                     docId: { $first: "$_id" }
                 }
             },
-             {
+            {
                 $project: {
                     _id: 0,
                     conversationId: "$_id",
@@ -177,12 +177,12 @@ router.get('/conversations', protect, async (req, res) => {
             },
             { $sort: { timestamp: -1 } },
         ]);
-        
+
         const conversations = messages.map(msg => {
             const otherUserId = msg.conversationId.sender.equals(userId) ? msg.conversationId.receiver : msg.conversationId.sender;
             return {
                 id: `${msg.conversationId.sender}-${msg.conversationId.receiver}`, // A consistent ID
-                participants: [{id: req.user.id}, {id: otherUserId.toString()}],
+                participants: [{ id: req.user.id }, { id: otherUserId.toString() }],
                 lastMessage: msg.lastMessage,
                 timestamp: msg.timestamp
             };
@@ -217,11 +217,18 @@ router.post('/send/:receiverId', protect, async (req, res) => {
         const responseMessage = newMessage.toJSON();
 
         // Emit the message to the specific room for this DM
+        // Room Name Convention: dm-{sorted(id1, id2)}
         const roomName = `dm-${[senderId.toString(), receiverId].sort().join('-')}`;
-        req.io.to(roomName).emit('newMessage', responseMessage);
-        
-        // **REMOVED** Notification creation for DMs to avoid cluttering the main feed.
-        // Unread count is handled on the client via the 'newMessage' socket event.
+
+        if (req.io) {
+            console.log(`📡 Emitting 'newMessage' to room: ${roomName}`);
+            req.io.to(roomName).emit('newMessage', responseMessage);
+
+            // Also emit to receiver's personal room for Notifications/Unread counts
+            // This ensures they get it even if they aren't "in" the DM room explicitly yet
+            const recipientRoom = `user-${receiverId}`;
+            req.io.to(recipientRoom).emit('newMessage', responseMessage);
+        }
 
         res.status(201).json(responseMessage);
 

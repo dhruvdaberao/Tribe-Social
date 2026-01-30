@@ -40,18 +40,25 @@ interface ServerToClientEvents {
 
   tribeDeleted: (tribeId: string) => void;
   userUpdated: (user: User) => void;
+
+  // Typing
+  userTyping: (data: { userName: string, userId: string }) => void;
+  userStoppedTyping: (data: { userName: string, userId: string }) => void;
 }
 
 
 interface ClientToServerEvents {
   joinRoom: (roomId: string) => void;
   leaveRoom: (roomId: string) => void;
+  typing: (data: { roomId: string, userName: string, userId: string }) => void;
+  stopTyping: (data: { roomId: string, userName: string, userId: string }) => void;
 }
 
 /* ───────────── CONTEXT TYPE ───────────── */
 
 interface SocketContextType {
   socket: Socket<ServerToClientEvents, ClientToServerEvents> | null;
+  isConnected: boolean; // 🔥 Added
   onlineUsers: string[];
   notifications: Notification[];
   setNotifications: React.Dispatch<React.SetStateAction<Notification[]>>;
@@ -89,9 +96,10 @@ export const SocketProvider: React.FC<{ children: ReactNode }> = ({ children }) 
   const socketRef =
     useRef<Socket<ServerToClientEvents, ClientToServerEvents> | null>(null);
 
+  const [isConnected, setIsConnected] = useState(false); // 🔥 Added
   const [onlineUsers, setOnlineUsers] = useState<string[]>([]);
   const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [activeChatPartnerId, setActiveChatPartnerId] = useState<string | null>(null); // 🔥 New State
+  const [activeChatPartnerId, setActiveChatPartnerId] = useState<string | null>(null);
 
   const [unreadCounts, setUnreadCounts] = useState({
     messages: {} as Record<string, number>,
@@ -103,18 +111,32 @@ export const SocketProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     if (!currentUser) return;
 
     if (!socketRef.current) {
+      console.log("🔌 Initializing Socket.IO connection...");
       socketRef.current = io(SOCKET_URL, {
         auth: { userId: currentUser.id },
-        withCredentials: true
+        withCredentials: true,
+        reconnection: true,             // Enable reconnection
+        reconnectionAttempts: 10,       // Retry 10 times
+        reconnectionDelay: 1000,
       });
 
       const socket = socketRef.current;
 
       socket.on('connect', () => {
         console.log('✅ Socket connected:', socket.id);
-
-        // 🔥 JOIN USER-SCOPED ROOM (OPTION B)
+        setIsConnected(true);
+        // User room is auto-joined by backend in new logic, but redundant join is safe
         socket.emit('joinRoom', `user-${currentUser.id}`);
+      });
+
+      socket.on('disconnect', () => {
+        console.log('❌ Socket disconnected');
+        setIsConnected(false);
+      });
+
+      socket.on('connect_error', (err) => {
+        console.error('⚠️ Socket connect error:', err.message);
+        setIsConnected(false);
       });
 
       socket.on('getOnlineUsers', setOnlineUsers);
@@ -127,8 +149,8 @@ export const SocketProvider: React.FC<{ children: ReactNode }> = ({ children }) 
       });
 
       /* ───────────── DIRECT MESSAGE UNREAD ───────────── */
-      /* ───────────── DIRECT MESSAGE UNREAD ───────────── */
       socket.on('newMessage', message => {
+        // If I sent it, ignore unread count
         if (message.senderId === currentUser.id) return;
 
         // Use functional state update or ref to check current active partner
@@ -160,18 +182,41 @@ export const SocketProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     }
 
     return () => {
-      socketRef.current?.disconnect();
-      socketRef.current = null;
+      // Don't disconnect on every re-render, only on explicit unmount/logout
+      // But for strict cleanup in React 18:
+      // socketRef.current?.disconnect();
+      // socketRef.current = null;
     };
   }, [currentUser]);
 
+  // Clean disconnect on unmount of Provider (app exit)
+  useEffect(() => {
+    return () => {
+      if (socketRef.current) {
+        console.log("🔌 Disconnecting socket on cleanup...");
+        socketRef.current.disconnect();
+        socketRef.current = null;
+        setIsConnected(false);
+      }
+    }
+  }, []);
+
   /* ───────────── HELPERS ───────────── */
   const joinRoom = useCallback((roomId: string) => {
-    socketRef.current?.emit('joinRoom', roomId);
+    if (socketRef.current && socketRef.current.connected) {
+      console.log(`📤 Emitting joinRoom: ${roomId}`);
+      socketRef.current.emit('joinRoom', roomId);
+    } else {
+      console.warn(`⚠️ Cannot join room ${roomId}: Socket not connected`);
+      // TODO: Implement queueing if strictly needed, but usually retrying on 'connect' event in component is better
+    }
   }, []);
 
   const leaveRoom = useCallback((roomId: string) => {
-    socketRef.current?.emit('leaveRoom', roomId);
+    if (socketRef.current) {
+      console.log(`📤 Emitting leaveRoom: ${roomId}`);
+      socketRef.current.emit('leaveRoom', roomId);
+    }
   }, []);
 
   const clearUnreadMessages = useCallback((partnerId: string) => {
@@ -204,6 +249,7 @@ export const SocketProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     <SocketContext.Provider
       value={{
         socket: socketRef.current,
+        isConnected,
         onlineUsers,
         notifications,
         setNotifications,

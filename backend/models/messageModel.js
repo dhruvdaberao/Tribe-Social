@@ -1,13 +1,17 @@
 import mongoose from 'mongoose';
 
 const messageSchema = mongoose.Schema({
-    sender: { type: mongoose.Schema.Types.ObjectId, ref: 'User', index: true },
-    receiver: { type: mongoose.Schema.Types.ObjectId, ref: 'User', index: true },
-    message: { type: String, required: true },
-    imageUrl: { type: String, default: null },
+  sender: { type: mongoose.Schema.Types.ObjectId, ref: 'User', index: true },
+  receiver: { type: mongoose.Schema.Types.ObjectId, ref: 'User', index: true },
+  message: { type: String, required: true },
+  imageUrl: { type: String, default: null },
 }, {
-    timestamps: true,
+  timestamps: true,
 });
+
+// Compound index for fast retrieval of chat history between two users
+messageSchema.index({ sender: 1, receiver: 1, createdAt: -1 });
+messageSchema.index({ receiver: 1, sender: 1, createdAt: -1 });
 
 messageSchema.set('toJSON', {
   transform: (document, returnedObject) => {

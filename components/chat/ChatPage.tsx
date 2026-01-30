@@ -146,7 +146,14 @@ const ChatPage: React.FC<ChatPageProps> = ({ currentUser, allUsers, chukUser, in
 
     setActiveChatPartnerId(otherUserId);
     clearUnreadMessages(otherUserId);
-    socket?.emit('joinRoom', `dm-${[currentUser.id, otherUserId].sort().join('-')}`);
+
+    // Join logic: Only if socket is ready
+    if (socket && socket.connected) {
+      socket.emit('joinRoom', `dm-${[currentUser.id, otherUserId].sort().join('-')}`);
+    } else {
+      // Queue it or let the 'connect' handler in useEffect deal with it if we tracked active room there
+      // For now, we rely on the user finding it works when they are online
+    }
 
     // AI Check
     if (otherUserId === chukUser.id) {
