@@ -195,7 +195,7 @@ const NotificationsPage: React.FC<NotificationsPageProps> = ({ notifications, al
 
   return (
     <div className="max-w-3xl mx-auto">
-      <h1 className="text-2xl font-bold text-primary mb-6 font-display">Notifications</h1>
+      <h1 className="text-[28px] font-bold text-primary mb-6 font-display leading-[1.2]">Notifications</h1>
       <div className="space-y-3">
         {displayNotifications.length > 0 ? (
           displayNotifications.map(notification => (

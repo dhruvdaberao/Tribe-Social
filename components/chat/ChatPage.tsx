@@ -299,7 +299,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ currentUser, allUsers, chukUser, in
             <div className="w-24 h-24 text-secondary mb-4">
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1}><path strokeLinecap="round" strokeLinejoin="round" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" /></svg>
             </div>
-            <h2 className="text-2xl font-bold text-primary font-display">Your Messages</h2>
+            <h2 className="text-[28px] font-bold text-primary font-display leading-[1.2]">Your Messages</h2>
             <p className="text-secondary mt-2">Select a conversation or start a new one.</p>
           </div>
         )}

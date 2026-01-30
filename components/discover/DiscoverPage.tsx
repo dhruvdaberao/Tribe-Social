@@ -112,7 +112,7 @@ const DiscoverPage: React.FC<DiscoverPageProps> = (props) => {
 
     return (
         <div>
-            <h1 className="text-2xl font-bold text-primary mb-6 font-display">Discover</h1>
+            <h1 className="text-[28px] font-bold text-primary mb-6 font-display leading-[1.2]">Discover</h1>
 
             <div className="relative mb-8">
                 <input

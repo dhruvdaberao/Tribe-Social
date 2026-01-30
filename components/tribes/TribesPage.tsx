@@ -18,12 +18,14 @@ const Header = styled.div`
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 32px;
+  margin-bottom: 24px;
 `;
 
 const Title = styled.h1`
   font-size: 28px;
   font-weight: 700;
+  line-height: 1.2;
+  font-family: var(--font-display);
   color: ${({ theme }) => theme.text};
 `;
 

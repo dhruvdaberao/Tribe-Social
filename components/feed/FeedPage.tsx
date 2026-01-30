@@ -19,7 +19,7 @@ const FeedPage: React.FC<FeedPageProps> = (props) => {
   const { posts, currentUser, allUsers, allTribes, onLikePost, onCommentPost, onDeletePost, onDeleteComment, onViewProfile, onSharePost } = props;
   return (
     <div>
-      <h1 className="text-2xl font-bold text-primary mb-6 font-display">Home Feed</h1>
+      <h1 className="text-[28px] font-bold text-primary mb-6 font-display leading-[1.2]">Home Feed</h1>
       <div>
         {posts.map(post => (
           <PostCard
