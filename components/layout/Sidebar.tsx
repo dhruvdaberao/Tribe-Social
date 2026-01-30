@@ -237,7 +237,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeItem, onSelectItem, currentUser
             onClick={() => onSelectItem('Home')}
           >
             <img src={theme === 'dark' ? '/dark1.png' : '/Light1.png'} alt="Tribe" className="h-5 w-auto flex-shrink-0 select-none" />
-            <span className="text-[21px] font-bold font-display tracking-tight text-accent-text sm:inline leading-none pt-0.5">Tribe</span>
+            <span className="text-[21px] font-extrabold font-display tracking-tight text-accent-text sm:inline leading-none pt-0.5">Tribe</span>
           </div>
           <nav className="hidden md:flex items-center space-x-2">
             {mainNavItems.map(item => (
