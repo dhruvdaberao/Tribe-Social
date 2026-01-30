@@ -250,6 +250,7 @@ import CreatePost from '../feed/CreatePost';
 import FollowListModal from './FollowListModal';
 import UserAvatar from '../common/UserAvatar';
 import ShareButton from '../common/ShareButton';
+import { toast } from '../common/Toast';
 import PostGridItem from './PostGridItem';
 import PostViewModal from './PostViewModal';
 
@@ -348,6 +349,8 @@ export const ProfilePage: React.FC<ProfilePageProps> = (props) => {
         }));
     }
 
+
+
     const handleDelete = (postId: string) => {
         onDeletePost(postId);
         setProfilePosts(prev => prev.filter(p => p.id !== postId));
@@ -411,12 +414,11 @@ export const ProfilePage: React.FC<ProfilePageProps> = (props) => {
                                                 <button onClick={() => { onStartConversation(profileUser); }} className={`w-full text-left px-4 py-2 hover:bg-background transition-colors flex items-center space-x-2 text-primary`}>
                                                     <BlockIcon /><span>Message User</span>
                                                 </button>
+                                                {/* 
                                                 <button onClick={() => { onToggleBlock(profileUser.id); toast.success(isBlocked ? "User unblocked successfully" : "User blocked successfully"); }} className={`w-full text-left px-4 py-2 hover:bg-background transition-colors flex items-center space-x-2 text-red-500`}>
                                                     <BlockIcon /><span>{isBlocked ? 'Unblock User' : 'Block User'}</span>
-                                                </button>
-                                                <button onClick={() => { onToggleBlock(profileUser.id); toast.success(isBlocked ? "User unblocked successfully" : "User blocked successfully"); }} className={`w-full text-left px-4 py-2 hover:bg-background transition-colors flex items-center space-x-2 text-red-500`}>
-                                                    <BlockIcon /><span>{isBlocked ? 'Unblock User' : 'Block User'}</span>
-                                                </button>
+                                                </button> 
+                                                */}
                                             </div>
                                         )}
                                     </div>
@@ -494,8 +496,6 @@ const EditProfileModal: React.FC<EditProfileModalProps> = ({ user, onClose, onSa
     const [bannerPreview, setBannerPreview] = useState<string | null>(user.bannerUrl);
     const avatarInputRef = useRef<HTMLInputElement>(null);
     const bannerInputRef = useRef<HTMLInputElement>(null);
-    const avatarCameraRef = useRef<HTMLInputElement>(null);
-    const bannerCameraRef = useRef<HTMLInputElement>(null);
     const avatarCameraRef = useRef<HTMLInputElement>(null);
     const bannerCameraRef = useRef<HTMLInputElement>(null);
 

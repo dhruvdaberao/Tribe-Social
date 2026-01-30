@@ -21,8 +21,8 @@ export default {
         border: 'hsl(var(--border))',
       },
       fontFamily: {
-        sans: ['Poppins', 'sans-serif'],
-        display: ['Poppins', 'sans-serif'],
+        sans: ['Asimovian', 'sans-serif'],
+        display: ['Asimovian', 'sans-serif'],
       },
       animation: {
         'indeterminate-progress': 'indeterminate-progress 1.5s infinite ease-in-out',
