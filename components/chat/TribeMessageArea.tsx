@@ -136,43 +136,63 @@ const TribeMessageArea: React.FC<TribeMessageAreaProps> = ({
                         alt="shared"
                       />
                     )}
-                    <p className="text-sm whitespace-pre-wrap break-words">
-                      {message.text}
+
+                    {message.text.includes('[Shared Post]') ? (
+                      <div className="flex flex-col space-y-2">
+                        <div className="bg-background/20 p-2 rounded-lg border-l-2 border-primary">
+                          <p className="text-xs font-bold opacity-75">Shared Content</p>
+                          <p className="text-sm">{message.text.replace('[Shared Post]', '').trim()}</p>
+                        </div>
+                        {message.text.match(/https?:\/\/[^\s]+/) && (
+                          <a
+                            href={message.text.match(/https?:\/\/[^\s]+/)?.[0]}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="bg-primary text-background text-xs font-bold py-1 px-3 rounded-full self-start hover:opacity-80 transition-opacity"
+                          >
+                            Visit Link
+                          </a>
+                        )}
+                      </div>
+                    ) : message.text.includes('[Shared Story]') ? (
+                      <div className="flex flex-col space-y-2">
+                        <div className="bg-background/20 p-2 rounded-lg border-l-2 border-accent">
+                          <p className="text-xs font-bold opacity-75">Shared Story</p>
+                          <p className="text-sm">{message.text.replace('[Shared Story]', '').replace(/\/story\/[a-zA-Z0-9]+/, '').trim()}</p>
+                        </div>
+                        {message.text.match(/\/story\/([a-zA-Z0-9]+)/) && (
+                          <button
+                            onClick={() => {
+                              const match = message.text.match(/\/story\/([a-zA-Z0-9]+)/);
+                              if (match) {
+                                window.dispatchEvent(new CustomEvent('open-story', { detail: match[1] }));
+                              }
+                            }}
+                            className="bg-primary text-background text-xs font-bold py-1 px-3 rounded-full self-start hover:opacity-80 transition-opacity"
+                          >
+                            View Story
+                          </button>
+                        )}
+                      </div>
+                    ) : (
+                      <p className="text-sm whitespace-pre-wrap break-words">
+                        {message.text}
+                        {message.text.match(/https?:\/\/[^\s]+/) && (
+                          <a
+                            href={message.text.match(/https?:\/\/[^\s]+/)?.[0]}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="block mt-2 text-xs underline opacity-80"
+                          >
+                            {message.text.match(/https?:\/\/[^\s]+/)?.[0]}
+                          </a>
+                        )}
+                      </p>
+                    )}
+
+                    <p className={`text-[10px] mt-1 text-right ${isCurrentUser ? 'text-accent-text/70' : 'text-secondary'}`}>
+                      {new Date(message.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                     </p>
-
-                    {/* 🔥 Feature: Detect Links/Shared Posts */}
-                    {(() => {
-                      const urlMatch = message.text.match(/(https?:\/\/[^\s]+)/g);
-                      const isSharedPost = message.text.startsWith('[Shared Post');
-
-                      if (urlMatch || isSharedPost) {
-                        const targetUrl = urlMatch ? urlMatch[0] : null;
-                        return (
-                          <div className={`mt-2 pt-2 border-t ${isCurrentUser ? 'border-accent-text/20' : 'border-border'}`}>
-                            {isSharedPost && (
-                              <span className="text-[10px] uppercase tracking-wider opacity-70 block mb-1">
-                                Shared Content
-                              </span>
-                            )}
-                            {targetUrl && (
-                              <a
-                                href={targetUrl}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className={`
-                                    inline-flex items-center gap-1 text-xs font-bold underline 
-                                    ${isCurrentUser ? 'text-accent-text' : 'text-accent'}
-                                  `}
-                              >
-                                Visit Link &rarr;
-                              </a>
-                            )}
-                          </div>
-                        );
-                      }
-                      return null;
-                    })()}
-
                   </div>
 
                   <span className="text-[10px] opacity-60 mt-1 ml-1">

@@ -96,7 +96,7 @@ const StoryFeed: React.FC<StoryFeedProps> = ({ myStories, followingUserStories, 
                 {hasMyStory && (
                     <StoryFeedItem
                         user={currentUser}
-                        hasUnseen={true} // My story is always "unseen" in the context of the ring color
+                        hasUnseen={!seenStoryAuthors.has(currentUser.id)}
                         onClick={() => onViewUserStories(currentUser.id)}
                     />
                 )}

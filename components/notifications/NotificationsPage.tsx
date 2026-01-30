@@ -9,6 +9,7 @@ import { useSocket } from '../../contexts/SocketContext';
 interface NotificationsPageProps {
   notifications: Notification[];
   allTribes: Tribe[];
+  currentUser: User;
   onViewProfile: (user: User) => void;
   onViewMessage: (user: User) => void;
   onViewPost: (postId: string) => void;
@@ -32,7 +33,7 @@ const timeAgo = (dateString: string) => {
   return date.toLocaleDateString();
 };
 
-const NotificationItem: React.FC<{ notification: Notification; allTribes: Tribe[]; onViewProfile: (user: User) => void; onViewMessage: (user: User) => void; onViewPost: (postId: string) => void; onViewTribe: (tribe: any) => void; onViewStory: (userId: string) => void; }> = ({ notification, allTribes, onViewProfile, onViewMessage, onViewPost, onViewTribe, onViewStory }) => {
+const NotificationItem: React.FC<{ notification: Notification; allTribes: Tribe[]; currentUser: User; onViewProfile: (user: User) => void; onViewMessage: (user: User) => void; onViewPost: (postId: string) => void; onViewTribe: (tribe: any) => void; onViewStory: (userId: string) => void; }> = ({ notification, allTribes, currentUser, onViewProfile, onViewMessage, onViewPost, onViewTribe, onViewStory }) => {
   const { sender, type, timestamp } = notification;
 
   const renderText = () => {
@@ -73,9 +74,15 @@ const NotificationItem: React.FC<{ notification: Notification; allTribes: Tribe[
         onViewProfile(sender);
         break;
       case 'story_like':
-        onViewStory(sender.id);
+        // If someone liked MY story, I should view MY story to see the like
+        // Current behavior (bug): onViewStory(sender.id) -> Views the liker's story
+        // New behavior (fix): onViewStory(currentUser.id) -> Views my story
+        if (currentUser) {
+          onViewStory(currentUser.id);
+        }
         break;
       case 'message':
+        // ... rest of switch ...
         onViewMessage(sender);
         break;
       case 'like':
@@ -135,7 +142,7 @@ const NotificationItem: React.FC<{ notification: Notification; allTribes: Tribe[
   );
 };
 
-const NotificationsPage: React.FC<NotificationsPageProps> = ({ notifications, allTribes, onViewProfile, onViewMessage, onViewPost, onViewTribe, onViewStory }) => {
+const NotificationsPage: React.FC<NotificationsPageProps> = ({ notifications, allTribes, currentUser, onViewProfile, onViewMessage, onViewPost, onViewTribe, onViewStory }) => {
   const { setNotifications } = useSocket();
   const [cachedNotifications, setCachedNotifications] = useState<Notification[]>([]);
   const [isLoadingFromCache, setIsLoadingFromCache] = useState(true);
@@ -196,6 +203,7 @@ const NotificationsPage: React.FC<NotificationsPageProps> = ({ notifications, al
               key={notification.id}
               notification={notification}
               allTribes={allTribes}
+              currentUser={currentUser}
               onViewProfile={onViewProfile}
               onViewMessage={onViewMessage}
               onViewPost={onViewPost}

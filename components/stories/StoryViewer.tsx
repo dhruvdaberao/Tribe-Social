@@ -50,7 +50,7 @@
 //       void progressRef.current.offsetWidth; // Trigger reflow
 //       progressRef.current.style.animation = '';
 //     }
-    
+
 //     if (timerRef.current) clearTimeout(timerRef.current);
 //     if (!isPaused) {
 //       timerRef.current = setTimeout(goToNext, 3000);
@@ -119,7 +119,7 @@
 //               </div>
 //             )}
 //           </div>
-          
+
 //           {/* Footer */}
 //           <div className="p-4 z-20 flex items-center justify-end space-x-2 text-white">
 //               {!isOwnStory && (
@@ -191,7 +191,7 @@ const StoryViewer: React.FC<StoryViewerProps> = ({ userStories, currentUser, all
   const goToNext = () => {
     setCurrentIndex(prev => {
       if (prev < stories.length - 1) return prev + 1;
-      onClose(); 
+      onClose();
       return prev;
     });
   };
@@ -219,19 +219,19 @@ const StoryViewer: React.FC<StoryViewerProps> = ({ userStories, currentUser, all
   const isLiked = currentStory.likes.includes(currentUser.id);
 
   const handleShare = (destination: { type: 'tribe' | 'user', id: string }) => {
-      onSharePost({
-          author: user,
-          content: currentStory.text || `Check out this story from @${user.username}!`,
-          imageUrl: currentStory.imageUrl,
-      }, destination);
+    onSharePost({
+      author: user,
+      content: `[Shared Story] ${currentUser.name} wants you to see a story by @${user.username}. /story/${user.id}`,
+      imageUrl: currentStory.imageUrl,
+    }, destination);
   };
 
   return (
     <>
       <div className="fixed inset-0 bg-black/95 z-50 flex items-center justify-center p-4" onMouseDown={() => setIsPaused(true)} onMouseUp={() => setIsPaused(false)}>
-        <div 
-            className="relative w-full max-w-[360px] aspect-[9/16] rounded-3xl overflow-hidden flex flex-col border-4 border-white/10 shadow-2xl transition-colors duration-300"
-            style={{ backgroundColor: currentStory.backgroundColor || '#2A2320' }}
+        <div
+          className="relative w-full max-w-[360px] aspect-[9/16] rounded-3xl overflow-hidden flex flex-col border-4 border-white/10 shadow-2xl transition-colors duration-300"
+          style={{ backgroundColor: currentStory.backgroundColor || '#2A2320' }}
         >
           {/* Progress */}
           <div className="absolute top-3 left-3 right-3 flex space-x-1 z-20">
@@ -259,45 +259,45 @@ const StoryViewer: React.FC<StoryViewerProps> = ({ userStories, currentUser, all
           {/* Canvas Content */}
           <div className="flex-1 relative overflow-hidden w-full h-full pointer-events-none">
             {currentStory.imageUrl && (
-              <div 
+              <div
                 className="absolute"
-                style={{ 
-                    left: `${currentStory.imagePosition?.x || 0}%`, 
-                    top: `${currentStory.imagePosition?.y || 0}%`,
-                    transform: `translate(-50%, -50%) rotate(${currentStory.imageRotation || 0}deg) scale(${currentStory.imageScale || 1})`
+                style={{
+                  left: `${currentStory.imagePosition?.x || 0}%`,
+                  top: `${currentStory.imagePosition?.y || 0}%`,
+                  transform: `translate(-50%, -50%) rotate(${currentStory.imageRotation || 0}deg) scale(${currentStory.imageScale || 1})`
                 }}
               >
-                  <img src={currentStory.imageUrl} alt="Story" className="w-48 rounded-lg shadow-xl" />
+                <img src={currentStory.imageUrl} alt="Story" className="w-48 rounded-lg shadow-xl" />
               </div>
             )}
             {currentStory.text && (
-              <div 
+              <div
                 className="absolute text-2xl font-bold font-display text-center whitespace-pre-wrap"
                 style={{
-                    left: `${currentStory.textPosition?.x || 50}%`, 
-                    top: `${currentStory.textPosition?.y || 50}%`,
-                    transform: `translate(-50%, -50%) rotate(${currentStory.textRotation || 0}deg) scale(${currentStory.textScale || 1})`,
-                    color: currentStory.textColor || '#ffffff',
-                    textShadow: '1px 1px 2px rgba(0,0,0,0.5)',
-                    minWidth: '150px'
+                  left: `${currentStory.textPosition?.x || 50}%`,
+                  top: `${currentStory.textPosition?.y || 50}%`,
+                  transform: `translate(-50%, -50%) rotate(${currentStory.textRotation || 0}deg) scale(${currentStory.textScale || 1})`,
+                  color: currentStory.textColor || '#ffffff',
+                  textShadow: '1px 1px 2px rgba(0,0,0,0.5)',
+                  minWidth: '150px'
                 }}
               >
                 {currentStory.text}
               </div>
             )}
           </div>
-          
+
           {/* Footer */}
           <div className="absolute bottom-0 left-0 right-0 p-4 z-20 flex items-center justify-end space-x-3 bg-gradient-to-t from-black/50 to-transparent">
-              {!isOwnStory && (
-                  <button onClick={(e) => { e.stopPropagation(); onLike(currentStory.id); }} className={`p-3 rounded-full bg-white/10 backdrop-blur-md hover:bg-white/20 transition-colors ${isLiked ? 'text-red-500' : 'text-white'}`}>
-                      <HeartIcon filled={isLiked} />
-                  </button>
-              )}
-              <button onClick={(e) => { e.stopPropagation(); setIsShareModalOpen(true); }} className="p-3 rounded-full bg-white/10 backdrop-blur-md hover:bg-white/20 text-white transition-colors"><ShareIcon /></button>
-              {isOwnStory && (
-                  <button onClick={(e) => { e.stopPropagation(); onDelete(currentStory.id); }} className="p-3 rounded-full bg-white/10 backdrop-blur-md hover:bg-white/20 text-white transition-colors"><TrashIcon /></button>
-              )}
+            {!isOwnStory && (
+              <button onClick={(e) => { e.stopPropagation(); onLike(currentStory.id); }} className={`p-3 rounded-full bg-white/10 backdrop-blur-md hover:bg-white/20 transition-colors ${isLiked ? 'text-red-500' : 'text-white'}`}>
+                <HeartIcon filled={isLiked} />
+              </button>
+            )}
+            <button onClick={(e) => { e.stopPropagation(); setIsShareModalOpen(true); }} className="p-3 rounded-full bg-white/10 backdrop-blur-md hover:bg-white/20 text-white transition-colors"><ShareIcon /></button>
+            {isOwnStory && (
+              <button onClick={(e) => { e.stopPropagation(); onDelete(currentStory.id); }} className="p-3 rounded-full bg-white/10 backdrop-blur-md hover:bg-white/20 text-white transition-colors"><TrashIcon /></button>
+            )}
           </div>
         </div>
         <style>{`.animate-progress { animation: progress 5s linear forwards; } @keyframes progress { from { width: 0%; } to { width: 100%; } }`}</style>

@@ -55,7 +55,26 @@ const App: React.FC = () => {
     const [tribes, setTribes] = useState<Tribe[]>([]);
     const [myStories, setMyStories] = useState<Story[]>([]);
     const [followingUserStories, setFollowingUserStories] = useState<{ user: User, stories: Story[] }[]>([]);
-    const [seenStoryAuthors, setSeenStoryAuthors] = useState<Set<string>>(new Set());
+
+    // Load seen stories from local storage
+    const [seenStoryAuthors, setSeenStoryAuthors] = useState<Set<string>>(() => {
+        try {
+            const saved = localStorage.getItem('tribe_storage_seen_stories');
+            return saved ? new Set(JSON.parse(saved)) : new Set();
+        } catch (e) {
+            return new Set();
+        }
+    });
+
+    // Persist seen stories
+    useEffect(() => {
+        try {
+            localStorage.setItem('tribe_storage_seen_stories', JSON.stringify(Array.from(seenStoryAuthors)));
+        } catch (e) {
+            console.error("Failed to save seen stories", e);
+        }
+    }, [seenStoryAuthors]);
+
     const [isDataLoaded, setIsDataLoaded] = useState(false);
     const [isFetching, setIsFetching] = useState(false);
     const [isCreatingPost, setIsCreatingPost] = useState(false);
@@ -75,6 +94,18 @@ const App: React.FC = () => {
     // URL Sync for Tribes
     const navigate = useNavigate();
     const location = useLocation();
+
+    // Listen for custom "open-story" event from Chat
+    useEffect(() => {
+        const handleOpenStory = (e: any) => {
+            const userId = e.detail;
+            if (userId) {
+                handleViewUserStories(userId);
+            }
+        };
+        window.addEventListener('open-story', handleOpenStory);
+        return () => window.removeEventListener('open-story', handleOpenStory);
+    }, []);
 
     useEffect(() => {
         if (location.pathname === '/tribes' || location.pathname === '/tribes/') {
@@ -833,7 +864,13 @@ const App: React.FC = () => {
                     tribeId={effectiveTribeId}
                 />;
             case 'Notifications':
-                return <NotificationsPage notifications={notifications} allTribes={tribes} onViewProfile={handleViewProfile} onViewMessage={handleStartConversation} onViewPost={handleViewPost} onViewTribe={handleViewTribe} onViewStory={handleViewUserStories} />;
+                return (
+                    <NotificationsPage
+                        notifications={notifications}
+                        allTribes={tribes}
+                        currentUser={currentUser!}
+                        onViewProfile={handleViewProfile} onViewMessage={handleStartConversation} onViewPost={handleViewPost} onViewTribe={handleViewTribe} onViewStory={handleViewUserStories} />
+                );
             case 'Profile':
                 if (!viewedUser || (currentUser.blockedUsers || []).includes(viewedUser.id) || (viewedUser.blockedUsers || []).includes(currentUser.id)) {
                     return <div className="text-center p-8">User not found or is blocked.</div>;
