@@ -291,7 +291,23 @@ export const ProfilePage: React.FC<ProfilePageProps> = (props) => {
     const [optionsOpen, setOptionsOpen] = useState(false);
     const [viewingPost, setViewingPost] = useState<Post | null>(null);
     const [profilePosts, setProfilePosts] = useState<Post[]>(posts);
+    const [profileUser, setProfileUser] = useState<User>(user);
     const [isLoading, setIsLoading] = useState(false);
+
+    // FETCH FULL USER PROFILE (Fixes 0 counts / missing banner)
+    useEffect(() => {
+        const fetchFullProfile = async () => {
+            try {
+                const { data } = await api.fetchUser(user.id);
+                setProfileUser(data);
+            } catch (error) {
+                console.error("Failed to fetch full profile:", error);
+            }
+        };
+
+        setProfileUser(user); // Reset to prop user first
+        fetchFullProfile();
+    }, [user.id]);
 
     // FETCH USER POSTS (Phase 3 Requirement)
     useEffect(() => {
@@ -346,24 +362,24 @@ export const ProfilePage: React.FC<ProfilePageProps> = (props) => {
     }
 
     const handleMessageClick = () => {
-        onStartConversation(user);
+        onStartConversation(profileUser);
     }
 
     return (
         <div>
             <div className="bg-surface rounded-2xl shadow-sm border border-border mb-6 overflow-hidden">
                 <div className="h-48 md:h-64 bg-background rounded-t-2xl">
-                    {user.bannerUrl ? <img src={user.bannerUrl} alt={`${user.name}'s banner`} className="w-full h-full object-cover" /> : <div className="w-full h-full bg-gradient-to-br from-background via-surface to-background" />}
+                    {profileUser.bannerUrl ? <img src={profileUser.bannerUrl} alt={`${profileUser.name}'s banner`} className="w-full h-full object-cover" /> : <div className="w-full h-full bg-gradient-to-br from-background via-surface to-background" />}
                 </div>
 
                 <div className="p-4 md:p-6 relative">
                     <div className="flex flex-col sm:flex-row justify-between items-start">
                         <div
                             className="sm:-mt-20 -mt-16 flex-shrink-0 cursor-pointer"
-                            onClick={hasStory ? () => onViewUserStories(user.id) : undefined}
+                            onClick={hasStory ? () => onViewUserStories(profileUser.id) : undefined}
                         >
                             <div className={`w-28 h-28 md:w-36 md:h-36 rounded-full p-1 ${hasStory ? 'bg-accent' : 'bg-transparent'}`}>
-                                <UserAvatar user={user} className="w-full h-full border-4 border-surface" />
+                                <UserAvatar user={profileUser} className="w-full h-full border-4 border-surface" />
                             </div>
                         </div>
 
@@ -380,18 +396,18 @@ export const ProfilePage: React.FC<ProfilePageProps> = (props) => {
                                 </>
                             ) : (
                                 <>
-                                    <button onClick={handleMessageClick} className="w-full sm:w-auto font-semibold px-6 py-2 rounded-lg transition-colors bg-surface text-primary border border-border hover:bg-background">Message</button>
-                                    <button onClick={() => onToggleFollow(user.id)} className={`w-full sm:w-auto font-semibold px-6 py-2 rounded-lg transition-colors ${isFollowing ? 'bg-surface text-primary border border-border hover:bg-background' : 'bg-accent text-accent-text hover:bg-accent-hover'}`}>
+                                    <button onClick={() => handleMessageClick()} className="w-full sm:w-auto font-semibold px-6 py-2 rounded-lg transition-colors bg-surface text-primary border border-border hover:bg-background">Message</button>
+                                    <button onClick={() => onToggleFollow(profileUser.id)} className={`w-full sm:w-auto font-semibold px-6 py-2 rounded-lg transition-colors ${isFollowing ? 'bg-surface text-primary border border-border hover:bg-background' : 'bg-accent text-accent-text hover:bg-accent-hover'}`}>
                                         {isFollowing ? 'Following' : 'Follow'}
                                     </button>
                                     <div className="relative">
                                         <button onClick={() => setOptionsOpen(!optionsOpen)} onBlur={() => setTimeout(() => setOptionsOpen(false), 150)} className="p-2 rounded-full bg-surface text-primary border border-border hover:bg-background" aria-label="More options"><OptionsIcon /></button>
                                         {optionsOpen && (
                                             <div className="absolute right-0 mt-2 w-48 bg-surface rounded-lg shadow-lg border border-border z-10">
-                                                <ShareButton shareData={{ title: `Check out ${user.name}'s profile on Tribe!`, text: `See what ${user.name} (@${user.username}) is up to.`, url: window.location.href }} className="w-full text-left px-4 py-2 text-primary hover:bg-background rounded-t-lg transition-colors flex items-center space-x-2" onShare={() => setOptionsOpen(false)}>
+                                                <ShareButton shareData={{ title: `Check out ${profileUser.name}'s profile on Tribe!`, text: `See what ${profileUser.name} (@${profileUser.username}) is up to.`, url: window.location.href }} className="w-full text-left px-4 py-2 text-primary hover:bg-background rounded-t-lg transition-colors flex items-center space-x-2" onShare={() => setOptionsOpen(false)}>
                                                     <ShareIcon /><span>Share Profile</span>
                                                 </ShareButton>
-                                                <button onClick={() => onStartConversation(user)} className={`w-full text-left px-4 py-2 hover:bg-background transition-colors flex items-center space-x-2 text-primary`}>
+                                                <button onClick={() => onStartConversation(profileUser)} className={`w-full text-left px-4 py-2 hover:bg-background transition-colors flex items-center space-x-2 text-primary`}>
                                                     <BlockIcon /><span>Block User</span>
                                                 </button>
                                             </div>
@@ -403,20 +419,20 @@ export const ProfilePage: React.FC<ProfilePageProps> = (props) => {
                     </div>
 
                     <div className="mt-2">
-                        <h1 className="text-3xl font-bold text-primary font-display">{user.name}</h1>
-                        <p className="text-md text-secondary">@{user.username}</p>
+                        <h1 className="text-3xl font-bold text-primary font-display">{profileUser.name}</h1>
+                        <p className="text-md text-secondary">@{profileUser.username}</p>
                         <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2">
-                            <button onClick={() => openFollowModal('following', user.following || [])} className="hover:underline"><span className="font-bold text-primary">{(user.following || []).length}</span> <span className="text-secondary">Following</span></button>
-                            <button onClick={() => openFollowModal('followers', user.followers || [])} className="hover:underline"><span className="font-bold text-primary">{(user.followers || []).length}</span> <span className="text-secondary">Followers</span></button>
+                            <button onClick={() => openFollowModal('following', profileUser.following || [])} className="hover:underline"><span className="font-bold text-primary">{(profileUser.following || []).length}</span> <span className="text-secondary">Following</span></button>
+                            <button onClick={() => openFollowModal('followers', profileUser.followers || [])} className="hover:underline"><span className="font-bold text-primary">{(profileUser.followers || []).length}</span> <span className="text-secondary">Followers</span></button>
                         </div>
-                        <p className="text-primary mt-4 max-w-2xl whitespace-pre-wrap">{user.bio}</p>
+                        <p className="text-primary mt-4 max-w-2xl whitespace-pre-wrap">{profileUser.bio}</p>
                     </div>
                 </div>
             </div>
 
             {isOwnProfile && <CreatePost currentUser={currentUser} allUsers={visibleUsers} myStories={myStories} onAddPost={onAddPost} isPosting={isPosting} onOpenStoryCreator={onOpenStoryCreator} onViewUserStories={onViewUserStories} />}
 
-            <h2 className="text-xl font-bold text-primary my-6 font-display">{isOwnProfile ? "Your Posts" : `${user.name.split(' ')[0]}'s Posts`}</h2>
+            <h2 className="text-xl font-bold text-primary my-6 font-display">{isOwnProfile ? "Your Posts" : `${profileUser.name.split(' ')[0]}'s Posts`}</h2>
 
             {isLoading ? (
                 <div className="flex justify-center p-8"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div></div>
