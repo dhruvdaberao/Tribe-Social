@@ -5,27 +5,27 @@
  */
 
 export const lightTheme = {
-    background: '#FAF8F6',      // Creamy off-white page background
-    cardBackground: '#FFFFFF',  // Crisp white for card surfaces
-    text: '#3B302B',            // Dark coffee brown for high readability
-    textSecondary: '#8A7B74',   // Muted gray-brown for timestamps/subtitles
-    primary: '#B59477',         // Brand Accent: Muted tan/sand
-    secondary: '#3B302B',       // Primary text color used as a secondary structure color
-    border: '#EAE4E0',          // Soft warm border
-    hover: '#F1F3F5',           // Standard hover background
-    accentHover: '#A17F61',     // Darker rich hover for brand elements
-    accentText: '#FFFFFF',      // Text color on brand backgrounds
+    background: '#FAF7F3',      // Warm Cream
+    cardBackground: '#F2ECE6',  // Card Cream
+    text: '#2C211B',            // Deep Cocoa
+    textSecondary: '#8C7A6A',   // Muted Brown
+    primary: '#B89A7A',         // Brand Brown
+    secondary: '#2C211B',       // Deep Cocoa
+    border: '#E6DED6',          // Soft Divider
+    hover: '#EAE4E0',           // Soft hover
+    accentHover: '#9E8466',     // Darker Brand Brown
+    accentText: '#FFFFFF',      // White on Brand
 };
 
 export const darkTheme = {
-    background: '#2A2320',      // Dark espresso background
-    cardBackground: '#3B302B',  // Medium roast brown for card surfaces
-    text: '#F5F1EE',            // Bone white for primary text
-    textSecondary: '#B8AFA9',   // Lighter gray-brown for secondary text
-    primary: '#C5A58A',         // Brand Accent: Luminous tan/sand
-    secondary: '#F5F1EE',       // Primary text color used as a secondary structure color
-    border: '#504540',          // Subtle warm border for dark mode
-    hover: '#3D332E',           // Subtle lift for hover states in dark mode
-    accentHover: '#D6B9A0',     // Lighter hover for accent in dark mode
-    accentText: '#2A2320',      // Dark text on accent for high contrast
+    background: '#2C211B',      // Deep Cocoa
+    cardBackground: '#3A2C25',  // Soft Cocoa
+    text: '#F5EFEA',            // Off-white
+    textSecondary: '#B8A99A',   // Muted Beige
+    primary: '#C9A27E',         // Warm Accent Brown
+    secondary: '#F5EFEA',       // Off-white
+    border: '#4A3A31',          // Subtle separation
+    hover: '#45352F',           // Subtle lift
+    accentHover: '#DBC0A5',     // Lighter hover
+    accentText: '#2C211B',      // Dark text on accent
 };
