@@ -351,6 +351,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = (props) => {
     const handleDelete = (postId: string) => {
         onDeletePost(postId);
         setProfilePosts(prev => prev.filter(p => p.id !== postId));
+        toast.success("Post deleted successfully");
     }
 
 
@@ -407,8 +408,14 @@ export const ProfilePage: React.FC<ProfilePageProps> = (props) => {
                                                 <ShareButton shareData={{ title: `Check out ${profileUser.name}'s profile on Tribe!`, text: `See what ${profileUser.name} (@${profileUser.username}) is up to.`, url: window.location.href }} className="w-full text-left px-4 py-2 text-primary hover:bg-background rounded-t-lg transition-colors flex items-center space-x-2" onShare={() => setOptionsOpen(false)}>
                                                     <ShareIcon /><span>Share Profile</span>
                                                 </ShareButton>
-                                                <button onClick={() => onStartConversation(profileUser)} className={`w-full text-left px-4 py-2 hover:bg-background transition-colors flex items-center space-x-2 text-primary`}>
-                                                    <BlockIcon /><span>Block User</span>
+                                                <button onClick={() => { onStartConversation(profileUser); }} className={`w-full text-left px-4 py-2 hover:bg-background transition-colors flex items-center space-x-2 text-primary`}>
+                                                    <BlockIcon /><span>Message User</span>
+                                                </button>
+                                                <button onClick={() => { onToggleBlock(profileUser.id); toast.success(isBlocked ? "User unblocked successfully" : "User blocked successfully"); }} className={`w-full text-left px-4 py-2 hover:bg-background transition-colors flex items-center space-x-2 text-red-500`}>
+                                                    <BlockIcon /><span>{isBlocked ? 'Unblock User' : 'Block User'}</span>
+                                                </button>
+                                                <button onClick={() => { onToggleBlock(profileUser.id); toast.success(isBlocked ? "User unblocked successfully" : "User blocked successfully"); }} className={`w-full text-left px-4 py-2 hover:bg-background transition-colors flex items-center space-x-2 text-red-500`}>
+                                                    <BlockIcon /><span>{isBlocked ? 'Unblock User' : 'Block User'}</span>
                                                 </button>
                                             </div>
                                         )}

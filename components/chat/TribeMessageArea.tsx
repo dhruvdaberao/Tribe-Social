@@ -137,24 +137,7 @@ const TribeMessageArea: React.FC<TribeMessageAreaProps> = ({
                       />
                     )}
 
-                    {message.text.includes('[Shared Post]') ? (
-                      <div className="flex flex-col space-y-2">
-                        <div className="bg-background/20 p-2 rounded-lg border-l-2 border-primary">
-                          <p className="text-xs font-bold opacity-75">Shared Content</p>
-                          <p className="text-sm">{message.text.replace('[Shared Post]', '').trim()}</p>
-                        </div>
-                        {message.text.match(/https?:\/\/[^\s]+/) && (
-                          <a
-                            href={message.text.match(/https?:\/\/[^\s]+/)?.[0]}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="bg-primary text-background text-xs font-bold py-1 px-3 rounded-full self-start hover:opacity-80 transition-opacity"
-                          >
-                            Visit Link
-                          </a>
-                        )}
-                      </div>
-                    ) : message.text.includes('[Shared Story]') ? (
+                    {message.text.includes('[Shared Story]') ? (
                       <div className="flex flex-col space-y-2">
                         <div className="bg-background/20 p-2 rounded-lg border-l-2 border-accent">
                           <p className="text-xs font-bold opacity-75">Shared Story</p>
@@ -172,6 +155,40 @@ const TribeMessageArea: React.FC<TribeMessageAreaProps> = ({
                           >
                             View Story
                           </button>
+                        )}
+                      </div>
+                    ) : message.text.includes('[Shared Post]') ? (
+                      <div className="flex flex-col space-y-2">
+                        <div className="bg-background/20 p-2 rounded-lg border-l-2 border-primary">
+                          <p className="text-xs font-bold opacity-75">Shared Content</p>
+                          <p className="text-sm">{message.text.replace('[Shared Post]', '').replace(/\/post\/[a-zA-Z0-9-]+/, '').trim()}</p>
+                        </div>
+
+                        {/* View Post Button */}
+                        {message.text.match(/\/post\/([a-zA-Z0-9-]+)/) && (
+                          <button
+                            onClick={() => {
+                              const match = message.text.match(/\/post\/([a-zA-Z0-9-]+)/);
+                              if (match) {
+                                window.dispatchEvent(new CustomEvent('open-post', { detail: match[1] }));
+                              }
+                            }}
+                            className="bg-primary text-background text-xs font-bold py-1 px-3 rounded-full self-start hover:opacity-80 transition-opacity"
+                          >
+                            View Post
+                          </button>
+                        )}
+
+                        {/* External Link Button (if any) */}
+                        {message.text.match(/https?:\/\/[^\s]+/) && (
+                          <a
+                            href={message.text.match(/https?:\/\/[^\s]+/)?.[0]}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="bg-primary text-background text-xs font-bold py-1 px-3 rounded-full self-start hover:opacity-80 transition-opacity"
+                          >
+                            Visit Link
+                          </a>
                         )}
                       </div>
                     ) : (

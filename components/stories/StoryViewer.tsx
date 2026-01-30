@@ -166,6 +166,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import type { Story, User, Tribe } from '../../types';
 import UserAvatar from '../common/UserAvatar';
 import ShareModal from '../common/ShareModal';
+import { toast } from '../common/Toast';
 
 interface StoryViewerProps {
   userStories: { user: User, stories: Story[] };
@@ -296,7 +297,7 @@ const StoryViewer: React.FC<StoryViewerProps> = ({ userStories, currentUser, all
             )}
             <button onClick={(e) => { e.stopPropagation(); setIsShareModalOpen(true); }} className="p-3 rounded-full bg-white/10 backdrop-blur-md hover:bg-white/20 text-white transition-colors"><ShareIcon /></button>
             {isOwnStory && (
-              <button onClick={(e) => { e.stopPropagation(); onDelete(currentStory.id); }} className="p-3 rounded-full bg-white/10 backdrop-blur-md hover:bg-white/20 text-white transition-colors"><TrashIcon /></button>
+              <button onClick={(e) => { e.stopPropagation(); onDelete(currentStory.id); toast.success("Story deleted successfully"); }} className="p-3 rounded-full bg-white/10 backdrop-blur-md hover:bg-white/20 text-white transition-colors"><TrashIcon /></button>
             )}
           </div>
         </div>

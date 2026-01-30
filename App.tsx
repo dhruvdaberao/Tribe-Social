@@ -103,8 +103,20 @@ const App: React.FC = () => {
                 handleViewUserStories(userId);
             }
         };
+
+        const handleOpenPost = (e: any) => {
+            const postId = e.detail;
+            if (postId) {
+                handleViewPost(postId);
+            }
+        };
+
         window.addEventListener('open-story', handleOpenStory);
-        return () => window.removeEventListener('open-story', handleOpenStory);
+        window.addEventListener('open-post', handleOpenPost);
+        return () => {
+            window.removeEventListener('open-story', handleOpenStory);
+            window.removeEventListener('open-post', handleOpenPost);
+        };
     }, []);
 
     useEffect(() => {
@@ -535,9 +547,10 @@ const App: React.FC = () => {
         if (!currentUser) return;
 
         // 🔥 Fix: Don't add "Shared Post" prefix if it's a Shared Story (already has its own prefix)
+        // For regular posts, append the ID to allow "View Post" button
         const messageText = post.content.startsWith('[Shared Story]')
             ? post.content
-            : `[Shared Post by @${post.author.username}]:\n${post.content}`;
+            : `[Shared Post by @${post.author.username}]:\n${post.content}\n/post/${post.id}`;
 
         const messageData = {
             text: messageText,

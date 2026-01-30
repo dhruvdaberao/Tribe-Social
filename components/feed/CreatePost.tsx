@@ -61,7 +61,7 @@
 //       reader.readAsDataURL(file);
 //     }
 //   };
-  
+
 //   const removeImage = () => {
 //       setImagePreview(null);
 //       if(fileInputRef.current) {
@@ -140,7 +140,7 @@
 //               ))}
 //             </div>
 //           )}
-          
+
 //           {imagePreview && (
 //             <div className="mt-4 relative">
 //               <img src={imagePreview} alt="Image preview" className="rounded-lg w-full max-h-80 object-cover" />
@@ -210,6 +210,7 @@
 import React, { useState, useRef } from 'react';
 import { User, Story } from '../../types';
 import UserAvatar from '../common/UserAvatar';
+import { toast } from '../common/Toast';
 
 interface CreatePostProps {
   currentUser: User;
@@ -265,11 +266,12 @@ const CreatePost: React.FC<CreatePostProps> = ({ currentUser, allUsers, myStorie
       reader.readAsDataURL(file);
     }
   };
-  
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!isPosting && (content.trim() || imagePreview)) {
       onAddPost(content, imagePreview || undefined);
+      toast.success("Post created successfully!");
       setContent('');
       setImagePreview(null);
     }
@@ -277,10 +279,10 @@ const CreatePost: React.FC<CreatePostProps> = ({ currentUser, allUsers, myStorie
 
   return (
     <div className="bg-surface p-4 rounded-2xl shadow-sm border border-border mb-6 relative overflow-hidden">
-        {isPosting && (
-            <div className="absolute top-0 left-0 right-0 h-1 bg-accent/20 overflow-hidden rounded-t-2xl">
-                <div className="w-full h-full bg-accent animate-indeterminate-progress"></div>
-                 <style>{`
+      {isPosting && (
+        <div className="absolute top-0 left-0 right-0 h-1 bg-accent/20 overflow-hidden rounded-t-2xl">
+          <div className="w-full h-full bg-accent animate-indeterminate-progress"></div>
+          <style>{`
                     @keyframes indeterminate-progress {
                         0% { transform: translateX(-100%); }
                         100% { transform: translateX(100%); }
@@ -289,23 +291,23 @@ const CreatePost: React.FC<CreatePostProps> = ({ currentUser, allUsers, myStorie
                         animation: indeterminate-progress 1.5s infinite ease-in-out;
                     }
                 `}</style>
-            </div>
-        )}
+        </div>
+      )}
       <div className={`flex items-start space-x-4 ${isPosting ? 'opacity-50 pointer-events-none' : ''}`}>
         <div className="relative flex-shrink-0">
-            <button 
-              onClick={hasStory ? () => onViewUserStories(currentUser.id) : onOpenStoryCreator}
-              className={`w-12 h-12 rounded-full p-0.5 ${hasStory ? 'bg-accent' : 'bg-transparent'}`}
-            >
-              <UserAvatar user={currentUser} className="w-full h-full border-2 border-surface" />
-            </button>
-            <button
-                onClick={onOpenStoryCreator}
-                className="absolute -bottom-1 -right-1 bg-accent text-accent-text rounded-full p-0.5 border-2 border-surface hover:bg-accent-hover transition-transform hover:scale-110"
-                aria-label="Create a new story"
-            >
-                <PlusIcon />
-            </button>
+          <button
+            onClick={hasStory ? () => onViewUserStories(currentUser.id) : onOpenStoryCreator}
+            className={`w-12 h-12 rounded-full p-0.5 ${hasStory ? 'bg-accent' : 'bg-transparent'}`}
+          >
+            <UserAvatar user={currentUser} className="w-full h-full border-2 border-surface" />
+          </button>
+          <button
+            onClick={onOpenStoryCreator}
+            className="absolute -bottom-1 -right-1 bg-accent text-accent-text rounded-full p-0.5 border-2 border-surface hover:bg-accent-hover transition-transform hover:scale-110"
+            aria-label="Create a new story"
+          >
+            <PlusIcon />
+          </button>
         </div>
 
         <div className="w-full relative">
@@ -337,14 +339,14 @@ const CreatePost: React.FC<CreatePostProps> = ({ currentUser, allUsers, myStorie
               ))}
             </div>
           )}
-          
+
           {imagePreview && (
-              <div className="mt-2 relative">
-                  <img src={imagePreview} alt="Selected preview" className="rounded-lg max-h-48 w-auto" />
-                  <button onClick={() => setImagePreview(null)} className="absolute top-2 right-2 bg-black/50 text-white rounded-full p-1 hover:bg-black/70">
-                      <CloseIcon />
-                  </button>
-              </div>
+            <div className="mt-2 relative">
+              <img src={imagePreview} alt="Selected preview" className="rounded-lg max-h-48 w-auto" />
+              <button onClick={() => setImagePreview(null)} className="absolute top-2 right-2 bg-black/50 text-white rounded-full p-1 hover:bg-black/70">
+                <CloseIcon />
+              </button>
+            </div>
           )}
 
           <div className="flex justify-between items-center mt-2">
@@ -358,12 +360,12 @@ const CreatePost: React.FC<CreatePostProps> = ({ currentUser, allUsers, myStorie
               >
                 <ImageIcon />
               </button>
-              <input 
-                type="file" 
-                ref={fileInputRef} 
-                onChange={handleFileChange} 
-                accept="image/*" 
-                className="hidden" 
+              <input
+                type="file"
+                ref={fileInputRef}
+                onChange={handleFileChange}
+                accept="image/*"
+                className="hidden"
                 disabled={isPosting}
               />
             </div>
@@ -383,9 +385,9 @@ const CreatePost: React.FC<CreatePostProps> = ({ currentUser, allUsers, myStorie
 };
 
 const ImageIcon = (props: React.SVGProps<SVGSVGElement>) => (
-    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" {...props}>
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-    </svg>
+  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" {...props}>
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+  </svg>
 );
 
 const CloseIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>;

@@ -3,6 +3,7 @@ import styled from 'styled-components';
 import { X, Trash2, Users } from 'lucide-react'; // Import Trash2
 import * as api from '../../api';
 import { Tribe } from '../../types';
+import { toast } from '../common/Toast';
 
 const Overlay = styled.div`
   position: fixed;
@@ -127,6 +128,7 @@ const EditTribeModal: React.FC<EditTribeModalProps> = ({ tribe, onClose, onSucce
     if (window.confirm("Are you sure you want to delete this tribe? This cannot be undone.")) {
       if (onDelete) {
         onDelete(tribe.id);
+        toast.success("Tribe deleted successfully");
       } else {
         console.error("Delete handler not provided to modal");
         alert("Delete functionality unavailable.");
