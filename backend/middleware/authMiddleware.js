@@ -4,26 +4,21 @@ import User from '../models/userModel.js';
 const protect = async (req, res, next) => {
   let token;
 
-  // Case-insensitive check for 'Bearer'
-  if (req.headers.authorization && (req.headers.authorization.startsWith('Bearer') || req.headers.authorization.startsWith('bearer'))) {
+  if (
+    req.headers.authorization &&
+    req.headers.authorization.startsWith('Bearer')
+  ) {
     try {
-      // Get token from header
       token = req.headers.authorization.split(' ')[1];
 
-      // Verify token
-      // DEBUG: Force hardcoded secret to rule out Env Var corruption
-      const getJwtSecret = () => 'tribe_temp_fallback_secret_2024';
-      const decoded = jwt.verify(token, getJwtSecret());
+      // 🔐 SECURITY: Verify using the environment secret.
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-      // Get user from the token
       req.user = await User.findById(decoded.id).select('-password');
 
       if (!req.user) {
-        console.error("Auth Middleware: User not found for ID:", decoded.id);
-        return res.status(401).json({
-          message: 'Not authorized, user not found',
-          receivedToken: token ? `${token.substring(0, 5)}...` : 'null'
-        });
+        console.warn(`⚠️ Auth Failed: User not found for ID ${decoded.id}`);
+        return res.status(401).json({ message: 'User belonging to this token no longer exists.' });
       }
 
       next();

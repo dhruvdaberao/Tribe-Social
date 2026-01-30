@@ -26,6 +26,13 @@ import { initializeSocket } from './socketManager.js';
 
 dotenv.config();
 
+// CRITICAL: Fail fast if JWT_SECRET is missing
+if (!process.env.JWT_SECRET) {
+  console.error("❌ FATAL ERROR: JWT_SECRET is not defined in environment variables.");
+  console.error("   Please set JWT_SECRET in your .env or Render dashboard.");
+  process.exit(1); // Crash intentionally
+}
+
 const startServer = async () => {
   console.log("----------------------------------");
   console.log("🚀 Starting Tribe Backend Server...");

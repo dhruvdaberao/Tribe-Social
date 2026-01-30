@@ -82,11 +82,9 @@ const router = express.Router();
 // Initialize Resend with API Key from .env
 const resend = new Resend(process.env.RESEND_API_KEY);
 
-// Use Env Var or Fallback
-const getJwtSecret = () => process.env.JWT_SECRET || 'tribe_temp_fallback_secret_2024';
-
+// 🔐 SECURITY: Use ONLY the Environment Variable. No fallbacks.
 const generateToken = (id) => {
-  return jwt.sign({ id }, getJwtSecret(), {
+  return jwt.sign({ id }, process.env.JWT_SECRET, {
     expiresIn: '30d',
   });
 };
