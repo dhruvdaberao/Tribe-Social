@@ -93,7 +93,7 @@ const TribeMessageArea: React.FC<TribeMessageAreaProps> = ({
               >
                 {/* AVATAR */}
                 {!isCurrentUser && (
-                  <div className="w-8 h-8 flex-shrink-0">
+                  <div className="w-8 h-8 flex-shrink-0 mb-5"> {/* 🔥 Fix: Lift avatar above timestamp */}
                     {showAvatar ? (
                       <div
                         className="cursor-pointer"
@@ -115,7 +115,7 @@ const TribeMessageArea: React.FC<TribeMessageAreaProps> = ({
                     }`}
                 >
                   {!isCurrentUser && showAvatar && (
-                    <span className="text-xs text-secondary mb-1">
+                    <span className="text-xs text-secondary mb-1 ml-1">
                       {sender?.name || 'Unknown'}
                     </span>
                   )}
@@ -138,7 +138,7 @@ const TribeMessageArea: React.FC<TribeMessageAreaProps> = ({
                     </p>
                   </div>
 
-                  <span className="text-[10px] opacity-60 mt-1">
+                  <span className="text-[10px] opacity-60 mt-1 ml-1">
                     {sentAt}
                   </span>
                 </div>
@@ -170,7 +170,7 @@ const TribeMessageArea: React.FC<TribeMessageAreaProps> = ({
           border-t border-border
           flex-shrink-0 
           z-20
-          sticky bottom-0
+          sticky bottom-20 md:bottom-0 /* 🔥 Fix: Lift above mobile nav */
         "
       >
         <form
