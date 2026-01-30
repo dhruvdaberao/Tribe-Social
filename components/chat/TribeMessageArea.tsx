@@ -88,7 +88,7 @@ const TribeMessageArea: React.FC<TribeMessageAreaProps> = ({
             return (
               <div
                 key={message.id}
-                className={`flex items-end gap-2 ${isCurrentUser ? 'justify-end' : 'justify-start'
+                className={`flex items-end gap-3 ${isCurrentUser ? 'justify-end' : 'justify-start'
                   }`}
               >
                 {/* AVATAR */}
@@ -186,8 +186,8 @@ const TribeMessageArea: React.FC<TribeMessageAreaProps> = ({
               flex-1
               bg-surface
               border border-border
-              rounded-2xl
-              px-4 py-3
+              rounded-lg
+              px-4 py-2.5
               focus:outline-none focus:ring-2 focus:ring-accent
               text-primary
               min-w-0
@@ -201,22 +201,22 @@ const TribeMessageArea: React.FC<TribeMessageAreaProps> = ({
             type="submit"
             disabled={!inputText.trim() || isSending}
             className="
-              w-12 h-12
+              w-12 h-11
               flex-shrink-0
-              rounded-full
+              rounded-lg
               bg-accent
               text-accent-text
               flex items-center justify-center
               hover:bg-accent-hover
               transition-colors
               disabled:opacity-50
-              shadow-md
+              shadow-sm
             "
           >
             {isSending ? (
               <div className="w-5 h-5 border-2 border-accent-text border-t-transparent rounded-full animate-spin" />
             ) : (
-              <Send size={20} />
+              <Send size={18} />
             )}
           </button>
         </form>
