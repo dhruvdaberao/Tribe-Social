@@ -216,11 +216,23 @@ const StoryViewer: React.FC<StoryViewerProps> = ({ userStories, currentUser, all
       progressRef.current.style.animation = '';
     }
     if (timerRef.current) clearTimeout(timerRef.current);
+
+    // Video handles its own timing via onEnded, unless it fails to load or something
+    // But for simplicity/safety, we set timeout backup or use CSS animation for bar
+    // Actually, we should sync bar with video.
+    // For now, simpler approach:
+    // If video, disable JS timer (let onEnded handle), but we need animation duration.
+
     if (!isPaused && !isShareModalOpen) {
-      timerRef.current = setTimeout(goToNext, 5000);
+      if (currentStory.mediaType === 'video' && currentStory.duration) {
+        // Let video onEnded handle transition.
+        // We just set animation duration for the bar.
+      } else {
+        timerRef.current = setTimeout(goToNext, 5000);
+      }
     }
     return () => { if (timerRef.current) clearTimeout(timerRef.current); };
-  }, [currentIndex, isPaused, isShareModalOpen, stories.length]);
+  }, [currentIndex, isPaused, isShareModalOpen, stories.length, currentStory.mediaType]); // Added mediaType dep
 
   if (!currentStory) return null;
 
@@ -235,6 +247,8 @@ const StoryViewer: React.FC<StoryViewerProps> = ({ userStories, currentUser, all
     }, destination);
   };
 
+  const videoDuration = currentStory.duration || 5; // Default helper
+
   return (
     <>
       <div className="fixed inset-0 bg-black/95 z-50 flex items-center justify-center p-4" onMouseDown={() => setIsPaused(true)} onMouseUp={() => setIsPaused(false)}>
@@ -244,10 +258,16 @@ const StoryViewer: React.FC<StoryViewerProps> = ({ userStories, currentUser, all
         >
           {/* Progress */}
           <div className="absolute top-3 left-3 right-3 flex space-x-1 z-20">
-            {stories.map((_, index) => (
+            {stories.map((s, index) => (
               <div key={index} className="flex-1 h-1 bg-white/30 rounded-full overflow-hidden">
                 {index < currentIndex && <div className="h-full w-full bg-white" />}
-                {index === currentIndex && <div ref={progressRef} className={`h-full bg-white ${isPaused || isShareModalOpen ? '' : 'animate-progress'}`} />}
+                {index === currentIndex && (
+                  <div
+                    ref={progressRef}
+                    className={`h-full bg-white ${isPaused || isShareModalOpen ? '' : 'animate-progress'}`}
+                    style={{ animationDuration: `${s.mediaType === 'video' ? (s.duration || 10) : 5}s` }}
+                  />
+                )}
               </div>
             ))}
           </div>
@@ -276,7 +296,20 @@ const StoryViewer: React.FC<StoryViewerProps> = ({ userStories, currentUser, all
                   transform: `translate(-50%, -50%) rotate(${currentStory.imageRotation || 0}deg) scale(${currentStory.imageScale || 1})`
                 }}
               >
-                <img src={currentStory.imageUrl} alt="Story" className="w-48 rounded-lg shadow-xl" />
+                {currentStory.mediaType === 'video' ? (
+                  <video
+                    src={currentStory.imageUrl}
+                    className="w-48 rounded-lg shadow-xl"
+                    autoPlay
+                    muted={false} // Should be sound? usually stories have sound.
+                    playsInline
+                    onEnded={goToNext}
+                    onPause={() => setIsPaused(true)}
+                    onPlay={() => setIsPaused(false)}
+                  />
+                ) : (
+                  <img src={currentStory.imageUrl} alt="Story" className="w-48 rounded-lg shadow-xl" />
+                )}
               </div>
             )}
             {currentStory.text && (
@@ -309,7 +342,7 @@ const StoryViewer: React.FC<StoryViewerProps> = ({ userStories, currentUser, all
             )}
           </div>
         </div>
-        <style>{`.animate-progress { animation: progress 5s linear forwards; } @keyframes progress { from { width: 0%; } to { width: 100%; } }`}</style>
+        <style>{`.animate-progress { animation-name: progress; animation-timing-function: linear; animation-fill-mode: forwards; } @keyframes progress { from { width: 0%; } to { width: 100%; } }`}</style>
       </div>
       {isShareModalOpen && <ShareModal post={{ author: user, content: currentStory.text || '', imageUrl: currentStory.imageUrl } as any} currentUser={currentUser} users={allUsers} tribes={allTribes} onClose={() => setIsShareModalOpen(false)} onSharePost={(post, dest) => handleShare(dest)} />}
     </>

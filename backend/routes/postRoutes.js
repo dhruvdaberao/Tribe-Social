@@ -949,18 +949,21 @@ router.get('/:id', protect, async (req, res) => {
 
 // @route   POST /api/posts
 router.post('/', protect, async (req, res) => {
-    const { content, imageUrl, tempId } = req.body;
+    const { content, imageUrl, tempId, mediaType = 'image', duration } = req.body;
     if (!content && !imageUrl) {
-        return res.status(400).json({ message: 'Post must have content or an image' });
+        return res.status(400).json({ message: 'Post must have content or an image/video' });
     }
     let finalImageUrl = null;
     let finalPublicId = null;
 
     try {
-        if (imageUrl && imageUrl.startsWith('data:image')) {
-            const uploadResponse = await cloudinary.uploader.upload(imageUrl, {
+        if (imageUrl && imageUrl.startsWith('data:')) {
+            const uploadOptions = {
                 folder: 'tribe_social_posts',
-            });
+                resource_type: mediaType === 'video' ? 'video' : 'image'
+            };
+
+            const uploadResponse = await cloudinary.uploader.upload(imageUrl, uploadOptions);
             finalImageUrl = uploadResponse.secure_url;
             finalPublicId = uploadResponse.public_id;
         } else if (imageUrl) {
@@ -971,6 +974,8 @@ router.post('/', protect, async (req, res) => {
             content: content || '',
             imageUrl: finalImageUrl,
             imagePublicId: finalPublicId,
+            mediaType,
+            duration,
             user: req.user.id,
         });
 

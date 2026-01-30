@@ -454,7 +454,7 @@ const App: React.FC = () => {
         setActiveNavItem('Messages');
     };
 
-    const handleAddPost = async (content: string, imageUrl?: string) => {
+    const handleAddPost = async (content: string, imageUrl?: string, mediaType?: 'image' | 'video', duration?: number) => {
         if (!currentUser) return;
         setIsCreatingPost(true);
         const tempId = Date.now().toString();
@@ -464,6 +464,8 @@ const App: React.FC = () => {
             author: currentUser,
             content: content,
             imageUrl: imageUrl,
+            mediaType: mediaType || 'image', // Optimistic update needs this
+            duration: duration,
             timestamp: new Date().toISOString(),
             likes: [],
             comments: [],
@@ -471,7 +473,7 @@ const App: React.FC = () => {
         setPosts(prev => [tempPost, ...prev]);
 
         try {
-            await api.createPost({ content, imageUrl, tempId });
+            await api.createPost({ content, imageUrl, tempId, mediaType, duration });
             toast.success("Post created successfully!");
         } catch (error) {
             console.error("Failed to add post:", error);

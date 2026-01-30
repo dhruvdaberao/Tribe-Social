@@ -27,6 +27,8 @@ export interface Post {
   author: User;
   content: string;
   imageUrl?: string;
+  mediaType?: 'image' | 'video';
+  duration?: number;
   timestamp: string;
   likes: string[];
   comments: Comment[];
@@ -108,6 +110,8 @@ export interface Story {
   author: User;
   user: string;
   imageUrl?: string;
+  mediaType?: 'image' | 'video';
+  duration?: number;
   text?: string;
   textPosition?: { x: number; y: number };
   imagePosition?: { x: number; y: number };

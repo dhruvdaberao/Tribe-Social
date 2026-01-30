@@ -218,7 +218,7 @@ interface CreatePostProps {
   currentUser: User;
   allUsers: User[];
   myStories: Story[];
-  onAddPost: (content: string, imageUrl?: string) => void;
+  onAddPost: (content: string, imageUrl?: string, mediaType?: 'image' | 'video', duration?: number) => void;
   isPosting: boolean;
   onOpenStoryCreator: () => void;
   onViewUserStories: (userId: string) => void;
@@ -259,12 +259,47 @@ const CreatePost: React.FC<CreatePostProps> = ({ currentUser, allUsers, myStorie
     setShowMentions(false);
   };
 
+  const [mediaType, setMediaType] = useState<'image' | 'video'>('image');
+  const [videoDuration, setVideoDuration] = useState<number | undefined>(undefined);
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      if (file.size > 50 * 1024 * 1024) {
+        toast.error("File size exceeds 50MB limit.");
+        return;
+      }
+
+      const isVideo = file.type.startsWith('video/');
       const reader = new FileReader();
+
       reader.onloadend = () => {
-        setImagePreview(reader.result as string);
+        const result = reader.result as string;
+
+        if (isVideo) {
+          // Validate duration
+          const video = document.createElement('video');
+          video.preload = 'metadata';
+          video.onloadedmetadata = function () {
+            window.URL.revokeObjectURL(video.src);
+            if (video.duration > 32) { // 32s buffer for 30s limit
+              toast.error("Video duration must be 30 seconds or less.");
+              setImagePreview(null);
+              setMediaType('image');
+              if (fileInputRef.current) fileInputRef.current.value = "";
+            } else {
+              setImagePreview(result);
+              setMediaType('video');
+              setVideoDuration(video.duration);
+            }
+          }
+          video.src = URL.createObjectURL(file);
+        } else {
+          setImagePreview(result);
+          setMediaType('image');
+          setVideoDuration(undefined);
+        }
+
         if (fileInputRef.current) fileInputRef.current.value = "";
       };
       reader.readAsDataURL(file);
@@ -274,10 +309,12 @@ const CreatePost: React.FC<CreatePostProps> = ({ currentUser, allUsers, myStorie
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!isPosting && (content.trim() || imagePreview)) {
-      onAddPost(content, imagePreview || undefined);
+      onAddPost(content, imagePreview || undefined, mediaType, videoDuration);
       toast.success("Post created successfully!");
       setContent('');
       setImagePreview(null);
+      setMediaType('image');
+      setVideoDuration(undefined);
     }
   };
 
@@ -346,8 +383,12 @@ const CreatePost: React.FC<CreatePostProps> = ({ currentUser, allUsers, myStorie
 
           {imagePreview && (
             <div className="mt-2 relative">
-              <img src={imagePreview} alt="Selected preview" className="rounded-lg max-h-48 w-auto" />
-              <button onClick={() => setImagePreview(null)} className="absolute top-2 right-2 bg-black/50 text-white rounded-full p-1 hover:bg-black/70">
+              {mediaType === 'video' ? (
+                <video src={imagePreview} className="rounded-lg max-h-48 w-auto" controls muted />
+              ) : (
+                <img src={imagePreview} alt="Selected preview" className="rounded-lg max-h-48 w-auto" />
+              )}
+              <button onClick={() => { setImagePreview(null); setMediaType('image'); }} className="absolute top-2 right-2 bg-black/50 text-white rounded-full p-1 hover:bg-black/70">
                 <CloseIcon />
               </button>
             </div>
@@ -368,7 +409,7 @@ const CreatePost: React.FC<CreatePostProps> = ({ currentUser, allUsers, myStorie
                 type="file"
                 ref={fileInputRef}
                 onChange={handleFileChange}
-                accept="image/*"
+                accept="image/*,video/mp4,video/quicktime,video/webm"
                 className="hidden"
                 disabled={isPosting}
               />

@@ -869,19 +869,35 @@ const PostCard: React.FC<PostCardProps> = (props) => {
           </div>
         )}
         {post.imageUrl && !imageError && (
-          <div className="bg-background w-full flex justify-center items-center overflow-hidden relative min-h-[200px]">
+          <div className="bg-background w-full flex justify-center items-center overflow-hidden relative min-h-[200px] group">
             {isImageLoading && (
               <div className="absolute inset-0 flex items-center justify-center bg-surface animate-pulse">
                 <div className="w-10 h-10 border-4 border-accent/30 border-t-accent rounded-full animate-spin"></div>
               </div>
             )}
-            <img
-              src={post.imageUrl}
-              alt="Post content"
-              className={`w-full h-auto max-h-[500px] object-cover object-center transition-opacity duration-300 ${isImageLoading ? 'opacity-0' : 'opacity-100'}`}
-              onLoad={() => setIsImageLoading(false)}
-              onError={() => { setIsImageLoading(false); setImageError(true); }}
-            />
+
+            {post.mediaType === 'video' ? (
+              <div className="relative w-full flex justify-center bg-black">
+                <video
+                  src={post.imageUrl}
+                  className={`w-full h-auto max-h-[600px] object-contain transition-opacity duration-300 ${isImageLoading ? 'opacity-0' : 'opacity-100'}`}
+                  onLoadStart={() => setIsImageLoading(true)}
+                  onLoadedData={() => setIsImageLoading(false)}
+                  onError={() => { setIsImageLoading(false); setImageError(true); }}
+                  controls
+                  playsInline
+                  preload="metadata"
+                />
+              </div>
+            ) : (
+              <img
+                src={post.imageUrl}
+                alt="Post content"
+                className={`w-full h-auto max-h-[500px] object-cover object-center transition-opacity duration-300 ${isImageLoading ? 'opacity-0' : 'opacity-100'}`}
+                onLoad={() => setIsImageLoading(false)}
+                onError={() => { setIsImageLoading(false); setImageError(true); }}
+              />
+            )}
           </div>
         )}
         {post.imageUrl && imageError && (

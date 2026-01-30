@@ -186,6 +186,8 @@ const TEXT_COLORS = ['#FFFFFF', '#000000', '#2A2320', '#B59477', '#EF4444', '#3B
 
 const StoryCreator: React.FC<StoryCreatorProps> = ({ onClose, onCreate }) => {
     const [image, setImage] = useState<{ src: string, pos: { x: number, y: number }, scale: number, rotation: number } | null>(null);
+    const [mediaType, setMediaType] = useState<'image' | 'video'>('image');
+    const [videoDuration, setVideoDuration] = useState<number | undefined>(undefined);
     const [text, setText] = useState<{ content: string, pos: { x: number, y: number }, scale: number, rotation: number, color: string } | null>(null);
     const [bgColor, setBgColor] = useState('#2A2320');
     const [isEditingText, setIsEditingText] = useState(false);
@@ -213,13 +215,42 @@ const StoryCreator: React.FC<StoryCreatorProps> = ({ onClose, onCreate }) => {
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (file) {
+            if (file.size > 50 * 1024 * 1024) {
+                toast.error("File size exceeds 50MB limit.");
+                return;
+            }
+
+            const isVideo = file.type.startsWith('video/');
             const reader = new FileReader();
+
             reader.onloadend = () => {
-                setImage({ src: reader.result as string, pos: { x: 50, y: 50 }, scale: 1, rotation: 0 });
-                setSelectedElement('image');
+                const result = reader.result as string;
+
+                if (isVideo) {
+                    const video = document.createElement('video');
+                    video.preload = 'metadata';
+                    video.onloadedmetadata = function () {
+                        window.URL.revokeObjectURL(video.src);
+                        if (video.duration > 32) {
+                            toast.error("Video duration must be 30 seconds or less.");
+                            setImage(null);
+                            e.target.value = '';
+                        } else {
+                            setImage({ src: result, pos: { x: 50, y: 50 }, scale: 1, rotation: 0 });
+                            setMediaType('video');
+                            setVideoDuration(video.duration);
+                            setSelectedElement('image');
+                        }
+                    }
+                    video.src = URL.createObjectURL(file);
+                } else {
+                    setImage({ src: result, pos: { x: 50, y: 50 }, scale: 1, rotation: 0 });
+                    setMediaType('image');
+                    setVideoDuration(undefined);
+                    setSelectedElement('image');
+                }
             };
             reader.readAsDataURL(file);
-            // Clear inputs
             e.target.value = '';
         }
     };
@@ -331,7 +362,9 @@ const StoryCreator: React.FC<StoryCreatorProps> = ({ onClose, onCreate }) => {
                 textScale: text?.scale,
                 imageScale: image?.scale,
                 textColor: text?.color,
-                backgroundColor: bgColor
+                backgroundColor: bgColor,
+                mediaType,
+                duration: videoDuration
             });
             onClose();
         } catch (error) {
@@ -373,7 +406,11 @@ const StoryCreator: React.FC<StoryCreatorProps> = ({ onClose, onCreate }) => {
                             onTouchStart={(e) => handleMouseDown(e, 'image', 'move')}
                         >
                             <div className={`relative group ${selectedElement === 'image' ? 'ring-2 ring-white ring-dashed p-1' : ''}`}>
-                                <img src={image.src} alt="" className="w-48 rounded-lg shadow-xl pointer-events-none" />
+                                {mediaType === 'video' ? (
+                                    <video src={image.src} className="w-48 rounded-lg shadow-xl pointer-events-none" muted autoPlay loop />
+                                ) : (
+                                    <img src={image.src} alt="" className="w-48 rounded-lg shadow-xl pointer-events-none" />
+                                )}
                                 {selectedElement === 'image' && (
                                     <>
                                         <div className="absolute -top-6 -right-6 w-10 h-10 bg-white rounded-full shadow-lg flex items-center justify-center cursor-ew-resize z-[100] pointer-events-auto" onMouseDown={(e) => handleMouseDown(e, 'image', 'rotate')} onTouchStart={(e) => handleMouseDown(e, 'image', 'rotate')}><RotateIcon /></div>
@@ -423,7 +460,7 @@ const StoryCreator: React.FC<StoryCreatorProps> = ({ onClose, onCreate }) => {
                     <button onClick={handlePost} disabled={isPosting} className="w-full bg-white text-black py-3.5 rounded-xl font-bold text-lg shadow-lg active:scale-95 transition-transform disabled:opacity-50">{isPosting ? 'Posting...' : 'Share Story'}</button>
                 </div>
                 <input type="file" ref={cameraInputRef} onChange={handleFileChange} accept="image/*" capture="environment" className="hidden" />
-                <input type="file" ref={galleryInputRef} onChange={handleFileChange} accept="image/*" className="hidden" />
+                <input type="file" ref={galleryInputRef} onChange={handleFileChange} accept="image/*,video/mp4,video/quicktime,video/webm" className="hidden" />
             </div>
 
             <MediaSelectionModal

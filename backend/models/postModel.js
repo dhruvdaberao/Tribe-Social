@@ -78,8 +78,10 @@ const postSchema = mongoose.Schema(
   {
     user: { type: mongoose.Schema.Types.ObjectId, required: true, ref: 'User', index: true },
     content: { type: String, required: function () { return !this.imageUrl; } },
-    imageUrl: { type: String },
+    imageUrl: { type: String }, // Backwards compatibility (used for both image and video URL)
     imagePublicId: { type: String },
+    mediaType: { type: String, enum: ['image', 'video'], default: 'image' },
+    duration: { type: Number }, // In seconds, for videos
     likes: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
     comments: [commentSchema],
   },
