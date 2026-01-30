@@ -405,6 +405,7 @@ import HelpPage from './HelpPage';
 import AboutUsPage from './AboutUsPage';
 import * as api from '../../api'; // Assumed root based on instruction
 import { toast } from '../common/Toast';
+import { User as UserIconLucide, HelpCircle, Info, Ban, LogOut, Trash2, ChevronRight, ArrowLeft } from 'lucide-react';
 
 interface SettingsPageProps {
   currentUser: User;
@@ -578,14 +579,14 @@ const DeleteAccountModal: React.FC<{ onClose: () => void, onConfirm: () => void 
 );
 
 // ICONS
-const Icon: React.FC<{ children: React.ReactNode }> = ({ children }) => <>{children}</>;
-const UserIcon = () => <Icon><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" /></svg></Icon>;
-const HelpIcon = () => <Icon><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9 5.25h.008v.008H12v-.008z" /></svg></Icon>;
-const InfoIcon = () => <Icon><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" /></svg></Icon>;
-const BlockIcon = () => <Icon><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" /></svg></Icon>;
-const LogoutIcon = () => <Icon><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15m3 0l3-3m0 0l-3-3m3 3H9" /></svg></Icon>;
-const TrashIcon = () => <Icon><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="M3 6h18m-2 0v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6m3 0V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" /></svg></Icon>;
-const ChevronRightIcon = () => <Icon><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" /></svg></Icon>;
-const BackIcon = () => <Icon><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" /></svg></Icon>;
+// Using Lucide-React icons for consistency and calmness
+const UserIcon = () => <UserIconLucide size={24} strokeWidth={1.75} />;
+const HelpIcon = () => <HelpCircle size={24} strokeWidth={1.75} />;
+const InfoIcon = () => <Info size={24} strokeWidth={1.75} />;
+const BlockIcon = () => <Ban size={24} strokeWidth={1.75} />;
+const LogoutIcon = () => <LogOut size={24} strokeWidth={1.75} />;
+const TrashIcon = () => <Trash2 size={24} strokeWidth={1.75} />;
+const ChevronRightIcon = () => <ChevronRight size={20} strokeWidth={1.75} />;
+const BackIcon = () => <ArrowLeft size={24} strokeWidth={1.75} />;
 
 export default SettingsPage;
