@@ -26,7 +26,7 @@
 //   const messagesEndRef = useRef<HTMLDivElement>(null);
 //   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 //   const { socket, onlineUsers } = useSocket();
-  
+
 //   const isOtherUserOnline = otherParticipantId ? onlineUsers.includes(otherParticipantId) : false;
 
 //   useEffect(() => {
@@ -215,7 +215,7 @@ export const MessageArea: React.FC<MessageAreaProps> = ({ conversation, messages
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const { socket, onlineUsers } = useSocket();
-  
+
   const isOtherUserOnline = otherParticipantId ? onlineUsers.includes(otherParticipantId) : false;
 
   useEffect(() => {
@@ -228,7 +228,7 @@ export const MessageArea: React.FC<MessageAreaProps> = ({ conversation, messages
       if (userId === otherParticipantId) setIsTyping(true);
     };
     const handleStopTyping = ({ userId }: { userId: string }) => {
-       if (userId === otherParticipantId) setIsTyping(false);
+      if (userId === otherParticipantId) setIsTyping(false);
     };
     socket.on('userTyping', handleTyping);
     socket.on('userStoppedTyping', handleStopTyping);
@@ -267,19 +267,19 @@ export const MessageArea: React.FC<MessageAreaProps> = ({ conversation, messages
   };
 
   if (!otherParticipant) {
-      return (
-          <div className="flex flex-col h-full bg-surface">
-              <div className="flex items-center p-3 border-b border-border flex-shrink-0">
-                  <button onClick={onBack} className="md:hidden p-2 mr-2 text-primary">
-                      <BackIcon />
-                  </button>
-                  <h2 className="text-lg font-bold text-primary">Error</h2>
-              </div>
-              <div className="flex-1 flex items-center justify-center p-4 text-center">
-                  <p className="text-secondary">Could not load conversation. The user may no longer exist.</p>
-              </div>
-          </div>
-      );
+    return (
+      <div className="flex flex-col h-full bg-surface">
+        <div className="flex items-center p-3 border-b border-border flex-shrink-0">
+          <button onClick={onBack} className="md:hidden p-2 mr-2 text-primary">
+            <BackIcon />
+          </button>
+          <h2 className="text-lg font-bold text-primary">Error</h2>
+        </div>
+        <div className="flex-1 flex items-center justify-center p-4 text-center">
+          <p className="text-secondary">Could not load conversation. The user may no longer exist.</p>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -287,69 +287,115 @@ export const MessageArea: React.FC<MessageAreaProps> = ({ conversation, messages
     <div className="flex flex-col h-full bg-background">
       <div className="flex items-center p-3 border-b border-border bg-surface flex-shrink-0 z-10">
         <button onClick={onBack} className="md:hidden p-2 mr-2 text-primary">
-            <BackIcon />
+          <BackIcon />
         </button>
-        <div 
-            className="flex items-center cursor-pointer overflow-hidden"
-            onClick={() => onViewProfile(otherParticipant)}
+        <div
+          className="flex items-center cursor-pointer overflow-hidden"
+          onClick={() => onViewProfile(otherParticipant)}
         >
-            <UserAvatar user={otherParticipant} className="w-10 h-10 rounded-full mr-3 flex-shrink-0" isOnline={isOtherUserOnline} />
-            <div className="min-w-0">
-                <h2 className="text-lg font-bold text-primary leading-tight hover:underline truncate">{otherParticipant.name}</h2>
-                 {isTyping ? (
-                    <p className="text-sm text-accent leading-tight truncate italic">typing...</p>
-                 ) : (
-                    <p className="text-sm text-secondary leading-tight truncate">@{otherParticipant.username}</p>
-                 )}
-            </div>
+          <UserAvatar user={otherParticipant} className="w-10 h-10 rounded-full mr-3 flex-shrink-0" isOnline={isOtherUserOnline} />
+          <div className="min-w-0">
+            <h2 className="text-lg font-bold text-primary leading-tight hover:underline truncate">{otherParticipant.name}</h2>
+            {isTyping ? (
+              <p className="text-sm text-accent leading-tight truncate italic">typing...</p>
+            ) : (
+              <p className="text-sm text-secondary leading-tight truncate">@{otherParticipant.username}</p>
+            )}
+          </div>
         </div>
       </div>
 
       <div className="flex-1 overflow-y-auto p-4">
         {isLoading ? (
-            <div className="w-full h-full flex items-center justify-center">
-                <img src="/duckload.gif" alt="Loading messages..." className="w-16 h-16" />
-            </div>
+          <div className="w-full h-full flex items-center justify-center">
+            <img src="/duckload.gif" alt="Loading messages..." className="w-16 h-16" />
+          </div>
         ) : (
-            <div className="flex flex-col space-y-2">
+          <div className="flex flex-col space-y-2">
             {messages.map(message => {
-                const isCurrentUser = message.senderId === currentUser.id;
-                const sender = isCurrentUser ? currentUser : userMap.get(message.senderId);
-                const sentAt = new Date(message.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
-                return (
+              const isCurrentUser = message.senderId === currentUser.id;
+              const sender = isCurrentUser ? currentUser : userMap.get(message.senderId);
+              const sentAt = new Date(message.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
+              return (
                 <div key={message.id} className={`flex items-end gap-2.5 ${isCurrentUser ? 'justify-end' : 'justify-start'}`}>
-                    {!isCurrentUser && (
-                        <div className="w-8 h-8 rounded-full flex-shrink-0 self-start">
-                        <UserAvatar user={sender || null} />
-                        </div>
-                    )}
-                    <div className={`flex flex-col w-full max-w-xs lg:max-w-md ${isCurrentUser ? 'items-end' : 'items-start'}`}>
-                        {/* Modified rounded classes for proper chat bubble look */}
-                        <div className={`px-4 py-2.5 ${isCurrentUser ? 'bg-accent text-accent-text rounded-2xl rounded-tr-none' : 'bg-surface text-primary shadow-sm rounded-2xl rounded-tl-none'}`}>
-                            {message.imageUrl && <img src={message.imageUrl} alt="Shared content" className="mb-2 rounded-lg w-full" />}
-                            <div className="text-sm leading-relaxed">
-                                {sender?.id === 'chuk-ai' ? (
-                                    <MarkdownRenderer text={message.text} />
-                                ) : (
-                                    <p className="whitespace-pre-wrap break-words">{message.text}</p>
-                                )}
-                            </div>
-                        </div>
-                        <p className="text-xs text-secondary mt-1.5 px-1">{sentAt}</p>
+                  {!isCurrentUser && (
+                    <div className="w-8 h-8 rounded-full flex-shrink-0 self-start">
+                      <UserAvatar user={sender || null} />
                     </div>
+                  )}
+                  <div className={`flex flex-col w-full max-w-xs lg:max-w-md ${isCurrentUser ? 'items-end' : 'items-start'}`}>
+                    {/* Modified rounded classes for proper chat bubble look */}
+                    <div className={`px-4 py-2.5 ${isCurrentUser ? 'bg-accent text-accent-text rounded-2xl rounded-tr-none' : 'bg-surface text-primary shadow-sm rounded-2xl rounded-tl-none'}`}>
+
+                      {/* SHARED CONTENT LOGIC */}
+                      {(message.text.includes('Shared a story') || message.text.includes('[Shared Story]')) ? (
+                        <div className="flex flex-col min-w-[200px]">
+                          <span className="text-[10px] font-bold opacity-60 uppercase mb-2 tracking-wider">Shared Story</span>
+                          {message.imageUrl && (
+                            <div className="mb-2 rounded-lg overflow-hidden bg-black/10 aspect-video relative">
+                              <img src={message.imageUrl} className="w-full h-full object-cover" alt="Story" />
+                            </div>
+                          )}
+                          <button
+                            onClick={() => {
+                              const match = message.text.match(/\/story\/([a-zA-Z0-9]+)/);
+                              if (match) window.dispatchEvent(new CustomEvent('open-story', { detail: match[1] }));
+                            }}
+                            className={`mt-1 text-xs font-bold py-1.5 px-4 rounded-full self-start transition-opacity hover:opacity-90 shadow-sm ${isCurrentUser ? 'bg-surface text-primary' : 'bg-primary text-surface'}`}
+                          >
+                            View Story
+                          </button>
+                        </div>
+                      ) : (message.text.includes('Shared a post') || message.text.includes('[Shared Post]')) ? (
+                        <div className="flex flex-col min-w-[200px]">
+                          <span className="text-[10px] font-bold opacity-60 uppercase mb-2 tracking-wider">Shared Post</span>
+                          {message.imageUrl && (
+                            <div className="mb-2 rounded-lg overflow-hidden bg-black/10 aspect-video relative">
+                              <img src={message.imageUrl} className="w-full h-full object-cover" alt="Post" />
+                            </div>
+                          )}
+                          <p className="text-sm opacity-90 line-clamp-2 mb-3 italic">
+                            "{message.text.split('\n').filter(line => !line.includes('/post/') && !line.includes('Shared a post')).join(' ').trim()}"
+                          </p>
+                          <button
+                            onClick={() => {
+                              const match = message.text.match(/\/post\/([a-zA-Z0-9-]+)/);
+                              if (match) window.dispatchEvent(new CustomEvent('open-post', { detail: match[1] }));
+                            }}
+                            className={`text-xs font-bold py-1.5 px-4 rounded-full self-start transition-opacity hover:opacity-90 shadow-sm ${isCurrentUser ? 'bg-surface text-primary' : 'bg-primary text-surface'}`}
+                          >
+                            View Post
+                          </button>
+                        </div>
+                      ) : (
+                        /* NORMAL MESSAGE */
+                        <>
+                          {message.imageUrl && <img src={message.imageUrl} alt="Shared content" className="mb-2 rounded-lg w-full" />}
+                          <div className="text-sm leading-relaxed">
+                            {sender?.id === 'chuk-ai' ? (
+                              <MarkdownRenderer text={message.text} />
+                            ) : (
+                              <p className="whitespace-pre-wrap break-words">{message.text}</p>
+                            )}
+                          </div>
+                        </>
+                      )}
+                    </div>
+                    <p className="text-xs text-secondary mt-1.5 px-1">{sentAt}</p>
+                  </div>
                 </div>
-                );
+              );
             })}
             {messages.length === 0 && (
-                <div className="text-center text-secondary p-8">
-                    <p>This is the beginning of your conversation with {otherParticipant.name}.</p>
-                </div>
+              <div className="text-center text-secondary p-8">
+                <p>This is the beginning of your conversation with {otherParticipant.name}.</p>
+              </div>
             )}
             {isSending && otherParticipant.id !== 'chuk-ai' && (
-                <div className="flex justify-end"><p className="text-xs text-secondary mt-1.5 px-1 italic">Sending...</p></div>
+              <div className="flex justify-end"><p className="text-xs text-secondary mt-1.5 px-1 italic">Sending...</p></div>
             )}
             <div ref={messagesEndRef} />
-            </div>
+          </div>
         )}
       </div>
 

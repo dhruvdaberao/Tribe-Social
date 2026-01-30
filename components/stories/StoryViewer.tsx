@@ -222,7 +222,7 @@ const StoryViewer: React.FC<StoryViewerProps> = ({ userStories, currentUser, all
   const handleShare = (destination: { type: 'tribe' | 'user', id: string }) => {
     onSharePost({
       author: user,
-      content: `[Shared Story] ${currentUser.name} wants you to see a story by @${user.username}. /story/${user.id}`,
+      content: `Shared a story\n/story/${user.id}`,
       imageUrl: currentStory.imageUrl,
     }, destination);
   };

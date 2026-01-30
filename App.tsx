@@ -546,11 +546,10 @@ const App: React.FC = () => {
     const handleSharePost = async (post: any, destination: { type: 'tribe' | 'user', id: string, name?: string }) => {
         if (!currentUser) return;
 
-        // 🔥 Fix: Don't add "Shared Post" prefix if it's a Shared Story (already has its own prefix)
-        // For regular posts, append the ID to allow "View Post" button
-        const messageText = post.content.startsWith('[Shared Story]')
-            ? post.content
-            : `[Shared Post by @${post.author.username}]:\n${post.content}\n/post/${post.id}`;
+        // Clean message format for shared content
+        const messageText = post.content.startsWith('Shared Story')
+            ? post.content // StoryViewer already formats it
+            : `Shared a post\n/post/${post.id}\n${post.content}`; // Post ID enables the "View Post" CTA
 
         const messageData = {
             text: messageText,

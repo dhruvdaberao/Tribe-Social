@@ -129,82 +129,66 @@ const TribeMessageArea: React.FC<TribeMessageAreaProps> = ({
                       : 'bg-surface text-primary rounded-tl-none'
                       }`}
                   >
-                    {message.imageUrl && !message.text.includes('[Shared Story]') && (
-                      <img
-                        src={message.imageUrl}
-                        className="mb-2 rounded-lg w-full"
-                        alt="shared"
-                      />
-                    )}
-
-                    {message.text.includes('[Shared Story]') ? (
-                      <div className="flex flex-col space-y-2">
-                        <div className="bg-background/20 p-2 rounded-lg border-l-2 border-accent">
-                          <p className="text-xs font-bold opacity-75">Shared Story</p>
-                          <p className="text-sm">{message.text.replace('[Shared Story]', '').replace(/\/story\/[a-zA-Z0-9]+/, '').trim()}</p>
-                        </div>
-                        {message.text.match(/\/story\/([a-zA-Z0-9]+)/) && (
-                          <button
-                            onClick={() => {
-                              const match = message.text.match(/\/story\/([a-zA-Z0-9]+)/);
-                              if (match) {
-                                window.dispatchEvent(new CustomEvent('open-story', { detail: match[1] }));
-                              }
-                            }}
-                            className="bg-primary text-background text-xs font-bold py-1 px-3 rounded-full self-start hover:opacity-80 transition-opacity"
-                          >
-                            View Story
-                          </button>
+                    {/* SHARED STORY CARD */}
+                    {(message.text.includes('Shared a story') || message.text.includes('[Shared Story]')) ? (
+                      <div className="flex flex-col min-w-[200px]">
+                        <span className="text-[10px] font-bold opacity-60 uppercase mb-2 tracking-wider">Shared Story</span>
+                        {message.imageUrl && (
+                          <div className="mb-2 rounded-lg overflow-hidden bg-black/10 aspect-video relative">
+                            <img src={message.imageUrl} className="w-full h-full object-cover" alt="Story" />
+                          </div>
                         )}
+                        <button
+                          onClick={() => {
+                            const match = message.text.match(/\/story\/([a-zA-Z0-9]+)/);
+                            if (match) window.dispatchEvent(new CustomEvent('open-story', { detail: match[1] }));
+                          }}
+                          className={`mt-1 text-xs font-bold py-1.5 px-4 rounded-full self-start transition-opacity hover:opacity-90 shadow-sm ${isCurrentUser ? 'bg-surface text-primary' : 'bg-primary text-surface'}`}
+                        >
+                          View Story
+                        </button>
                       </div>
-                    ) : message.text.includes('[Shared Post]') ? (
-                      <div className="flex flex-col space-y-2">
-                        <div className="bg-background/20 p-2 rounded-lg border-l-2 border-primary">
-                          <p className="text-xs font-bold opacity-75">Shared Content</p>
-                          <p className="text-sm">{message.text.replace('[Shared Post]', '').replace(/\/post\/[a-zA-Z0-9-]+/, '').trim()}</p>
-                        </div>
-
-                        {/* View Post Button */}
-                        {message.text.match(/\/post\/([a-zA-Z0-9-]+)/) && (
-                          <button
-                            onClick={() => {
-                              const match = message.text.match(/\/post\/([a-zA-Z0-9-]+)/);
-                              if (match) {
-                                window.dispatchEvent(new CustomEvent('open-post', { detail: match[1] }));
-                              }
-                            }}
-                            className="bg-primary text-background text-xs font-bold py-1 px-3 rounded-full self-start hover:opacity-80 transition-opacity"
-                          >
-                            View Post
-                          </button>
+                    ) : (message.text.includes('Shared a post') || message.text.includes('[Shared Post]')) ? (
+                      <div className="flex flex-col min-w-[200px]">
+                        <span className="text-[10px] font-bold opacity-60 uppercase mb-2 tracking-wider">Shared Post</span>
+                        {message.imageUrl && (
+                          <div className="mb-2 rounded-lg overflow-hidden bg-black/10 aspect-video relative">
+                            <img src={message.imageUrl} className="w-full h-full object-cover" alt="Post" />
+                          </div>
                         )}
-
-                        {/* External Link Button (if any) */}
-                        {message.text.match(/https?:\/\/[^\s]+/) && (
-                          <a
-                            href={message.text.match(/https?:\/\/[^\s]+/)?.[0]}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="bg-primary text-background text-xs font-bold py-1 px-3 rounded-full self-start hover:opacity-80 transition-opacity"
-                          >
-                            Visit Link
-                          </a>
-                        )}
+                        {/* Snippet for post text, cleaned of metadata */}
+                        <p className="text-sm opacity-90 line-clamp-2 mb-3 italic">
+                          "{message.text.split('\n').filter(line => !line.includes('/post/') && !line.includes('Shared a post')).join(' ').trim()}"
+                        </p>
+                        <button
+                          onClick={() => {
+                            const match = message.text.match(/\/post\/([a-zA-Z0-9-]+)/);
+                            if (match) window.dispatchEvent(new CustomEvent('open-post', { detail: match[1] }));
+                          }}
+                          className={`text-xs font-bold py-1.5 px-4 rounded-full self-start transition-opacity hover:opacity-90 shadow-sm ${isCurrentUser ? 'bg-surface text-primary' : 'bg-primary text-surface'}`}
+                        >
+                          View Post
+                        </button>
                       </div>
                     ) : (
-                      <p className="text-sm whitespace-pre-wrap break-words">
-                        {message.text}
-                        {message.text.match(/https?:\/\/[^\s]+/) && (
-                          <a
-                            href={message.text.match(/https?:\/\/[^\s]+/)?.[0]}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="block mt-2 text-xs underline opacity-80"
-                          >
-                            {message.text.match(/https?:\/\/[^\s]+/)?.[0]}
-                          </a>
-                        )}
-                      </p>
+                      /* NORMAL MESSAGE (Text + Optional Image) */
+                      <>
+                        {message.imageUrl && <img src={message.imageUrl} className="mb-2 rounded-lg w-full" alt="shared" />}
+                        <p className="text-sm whitespace-pre-wrap break-words">
+                          {message.text}
+                          {/* Simple URL Link detection */}
+                          {message.text.match(/https?:\/\/[^\s]+/) && (
+                            <a
+                              href={message.text.match(/https?:\/\/[^\s]+/)?.[0]}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="block mt-2 text-xs underline opacity-80"
+                            >
+                              {message.text.match(/https?:\/\/[^\s]+/)?.[0]}
+                            </a>
+                          )}
+                        </p>
+                      </>
                     )}
                   </div>
 
