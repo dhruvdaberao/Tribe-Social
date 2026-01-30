@@ -810,13 +810,39 @@ const App: React.FC = () => {
         }
     };
 
-    const handleViewUserStories = (userId: string, stories?: Story[], initialStoryId?: string) => {
+    const handleViewUserStories = async (userId: string, stories?: Story[], initialStoryId?: string) => {
         let userStoryData;
         if (userId === currentUser?.id) {
             userStoryData = { user: currentUser, stories: stories || myStories, initialStoryId };
         } else {
             const foundUserStories = followingUserStories.find(us => us.user.id === userId);
-            if (foundUserStories) userStoryData = { ...foundUserStories, initialStoryId };
+            if (foundUserStories) {
+                userStoryData = { ...foundUserStories, initialStoryId };
+            } else {
+                try {
+                    let user = userMap.get(userId) || users.find(u => u.id === userId);
+                    if (!user) {
+                        try {
+                            const { data } = await api.fetchUser(userId);
+                            user = data;
+                        } catch (e) {
+                            console.error("Failed to fetch user for story:", e);
+                        }
+                    }
+
+                    if (user) {
+                        const { data: userStories } = await api.fetchUserStories(userId);
+                        if (userStories.length > 0) {
+                            userStoryData = { user, stories: userStories as Story[], initialStoryId };
+                        } else {
+                            toast.info("This story is no longer available.");
+                        }
+                    }
+                } catch (e) {
+                    console.error("Failed to load user stories", e);
+                    toast.error("Could not load story.");
+                }
+            }
         }
 
         if (userStoryData && userStoryData.stories.length > 0) {

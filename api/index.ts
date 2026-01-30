@@ -139,6 +139,11 @@ export const fetchFollowingStories = async () => {
   return { data: normalizeArray(res.data) };
 };
 
+export const fetchUserStories = async (userId: string) => {
+  const res = await API.get(`/stories/user/${userId}`);
+  return { data: normalizeArray(res.data) };
+};
+
 export const deleteStory = (id: string) => API.delete(`/stories/${id}`);
 export const likeStory = (id: string) => API.put(`/stories/${id}/like`);
 

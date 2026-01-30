@@ -260,6 +260,20 @@ router.get('/feed', protect, async (req, res) => {
     }
 });
 
+// @route   GET /api/stories/user/:userId
+// @desc    Get active stories for a specific user
+router.get('/user/:userId', protect, async (req, res) => {
+    try {
+        const stories = await Story.find({ user: req.params.userId })
+            .populate('user', 'name username avatarUrl')
+            .sort({ createdAt: 'asc' });
+        res.json(stories);
+    } catch (error) {
+        console.error("Error fetching user stories:", error);
+        res.status(500).json({ message: 'Server error' });
+    }
+});
+
 // @route   DELETE /api/stories/:id
 // @desc    Delete a story
 router.delete('/:id', protect, async (req, res) => {

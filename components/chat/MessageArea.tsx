@@ -3,6 +3,7 @@
 // import React, { useState, useRef, useEffect } from 'react';
 // import { Conversation, User, Message } from '../../types';
 // import UserAvatar from '../common/UserAvatar';
+import ChatInput from './ChatInput';
 // import { useSocket } from '../../contexts/SocketContext';
 // import MarkdownRenderer from '../common/MarkdownRenderer';
 
@@ -400,19 +401,14 @@ export const MessageArea: React.FC<MessageAreaProps> = ({ conversation, messages
       </div>
 
       <div className="p-4 bg-transparent flex-shrink-0">
-        <form onSubmit={handleSendMessage} className="flex items-center space-x-3">
-          <input
-            type="text"
-            value={inputText}
-            onChange={handleInputChange}
-            placeholder="Type a message..."
-            className="flex-1 bg-surface border border-border rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-accent text-primary min-w-0"
-          />
-          {/* Changed rounded-full to rounded-lg */}
-          <button type="submit" className="bg-accent text-accent-text rounded-lg w-12 h-11 flex-shrink-0 flex items-center justify-center hover:bg-accent-hover transition-colors disabled:opacity-50" disabled={!inputText.trim() || isSending}>
-            {isSending ? <div className="w-5 h-5 border-2 border-accent-text border-t-transparent rounded-full animate-spin"></div> : <SendIcon />}
-          </button>
-        </form>
+        <ChatInput
+          value={inputText}
+          onChange={handleInputChange}
+          onSend={handleSendMessage}
+          placeholder="Type a message..."
+          disabled={!inputText.trim()}
+          isSending={isSending}
+        />
       </div>
     </div>
   );

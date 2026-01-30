@@ -1,7 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Tribe, User, TribeMessage } from '../../types';
 import UserAvatar from '../common/UserAvatar';
-import { Send, Image as ImageIcon } from 'lucide-react';
+import { Image as ImageIcon } from 'lucide-react';
+import ChatInput from './ChatInput';
 
 interface TribeMessageAreaProps {
   tribe: Tribe;
@@ -227,53 +228,14 @@ const TribeMessageArea: React.FC<TribeMessageAreaProps> = ({
           sticky bottom-20 md:bottom-0 /* 🔥 Fix: Lift above mobile nav */
         "
       >
-        <form
-          onSubmit={handleSend}
-          className="flex items-center space-x-3"
-        >
-          <input
-            type="text"
-            value={inputText}
-            onChange={e => setInputText(e.target.value)}
-            placeholder={`Message ${tribe.name}…`}
-            className="
-              flex-1
-              bg-surface
-              border border-border
-              rounded-full
-              px-4 py-2.5
-              focus:outline-none focus:ring-2 focus:ring-accent
-              text-primary
-              min-w-0
-            "
-            style={{
-              fontSize: '16px' // Prevents zoom on iOS
-            }}
-          />
-
-          <button
-            type="submit"
-            disabled={!inputText.trim() || isSending}
-            className="
-              w-11 h-11
-              flex-shrink-0
-              rounded-full
-              bg-accent
-              text-accent-text
-              flex items-center justify-center
-              hover:bg-accent-hover
-              transition-colors
-              disabled:opacity-50
-              shadow-sm
-            "
-          >
-            {isSending ? (
-              <div className="w-5 h-5 border-2 border-accent-text border-t-transparent rounded-full animate-spin" />
-            ) : (
-              <Send size={18} />
-            )}
-          </button>
-        </form>
+        <ChatInput
+          value={inputText}
+          onChange={e => setInputText(e.target.value)}
+          onSend={handleSend}
+          placeholder={`Message ${tribe.name}…`}
+          disabled={!inputText.trim()}
+          isSending={isSending}
+        />
       </div>
     </div>
   );
