@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Tribe, User, TribeMessage } from '../../types';
 import UserAvatar from '../common/UserAvatar';
-import { Send, Image as ImageIcon } from 'lucide-react';
+import { ArrowUp, Image as ImageIcon } from 'lucide-react';
 
 interface TribeMessageAreaProps {
   tribe: Tribe;
@@ -51,6 +51,7 @@ const TribeMessageArea: React.FC<TribeMessageAreaProps> = ({
           flex-1 overflow-y-auto
           px-4 py-3
           space-y-4
+          pb-32 md:pb-4 /* 🔥 Fix: Add padded bottom so last message isn't hidden by sticky input */
         "
       >
         {isLoading && messages.length === 0 && (
@@ -161,7 +162,6 @@ const TribeMessageArea: React.FC<TribeMessageAreaProps> = ({
         <div ref={bottomRef} />
       </div>
 
-      {/* ───────────── INPUT BAR (MOBILE SAFE) ───────────── */}
       {/* ───────────── INPUT BAR (MOBILE OPTIMIZED) ───────────── */}
       <div
         className="
@@ -170,7 +170,7 @@ const TribeMessageArea: React.FC<TribeMessageAreaProps> = ({
           border-t border-border
           flex-shrink-0 
           z-20
-          sticky bottom-20 md:bottom-0 /* 🔥 Fix: Lift above mobile nav */
+          sticky bottom-[56px] md:bottom-0 /* 🔥 Fix: Reduce gap (56px approx nav height) */
         "
       >
         <form
@@ -201,7 +201,7 @@ const TribeMessageArea: React.FC<TribeMessageAreaProps> = ({
             type="submit"
             disabled={!inputText.trim() || isSending}
             className="
-              w-12 h-11
+              w-12 h-12 /* Square shape */
               flex-shrink-0
               rounded-lg
               bg-accent
@@ -216,7 +216,7 @@ const TribeMessageArea: React.FC<TribeMessageAreaProps> = ({
             {isSending ? (
               <div className="w-5 h-5 border-2 border-accent-text border-t-transparent rounded-full animate-spin" />
             ) : (
-              <Send size={18} />
+              <ArrowUp size={24} strokeWidth={2.5} /> /* 🔥 Fix: Upright Arrow Icon */
             )}
           </button>
         </form>
