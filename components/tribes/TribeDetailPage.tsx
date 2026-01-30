@@ -101,17 +101,19 @@ const ActionButton = styled.button`
 /* ───────────── COMPONENT ───────────── */
 interface Props {
   currentUser: User | null;
+  tribeId?: string; // 🔥 Added prop to receive ID from parent (App.tsx)
 }
 
-const TribeDetailPage: React.FC<Props> = ({ currentUser }) => {
-  const { id } = useParams<{ id: string }>();
+const TribeDetailPage: React.FC<Props> = ({ currentUser, tribeId: propTribeId }) => {
+  const params = useParams<{ id: string }>();
   const navigate = useNavigate();
-  // const location = useLocation();
+
+  // Resolve ID: Prefer prop (from App.tsx manual routing) -> Then param (if used in Route)
+  const id = propTribeId || params.id;
 
   const { socket, joinRoom, leaveRoom, clearUnreadTribe } = useSocket();
 
   // Optimistic init from navigation state
-  // const initialTribe = location.state?.tribe || null;
   const [tribe, setTribe] = useState<Tribe | null>(null);
 
 
