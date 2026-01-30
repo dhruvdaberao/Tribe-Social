@@ -49,13 +49,25 @@ const saveToCache = (key: string, data: any) => {
     try {
         localStorage.setItem(STORAGE_KEY_PREFIX + key, JSON.stringify(data));
     } catch (e) {
-        console.warn('Local storage full, clearing old cache to make space.');
+        console.warn('Local storage full, attempting to clear old cache...');
         try {
-            // specific strategy: clear only our app's keys if possible, but for now simplistic approach
-            localStorage.clear();
+            // 🔥 CRITICAL FIX: Do NOT clear 'token' or 'currentUser' or the app crashes/logs out
+            const token = localStorage.getItem('token');
+            const user = localStorage.getItem('currentUser');
+
+            // Clear only keys starting with our prefix
+            Object.keys(localStorage).forEach(k => {
+                if (k.startsWith(STORAGE_KEY_PREFIX)) localStorage.removeItem(k);
+            });
+
+            // If we are desperate, we can clear everything but MUST restore auth
+            // localStorage.clear();
+            // if (token) localStorage.setItem('token', token);
+            // if (user) localStorage.setItem('currentUser', user);
+
             localStorage.setItem(STORAGE_KEY_PREFIX + key, JSON.stringify(data));
         } catch (retryError) {
-            console.error('Failed to save to local storage even after clear', retryError);
+            console.error('Failed to save to local storage even after clear. Data might be too large.', retryError);
         }
     }
 };
