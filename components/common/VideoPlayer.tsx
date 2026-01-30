@@ -9,6 +9,20 @@ interface VideoPlayerProps {
     onPlay?: () => void;
 }
 
+/**
+ * Generate Cloudinary poster URL from video URL
+ * Extracts first frame at 1s mark as thumbnail
+ */
+const getVideoPoster = (videoUrl: string): string => {
+    // Cloudinary video URL pattern: .../video/upload/.../filename.mp4
+    // Poster pattern: .../video/upload/so_1.0/filename.jpg
+    if (videoUrl.includes('cloudinary.com') && videoUrl.includes('/video/upload/')) {
+        return videoUrl.replace('/video/upload/', '/video/upload/so_1.0/').replace(/\.(mp4|mov|webm)$/, '.jpg');
+    }
+    // Fallback: use video URL (browser will extract first frame)
+    return videoUrl;
+};
+
 const VideoPlayer: React.FC<VideoPlayerProps> = ({ src, className = '', onPause, onPlay }) => {
     const videoRef = useRef<HTMLVideoElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
@@ -22,7 +36,10 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ src, className = '', onPause,
     const [progress, setProgress] = useState(0);
     const [duration, setDuration] = useState(0);
     const [currentTime, setCurrentTime] = useState(0);
+    const [isVideoLoaded, setIsVideoLoaded] = useState(false);
     const controlsTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+    const posterUrl = getVideoPoster(src);
 
     // Format time as MM:SS
     const formatTime = (time: number) => {
@@ -31,14 +48,22 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ src, className = '', onPause,
         return `${minutes}:${seconds.toString().padStart(2, '0')}`;
     };
 
-    // Handle play/pause
+    // Handle play/pause with lazy loading
     const togglePlayPause = () => {
         if (!videoRef.current) return;
 
-        if (isPlaying) {
-            videoRef.current.pause();
-        } else {
+        // Lazy load video on first play
+        if (!isVideoLoaded) {
+            videoRef.current.src = src;
+            videoRef.current.load();
+            setIsVideoLoaded(true);
             videoRef.current.play();
+        } else {
+            if (isPlaying) {
+                videoRef.current.pause();
+            } else {
+                videoRef.current.play();
+            }
         }
     };
 
@@ -61,7 +86,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ src, className = '', onPause,
 
     // Handle progress bar click
     const handleProgressClick = (e: React.MouseEvent<HTMLDivElement>) => {
-        if (!videoRef.current) return;
+        if (!videoRef.current || !isVideoLoaded) return;
         const rect = e.currentTarget.getBoundingClientRect();
         const pos = (e.clientX - rect.left) / rect.width;
         videoRef.current.currentTime = pos * videoRef.current.duration;
@@ -150,10 +175,11 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ src, className = '', onPause,
         >
             <video
                 ref={videoRef}
-                src={src}
+                poster={posterUrl}
                 className="w-full h-auto max-h-[600px] object-contain"
                 playsInline
-                preload="metadata"
+                preload="none"
+                muted={isMuted}
             />
 
             {/* Duration badge (shows when not playing or controls visible) */}
@@ -165,15 +191,15 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ src, className = '', onPause,
 
             {/* Play button overlay (shows when paused) */}
             {!isPlaying && (
-                <div className="absolute inset-0 flex items-center justify-center bg-black/20">
-                    <div className="w-16 h-16 flex items-center justify-center rounded-full bg-white/90 shadow-lg">
+                <div className="absolute inset-0 flex items-center justify-center">
+                    <div className="w-16 h-16 flex items-center justify-center rounded-full bg-white/90 shadow-lg hover:scale-110 transition-transform">
                         <Play className="w-8 h-8 text-black ml-1" fill="black" />
                     </div>
                 </div>
             )}
 
             {/* Custom controls */}
-            {showControls && (
+            {showControls && isVideoLoaded && (
                 <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-3">
                     {/* Progress bar */}
                     <div
