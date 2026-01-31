@@ -71,20 +71,6 @@
 //     >
 //       {React.cloneElement(item.icon, { isActive: activeItem === item.name })}
 //       <NavBadge count={item.unreadCount} />
-//     </button>
-//   );
-
-//   return (
-//     <>
-//       {/* Top Header */}
-//       <header className="fixed top-0 left-0 right-0 h-16 bg-top-bar z-50 flex items-center justify-between px-4 md:px-6">
-//             </nav>
-//         </div>
-
-//         {/* Right Side: Controls */}
-//         <div className="flex items-center space-x-2">
-//             <button
-//               onClick={toggleTheme}
 //               className="text-accent-text/80 hover:text-accent-text hover:bg-black/10 rounded-full p-2 flex-shrink-0"
 //               aria-label="Toggle theme"
 //             >
@@ -216,15 +202,18 @@ const Sidebar: React.FC<SidebarProps> = ({ activeItem, onSelectItem, currentUser
   return (
     <>
       {/* Top Header */}
-      <header className="fixed top-0 left-0 right-0 h-16 bg-accent z-50 flex items-center justify-between px-4 md:px-6">
+      <header className="fixed top-0 left-0 right-0 h-20 bg-top-bar z-50 flex items-center justify-between px-4 md:px-6 shadow-sm">
         {/* Left Side: Logo & Desktop Nav */}
-        <div className="flex items-center space-x-6">
+        <div className="flex items-center space-x-6 h-full">
           <div
-            className="flex items-center gap-[3px] cursor-pointer"
+            className="flex items-center cursor-pointer h-full py-2"
             onClick={() => onSelectItem('Home')}
           >
-            <img src={theme === 'dark' ? '/dark1.png' : '/Light1.png'} alt="Tribe" className="h-[28px] w-auto flex-shrink-0 select-none" />
-            <span className="text-[28px] font-extrabold font-display tracking-[-0.5px] text-accent-text sm:inline leading-none">Tribe</span>
+            <img
+              src={theme === 'dark' ? '/white-color-logo.png' : '/black-color-logo.png'}
+              alt="Tribe Logo"
+              className="h-16 w-auto object-contain select-none"
+            />
           </div>
           <nav className="hidden md:flex items-center space-x-2">
             {mainNavItems.map(item => (
