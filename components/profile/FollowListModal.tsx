@@ -20,10 +20,10 @@ const FollowListModal: React.FC<FollowListModalProps> = ({ title, userIds, allUs
     const [localUserIds, setLocalUserIds] = React.useState<string[]>(userIds);
 
     React.useEffect(() => {
-        setLocalUserIds(userIds);
+        setLocalUserIds(userIds || []);
     }, [userIds]);
 
-    const usersToShow = allUsers.filter(u => localUserIds.includes(u.id));
+    const usersToShow = (allUsers || []).filter(u => localUserIds.includes(u.id));
 
     const handleRemoveFollower = async (userId: string) => {
         try {

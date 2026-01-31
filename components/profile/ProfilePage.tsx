@@ -411,7 +411,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = (props) => {
                                     <button onClick={() => handleMessageClick()} className="w-full sm:w-auto font-semibold px-6 py-2 rounded-lg transition-colors bg-surface text-primary border border-border hover:bg-background">Message</button>
                                     {profileUser.id !== 'chuk-ai' && (
                                         <button onClick={() => onToggleFollow(profileUser.id)} className={`w-full sm:w-auto font-semibold px-6 py-2 rounded-lg transition-colors ${isFollowing ? 'bg-surface text-primary border border-border hover:bg-background' : 'bg-accent text-accent-text hover:bg-accent-hover'}`}>
-                                            {isFollowing ? 'Following' : 'Follow'}
+                                            {isFollowing ? 'Unfollow' : 'Follow'}
                                         </button>
                                     )}
                                     <div className="relative">
