@@ -1040,7 +1040,7 @@ const App: React.FC = () => {
         >
             <Toaster />
             <Sidebar activeItem={activeNavItem} onSelectItem={handleSelectItem} currentUser={currentUser} unreadMessageCount={unreadMessageCount} unreadTribeCount={unreadTribeCount} unreadNotificationCount={unreadNotificationCount} isChatOpen={isChatOpen} />
-            <main className={`${shouldHideHeader ? 'pt-0' : 'pt-16'} pb-16 md:pb-0 h-screen transition-all duration-300`}>
+            <main className={`${shouldHideHeader ? 'pt-0 md:pt-16' : 'pt-16'} pb-16 md:pb-0 h-screen transition-all duration-300`}>
                 <div
                     ref={mainRef}
                     className={`${containerClass} overflow-y-auto no-scrollbar`}
