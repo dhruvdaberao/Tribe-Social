@@ -361,6 +361,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = (props) => {
 
     const isOwnProfile = user.id === currentUser.id;
     const isFollowing = (currentUser.following || []).includes(user.id);
+    const canViewLists = isOwnProfile || isFollowing;
 
     const openFollowModal = (type: 'followers' | 'following', userIds: string[]) => {
         setFollowModal({ isOpen: true, type, userIds });
@@ -447,8 +448,20 @@ export const ProfilePage: React.FC<ProfilePageProps> = (props) => {
                             </div>
                         ) : (
                             <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2">
-                                <button onClick={() => openFollowModal('following', profileUser.following || [])} className="hover:underline"><span className="font-bold text-primary">{(profileUser.following || []).length}</span> <span className="text-secondary">Following</span></button>
-                                <button onClick={() => openFollowModal('followers', profileUser.followers || [])} className="hover:underline"><span className="font-bold text-primary">{(profileUser.followers || []).length}</span> <span className="text-secondary">Followers</span></button>
+                                <button
+                                    onClick={() => canViewLists && openFollowModal('following', profileUser.following || [])}
+                                    className={`hover:underline ${!canViewLists ? 'cursor-not-allowed opacity-50' : ''}`}
+                                    title={!canViewLists ? "Follow to view lists" : ""}
+                                >
+                                    <span className="font-bold text-primary">{(profileUser.following || []).length}</span> <span className="text-secondary">Following</span>
+                                </button>
+                                <button
+                                    onClick={() => canViewLists && openFollowModal('followers', profileUser.followers || [])}
+                                    className={`hover:underline ${!canViewLists ? 'cursor-not-allowed opacity-50' : ''}`}
+                                    title={!canViewLists ? "Follow to view lists" : ""}
+                                >
+                                    <span className="font-bold text-primary">{(profileUser.followers || []).length}</span> <span className="text-secondary">Followers</span>
+                                </button>
                             </div>
                         )}
                         <p className="text-primary mt-4 max-w-2xl whitespace-pre-wrap">{profileUser.bio}</p>
@@ -499,7 +512,17 @@ export const ProfilePage: React.FC<ProfilePageProps> = (props) => {
             {isOwnProfile && isEditModalOpen && <EditProfileModal user={currentUser} onClose={() => setEditModalOpen(false)} onSave={onUpdateUser} />}
 
             {followModal.isOpen && (
-                <FollowListModal title={followModal.type === 'followers' ? 'Followers' : 'Following'} userIds={followModal.userIds} allUsers={allUsers} currentUser={currentUser} onClose={() => setFollowModal({ isOpen: false, type: 'followers', userIds: [] })} onToggleFollow={onToggleFollow} onViewProfile={(userToView) => { setFollowModal({ isOpen: false, type: 'followers', userIds: [] }); onViewProfile(userToView); }} />
+                <FollowListModal
+                    title={followModal.type === 'followers' ? 'Followers' : 'Following'}
+                    userIds={followModal.userIds}
+                    allUsers={allUsers}
+                    currentUser={currentUser}
+                    onClose={() => setFollowModal({ isOpen: false, type: 'followers', userIds: [] })}
+                    onToggleFollow={onToggleFollow}
+                    onViewProfile={(userToView) => { setFollowModal({ isOpen: false, type: 'followers', userIds: [] }); onViewProfile(userToView); }}
+                    isOwnProfile={isOwnProfile}
+                    listType={followModal.type}
+                />
             )}
         </div>
     );

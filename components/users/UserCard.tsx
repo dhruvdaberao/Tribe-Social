@@ -8,10 +8,52 @@ interface UserCardProps {
     onToggleFollow: (targetUserId: string) => void;
     onViewProfile: (user: User) => void;
     layout?: 'card' | 'list';
+    isOwnProfile?: boolean;
+    listType?: 'followers' | 'following';
+    onRemove?: (userId: string) => void;
 }
 
-const UserCard: React.FC<UserCardProps> = ({ user, currentUser, onToggleFollow, onViewProfile, layout = 'card' }) => {
+const UserCard: React.FC<UserCardProps> = ({ user, currentUser, onToggleFollow, onViewProfile, layout = 'card', isOwnProfile, listType, onRemove }) => {
     const isFollowing = currentUser.following.includes(user.id);
+
+    const renderButton = () => {
+        // 1. My Following List -> Show "Unfollow"
+        if (isOwnProfile && listType === 'following') {
+            return (
+                <button
+                    onClick={() => onToggleFollow(user.id)}
+                    className="font-semibold px-4 py-1.5 rounded-lg transition-colors text-sm ml-2 flex-shrink-0 bg-surface text-primary border border-border hover:bg-red-50 hover:text-red-600 hover:border-red-200"
+                >
+                    Unfollow
+                </button>
+            );
+        }
+
+        // 2. My Followers List -> Show "Remove"
+        if (isOwnProfile && listType === 'followers') {
+            return (
+                <button
+                    onClick={() => onRemove && onRemove(user.id)}
+                    className="font-semibold px-4 py-1.5 rounded-lg transition-colors text-sm ml-2 flex-shrink-0 bg-surface text-primary border border-border hover:bg-red-50 hover:text-red-600 hover:border-red-200"
+                >
+                    Remove
+                </button>
+            );
+        }
+
+        // 3. Default Behavior (Visiting someone else, or Search)
+        return (
+            <button
+                onClick={() => onToggleFollow(user.id)}
+                className={`font-semibold px-4 py-1.5 rounded-lg transition-colors text-sm ml-2 flex-shrink-0 ${isFollowing
+                    ? 'bg-surface text-primary border border-border hover:bg-background'
+                    : 'bg-accent text-accent-text hover:bg-accent-hover'
+                    }`}
+            >
+                {isFollowing ? 'Following' : 'Follow'}
+            </button>
+        );
+    };
 
     if (layout === 'list') {
         return (
@@ -25,15 +67,7 @@ const UserCard: React.FC<UserCardProps> = ({ user, currentUser, onToggleFollow, 
                         <p className="text-sm text-secondary truncate">@{user.username}</p>
                     </div>
                 </div>
-                <button
-                    onClick={() => onToggleFollow(user.id)}
-                    className={`font-semibold px-4 py-1.5 rounded-lg transition-colors text-sm ml-2 flex-shrink-0 ${isFollowing
-                            ? 'bg-surface text-primary border border-border hover:bg-background'
-                            : 'bg-accent text-accent-text hover:bg-accent-hover'
-                        }`}
-                >
-                    {isFollowing ? 'Following' : 'Follow'}
-                </button>
+                {renderButton()}
             </div>
         )
     }
@@ -58,15 +92,9 @@ const UserCard: React.FC<UserCardProps> = ({ user, currentUser, onToggleFollow, 
             <p className="text-sm text-secondary my-4 line-clamp-3 px-2 flex-grow">
                 {user.bio || 'No bio provided.'}
             </p>
-            <button
-                onClick={() => onToggleFollow(user.id)}
-                className={`w-full font-semibold px-4 py-2 rounded-lg transition-colors text-sm mt-auto ${isFollowing
-                        ? 'bg-surface text-primary border border-border hover:bg-background'
-                        : 'bg-accent text-accent-text hover:bg-accent-hover'
-                    }`}
-            >
-                {isFollowing ? 'Following' : 'Follow'}
-            </button>
+            <div className="mt-auto w-full">
+                {renderButton()}
+            </div>
         </div>
     );
 };

@@ -660,4 +660,39 @@ router.put('/:id/block', protect, async (req, res) => {
 });
 
 
+// @route   PUT /api/users/:id/remove-follower
+// @desc    Remove a user from your followers list
+router.put('/:id/remove-follower', protect, async (req, res) => {
+    try {
+        const userToRemove = await User.findById(req.params.id);
+        const currentUser = await User.findById(req.user.id);
+
+        if (!userToRemove || !currentUser) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        // Check if the target user is actually following the current user
+        if (currentUser.followers.includes(userToRemove._id)) {
+            // Remove target from my followers list
+            currentUser.followers = currentUser.followers.filter(id => id.toString() !== userToRemove._id.toString());
+            // Remove me from target's following list
+            userToRemove.following = userToRemove.following.filter(id => id.toString() !== currentUser._id.toString());
+
+            await currentUser.save();
+            await userToRemove.save();
+
+            req.io.emit('userUpdated', currentUser.toJSON());
+            req.io.emit('userUpdated', userToRemove.toJSON());
+
+            res.json({ message: 'Follower removed successfully' });
+        } else {
+            res.status(400).json({ message: 'User is not following you' });
+        }
+
+    } catch (error) {
+        console.error('Remove follower error:', error);
+        res.status(500).json({ message: 'Server Error' });
+    }
+});
+
 export default router;

@@ -90,6 +90,9 @@ export const updateProfile = (profileData: any) =>
 export const toggleFollow = (id: string) =>
   API.put(`/users/${id}/follow`);
 
+export const removeFollower = (id: string) =>
+  API.put(`/users/${id}/remove-follower`);
+
 export const toggleBlock = (id: string) =>
   API.put(`/users/${id}/block`);
 

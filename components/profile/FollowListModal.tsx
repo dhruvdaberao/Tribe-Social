@@ -1,6 +1,8 @@
 import React from 'react';
 import { User } from '../../types';
 import UserCard from '../users/UserCard';
+import { removeFollower } from '../../api';
+import { toast } from '../common/Toast';
 
 interface FollowListModalProps {
     title: string;
@@ -10,12 +12,31 @@ interface FollowListModalProps {
     onClose: () => void;
     onToggleFollow: (targetUserId: string) => void;
     onViewProfile: (user: User) => void;
+    isOwnProfile?: boolean;
+    listType?: 'followers' | 'following';
 }
 
-const FollowListModal: React.FC<FollowListModalProps> = ({ title, userIds, allUsers, currentUser, onClose, onToggleFollow, onViewProfile }) => {
-    const usersToShow = allUsers.filter(u => userIds.includes(u.id));
+const FollowListModal: React.FC<FollowListModalProps> = ({ title, userIds, allUsers, currentUser, onClose, onToggleFollow, onViewProfile, isOwnProfile, listType }) => {
+    const [localUserIds, setLocalUserIds] = React.useState<string[]>(userIds);
 
-    console.log('FollowListModal Render:', { title, userIdsCount: userIds.length, usersToShowCount: usersToShow.length });
+    React.useEffect(() => {
+        setLocalUserIds(userIds);
+    }, [userIds]);
+
+    const usersToShow = allUsers.filter(u => localUserIds.includes(u.id));
+
+    const handleRemoveFollower = async (userId: string) => {
+        try {
+            await removeFollower(userId);
+            setLocalUserIds(prev => prev.filter(id => id !== userId));
+            toast.success("Follower removed");
+        } catch (error) {
+            console.error("Failed to remove follower:", error);
+            toast.error("Failed to remove follower");
+        }
+    };
+
+    console.log('FollowListModal Render:', { title, userIdsCount: localUserIds.length, usersToShowCount: usersToShow.length });
 
     return (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[100] p-4" onClick={onClose}>
@@ -36,6 +57,9 @@ const FollowListModal: React.FC<FollowListModalProps> = ({ title, userIds, allUs
                                     onToggleFollow={onToggleFollow}
                                     onViewProfile={onViewProfile}
                                     layout="list"
+                                    isOwnProfile={isOwnProfile}
+                                    listType={listType}
+                                    onRemove={handleRemoveFollower}
                                 />
                             ))}
                         </div>
