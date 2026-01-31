@@ -273,10 +273,12 @@ const Sidebar: React.FC<SidebarProps> = ({ activeItem, onSelectItem, currentUser
       </header>
 
       {/* Mobile Bottom Nav */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-surface border-t border-border flex justify-around items-center h-16 z-50">
-        {mobileNavItems.map(item => (
-          <MobileNavButton key={item.name} item={item} />
-        ))}
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-surface border-t border-border z-50 pb-[env(safe-area-inset-bottom)]">
+        <div className="flex justify-around items-center h-16">
+          {mobileNavItems.map(item => (
+            <MobileNavButton key={item.name} item={item} />
+          ))}
+        </div>
       </nav>
     </>
   );
@@ -293,7 +295,7 @@ const MessagesIcon: React.FC<IconProps> = ({ isActive }) => <IconWrapper><Messag
 const TribesIcon: React.FC<IconProps> = ({ isActive }) => <IconWrapper><Users size={24} strokeWidth={isActive ? 2.25 : 1.75} /></IconWrapper>;
 const HeartIcon: React.FC<IconProps> = ({ isActive }) => <IconWrapper><Heart size={24} strokeWidth={isActive ? 2.25 : 1.75} /></IconWrapper>;
 
-const ChukIcon = () => <IconWrapper><img src="/chuk.gif" alt="Chuk AI" className="w-full h-full p-0.5" /></IconWrapper>;
+const ChukIcon = () => <IconWrapper><img src="/chuk.png" alt="Chuk AI" className="w-full h-full p-0.5" /></IconWrapper>;
 const SunIcon = () => <IconWrapper><Sun size={24} strokeWidth={1.75} /></IconWrapper>;
 const MoonIcon = () => <IconWrapper><Moon size={24} strokeWidth={1.75} /></IconWrapper>;
 

@@ -2,4 +2,5 @@
 html, body, #root {
   height: 100%;
   overflow-x: hidden;
+  background-color: var(--color-background); /* Ensure consistent background during overscroll */
 }
