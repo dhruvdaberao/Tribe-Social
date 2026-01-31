@@ -74,7 +74,7 @@
 
 //         <div className="bg-surface p-8 rounded-2xl shadow-lg border border-border">
 //           <h2 className="text-2xl font-bold text-center text-primary mb-8">{isLogin ? 'Log In' : 'Sign Up'}</h2>
-          
+
 //           <form onSubmit={handleSubmit}>
 //             {!isLogin && (
 //                 <>
@@ -165,7 +165,7 @@
 
 
 import React, { useState, useContext, useEffect } from 'react';
-import { AuthContext } from '../../contexts/AuthContext';
+import { AuthContext, useAuth } from '../../contexts/AuthContext';
 import axios from 'axios';
 import * as api from '../../api';
 import { toast } from '../common/Toast';
@@ -179,7 +179,7 @@ interface AuthContextType {
 type AuthMode = 'login' | 'register' | 'forgot' | 'otp';
 
 const LoginPage: React.FC = () => {
-  const auth = useContext(AuthContext) as AuthContextType;
+  const auth = useAuth();
 
   const [mode, setMode] = useState<AuthMode>('login');
   const [email, setEmail] = useState('');
@@ -233,7 +233,7 @@ const LoginPage: React.FC = () => {
         toast.success("Welcome back!");
         // Persistent reminder via success toast
         setTimeout(() => {
-            toast.info("Security Tip: Please update your password from Settings soon.");
+          toast.info("Security Tip: Please update your password from Settings soon.");
         }, 1500);
       }
     } catch (err: any) {
@@ -330,11 +330,11 @@ const LoginPage: React.FC = () => {
 
           <p className="text-center text-secondary text-sm mt-6">
             {mode === 'forgot' || mode === 'otp' ? (
-                <button onClick={() => { setMode('login'); setError(''); }} className="font-semibold text-accent hover:underline">Back to Login</button>
+              <button onClick={() => { setMode('login'); setError(''); }} className="font-semibold text-accent hover:underline">Back to Login</button>
             ) : mode === 'login' ? (
-                <>Don't have an account? <button onClick={() => { setMode('register'); setError(''); }} className="font-semibold text-accent hover:underline ml-1">Sign Up</button></>
+              <>Don't have an account? <button onClick={() => { setMode('register'); setError(''); }} className="font-semibold text-accent hover:underline ml-1">Sign Up</button></>
             ) : (
-                <>Already have an account? <button onClick={() => { setMode('login'); setError(''); }} className="font-semibold text-accent hover:underline ml-1">Log In</button></>
+              <>Already have an account? <button onClick={() => { setMode('login'); setError(''); }} className="font-semibold text-accent hover:underline ml-1">Log In</button></>
             )}
           </p>
         </div>
