@@ -211,13 +211,13 @@ const Sidebar: React.FC<SidebarProps> = ({ activeItem, onSelectItem, currentUser
         {/* Left Side: Logo & Desktop Nav */}
         <div className="flex items-center space-x-6 h-full">
           <div
-            className="flex items-center cursor-pointer h-full py-2"
+            className="flex items-center justify-center cursor-pointer h-full"
             onClick={() => onSelectItem('Home')}
           >
             <img
               src={theme === 'dark' ? '/white-color-logo.png' : '/black-color-logo.png'}
               alt="Tribe Logo"
-              className="h-32 w-auto object-contain select-none"
+              className="h-12 w-auto object-contain select-none"
             />
           </div>
           <nav className="hidden md:flex items-center space-x-2">
