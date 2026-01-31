@@ -141,7 +141,7 @@
 // const TribesIcon: React.FC<IconProps> = ({ isActive }) => <IconWrapper><svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.653-.124-1.282-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.653.124-1.282.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" /></svg></IconWrapper>;
 // const HeartIcon: React.FC<IconProps> = ({ isActive }) => <IconWrapper><svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" /></svg></IconWrapper>;
 
-// const ChukIcon = () => <IconWrapper><img src="/chuk.gif" alt="Chuk AI" className="w-full h-full p-0.5" /></IconWrapper>;
+
 // const SunIcon = () => <IconWrapper><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" /></svg></IconWrapper>;
 // const MoonIcon = () => <IconWrapper><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" /></svg></IconWrapper>;
 
@@ -217,8 +217,8 @@ const Sidebar: React.FC<SidebarProps> = ({ activeItem, onSelectItem, currentUser
       key={item.name}
       onClick={() => onSelectItem(item.name)}
       className={`relative flex flex-col items-center justify-center p-2 rounded-lg flex-1 transition-colors ${activeItem === item.name
-        ? 'text-accent-text'
-        : 'text-accent-text/60 hover:bg-black/10 hover:text-accent-text'
+        ? 'text-accent'
+        : 'text-secondary hover:bg-background hover:text-primary'
         }`}
     >
       {React.cloneElement(item.icon, { isActive: activeItem === item.name })}
@@ -229,7 +229,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeItem, onSelectItem, currentUser
   return (
     <>
       {/* Top Header */}
-      <header className="fixed top-0 left-0 right-0 h-16 bg-accent z-50 flex items-center justify-between px-4 md:px-6 shadow-none border-none ring-0">
+      <header className="fixed top-0 left-0 right-0 h-16 bg-accent z-50 flex items-center justify-between px-4 md:px-6">
         {/* Left Side: Logo & Desktop Nav */}
         <div className="flex items-center space-x-6">
           <div
@@ -273,12 +273,10 @@ const Sidebar: React.FC<SidebarProps> = ({ activeItem, onSelectItem, currentUser
       </header>
 
       {/* Mobile Bottom Nav */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-accent z-50 pb-[env(safe-area-inset-bottom)] shadow-none border-none">
-        <div className="flex justify-around items-center h-16">
-          {mobileNavItems.map(item => (
-            <MobileNavButton key={item.name} item={item} />
-          ))}
-        </div>
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-surface border-t border-border flex justify-around items-center h-16 z-50">
+        {mobileNavItems.map(item => (
+          <MobileNavButton key={item.name} item={item} />
+        ))}
       </nav>
     </>
   );
