@@ -374,7 +374,13 @@ export const ProfilePage: React.FC<ProfilePageProps> = (props) => {
         <div>
             <div className="bg-surface rounded-2xl shadow-sm border border-border mb-6 overflow-hidden">
                 <div className="h-48 md:h-64 bg-background rounded-t-2xl">
-                    {profileUser.bannerUrl ? <img src={profileUser.bannerUrl} alt={`${profileUser.name}'s banner`} className="w-full h-full object-cover" /> : <div className="w-full h-full bg-gradient-to-br from-background via-surface to-background" />}
+                    {profileUser.id === 'chuk-ai' ? (
+                        <img src="/psy-banner.gif" alt="Psyduck Banner" className="w-full h-full object-cover" />
+                    ) : profileUser.bannerUrl ? (
+                        <img src={profileUser.bannerUrl} alt={`${profileUser.name}'s banner`} className="w-full h-full object-cover" />
+                    ) : (
+                        <div className="w-full h-full bg-gradient-to-br from-background via-surface to-background" />
+                    )}
                 </div>
 
                 <div className="p-4 md:p-6 relative">
@@ -402,9 +408,11 @@ export const ProfilePage: React.FC<ProfilePageProps> = (props) => {
                             ) : (
                                 <>
                                     <button onClick={() => handleMessageClick()} className="w-full sm:w-auto font-semibold px-6 py-2 rounded-lg transition-colors bg-surface text-primary border border-border hover:bg-background">Message</button>
-                                    <button onClick={() => onToggleFollow(profileUser.id)} className={`w-full sm:w-auto font-semibold px-6 py-2 rounded-lg transition-colors ${isFollowing ? 'bg-surface text-primary border border-border hover:bg-background' : 'bg-accent text-accent-text hover:bg-accent-hover'}`}>
-                                        {isFollowing ? 'Following' : 'Follow'}
-                                    </button>
+                                    {profileUser.id !== 'chuk-ai' && (
+                                        <button onClick={() => onToggleFollow(profileUser.id)} className={`w-full sm:w-auto font-semibold px-6 py-2 rounded-lg transition-colors ${isFollowing ? 'bg-surface text-primary border border-border hover:bg-background' : 'bg-accent text-accent-text hover:bg-accent-hover'}`}>
+                                            {isFollowing ? 'Following' : 'Follow'}
+                                        </button>
+                                    )}
                                     <div className="relative">
                                         <button onClick={() => setOptionsOpen(!optionsOpen)} onBlur={() => setTimeout(() => setOptionsOpen(false), 150)} className="p-2 rounded-full bg-surface text-primary border border-border hover:bg-background" aria-label="More options"><OptionsIcon /></button>
                                         {optionsOpen && (
@@ -431,10 +439,18 @@ export const ProfilePage: React.FC<ProfilePageProps> = (props) => {
                     <div className="mt-2">
                         <h1 className="text-3xl font-bold text-primary font-display">{profileUser.name}</h1>
                         <p className="text-md text-secondary">@{profileUser.username}</p>
-                        <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2">
-                            <button onClick={() => openFollowModal('following', profileUser.following || [])} className="hover:underline"><span className="font-bold text-primary">{(profileUser.following || []).length}</span> <span className="text-secondary">Following</span></button>
-                            <button onClick={() => openFollowModal('followers', profileUser.followers || [])} className="hover:underline"><span className="font-bold text-primary">{(profileUser.followers || []).length}</span> <span className="text-secondary">Followers</span></button>
-                        </div>
+                        {profileUser.id === 'chuk-ai' ? (
+                            <div className="mt-2 p-3 bg-accent/10 rounded-lg border border-accent/20">
+                                <p className="text-sm text-primary italic">
+                                    "Psy... Psyduck has hidden his followers & following list with his Psychic ability! (But he might secretly follow you... Psy!)" 🦆🌀
+                                </p>
+                            </div>
+                        ) : (
+                            <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2">
+                                <button onClick={() => openFollowModal('following', profileUser.following || [])} className="hover:underline"><span className="font-bold text-primary">{(profileUser.following || []).length}</span> <span className="text-secondary">Following</span></button>
+                                <button onClick={() => openFollowModal('followers', profileUser.followers || [])} className="hover:underline"><span className="font-bold text-primary">{(profileUser.followers || []).length}</span> <span className="text-secondary">Followers</span></button>
+                            </div>
+                        )}
                         <p className="text-primary mt-4 max-w-2xl whitespace-pre-wrap">{profileUser.bio}</p>
                     </div>
                 </div>
