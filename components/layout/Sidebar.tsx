@@ -74,26 +74,6 @@
 //     </button>
 //   );
 
-//   return (
-//     <>
-//       {/* Top Header */}
-//       <header className="fixed top-0 left-0 right-0 h-16 bg-top-bar z-50 flex items-center justify-between px-4 md:px-6">
-//         {/* Left Side: Logo & Desktop Nav */}
-//         <div className="flex items-center space-x-6">
-//             <div 
-//               className="flex items-center space-x-3 cursor-pointer"
-//               onClick={() => onSelectItem('Home')}
-//             >
-//               <img src="/tribe.png" alt="Tribe Logo" className="w-10 h-10 flex-shrink-0" />
-//               <span className="text-2xl font-bold font-display text-accent-text sm:inline">Tribe</span>
-//             </div>
-//             <nav className="hidden md:flex items-center space-x-2">
-//                {mainNavItems.map(item => (
-//                   <DesktopNavLink key={item.name} item={item} />
-//                ))}
-//             </nav>
-//         </div>
-
 //         {/* Right Side: Controls */}
 //         <div className="flex items-center space-x-2">
 //             <button
@@ -229,15 +209,18 @@ const Sidebar: React.FC<SidebarProps> = ({ activeItem, onSelectItem, currentUser
   return (
     <>
       {/* Top Header */}
-      <header className="fixed top-0 left-0 right-0 h-16 bg-accent z-50 flex items-center justify-between px-4 md:px-6">
+      <header className="fixed top-0 left-0 right-0 h-16 bg-top-bar z-50 flex items-center justify-between px-4 md:px-6">
         {/* Left Side: Logo & Desktop Nav */}
         <div className="flex items-center space-x-6">
           <div
             className="flex items-center gap-[3px] cursor-pointer"
             onClick={() => onSelectItem('Home')}
           >
-            <img src={theme === 'dark' ? '/dark1.png' : '/Light1.png'} alt="Tribe" className="h-[28px] w-auto flex-shrink-0 select-none" />
-            <span className="text-[28px] font-extrabold font-display tracking-[-0.5px] text-accent-text sm:inline leading-none">Tribe</span>
+            <img
+              src={theme === 'dark' ? '/white-color-logo.png' : '/black-color-logo.png'}
+              alt="Tribe"
+              className="h-8 w-auto object-contain transition-opacity duration-300"
+            />
           </div>
           <nav className="hidden md:flex items-center space-x-2">
             {mainNavItems.map(item => (
