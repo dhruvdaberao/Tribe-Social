@@ -34,7 +34,7 @@ const CHUK_AI_USER: User = {
     id: 'chuk-ai',
     name: 'Chuk',
     username: 'chuk_the_chicken',
-    avatarUrl: '/chuk.png',
+    avatarUrl: '/chuk-ai.png',
     bannerUrl: null,
     bio: 'Your personal guide & friend at Tribe! 🐣',
     followers: [],

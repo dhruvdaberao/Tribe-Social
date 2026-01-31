@@ -296,7 +296,7 @@ const HeartIcon: React.FC<IconProps> = ({ isActive }) => <IconWrapper><Heart siz
 const ChukIcon = () => (
   <IconWrapper>
     <img
-      src="/chuk.png"
+      src="/chuk-ai.png"
       alt="Chuk AI"
       className="w-full h-full p-0.5"
     />
