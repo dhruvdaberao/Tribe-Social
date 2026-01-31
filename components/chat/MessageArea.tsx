@@ -294,7 +294,11 @@ export const MessageArea: React.FC<MessageAreaProps> = ({ conversation, messages
           className="flex items-center cursor-pointer overflow-hidden"
           onClick={() => onViewProfile(otherParticipant)}
         >
-          <UserAvatar user={otherParticipant} className="w-10 h-10 rounded-full mr-3 flex-shrink-0" isOnline={isOtherUserOnline} />
+          {otherParticipant.id === 'chuk-ai' ? (
+            <img src="/chuk-ai.png" alt="Chuk AI" className="h-10 w-auto mr-3 flex-shrink-0 object-contain" />
+          ) : (
+            <UserAvatar user={otherParticipant} className="w-10 h-10 rounded-full mr-3 flex-shrink-0" isOnline={isOtherUserOnline} />
+          )}
           <div className="min-w-0">
             <h2 className="text-lg font-bold text-primary leading-tight hover:underline truncate">{otherParticipant.name}</h2>
             {isTyping ? (
@@ -320,8 +324,12 @@ export const MessageArea: React.FC<MessageAreaProps> = ({ conversation, messages
               return (
                 <div key={message.id} className={`flex items-end gap-2.5 ${isCurrentUser ? 'justify-end' : 'justify-start'}`}>
                   {!isCurrentUser && (
-                    <div className="w-8 h-8 rounded-full flex-shrink-0 self-start">
-                      <UserAvatar user={sender || null} />
+                    <div className="w-8 h-8 flex-shrink-0 self-start">
+                      {sender?.id === 'chuk-ai' ? (
+                        <img src="/chuk-ai.png" alt="Chuk AI" className="h-8 w-auto object-contain" />
+                      ) : (
+                        <UserAvatar user={sender || null} className="w-full h-full rounded-full" />
+                      )}
                     </div>
                   )}
                   <div className={`flex flex-col w-full max-w-xs lg:max-w-md ${isCurrentUser ? 'items-end' : 'items-start'}`}>
