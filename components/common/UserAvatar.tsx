@@ -16,7 +16,7 @@ const UserPlaceholderIcon = ({ className = '' }: { className?: string }) => (
 );
 
 const UserAvatar: React.FC<UserAvatarProps> = ({ user, className = 'w-10 h-10', isOnline = false }) => {
-  const containerClasses = `${className} rounded-full relative`;
+  const containerClasses = `${className} rounded-full relative bg-surface overflow-hidden`;
   const [imgError, setImgError] = React.useState(false);
 
   // Reset error state when user/avatar changes
