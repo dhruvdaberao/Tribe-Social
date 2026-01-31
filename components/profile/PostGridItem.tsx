@@ -62,7 +62,15 @@ const PostGridItem: React.FC<PostGridItemProps> = ({ post, onClick }) => {
       onClick={onClick}
       className="relative aspect-square bg-surface border border-border rounded-md overflow-hidden cursor-pointer group"
     >
-      {post.imageUrl ? (
+      {post.mediaType === 'video' && post.imageUrl ? (
+        <video
+          src={post.imageUrl}
+          className="w-full h-full object-cover object-center"
+          muted
+          playsInline
+          preload="metadata" // Ensure first frame loads
+        />
+      ) : post.imageUrl ? (
         <img src={post.imageUrl} alt="Post" className="w-full h-full object-cover object-center" />
       ) : (
         <div className="p-3 text-primary text-xs">
