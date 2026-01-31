@@ -17,14 +17,21 @@ const UserPlaceholderIcon = ({ className = '' }: { className?: string }) => (
 
 const UserAvatar: React.FC<UserAvatarProps> = ({ user, className = 'w-10 h-10', isOnline = false }) => {
   const containerClasses = `${className} rounded-full relative`;
+  const [imgError, setImgError] = React.useState(false);
+
+  // Reset error state when user/avatar changes
+  React.useEffect(() => {
+    setImgError(false);
+  }, [user?.avatarUrl]);
 
   return (
     <div className={containerClasses}>
-      {user?.avatarUrl ? (
+      {user?.avatarUrl && !imgError ? (
         <img
           src={user.avatarUrl}
           alt={user.name}
           className="w-full h-full rounded-full object-cover"
+          onError={() => setImgError(true)}
         />
       ) : (
         <UserPlaceholderIcon className="w-full h-full" />
