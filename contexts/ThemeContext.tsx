@@ -25,12 +25,16 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  // Apply theme changes to the document and localStorage
+  // Apply theme changes to the document, localStorage, and status bar color
   useEffect(() => {
     if (theme === 'dark') {
       document.documentElement.classList.add('dark');
+      // Dark Mode Accent Color: #C9A27E
+      document.querySelector('meta[name="theme-color"]')?.setAttribute('content', '#C9A27E');
     } else {
       document.documentElement.classList.remove('dark');
+      // Light Mode Accent Color: #B89A7A
+      document.querySelector('meta[name="theme-color"]')?.setAttribute('content', '#B89A7A');
     }
     localStorage.setItem('theme', theme);
   }, [theme]);
