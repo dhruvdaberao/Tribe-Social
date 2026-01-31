@@ -385,6 +385,8 @@ const App: React.FC = () => {
         }
     }, [socket, tribes, currentUser]);
 
+
+
     useEffect(() => {
         if (!socket || !viewedTribe || !viewedTribe.id) return;
         const room = `tribe-${viewedTribe.id}`;
@@ -1027,6 +1029,37 @@ const App: React.FC = () => {
     }
 
     // 🔥 FIX: Padding logic
+    // DEEP LINKING LISTENERS (For Chat Integration) - MOVED HERE TO AVOID REFERENCE ERROR
+    useEffect(() => {
+        const handleOpenStory = (e: Event) => {
+            const customEvent = e as CustomEvent;
+            const detail = customEvent.detail as string; // "userId:storyId"
+            if (detail) {
+                const parts = detail.split(':');
+                if (parts.length === 2) {
+                    const [userId, storyId] = parts;
+                    handleViewUserStories(userId, undefined, storyId);
+                } else {
+                    handleViewUserStories(detail); // Fallback: just userId
+                }
+            }
+        };
+
+        const handleOpenPost = (e: Event) => {
+            const customEvent = e as CustomEvent;
+            const postId = customEvent.detail as string;
+            if (postId) handleViewPost(postId);
+        };
+
+        window.addEventListener('open-story', handleOpenStory);
+        window.addEventListener('open-post', handleOpenPost);
+
+        return () => {
+            window.removeEventListener('open-story', handleOpenStory);
+            window.removeEventListener('open-post', handleOpenPost);
+        };
+    }, [handleViewUserStories, handleViewPost]);
+
     // Messages List -> Show Header (pt-16)
     // Messages Chat -> Hide Header (pt-0)
     // TribeDetail -> Hide Header (pt-0)
@@ -1041,7 +1074,8 @@ const App: React.FC = () => {
         >
             <Toaster />
             <Sidebar activeItem={activeNavItem} onSelectItem={handleSelectItem} currentUser={currentUser} unreadMessageCount={unreadMessageCount} unreadTribeCount={unreadTribeCount} unreadNotificationCount={unreadNotificationCount} isChatOpen={isChatOpen} />
-            <main className={`${shouldHideHeader ? 'pt-0' : 'pt-16'} pb-16 md:pb-0 h-screen transition-all duration-300`}>
+            {/* FIX: Ensure padding-top is present on desktop (md:pt-16) even if hidden on mobile (pt-0) */}
+            <main className={`${shouldHideHeader ? 'pt-0 md:pt-16' : 'pt-16'} pb-16 md:pb-0 h-screen transition-all duration-300`}>
                 <div
                     ref={mainRef}
                     className={`${containerClass} overflow-y-auto no-scrollbar`}

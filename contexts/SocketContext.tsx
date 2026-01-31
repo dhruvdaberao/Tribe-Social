@@ -144,7 +144,10 @@ export const SocketProvider: React.FC<{ children: ReactNode }> = ({ children }) 
       /* ───────────── NOTIFICATIONS ───────────── */
       socket.on('newNotification', notification => {
         if (notification.sender.id === currentUser.id) return;
-        setNotifications(prev => [notification, ...prev]);
+        setNotifications(prev => {
+          if (prev.some(n => n.id === notification.id)) return prev;
+          return [notification, ...prev];
+        });
         toast.info(`${notification.sender.name} sent a notification`);
       });
 

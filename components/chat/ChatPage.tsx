@@ -102,7 +102,6 @@ const ChatPage: React.FC<ChatPageProps> = ({ currentUser, allUsers, chukUser, in
     if (!socket) return;
 
     const handleNewMessage = (message: Message) => {
-      const isActiveConversation = (activeConversation?.participants.some(p => p.id === message.senderId) && activeConversation?.participants.some(p => p.id === message.receiverId));
 
       // Update Cache First
       const senderId = message.senderId;
@@ -116,8 +115,16 @@ const ChatPage: React.FC<ChatPageProps> = ({ currentUser, allUsers, chukUser, in
         messageCache.current.set(otherUserId, [...cached, message]);
       }
 
+      const isActiveConversation = (activeConversation?.participants.some(p => p.id === message.senderId) && activeConversation?.participants.some(p => p.id === message.receiverId));
+
       if (isActiveConversation) {
-        setMessages(prev => [...prev, message]);
+        setMessages(prev => {
+          // STRICT DEDUPLICATION: Check if message ID or temp ID already exists
+          if (prev.some(m => m.id === message.id || (m.id.startsWith('temp-') && m.text === message.text && m.timestamp === message.timestamp))) {
+            return prev;
+          }
+          return [...prev, message];
+        });
       }
 
       setConversations(prev => {

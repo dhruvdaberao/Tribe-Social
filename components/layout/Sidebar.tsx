@@ -200,59 +200,59 @@ const Sidebar: React.FC<SidebarProps> = ({ activeItem, onSelectItem, currentUser
     </button>
   );
 
-  // Hidden on Tribe Chat (TribeDetail) AND Active DM Chat (Messages + isChatOpen)
-  const shouldHideHeader = activeItem === 'TribeDetail' || (activeItem === 'Messages' && isChatOpen);
+  // Hidden on Tribe Chat (TribeDetail) AND Active DM Chat (Messages + isChatOpen) - ONLY ON MOBILE
+  const shouldHideHeaderOnMobile = activeItem === 'TribeDetail' || (activeItem === 'Messages' && isChatOpen);
 
   return (
     <>
-      {/* Top Header - Conditionally Hidden */}
-      {!shouldHideHeader && (
-        <header className="fixed top-0 left-0 right-0 h-16 bg-top-bar z-50 flex items-center justify-between px-4 md:px-6">
-          {/* Left Side: Logo & Desktop Nav */}
-          <div className="flex items-center space-x-6 h-full">
-            <div
-              className="flex items-center cursor-pointer h-full py-2"
-              onClick={() => onSelectItem('Home')}
-            >
-              <img
-                src={theme === 'dark' ? '/white-color-logo.png' : '/black-color-logo.png'}
-                alt="Tribe Logo"
-                className="h-32 w-auto object-contain select-none"
-              />
-            </div>
-            <nav className="hidden md:flex items-center space-x-2">
-              {mainNavItems.map(item => (
-                <DesktopNavLink key={item.name} item={item} />
-              ))}
-            </nav>
+      {/* Top Header - Hidden on Mobile if Chat Open, Visible on Desktop */}
+      <header className={`fixed top-0 left-0 right-0 h-16 bg-top-bar z-50 items-center justify-between px-4 md:px-6 ${shouldHideHeaderOnMobile ? 'hidden md:flex' : 'flex'}`}>
+        {/* Left Side: Logo & Desktop Nav */}
+        <div className="flex items-center space-x-6 h-full">
+          <div
+            className="flex items-center cursor-pointer h-full py-2"
+            onClick={() => onSelectItem('Home')}
+          >
+            {/* FIX: Reduced height to h-8/h-10 to fit in h-16 header properly and removed py-2 if needed */}
+            <img
+              src={theme === 'dark' ? '/white-color-logo.png' : '/black-color-logo.png'}
+              alt="Tribe Logo"
+              className="h-10 w-auto object-contain select-none"
+            />
           </div>
+          <nav className="hidden md:flex items-center space-x-2">
+            {mainNavItems.map(item => (
+              <DesktopNavLink key={item.name} item={item} />
+            ))}
+          </nav>
+        </div>
 
-          {/* Right Side: Controls */}
-          <div className="flex items-center space-x-2">
-            <button
-              onClick={toggleTheme}
-              className="text-accent-text/80 hover:text-accent-text hover:bg-black/10 rounded-full p-2 flex-shrink-0"
-              aria-label="Toggle theme"
-            >
-              {theme === 'light' ? <MoonIcon /> : <SunIcon />}
-            </button>
-            <button
-              onClick={() => onSelectItem('Psyduck')}
-              className="text-accent-text/80 hover:text-accent-text hover:bg-black/10 rounded-full p-1 flex-shrink-0"
-              aria-label="Open Psyduck AI Assistant"
-            >
-              <PsyduckIcon />
-            </button>
-            <button onClick={() => onSelectItem('Profile')} aria-label="View Profile" className="flex items-center space-x-3 rounded-full hover:bg-black/10 p-1 transition-colors">
-              <UserAvatar user={currentUser} className="w-10 h-10 flex-shrink-0" />
-              <div className="hidden lg:block text-left">
-                <p className="font-semibold text-primary text-sm leading-tight truncate">{currentUser?.name}</p>
-                <p className="text-secondary text-xs leading-tight truncate">@{currentUser?.username}</p>
-              </div>
-            </button>
-          </div>
-        </header>
-      )}
+        {/* Right Side: Controls */}
+        <div className="flex items-center space-x-2">
+          <button
+            onClick={toggleTheme}
+            className="text-accent-text/80 hover:text-accent-text hover:bg-black/10 rounded-full p-2 flex-shrink-0"
+            aria-label="Toggle theme"
+          >
+            {theme === 'light' ? <MoonIcon /> : <SunIcon />}
+          </button>
+          <button
+            onClick={() => onSelectItem('Psyduck')}
+            className="text-accent-text/80 hover:text-accent-text hover:bg-black/10 rounded-full p-1 flex-shrink-0"
+            aria-label="Open Psyduck AI Assistant"
+          >
+            <PsyduckIcon />
+          </button>
+          <button onClick={() => onSelectItem('Profile')} aria-label="View Profile" className="flex items-center space-x-3 rounded-full hover:bg-black/10 p-1 transition-colors">
+            <UserAvatar user={currentUser} className="w-10 h-10 flex-shrink-0" />
+            <div className="hidden lg:block text-left">
+              <p className="font-semibold text-primary text-sm leading-tight truncate">{currentUser?.name}</p>
+              <p className="text-secondary text-xs leading-tight truncate">@{currentUser?.username}</p>
+            </div>
+          </button>
+        </div>
+      </header>
+
 
       {/* Mobile Bottom Nav */}
       <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-surface border-t border-border flex justify-around items-center h-[calc(4rem+env(safe-area-inset-bottom))] pb-[env(safe-area-inset-bottom)] z-50">
