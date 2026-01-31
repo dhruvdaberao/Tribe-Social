@@ -217,8 +217,8 @@ const Sidebar: React.FC<SidebarProps> = ({ activeItem, onSelectItem, currentUser
       key={item.name}
       onClick={() => onSelectItem(item.name)}
       className={`relative flex flex-col items-center justify-center p-2 rounded-lg flex-1 transition-colors ${activeItem === item.name
-        ? 'text-accent'
-        : 'text-secondary hover:bg-background hover:text-primary'
+        ? 'text-accent-text'
+        : 'text-accent-text/60 hover:bg-black/10 hover:text-accent-text'
         }`}
     >
       {React.cloneElement(item.icon, { isActive: activeItem === item.name })}
@@ -229,7 +229,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeItem, onSelectItem, currentUser
   return (
     <>
       {/* Top Header */}
-      <header className="fixed top-0 left-0 right-0 h-16 bg-accent z-50 flex items-center justify-between px-4 md:px-6">
+      <header className="fixed top-0 left-0 right-0 h-16 bg-accent z-50 flex items-center justify-between px-4 md:px-6 shadow-none border-none ring-0">
         {/* Left Side: Logo & Desktop Nav */}
         <div className="flex items-center space-x-6">
           <div
@@ -273,7 +273,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeItem, onSelectItem, currentUser
       </header>
 
       {/* Mobile Bottom Nav */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-surface border-t border-border z-50 pb-[env(safe-area-inset-bottom)]">
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-accent z-50 pb-[env(safe-area-inset-bottom)] shadow-none border-none">
         <div className="flex justify-around items-center h-16">
           {mobileNavItems.map(item => (
             <MobileNavButton key={item.name} item={item} />
