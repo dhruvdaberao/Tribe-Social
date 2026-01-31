@@ -24,7 +24,7 @@ const UserAvatar: React.FC<UserAvatarProps> = ({ user, className = 'w-10 h-10', 
   }, [user?.avatarUrl]);
 
   return (
-    <div className={`${className} relative`}>
+    <div className={`${className} relative rounded-full`}>
       <div className="absolute inset-0 rounded-full overflow-hidden bg-surface">
         {user?.avatarUrl && !imgError ? (
           <img
