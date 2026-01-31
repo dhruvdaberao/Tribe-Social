@@ -223,7 +223,9 @@ const ConversationItem: React.FC<ConversationItemProps> = ({ conversation, other
   >
     <div className="relative mr-4 flex-shrink-0">
       {otherParticipant.id === 'chuk-ai' ? (
-        <img src="/chuk-ai.png" alt="Psyduck AI" className="h-12 w-auto object-contain" />
+        <div className="w-12 h-12 flex items-center justify-center bg-transparent rounded-full flex-shrink-0">
+          <img src="/chuk-ai.png" alt="Psyduck AI" className="w-full h-full object-contain" />
+        </div>
       ) : (
         <UserAvatar user={otherParticipant} className="w-12 h-12" />
       )}

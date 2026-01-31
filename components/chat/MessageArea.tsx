@@ -332,9 +332,9 @@ export const MessageArea: React.FC<MessageAreaProps> = ({ conversation, messages
                       )}
                     </div>
                   )}
-                  <div className={`flex flex-col w-full max-w-xs lg:max-w-md ${isCurrentUser ? 'items-end' : 'items-start'}`}>
+                  <div className={`flex flex-col w-full max-w-[75%] ${isCurrentUser ? 'items-end' : 'items-start'}`}>
                     {/* Modified rounded classes for proper chat bubble look */}
-                    <div className={`px-4 py-2.5 ${isCurrentUser ? 'bg-accent text-accent-text rounded-2xl rounded-tr-none' : 'bg-surface text-primary shadow-sm rounded-2xl rounded-tl-none'}`}>
+                    <div className={`px-4 py-2.5 break-words overflow-hidden ${isCurrentUser ? 'bg-accent text-accent-text rounded-2xl rounded-tr-none' : 'bg-surface text-primary shadow-sm rounded-2xl rounded-tl-none'}`}>
 
                       {/* SHARED CONTENT LOGIC */}
                       {(message.text.includes('Shared a story') || message.text.includes('Shared Story') || message.text.includes('[Shared Story]')) ? (
