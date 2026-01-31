@@ -218,12 +218,19 @@
   </script>
 
   <script>
-      // Flicker-prevention script
+      // Flicker-prevention script with intro splash background
       (function () {
         const theme = localStorage.getItem('theme');
         const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-        if (theme === 'dark' || (!theme && prefersDark)) {
+        const isDark = theme === 'dark' || (!theme && prefersDark);
+
+        if (isDark) {
           document.documentElement.classList.add('dark');
+          document.documentElement.style.backgroundColor = '#2B1F18';
+          document.body.style.backgroundColor = '#2B1F18';
+        } else {
+          document.documentElement.style.backgroundColor = '#F4EFE9';
+          document.body.style.backgroundColor = '#F4EFE9';
         }
       })();
   </script>

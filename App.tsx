@@ -27,6 +27,7 @@ import StoryViewer from './components/stories/StoryViewer';
 import StoryFeed from './components/stories/StoryFeed';
 import { Toaster, toast } from './components/common/Toast';
 import PostViewModal from './components/profile/PostViewModal';
+import IntroSplash from './components/common/IntroSplash';
 
 export type NavItem = 'Home' | 'Discover' | 'Messages' | 'Tribes' | 'Notifications' | 'Profile' | 'Psyduck' | 'TribeDetail' | 'Settings';
 
@@ -97,6 +98,14 @@ const App: React.FC = () => {
 
     // Track if a chat conversation is active (to hide header/adjust layout)
     const [isChatOpen, setIsChatOpen] = useState(false);
+
+    // ───────────── INTRO SPLASH LOGIC ─────────────
+    const [showIntro, setShowIntro] = useState(true);
+    const [introTheme, setIntroTheme] = useState<'light' | 'dark'>(() => {
+        const theme = localStorage.getItem('theme');
+        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        return (theme === 'dark' || (!theme && prefersDark)) ? 'dark' : 'light';
+    });
 
     // ───────────── SWIPE & SCROLL LOGIC ─────────────
     const mainRef = useRef<HTMLDivElement>(null);
@@ -943,6 +952,11 @@ const App: React.FC = () => {
         if (!currentUser) return [];
         return users.filter(u => !(currentUser.blockedUsers || []).includes(u.id) && !(u.blockedUsers || []).includes(currentUser.id));
     }, [users, currentUser]);
+
+    // Show intro splash first
+    if (showIntro) {
+        return <IntroSplash theme={introTheme} onComplete={() => setShowIntro(false)} />;
+    }
 
     if (isAuthLoading) {
         return <div className="min-h-screen bg-background flex flex-col items-center justify-center"><img src="/duckload.gif" alt="Loading..." className="w-24 h-24" /><h1 className="mt-4 text-xl font-semibold text-primary">Loading...</h1></div>;
