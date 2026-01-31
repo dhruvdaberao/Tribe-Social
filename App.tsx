@@ -27,7 +27,6 @@ import StoryViewer from './components/stories/StoryViewer';
 import StoryFeed from './components/stories/StoryFeed';
 import { Toaster, toast } from './components/common/Toast';
 import PostViewModal from './components/profile/PostViewModal';
-import SplashScreen from './components/common/SplashScreen';
 
 export type NavItem = 'Home' | 'Discover' | 'Messages' | 'Tribes' | 'Notifications' | 'Profile' | 'Psyduck' | 'TribeDetail' | 'Settings';
 
@@ -91,7 +90,6 @@ const App: React.FC = () => {
     const [prevNavItem, setPrevNavItem] = useState<NavItem>('Home');
     const [isTransitioning, setIsTransitioning] = useState(false);
     const [viewedUser, setViewedUser] = useState<User | null>(null);
-    const [showSplash, setShowSplash] = useState(true);
 
     // URL Sync for Tribes
     const navigate = useNavigate();
@@ -947,13 +945,9 @@ const App: React.FC = () => {
     }
 
     return (
-        <div className="flex h-screen bg-background text-primary overflow-hidden relative">
-            {showSplash && <SplashScreen onFinish={() => setShowSplash(false)} />}
+        <div className="bg-background min-h-screen text-primary overflow-hidden">
             <Toaster />
-            <Sidebar
-                activeItem={activeNavItem}
-                onSelectItem={handleSelectItem}
-                currentUser={currentUser} unreadMessageCount={unreadMessageCount} unreadTribeCount={unreadTribeCount} unreadNotificationCount={unreadNotificationCount} />
+            <Sidebar activeItem={activeNavItem} onSelectItem={handleSelectItem} currentUser={currentUser} unreadMessageCount={unreadMessageCount} unreadTribeCount={unreadTribeCount} unreadNotificationCount={unreadNotificationCount} />
             <main className="pt-16 pb-16 md:pb-0">
                 <div className={containerClass}>
                     {renderContent()}
