@@ -790,7 +790,7 @@ const PostCard: React.FC<PostCardProps> = (props) => {
     <>
       <div className={`bg-surface border-border rounded-2xl shadow-md ${onModalClose ? '' : 'border mb-6'}`}>
         {/* Post Header */}
-        <div className="flex items-center p-4">
+        <div className="flex items-center p-5">
           {onModalClose && (
             <button onClick={onModalClose} className="p-2 mr-2 -ml-2 text-primary rounded-full hover:bg-background">
               <BackIcon />
@@ -858,7 +858,7 @@ const PostCard: React.FC<PostCardProps> = (props) => {
 
         {/* Post Content */}
         {post.content && (
-          <div className="px-4 pb-4">
+          <div className="px-5 pb-5">
             <p ref={contentRef} className={`text-primary whitespace-pre-wrap ${!isExpanded ? (post.imageUrl ? 'line-clamp-2' : 'line-clamp-6') : ''}`}>
               {post.content}
             </p>
@@ -902,7 +902,7 @@ const PostCard: React.FC<PostCardProps> = (props) => {
         )}
 
         {/* Post Actions */}
-        <div className="flex justify-between items-center px-4 py-2 border-t border-b border-border text-secondary text-sm">
+        <div className="flex justify-between items-center px-5 py-2 border-t border-b border-border text-secondary text-sm">
           <div className="flex space-x-2">
             <span>{post.likes.length} Likes</span>
             <span>·</span>
@@ -937,7 +937,7 @@ const PostCard: React.FC<PostCardProps> = (props) => {
 
         {/* Comments Section */}
         {showComments && (
-          <div className="p-4 border-t border-border">
+          <div className="p-5 border-t border-border">
             {/* Comment Input */}
             <form onSubmit={handleCommentSubmit} className="flex items-start space-x-2 mb-4">
               <UserAvatar user={currentUser} className="w-8 h-8 flex-shrink-0 mt-1" />

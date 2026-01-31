@@ -18,6 +18,7 @@ export default {
         accent: 'hsl(var(--accent))',
         'accent-hover': 'hsl(var(--accent-hover))',
         'accent-text': 'hsl(var(--accent-text))',
+        'top-bar': 'var(--color-top-bar)',
         border: 'hsl(var(--border))',
       },
       fontFamily: {

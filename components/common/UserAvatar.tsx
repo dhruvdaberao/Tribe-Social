@@ -16,7 +16,6 @@ const UserPlaceholderIcon = ({ className = '' }: { className?: string }) => (
 );
 
 const UserAvatar: React.FC<UserAvatarProps> = ({ user, className = 'w-10 h-10', isOnline = false }) => {
-  const containerClasses = `${className} rounded-full relative bg-surface overflow-hidden`;
   const [imgError, setImgError] = React.useState(false);
 
   // Reset error state when user/avatar changes
@@ -25,19 +24,21 @@ const UserAvatar: React.FC<UserAvatarProps> = ({ user, className = 'w-10 h-10', 
   }, [user?.avatarUrl]);
 
   return (
-    <div className={containerClasses}>
-      {user?.avatarUrl && !imgError ? (
-        <img
-          src={user.avatarUrl}
-          alt={user.name}
-          className="w-full h-full rounded-full object-cover"
-          onError={() => setImgError(true)}
-        />
-      ) : (
-        <UserPlaceholderIcon className="w-full h-full" />
-      )}
+    <div className={`${className} relative`}>
+      <div className="absolute inset-0 rounded-full overflow-hidden bg-surface">
+        {user?.avatarUrl && !imgError ? (
+          <img
+            src={user.avatarUrl}
+            alt={user.name}
+            className="w-full h-full object-cover"
+            onError={() => setImgError(true)}
+          />
+        ) : (
+          <UserPlaceholderIcon className="w-full h-full" />
+        )}
+      </div>
       {isOnline && (
-        <span className="absolute bottom-0 right-0 block h-3 w-3 rounded-full bg-green-500 ring-2 ring-surface"></span>
+        <span className="absolute bottom-0 right-0 block h-3 w-3 rounded-full bg-green-500 ring-2 ring-surface z-10"></span>
       )}
     </div>
   );
