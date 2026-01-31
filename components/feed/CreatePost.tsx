@@ -338,9 +338,9 @@ const CreatePost: React.FC<CreatePostProps> = ({ currentUser, allUsers, myStorie
         <div className="relative flex-shrink-0">
           <button
             onClick={hasStory ? () => onViewUserStories(currentUser.id) : onOpenStoryCreator}
-            className={`w-12 h-12 rounded-full p-0.5 ${hasStory ? 'bg-accent' : 'bg-transparent'}`}
+            className="w-12 h-12 rounded-full p-1 border-2 border-dashed border-accent flex items-center justify-center hover:bg-accent/10 transition-colors"
           >
-            <UserAvatar user={currentUser} className="w-full h-full border-2 border-surface" />
+            <UserAvatar user={currentUser} className="w-full h-full" />
           </button>
           <button
             onClick={onOpenStoryCreator}
