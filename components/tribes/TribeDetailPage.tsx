@@ -22,7 +22,7 @@ const PageContainer = styled.div`
 const Header = styled.header`
   padding: 14px;
   background: ${({ theme }) => theme.cardBackground};
-  border-bottom: 1px solid ${({ theme }) => theme.borderColor};
+  /* border-bottom removed for clean look */
   display: flex;
   align-items: center;
   gap: 12px;

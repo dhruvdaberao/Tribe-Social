@@ -176,7 +176,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ src, className = '', onPause,
             <video
                 ref={videoRef}
                 poster={posterUrl}
-                className="w-full h-auto max-h-[600px] object-contain"
+                className="w-full h-auto max-h-[500px] object-cover bg-black"
                 playsInline
                 preload="none"
                 muted={isMuted}

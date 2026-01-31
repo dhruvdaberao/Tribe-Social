@@ -948,7 +948,7 @@ const App: React.FC = () => {
         <div className="bg-background min-h-screen text-primary overflow-hidden">
             <Toaster />
             <Sidebar activeItem={activeNavItem} onSelectItem={handleSelectItem} currentUser={currentUser} unreadMessageCount={unreadMessageCount} unreadTribeCount={unreadTribeCount} unreadNotificationCount={unreadNotificationCount} />
-            <main className="pt-16 pb-16 md:pb-0">
+            <main className={`${['Messages', 'TribeDetail'].includes(activeNavItem) ? 'pt-0' : 'pt-16'} pb-16 md:pb-0`}>
                 <div className={containerClass}>
                     {renderContent()}
                 </div>
