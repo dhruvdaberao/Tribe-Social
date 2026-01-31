@@ -28,15 +28,15 @@ import StoryFeed from './components/stories/StoryFeed';
 import { Toaster, toast } from './components/common/Toast';
 import PostViewModal from './components/profile/PostViewModal';
 
-export type NavItem = 'Home' | 'Discover' | 'Messages' | 'Tribes' | 'Notifications' | 'Profile' | 'Chuk' | 'TribeDetail' | 'Settings';
+export type NavItem = 'Home' | 'Discover' | 'Messages' | 'Tribes' | 'Notifications' | 'Profile' | 'Psyduck' | 'TribeDetail' | 'Settings';
 
-const CHUK_AI_USER: User = {
+const PSYDUCK_USER: User = {
     id: 'chuk-ai',
-    name: 'Chuk',
-    username: 'chuk_the_chicken',
+    name: 'Psyduck',
+    username: 'psyduck',
     avatarUrl: '/chuk-ai.png',
     bannerUrl: null,
-    bio: 'Your personal guide & friend at Tribe! 🐣',
+    bio: 'Psy... yi... yi... (Your goofy Tribe assistant) 🦆✨',
     followers: [],
     following: [],
     blockedUsers: [],
@@ -164,7 +164,7 @@ const App: React.FC = () => {
 
     const userMap = useMemo(() => {
         const map = new Map(users.map((user: User) => [user.id, user]));
-        map.set(CHUK_AI_USER.id, CHUK_AI_USER);
+        map.set(PSYDUCK_USER.id, PSYDUCK_USER);
         return map;
     }, [users]);
 
@@ -430,8 +430,8 @@ const App: React.FC = () => {
             setViewedUser(null);
         }
         if (item !== 'TribeDetail') setViewedTribe(null);
-        if (item === 'Chuk') {
-            handleStartConversation(CHUK_AI_USER);
+        if (item === 'Psyduck') {
+            handleStartConversation(PSYDUCK_USER);
             setIsTransitioning(false);
             return;
         }
@@ -894,7 +894,7 @@ const App: React.FC = () => {
             case 'Discover':
                 return <DiscoverPage posts={visiblePosts} users={visibleUsers} tribes={tribes} currentUser={currentUser} onLikePost={handleLikePost} onCommentPost={handleCommentPost} onDeletePost={handleDeletePost} onDeleteComment={handleDeleteComment} onToggleFollow={handleToggleFollow} onViewProfile={handleViewProfile} onViewTribe={handleViewTribe} onJoinToggle={handleJoinToggle} onEditTribe={(tribe) => setEditingTribe(tribe)} onSharePost={handleSharePost} onLoadMore={fetchAllPostsForDiscover} />;
             case 'Messages':
-                return <ChatPage currentUser={currentUser} allUsers={visibleUsers} chukUser={CHUK_AI_USER} initialTargetUser={chatTarget} onViewProfile={handleViewProfile} onSharePost={handleSharePost} />;
+                return <ChatPage currentUser={currentUser} allUsers={visibleUsers} chukUser={PSYDUCK_USER} initialTargetUser={chatTarget} onViewProfile={handleViewProfile} onSharePost={handleSharePost} />;
             case 'Tribes':
                 return (
                     <TribesPage

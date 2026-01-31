@@ -188,7 +188,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeItem, onSelectItem, currentUser
 
   // FIX: Changed JSX.Element to React.ReactElement to resolve type error from non-standard JSX namespace.
   // FIX: Specified generic type for React.ReactElement to allow passing 'isActive' prop.
-  const mainNavItems: { name: Exclude<NavItem, 'Profile' | 'TribeDetail' | 'Chuk'>; icon: React.ReactElement<IconProps>; unreadCount: number; }[] = [
+  const mainNavItems: { name: Exclude<NavItem, 'Profile' | 'TribeDetail' | 'Psyduck'>; icon: React.ReactElement<IconProps>; unreadCount: number; }[] = [
     { name: 'Home', icon: <HomeIcon />, unreadCount: 0 },
     { name: 'Discover', icon: <DiscoverIcon />, unreadCount: 0 },
     { name: 'Messages', icon: <MessagesIcon />, unreadCount: unreadMessageCount },
@@ -256,11 +256,11 @@ const Sidebar: React.FC<SidebarProps> = ({ activeItem, onSelectItem, currentUser
             {theme === 'light' ? <MoonIcon /> : <SunIcon />}
           </button>
           <button
-            onClick={() => onSelectItem('Chuk')}
+            onClick={() => onSelectItem('Psyduck')}
             className="text-accent-text/80 hover:text-accent-text hover:bg-black/10 rounded-full p-1 flex-shrink-0"
-            aria-label="Open Chuk AI Assistant"
+            aria-label="Open Psyduck AI Assistant"
           >
-            <ChukIcon />
+            <PsyduckIcon />
           </button>
           <button onClick={() => onSelectItem('Profile')} aria-label="View Profile" className="flex items-center space-x-3 rounded-full hover:bg-black/10 p-1 transition-colors">
             <UserAvatar user={currentUser} className="w-10 h-10 flex-shrink-0" />
@@ -293,10 +293,10 @@ const MessagesIcon: React.FC<IconProps> = ({ isActive }) => <IconWrapper><Messag
 const TribesIcon: React.FC<IconProps> = ({ isActive }) => <IconWrapper><Users size={24} strokeWidth={isActive ? 2.25 : 1.75} /></IconWrapper>;
 const HeartIcon: React.FC<IconProps> = ({ isActive }) => <IconWrapper><Heart size={24} strokeWidth={isActive ? 2.25 : 1.75} /></IconWrapper>;
 
-const ChukIcon = () => (
+const PsyduckIcon = () => (
   <img
     src="/chuk-ai.png"
-    alt="Chuk AI"
+    alt="Psyduck AI"
     className="h-10 w-auto object-contain"
   />
 );
