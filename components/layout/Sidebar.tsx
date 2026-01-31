@@ -202,7 +202,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeItem, onSelectItem, currentUser
   return (
     <>
       {/* Top Header */}
-      <header className="fixed top-0 left-0 right-0 h-16 bg-top-bar z-50 flex items-center justify-between px-4 md:px-6">
+      <header className="fixed top-0 left-0 right-0 h-20 bg-top-bar z-50 flex items-center justify-between px-4 md:px-6">
         {/* Left Side: Logo & Desktop Nav */}
         <div className="flex items-center space-x-6 h-full">
           <div
@@ -212,7 +212,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeItem, onSelectItem, currentUser
             <img
               src={theme === 'dark' ? '/white-color-logo.png' : '/black-color-logo.png'}
               alt="Tribe Logo"
-              className="h-14 w-auto object-contain select-none"
+              className="h-16 w-auto object-contain select-none"
             />
           </div>
           <nav className="hidden md:flex items-center space-x-2">
