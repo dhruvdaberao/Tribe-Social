@@ -4,7 +4,7 @@
     "description": "A social platform to connect with friends and communities",
     "start_url": "/",
     "display": "standalone",
-    "background_color": "#FAF6F1",
+    "background_color": "#1e1512",
     "theme_color": "#d2b48c",
     "orientation": "portrait-primary",
     "icons": [

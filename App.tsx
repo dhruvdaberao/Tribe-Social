@@ -27,7 +27,6 @@ import StoryViewer from './components/stories/StoryViewer';
 import StoryFeed from './components/stories/StoryFeed';
 import { Toaster, toast } from './components/common/Toast';
 import PostViewModal from './components/profile/PostViewModal';
-import IntroSplash from './components/common/IntroSplash';
 
 export type NavItem = 'Home' | 'Discover' | 'Messages' | 'Tribes' | 'Notifications' | 'Profile' | 'Psyduck' | 'TribeDetail' | 'Settings';
 
@@ -49,12 +48,6 @@ import { safeSet, safeGet } from './utils/storage';
 const App: React.FC = () => {
     const { currentUser, setCurrentUser, logout, isLoading: isAuthLoading } = useAuth();
     const { socket, notifications, setNotifications, unreadCounts, unreadMessageCount, unreadTribeCount, unreadNotificationCount, clearUnreadTribe } = useSocket();
-
-    // Intro Splash Logic
-    const [showIntro, setShowIntro] = useState(() => {
-        // Check if intro has already played this session
-        return !sessionStorage.getItem('introPlayed');
-    });
 
     // Global State
     const [users, setUsers] = useState<User[]>([]);
@@ -950,14 +943,6 @@ const App: React.FC = () => {
         if (!currentUser) return [];
         return users.filter(u => !(currentUser.blockedUsers || []).includes(u.id) && !(u.blockedUsers || []).includes(currentUser.id));
     }, [users, currentUser]);
-
-    // Show intro splash before anything else
-    if (showIntro) {
-        return <IntroSplash onComplete={() => {
-            sessionStorage.setItem('introPlayed', 'true');
-            setShowIntro(false);
-        }} />;
-    }
 
     if (isAuthLoading) {
         return <div className="min-h-screen bg-background flex flex-col items-center justify-center"><img src="/duckload.gif" alt="Loading..." className="w-24 h-24" /><h1 className="mt-4 text-xl font-semibold text-primary">Loading...</h1></div>;
