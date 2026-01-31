@@ -1,5 +1,6 @@
 import React, { useState, useContext, useEffect } from 'react';
 import { AuthContext, useAuth } from '../../contexts/AuthContext';
+import { useTheme } from '../../contexts/ThemeContext';
 import axios from 'axios';
 import * as api from '../../api';
 import { toast } from '../common/Toast';
@@ -14,6 +15,7 @@ type AuthMode = 'login' | 'register' | 'forgot' | 'otp';
 
 const LoginPage: React.FC = () => {
   const auth = useAuth();
+  const { theme } = useTheme();
 
   const [mode, setMode] = useState<AuthMode>('login');
   const [email, setEmail] = useState('');
@@ -71,8 +73,13 @@ const LoginPage: React.FC = () => {
         }, 1500);
       }
     } catch (err: any) {
-      if (err.message) setError(err.message);
-      else handleError(err);
+      if (axios.isAxiosError(err)) {
+        handleError(err);
+      } else if (err.message) {
+        setError(err.message);
+      } else {
+        setError('An unexpected error occurred.');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -97,9 +104,12 @@ const LoginPage: React.FC = () => {
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-10">
-          <div className="inline-flex items-center justify-center space-x-3">
-            <img src="tribe.png" alt="Tribe Logo" className="w-12 h-12" />
-            <h1 className="text-4xl font-bold font-display text-primary">Tribe</h1>
+          <div className="flex justify-center mb-6">
+            <img
+              src={theme === 'dark' ? '/white-color-logo.png' : '/black-color-logo.png'}
+              alt="Tribe Logo"
+              className="h-32 w-auto object-contain select-none"
+            />
           </div>
           <p className="text-secondary mt-2">Connect with your community.</p>
         </div>
