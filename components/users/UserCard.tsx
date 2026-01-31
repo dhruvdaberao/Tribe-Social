@@ -21,7 +21,7 @@ const UserCard: React.FC<UserCardProps> = ({ user, currentUser, onToggleFollow, 
         if (isOwnProfile && listType === 'following') {
             return (
                 <button
-                    onClick={() => onToggleFollow(user.id)}
+                    onClick={(e) => { e.stopPropagation(); onToggleFollow(user.id); }}
                     className="font-semibold px-4 py-1.5 rounded-lg transition-colors text-sm ml-2 flex-shrink-0 bg-surface text-primary border border-border hover:bg-red-50 hover:text-red-600 hover:border-red-200"
                 >
                     Unfollow
@@ -33,7 +33,7 @@ const UserCard: React.FC<UserCardProps> = ({ user, currentUser, onToggleFollow, 
         if (isOwnProfile && listType === 'followers') {
             return (
                 <button
-                    onClick={() => onRemove && onRemove(user.id)}
+                    onClick={(e) => { e.stopPropagation(); onRemove && onRemove(user.id); }}
                     className="font-semibold px-4 py-1.5 rounded-lg transition-colors text-sm ml-2 flex-shrink-0 bg-surface text-primary border border-border hover:bg-red-50 hover:text-red-600 hover:border-red-200"
                 >
                     Remove
@@ -44,13 +44,13 @@ const UserCard: React.FC<UserCardProps> = ({ user, currentUser, onToggleFollow, 
         // 3. Default Behavior (Visiting someone else, or Search)
         return (
             <button
-                onClick={() => onToggleFollow(user.id)}
+                onClick={(e) => { e.stopPropagation(); onToggleFollow(user.id); }}
                 className={`font-semibold px-4 py-1.5 rounded-lg transition-colors text-sm ml-2 flex-shrink-0 ${isFollowing
                     ? 'bg-surface text-primary border border-border hover:bg-background'
                     : 'bg-accent text-accent-text hover:bg-accent-hover'
                     }`}
             >
-                {isFollowing ? 'Following' : 'Follow'}
+                {isFollowing ? 'Unfollow' : 'Follow'}
             </button>
         );
     };

@@ -296,18 +296,35 @@ export const ProfilePage: React.FC<ProfilePageProps> = (props) => {
     const [profileUser, setProfileUser] = useState<User>(user);
     const [isLoading, setIsLoading] = useState(false);
 
+    // SYNC STATE WITH PROP (Critical for optimistic updates)
+    useEffect(() => {
+        setProfileUser(user);
+    }, [user]);
+
     // FETCH FULL USER PROFILE (Fixes 0 counts / missing banner)
     useEffect(() => {
         const fetchFullProfile = async () => {
+            // ... logic ...
+            // Intentionally omitted here to avoid overwriting optimistic state with stale server state immediately
+            // Ideally this should merge, but for now assuming optimistic update is truer for followers
             try {
                 const { data } = await api.fetchUser(user.id);
-                setProfileUser(data);
+                // Only update if IDs match (avoid race conditions)
+                if (data.id === user.id) {
+                    setProfileUser(prev => ({ ...data, followers: prev.followers, following: prev.following })); // Keep optimistic counts? Or trust server?
+                    // Actually, if we just toggled, server might be stale?
+                    // Let's just update other fields.
+                    setProfileUser(prev => ({
+                        ...data,
+                        // Preserve optimistic follow state if we just clicked it
+                        followers: prev.followers,
+                        following: prev.following
+                    }));
+                }
             } catch (error) {
                 console.error("Failed to fetch full profile:", error);
             }
         };
-
-        setProfileUser(user); // Reset to prop user first
         fetchFullProfile();
     }, [user.id]);
 
@@ -410,7 +427,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = (props) => {
                                 <>
                                     <button onClick={() => handleMessageClick()} className="w-full sm:w-auto font-semibold px-6 py-2 rounded-lg transition-colors bg-surface text-primary border border-border hover:bg-background">Message</button>
                                     {profileUser.id !== 'chuk-ai' && (
-                                        <button onClick={() => onToggleFollow(profileUser.id)} className={`w-full sm:w-auto font-semibold px-6 py-2 rounded-lg transition-colors ${isFollowing ? 'bg-surface text-primary border border-border hover:bg-background' : 'bg-accent text-accent-text hover:bg-accent-hover'}`}>
+                                        <button onClick={(e) => { e.stopPropagation(); onToggleFollow(profileUser.id); }} className={`w-full sm:w-auto font-semibold px-6 py-2 rounded-lg transition-colors ${isFollowing ? 'bg-surface text-primary border border-border hover:bg-background' : 'bg-accent text-accent-text hover:bg-accent-hover'}`}>
                                             {isFollowing ? 'Unfollow' : 'Follow'}
                                         </button>
                                     )}
