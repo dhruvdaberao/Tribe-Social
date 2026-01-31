@@ -293,23 +293,15 @@ const MessagesIcon: React.FC<IconProps> = ({ isActive }) => <IconWrapper><Messag
 const TribesIcon: React.FC<IconProps> = ({ isActive }) => <IconWrapper><Users size={24} strokeWidth={isActive ? 2.25 : 1.75} /></IconWrapper>;
 const HeartIcon: React.FC<IconProps> = ({ isActive }) => <IconWrapper><Heart size={24} strokeWidth={isActive ? 2.25 : 1.75} /></IconWrapper>;
 
-const ChukIcon = () => {
-  const [error, setError] = React.useState(false);
-  return (
-    <IconWrapper>
-      {!error ? (
-        <img
-          src="/chuk.png"
-          alt="Chuk AI"
-          className="w-full h-full p-0.5"
-          onError={() => setError(true)}
-        />
-      ) : (
-        <img src="/chuk.gif" alt="Chuk AI" className="w-full h-full p-0.5" />
-      )}
-    </IconWrapper>
-  );
-};
+const ChukIcon = () => (
+  <IconWrapper>
+    <img
+      src="/chuk.png"
+      alt="Chuk AI"
+      className="w-full h-full p-0.5"
+    />
+  </IconWrapper>
+);
 
 const SunIcon = () => <IconWrapper><Sun size={24} strokeWidth={1.75} /></IconWrapper>;
 const MoonIcon = () => <IconWrapper><Moon size={24} strokeWidth={1.75} /></IconWrapper>;
