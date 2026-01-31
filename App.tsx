@@ -98,6 +98,65 @@ const App: React.FC = () => {
     // Track if a chat conversation is active (to hide header/adjust layout)
     const [isChatOpen, setIsChatOpen] = useState(false);
 
+    // ───────────── SWIPE & SCROLL LOGIC ─────────────
+    const mainRef = useRef<HTMLDivElement>(null);
+    const scrollStore = useRef<Map<string, number>>(new Map());
+    const touchStart = useRef<{ x: number, y: number } | null>(null);
+    const NAV_ORDER: NavItem[] = ['Home', 'Discover', 'Messages', 'Notifications', 'Tribes'];
+
+    // Scroll Restoration
+    useEffect(() => {
+        // Save previous scroll
+        if (prevNavItem && !['Settings', 'Profile', 'TribeDetail'].includes(prevNavItem)) {
+            if (mainRef.current) {
+                scrollStore.current.set(prevNavItem, mainRef.current.scrollTop);
+            }
+        }
+
+        // Restore current scroll
+        if (mainRef.current) {
+            const savedScroll = scrollStore.current.get(activeNavItem) || 0;
+            // Use requestAnimationFrame to ensure DOM is ready
+            requestAnimationFrame(() => {
+                if (mainRef.current) mainRef.current.scrollTop = savedScroll;
+            });
+        }
+    }, [activeNavItem, prevNavItem]);
+
+    const handleTouchStart = (e: React.TouchEvent) => {
+        touchStart.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+    };
+
+    const handleTouchEnd = (e: React.TouchEvent) => {
+        if (!touchStart.current) return;
+
+        const touchEnd = { x: e.changedTouches[0].clientX, y: e.changedTouches[0].clientY };
+        const deltaX = touchStart.current.x - touchEnd.x;
+        const deltaY = touchStart.current.y - touchEnd.y;
+
+        // Settings: > 50px horiz swipe, < 30px vert variance
+        if (Math.abs(deltaX) > 50 && Math.abs(deltaY) < 30) {
+            // Ignore if in active chat or specific pages
+            if (isChatOpen || ['TribeDetail', 'Settings', 'Profile'].includes(activeNavItem)) return;
+
+            const currentIndex = NAV_ORDER.indexOf(activeNavItem);
+            if (currentIndex === -1) return;
+
+            if (deltaX > 0) {
+                // Swipe Left -> Next Tab
+                if (currentIndex < NAV_ORDER.length - 1) {
+                    handleSelectItem(NAV_ORDER[currentIndex + 1]);
+                }
+            } else {
+                // Swipe Right -> Prev Tab
+                if (currentIndex > 0) {
+                    handleSelectItem(NAV_ORDER[currentIndex - 1]);
+                }
+            }
+        }
+        touchStart.current = null;
+    };
+
     // Listen for custom "open-story" event from Chat
     useEffect(() => {
         const handleOpenStory = (e: any) => {
@@ -292,8 +351,8 @@ const App: React.FC = () => {
         }
     }, [currentUser, populatePost, setNotifications]);
 
-    const fetchAllPostsForDiscover = useCallback(async () => {
-        if (isAllPostsLoaded) return;
+    const fetchAllPostsForDiscover = useCallback(async (forceRefresh = false) => {
+        if (isAllPostsLoaded && !forceRefresh) return;
         try {
             const { data } = await api.fetchPosts();
             const populated = data.map((post: any) => populatePost(post, userMap)).filter(Boolean);
@@ -409,10 +468,25 @@ const App: React.FC = () => {
     }, [socket, userMap, populatePost, currentUser?.id, setCurrentUser, viewedUser?.id, viewedTribe, isCreatingPost]);
 
     const handleSelectItem = (item: NavItem) => {
-        // If clicking the already active item, scroll to top
-        if (item === activeNavItem && item !== 'Profile' && item !== 'TribeDetail') {
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-            return;
+        // Tab Reselect Logic: Scroll to Top or Refresh
+        if (item === activeNavItem) {
+            // For Profile, ensure we are on own profile
+            if (item === 'Profile' && viewedUser?.id !== currentUser?.id) {
+                // Switch to own profile, handled below
+            } else if (item !== 'TribeDetail' && item !== 'Settings') {
+                if (mainRef.current) {
+                    if (mainRef.current.scrollTop > 0) {
+                        mainRef.current.scrollTo({ top: 0, behavior: 'smooth' });
+                    } else {
+                        // Already at top -> Soft Refresh
+                        if (item === 'Home') fetchData();
+                        if (item === 'Discover') fetchAllPostsForDiscover(true);
+                        if (item === 'Notifications') (socket as any)?.emit('fetchNotifications');
+                        toast.success('Refreshed');
+                    }
+                }
+                return;
+            }
         }
 
         // Start transition
@@ -960,11 +1034,19 @@ const App: React.FC = () => {
     const shouldHideHeader = activeNavItem === 'TribeDetail' || (activeNavItem === 'Messages' && isChatOpen);
 
     return (
-        <div className="bg-background min-h-screen text-primary overflow-hidden">
+        <div
+            className="bg-background min-h-screen text-primary overflow-hidden touch-pan-y"
+            onTouchStart={handleTouchStart}
+            onTouchEnd={handleTouchEnd}
+        >
             <Toaster />
             <Sidebar activeItem={activeNavItem} onSelectItem={handleSelectItem} currentUser={currentUser} unreadMessageCount={unreadMessageCount} unreadTribeCount={unreadTribeCount} unreadNotificationCount={unreadNotificationCount} isChatOpen={isChatOpen} />
-            <main className={`${shouldHideHeader ? 'pt-0' : 'pt-16'} pb-16 md:pb-0`}>
-                <div className={containerClass}>
+            <main className={`${shouldHideHeader ? 'pt-0' : 'pt-16'} pb-16 md:pb-0 h-screen transition-all duration-300`}>
+                <div
+                    ref={mainRef}
+                    className={`${containerClass} overflow-y-auto no-scrollbar`}
+                    style={{ height: '100%' }}
+                >
                     {renderContent()}
                 </div>
             </main>
