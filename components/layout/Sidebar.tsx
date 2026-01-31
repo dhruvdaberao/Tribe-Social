@@ -313,6 +313,4 @@ const ChukIcon = () => {
 
 const SunIcon = () => <IconWrapper><Sun size={24} strokeWidth={1.75} /></IconWrapper>;
 const MoonIcon = () => <IconWrapper><Moon size={24} strokeWidth={1.75} /></IconWrapper>;
-
 export default Sidebar;
-```
