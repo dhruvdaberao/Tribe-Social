@@ -13,7 +13,7 @@ import { toast } from '../common/Toast';
 
 /* ───────────── STYLES ───────────── */
 const PageContainer = styled.div`
-  height: 100dvh;
+  height: 100%;
   display: flex;
   flex-direction: column;
   background: ${({ theme }) => theme.background};
@@ -366,7 +366,7 @@ const TribeDetailPage: React.FC<Props> = ({ currentUser, tribeId: propTribeId })
     <PageContainer>
       <Header>
         <BackButton onClick={() => navigate('/tribes')}>
-          <ArrowLeft size={20} />
+          <BackIcon />
         </BackButton>
 
         <Avatar $src={tribe?.avatarUrl}>
@@ -449,5 +449,7 @@ const TribeDetailPage: React.FC<Props> = ({ currentUser, tribeId: propTribeId })
     </PageContainer>
   );
 };
+
+const BackIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>;
 
 export default TribeDetailPage;

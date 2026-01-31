@@ -46,13 +46,11 @@ const TribeMessageArea: React.FC<TribeMessageAreaProps> = ({
         min-h-0
       "
     >
-      {/* ───────────── MESSAGE LIST ───────────── */}
       <div
         className="
-          flex-1 overflow-y-auto
+          flex-1 overflow-y-auto w-full
           px-4 py-3
           space-y-4
-          pb-40 md:pb-4 /* 🔥 Fix: Ensure last message clears the sticky input (Input + Mobile Nav) */
         "
       >
         {isLoading && messages.length === 0 && (
@@ -217,7 +215,7 @@ const TribeMessageArea: React.FC<TribeMessageAreaProps> = ({
       </div>
 
       {/* ───────────── INPUT BAR (MOBILE SAFE) ───────────── */}
-      {/* ───────────── INPUT BAR (MOBILE OPTIMIZED) ───────────── */}
+      {/* ───────────── INPUT BAR (MOBILE SAFE) ───────────── */}
       <div
         className="
           p-4 
@@ -225,7 +223,7 @@ const TribeMessageArea: React.FC<TribeMessageAreaProps> = ({
           border-t border-border
           flex-shrink-0 
           z-20
-          sticky bottom-20 md:bottom-0 /* 🔥 Fix: Lift above mobile nav */
+          w-full
         "
       >
         <ChatInput

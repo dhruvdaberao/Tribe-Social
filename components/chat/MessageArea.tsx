@@ -408,7 +408,7 @@ export const MessageArea: React.FC<MessageAreaProps> = ({ conversation, messages
         )}
       </div>
 
-      <div className="p-4 bg-transparent flex-shrink-0">
+      <div className="p-4 bg-background border-t border-border flex-shrink-0 z-20 w-full">
         <ChatInput
           value={inputText}
           onChange={handleInputChange}
