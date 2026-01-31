@@ -292,7 +292,7 @@ const LoginPage: React.FC = () => {
             {(mode === 'login' || mode === 'register' || mode === 'forgot') && (
               <div className="mb-4">
                 <label className="block text-secondary text-sm font-semibold mb-2">Email</label>
-                <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full p-3 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-accent text-primary" placeholder="you@example.com" disabled={isLoading || mode === 'otp'} />
+                <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full p-3 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-accent text-primary" placeholder="you@example.com" disabled={isLoading} />
               </div>
             )}
 
