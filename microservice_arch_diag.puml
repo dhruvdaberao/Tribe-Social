@@ -1,0 +1,284 @@
+@startuml Tribe-Social-Microservices-Architecture
+
+!define RECTANGLE class
+
+skinparam rectangle {
+    BackgroundColor<<frontend>> lightblue
+    BackgroundColor<<gateway>> orange
+    BackgroundColor<<service>> lightgreen
+    BackgroundColor<<database>> lightyellow
+    BackgroundColor<<cache>> lightcyan
+    BackgroundColor<<queue>> plum
+    BackgroundColor<<external>> lightpink
+}
+
+title Tribe Social - Microservices Architecture
+
+' ==================== CLIENT LAYER ====================
+package "Client Applications" <<frontend>> {
+    rectangle "Web App\n(React)" as WebApp
+    rectangle "Mobile App\n(Future)" as MobileApp
+}
+
+' ==================== API GATEWAY & LOAD BALANCER ====================
+rectangle "Load Balancer" as LoadBalancer <<gateway>>
+rectangle "API Gateway\n(Kong/Express Gateway)" as APIGateway <<gateway>> {
+    note right
+        - Request Routing
+        - Rate Limiting
+        - Authentication
+        - SSL Termination
+        - Request/Response Transformation
+    end note
+}
+
+' ==================== MICROSERVICES ====================
+package "Microservices Cluster" {
+    
+    rectangle "Auth Service" as AuthService <<service>> {
+        note right
+            - User Registration
+            - Login/Logout
+            - JWT Token Management
+            - Password Reset (OTP)
+            - Session Management
+        end note
+    }
+    
+    rectangle "User Service" as UserService <<service>> {
+        note right
+            - User Profiles
+            - Follow/Unfollow
+            - Block/Unblock
+            - User Search
+            - Profile Updates
+        end note
+    }
+    
+    rectangle "Post Service" as PostService <<service>> {
+        note right
+            - Create/Read/Update/Delete Posts
+            - Like/Unlike Posts
+            - Comment Management
+            - Post Feed Generation
+            - Share Posts
+        end note
+    }
+    
+    rectangle "Story Service" as StoryService <<service>> {
+        note right
+            - Create Stories
+            - View Stories
+            - Like Stories
+            - 24h Auto-Expiry (TTL)
+            - Story Feed
+        end note
+    }
+    
+    rectangle "Tribe Service" as TribeService <<service>> {
+        note right
+            - Create/Edit Tribes
+            - Join/Leave Tribes
+            - Member Management
+            - Tribe Discovery
+            - Tribe Messages
+        end note
+    }
+    
+    rectangle "Message Service" as MessageService <<service>> {
+        note right
+            - Direct Messages (DM)
+            - Conversation Management
+            - Message History
+            - AI Chat (Psyduck)
+            - Unread Counts
+        end note
+    }
+    
+    rectangle "Notification Service" as NotificationService <<service>> {
+        note right
+            - Activity Notifications
+            - Push Notifications
+            - Email Notifications
+            - Read/Unread Status
+            - Notification Preferences
+        end note
+    }
+    
+    rectangle "Media Service" as MediaService <<service>> {
+        note right
+            - Image Upload
+            - Video Upload
+            - Cloudinary Integration
+            - Media Processing
+            - CDN Management
+        end note
+    }
+    
+    rectangle "Real-time Service" as RealtimeService <<service>> {
+        note right
+            - WebSocket Connections
+            - Live Chat (DM & Tribes)
+            - Online/Offline Status
+            - Typing Indicators
+            - Real-time Notifications
+        end note
+    }
+}
+
+' ==================== SERVICE REGISTRY & DISCOVERY ====================
+rectangle "Service Registry\n(Consul/Eureka)" as ServiceRegistry <<gateway>> {
+    note right
+        - Service Registration
+        - Health Checks
+        - Service Discovery
+        - Load Balancing
+    end note
+}
+
+' ==================== MESSAGE QUEUE ====================
+rectangle "Message Queue\n(RabbitMQ/Kafka)" as MessageQueue <<queue>> {
+    note right
+        - Async Communication
+        - Event Publishing
+        - Event Consumption
+        - Decoupling Services
+    end note
+}
+
+' ==================== CACHE LAYER ====================
+rectangle "Redis Cache" as RedisCache <<cache>> {
+    note right
+        - Session Storage
+        - Frequently Accessed Data
+        - Real-time Counters
+        - Pub/Sub for Events
+    end note
+}
+
+' ==================== DATABASES (Per Service) ====================
+package "Database Layer" <<database>> {
+    database "Auth DB\n(MongoDB)" as AuthDB
+    database "User DB\n(MongoDB)" as UserDB
+    database "Post DB\n(MongoDB)" as PostDB
+    database "Story DB\n(MongoDB)\n+ TTL Index" as StoryDB
+    database "Tribe DB\n(MongoDB)" as TribeDB
+    database "Message DB\n(MongoDB)" as MessageDB
+    database "Notification DB\n(MongoDB)" as NotificationDB
+}
+
+' ==================== EXTERNAL SERVICES ====================
+package "External Services" <<external>> {
+    rectangle "Cloudinary\n(Media CDN)" as Cloudinary
+    rectangle "Google Gemini AI\n(Psyduck Bot)" as GeminiAI
+    rectangle "Email Service\n(SendGrid/SES)" as EmailService
+}
+
+' ==================== MONITORING & LOGGING ====================
+package "Observability Stack" {
+    rectangle "Logging\n(ELK Stack)" as Logging
+    rectangle "Monitoring\n(Prometheus + Grafana)" as Monitoring
+    rectangle "Tracing\n(Jaeger)" as Tracing
+}
+
+' ==================== CLIENT TO GATEWAY ====================
+WebApp --> LoadBalancer
+MobileApp --> LoadBalancer
+LoadBalancer --> APIGateway
+
+' ==================== GATEWAY TO SERVICES ====================
+APIGateway --> AuthService
+APIGateway --> UserService
+APIGateway --> PostService
+APIGateway --> StoryService
+APIGateway --> TribeService
+APIGateway --> MessageService
+APIGateway --> NotificationService
+APIGateway --> MediaService
+APIGateway --> RealtimeService
+
+' ==================== SERVICE REGISTRY ====================
+AuthService ..> ServiceRegistry : "register & heartbeat"
+UserService ..> ServiceRegistry : "register & heartbeat"
+PostService ..> ServiceRegistry : "register & heartbeat"
+StoryService ..> ServiceRegistry : "register & heartbeat"
+TribeService ..> ServiceRegistry : "register & heartbeat"
+MessageService ..> ServiceRegistry : "register & heartbeat"
+NotificationService ..> ServiceRegistry : "register & heartbeat"
+MediaService ..> ServiceRegistry : "register & heartbeat"
+RealtimeService ..> ServiceRegistry : "register & heartbeat"
+
+APIGateway ..> ServiceRegistry : "service discovery"
+
+' ==================== INTER-SERVICE COMMUNICATION ====================
+PostService --> MessageQueue : "publish: post.created"
+StoryService --> MessageQueue : "publish: story.created"
+TribeService --> MessageQueue : "publish: tribe.joined"
+MessageService --> MessageQueue : "publish: message.sent"
+
+NotificationService --> MessageQueue : "subscribe: all events"
+
+PostService --> UserService : "REST: get user data"
+TribeService --> UserService : "REST: validate members"
+MessageService --> UserService : "REST: get user profiles"
+PostService --> NotificationService : "REST: create notification"
+
+' ==================== SERVICES TO DATABASES ====================
+AuthService --> AuthDB
+UserService --> UserDB
+PostService --> PostDB
+StoryService --> StoryDB
+TribeService --> TribeDB
+MessageService --> MessageDB
+NotificationService --> NotificationDB
+
+' ==================== CACHE USAGE ====================
+AuthService --> RedisCache : "session tokens"
+UserService --> RedisCache : "user profiles"
+PostService --> RedisCache : "hot posts"
+NotificationService --> RedisCache : "unread counts"
+RealtimeService --> RedisCache : "online users"
+
+' ==================== EXTERNAL INTEGRATIONS ====================
+MediaService --> Cloudinary : "upload media"
+MessageService --> GeminiAI : "AI responses"
+NotificationService --> EmailService : "send emails"
+
+' ==================== OBSERVABILITY ====================
+AuthService ..> Logging : "logs"
+UserService ..> Logging : "logs"
+PostService ..> Logging : "logs"
+MessageService ..> Logging : "logs"
+
+AuthService ..> Monitoring : "metrics"
+UserService ..> Monitoring : "metrics"
+PostService ..> Monitoring : "metrics"
+
+AuthService ..> Tracing : "traces"
+PostService ..> Tracing : "traces"
+
+' ==================== DEPLOYMENT NOTES ====================
+note bottom of "Microservices Cluster"
+    **Deployment Strategy:**
+    - Docker Containers
+    - Kubernetes Orchestration
+    - Auto-scaling based on load
+    - Rolling updates (zero downtime)
+    - Health checks & self-healing
+    
+    **Communication Patterns:**
+    - Synchronous: REST APIs (service-to-service)
+    - Asynchronous: Message Queue (events)
+    - Real-time: WebSocket (client-to-service)
+end note
+
+note bottom of MessageQueue
+    **Event-Driven Architecture:**
+    - post.created → Notification
+    - story.created → Notification
+    - message.sent → Real-time Push
+    - user.followed → Notification
+    - tribe.joined → Notification
+end note
+
+@enduml

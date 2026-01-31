@@ -1,0 +1,215 @@
+@startuml Tribe-Social-Architecture
+
+!define RECTANGLE class
+
+skinparam rectangle {
+    BackgroundColor<<frontend>> lightblue
+    BackgroundColor<<backend>> lightgreen
+    BackgroundColor<<database>> lightyellow
+    BackgroundColor<<external>> lightpink
+    BackgroundColor<<realtime>> lightcoral
+}
+
+title Tribe Social - System Architecture Diagram
+
+' ==================== CLIENT LAYER ====================
+package "Client (Browser)" <<frontend>> {
+    rectangle "React App" as ReactApp {
+        rectangle "App.tsx\n(Main Router)" as AppTsx
+        
+        package "Pages & Components" {
+            rectangle "Auth\n(Login/Register)" as Auth
+            rectangle "Feed\n(Home)" as Feed
+            rectangle "Discover" as Discover
+            rectangle "Messages\n(DM Chat)" as Messages
+            rectangle "Notifications" as Notifications
+            rectangle "Tribes\n(Group Chat)" as Tribes
+            rectangle "Profile" as Profile
+            rectangle "Stories" as Stories
+            rectangle "Settings" as Settings
+        }
+        
+        package "Contexts" {
+            rectangle "AuthContext\n(User State)" as AuthContext
+            rectangle "SocketContext\n(Real-time)" as SocketContext
+            rectangle "ThemeContext\n(Dark/Light)" as ThemeContext
+        }
+        
+        package "Layout" {
+            rectangle "Sidebar\n(Navigation)" as Sidebar
+        }
+    }
+}
+
+' ==================== API LAYER ====================
+package "API Client" <<frontend>> {
+    rectangle "axios\n(HTTP Client)" as AxiosClient
+    rectangle "socket.io-client\n(WebSocket)" as SocketClient
+}
+
+' ==================== SERVER LAYER ====================
+package "Backend Server" <<backend>> {
+    rectangle "Express.js" as ExpressServer {
+        
+        package "API Routes" {
+            rectangle "/api/auth\n(Login, Register, OTP)" as AuthRoutes
+            rectangle "/api/users\n(Profile, Follow, Block)" as UserRoutes
+            rectangle "/api/posts\n(CRUD, Like, Comment)" as PostRoutes
+            rectangle "/api/stories\n(Create, View, Like)" as StoryRoutes
+            rectangle "/api/tribes\n(Create, Join, Messages)" as TribeRoutes
+            rectangle "/api/messages\n(DM, Conversations)" as MessageRoutes
+            rectangle "/api/notifications\n(Fetch, Mark Read)" as NotificationRoutes
+        }
+        
+        package "Middleware" {
+            rectangle "auth.js\n(JWT Verify)" as AuthMiddleware
+            rectangle "cors\n(CORS Policy)" as CorsMiddleware
+        }
+        
+        package "Controllers" {
+            rectangle "Auth Controller" as AuthController
+            rectangle "User Controller" as UserController
+            rectangle "Post Controller" as PostController
+            rectangle "Tribe Controller" as TribeController
+            rectangle "Message Controller" as MessageController
+        }
+    }
+    
+    rectangle "Socket.IO Server" as SocketServer <<realtime>> {
+        rectangle "Events" as SocketEvents {
+            note right
+                - joinRoom / leaveRoom
+                - newMessage (DM)
+                - newTribeMessage
+                - newPost
+                - newNotification
+                - typing / stopTyping
+                - userOnline / userOffline
+            end note
+        }
+    }
+}
+
+' ==================== DATABASE LAYER ====================
+package "MongoDB Database" <<database>> {
+    rectangle "Collections" as MongoCollections {
+        rectangle "users\n(Profile, Auth, Followers)" as UsersCollection
+        rectangle "posts\n(Content, Likes, Comments)" as PostsCollection
+        rectangle "stories\n(24h expiry)" as StoriesCollection
+        rectangle "tribes\n(Groups, Members)" as TribesCollection
+        rectangle "tribemessages\n(Group Messages)" as TribeMessagesCollection
+        rectangle "conversations\n(DM Pairs)" as ConversationsCollection
+        rectangle "messages\n(DM Content)" as MessagesCollection
+        rectangle "notifications\n(Activity Feed)" as NotificationsCollection
+    }
+}
+
+' ==================== EXTERNAL SERVICES ====================
+package "External Services" <<external>> {
+    rectangle "Cloudinary\n(Image/Video Storage)" as Cloudinary
+    rectangle "Google Gemini AI\n(Psyduck Chatbot)" as GeminiAI
+}
+
+' ==================== RELATIONSHIPS ====================
+
+' Frontend to API
+AppTsx --> Auth
+AppTsx --> Feed
+AppTsx --> Discover
+AppTsx --> Messages
+AppTsx --> Notifications
+AppTsx --> Tribes
+AppTsx --> Profile
+AppTsx --> Stories
+AppTsx --> Settings
+
+Auth --> AuthContext
+Feed --> AuthContext
+Messages --> SocketContext
+Tribes --> SocketContext
+Notifications --> SocketContext
+
+AppTsx --> Sidebar
+
+' API Client Connections
+AxiosClient --> ExpressServer : "HTTP/REST\n(CRUD Operations)"
+SocketClient --> SocketServer : "WebSocket\n(Real-time Events)"
+
+AuthContext ..> AxiosClient : "uses"
+Feed ..> AxiosClient : "uses"
+Discover ..> AxiosClient : "uses"
+Messages ..> SocketClient : "uses"
+Tribes ..> SocketClient : "uses"
+SocketContext ..> SocketClient : "uses"
+
+' Backend Routes to Controllers
+AuthRoutes --> AuthController
+UserRoutes --> UserController
+PostRoutes --> PostController
+TribeRoutes --> TribeController
+MessageRoutes --> MessageController
+
+' Middleware Flow
+ExpressServer --> CorsMiddleware
+ExpressServer --> AuthMiddleware
+
+' Controllers to Database
+AuthController --> UsersCollection
+UserController --> UsersCollection
+PostController --> PostsCollection
+PostController --> NotificationsCollection
+TribeController --> TribesCollection
+TribeController --> TribeMessagesCollection
+MessageController --> ConversationsCollection
+MessageController --> MessagesCollection
+
+' Socket to Database
+SocketServer --> MessagesCollection
+SocketServer --> TribeMessagesCollection
+SocketServer --> NotificationsCollection
+SocketServer --> PostsCollection
+
+' External Services
+PostController --> Cloudinary : "Upload Media"
+StoryRoutes --> Cloudinary : "Upload Media"
+MessageController --> GeminiAI : "Psyduck AI Chat"
+
+' Notes
+note right of ReactApp
+    **Tech Stack:**
+    - React 19
+    - TypeScript
+    - React Router
+    - Vite
+    - TailwindCSS
+    - Lucide Icons
+end note
+
+note right of ExpressServer
+    **Tech Stack:**
+    - Express.js 5.x
+    - Node.js
+    - JWT (jsonwebtoken)
+    - bcryptjs
+    - Mongoose ODM
+end note
+
+note right of MongoCollections
+    **Database:**
+    - MongoDB Atlas
+    - Indexed on userId, timestamp
+    - Populated references
+    - TTL on Stories (24h)
+end note
+
+note bottom of SocketServer
+    **Real-time Features:**
+    - DM Chat
+    - Group Chat (Tribes)
+    - Live Notifications
+    - Online/Offline Status
+    - Typing Indicators
+    - Auto-refresh on new posts
+end note
+
+@enduml
