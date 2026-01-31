@@ -27,32 +27,15 @@ API.interceptors.response.use(
     // Prevent infinite loop: Don't redirect if 401 happens on login page or during login request
     const isLoginRequest = error.config?.url?.includes('/auth/login');
 
-    // Map status codes to user-friendly messages
-    if (error.response) {
-      const status = error.response.status;
-      let friendlyMessage = "Something went wrong. Please try again.";
-
-      if (status === 400) friendlyMessage = error.response.data?.message || "Invalid request.";
-      else if (status === 401) friendlyMessage = "Session expired. Please login again.";
-      else if (status === 403) friendlyMessage = "You don't have permission to perform this action.";
-      else if (status === 404) friendlyMessage = "The requested resource was not found.";
-      else if (status === 500) friendlyMessage = "Server error. We're working on it.";
-      else if (status === 503) friendlyMessage = "Service unavailable. Please try again later.";
-
-      // Attach friendly message to error object for UI to use
-      error.message = friendlyMessage;
-
-      // Auto-logout on 401
-      if (status === 401 && !isLoginRequest) {
-        console.warn("Session expired or unauthorized. Logging out...");
-        localStorage.removeItem('token');
-        localStorage.removeItem('currentUser');
-        // Optional: Dispatch event or redirect
-      }
-    } else if (error.request) {
-      error.message = "Network error. Please check your internet connection.";
+    if (error.response && error.response.status === 401 && !isLoginRequest) {
+      console.warn("Session expired or unauthorized. Logging out...");
+      localStorage.removeItem('token');
+      localStorage.removeItem('currentUser');
+      // Prevent aggressive redirects. Let the UI handle the "logged out" state naturally (e.g., via App.tsx)
+      // if (window.location.pathname !== '/' && window.location.pathname !== '/login') {
+      //   window.location.href = '/';
+      // }
     }
-
     return Promise.reject(error);
   }
 );

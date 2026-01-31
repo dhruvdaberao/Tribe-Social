@@ -297,12 +297,6 @@ export const ProfilePage: React.FC<ProfilePageProps> = (props) => {
     const [isLoading, setIsLoading] = useState(false);
 
     // FETCH FULL USER PROFILE (Fixes 0 counts / missing banner)
-    // Sync state with prop updates (Optimistic handling)
-    useEffect(() => {
-        setProfileUser(user);
-    }, [user]);
-
-    // Fetch full profile only when ID changes
     useEffect(() => {
         const fetchFullProfile = async () => {
             try {
@@ -313,6 +307,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = (props) => {
             }
         };
 
+        setProfileUser(user); // Reset to prop user first
         fetchFullProfile();
     }, [user.id]);
 
