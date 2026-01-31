@@ -257,7 +257,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeItem, onSelectItem, currentUser
           </button>
           <button
             onClick={() => onSelectItem('Chuk')}
-            className="text-accent-text/80 hover:text-accent-text hover:bg-black/10 rounded-full p-2 flex-shrink-0"
+            className="text-accent-text/80 hover:text-accent-text hover:bg-black/10 rounded-full p-1 flex-shrink-0"
             aria-label="Open Chuk AI Assistant"
           >
             <ChukIcon />
@@ -294,13 +294,11 @@ const TribesIcon: React.FC<IconProps> = ({ isActive }) => <IconWrapper><Users si
 const HeartIcon: React.FC<IconProps> = ({ isActive }) => <IconWrapper><Heart size={24} strokeWidth={isActive ? 2.25 : 1.75} /></IconWrapper>;
 
 const ChukIcon = () => (
-  <IconWrapper>
-    <img
-      src="/chuk-ai.png"
-      alt="Chuk AI"
-      className="w-full h-full p-0.5"
-    />
-  </IconWrapper>
+  <img
+    src="/chuk-ai.png"
+    alt="Chuk AI"
+    className="h-10 w-auto object-contain"
+  />
 );
 
 const SunIcon = () => <IconWrapper><Sun size={24} strokeWidth={1.75} /></IconWrapper>;
