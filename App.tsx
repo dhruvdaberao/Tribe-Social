@@ -95,6 +95,9 @@ const App: React.FC = () => {
     const navigate = useNavigate();
     const location = useLocation();
 
+    // Track if a chat conversation is active (to hide header/adjust layout)
+    const [isChatOpen, setIsChatOpen] = useState(false);
+
     // Listen for custom "open-story" event from Chat
     useEffect(() => {
         const handleOpenStory = (e: any) => {
@@ -894,7 +897,7 @@ const App: React.FC = () => {
             case 'Discover':
                 return <DiscoverPage posts={visiblePosts} users={visibleUsers} tribes={tribes} currentUser={currentUser} onLikePost={handleLikePost} onCommentPost={handleCommentPost} onDeletePost={handleDeletePost} onDeleteComment={handleDeleteComment} onToggleFollow={handleToggleFollow} onViewProfile={handleViewProfile} onViewTribe={handleViewTribe} onJoinToggle={handleJoinToggle} onEditTribe={(tribe) => setEditingTribe(tribe)} onSharePost={handleSharePost} onLoadMore={fetchAllPostsForDiscover} />;
             case 'Messages':
-                return <ChatPage currentUser={currentUser} allUsers={visibleUsers} chukUser={PSYDUCK_USER} initialTargetUser={chatTarget} onViewProfile={handleViewProfile} onSharePost={handleSharePost} />;
+                return <ChatPage currentUser={currentUser} allUsers={visibleUsers} chukUser={PSYDUCK_USER} initialTargetUser={chatTarget} onViewProfile={handleViewProfile} onSharePost={handleSharePost} onConversationStateChange={setIsChatOpen} />;
             case 'Tribes':
                 return (
                     <TribesPage
@@ -939,16 +942,28 @@ const App: React.FC = () => {
 
     let containerClass = 'max-w-2xl mx-auto px-4 md:px-6 pt-6 pb-24 md:pb-8';
     if (isFullHeightPage) {
-        containerClass = 'h-[calc(100vh-8rem)] md:h-[calc(100vh-4rem)]';
+        // 🔥 FIX: Height calculation
+        // Total Height = 100vh
+        // If Header Visible (Messages List): - 4rem (Header) - 4rem (Nav) = 8rem
+        // If Header Hidden (Chat): - 4rem (Nav) only = 4rem (Bottom Nav + Safe Area handled by CSS env)
+        const offset = (activeNavItem === 'Messages' && !isChatOpen) ? '8rem' : '4rem';
+        containerClass = `h-[calc(100vh-${offset})] md:h-[calc(100vh-4rem)]`;
     } else if (isWidePage) {
         containerClass = 'max-w-5xl mx-auto px-4 md:px-6 pt-6 pb-24 md:pb-8';
     }
 
+    // 🔥 FIX: Padding logic
+    // Messages List -> Show Header (pt-16)
+    // Messages Chat -> Hide Header (pt-0)
+    // TribeDetail -> Hide Header (pt-0)
+    // Others -> Show Header (pt-16)
+    const shouldHideHeader = activeNavItem === 'TribeDetail' || (activeNavItem === 'Messages' && isChatOpen);
+
     return (
         <div className="bg-background min-h-screen text-primary overflow-hidden">
             <Toaster />
-            <Sidebar activeItem={activeNavItem} onSelectItem={handleSelectItem} currentUser={currentUser} unreadMessageCount={unreadMessageCount} unreadTribeCount={unreadTribeCount} unreadNotificationCount={unreadNotificationCount} />
-            <main className={`${['Messages', 'TribeDetail'].includes(activeNavItem) ? 'pt-0' : 'pt-16'} pb-16 md:pb-0`}>
+            <Sidebar activeItem={activeNavItem} onSelectItem={handleSelectItem} currentUser={currentUser} unreadMessageCount={unreadMessageCount} unreadTribeCount={unreadTribeCount} unreadNotificationCount={unreadNotificationCount} isChatOpen={isChatOpen} />
+            <main className={`${shouldHideHeader ? 'pt-0' : 'pt-16'} pb-16 md:pb-0`}>
                 <div className={containerClass}>
                     {renderContent()}
                 </div>

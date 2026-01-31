@@ -21,9 +21,10 @@ interface ChatPageProps {
   initialTargetUser: User | null;
   onViewProfile: (user: User) => void;
   onSharePost: (post: Post, destination: { type: 'tribe' | 'user', id: string }) => void;
+  onConversationStateChange?: (isOpen: boolean) => void;
 }
 
-const ChatPage: React.FC<ChatPageProps> = ({ currentUser, allUsers, chukUser, initialTargetUser, onViewProfile }) => {
+const ChatPage: React.FC<ChatPageProps> = ({ currentUser, allUsers, chukUser, initialTargetUser, onViewProfile, onSharePost, onConversationStateChange }) => {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [activeConversation, setActiveConversation] = useState<Conversation | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -43,6 +44,11 @@ const ChatPage: React.FC<ChatPageProps> = ({ currentUser, allUsers, chukUser, in
       setActiveChatPartnerId(null);
     };
   }, [setActiveChatPartnerId]);
+
+  // Notify parent about conversation state (for header visibility)
+  useEffect(() => {
+    onConversationStateChange?.(!!activeConversation);
+  }, [activeConversation, onConversationStateChange]);
 
   const userMap = useMemo(() => {
     const map = new Map(allUsers.map(user => [user.id, user]));

@@ -140,6 +140,7 @@ interface SidebarProps {
   unreadMessageCount: number;
   unreadTribeCount: number;
   unreadNotificationCount: number;
+  isChatOpen?: boolean;
 }
 
 // FIX: Moved IconProps interface to be available for the Sidebar component type definitions.
@@ -156,7 +157,7 @@ const NavBadge: React.FC<{ count: number }> = ({ count }) => {
   );
 };
 
-const Sidebar: React.FC<SidebarProps> = ({ activeItem, onSelectItem, currentUser, unreadMessageCount, unreadTribeCount, unreadNotificationCount }) => {
+const Sidebar: React.FC<SidebarProps> = ({ activeItem, onSelectItem, currentUser, unreadMessageCount, unreadTribeCount, unreadNotificationCount, isChatOpen }) => {
   const { theme, toggleTheme } = useTheme();
 
   // FIX: Changed JSX.Element to React.ReactElement to resolve type error from non-standard JSX namespace.
@@ -199,10 +200,13 @@ const Sidebar: React.FC<SidebarProps> = ({ activeItem, onSelectItem, currentUser
     </button>
   );
 
+  // Hidden on Tribe Chat (TribeDetail) AND Active DM Chat (Messages + isChatOpen)
+  const shouldHideHeader = activeItem === 'TribeDetail' || (activeItem === 'Messages' && isChatOpen);
+
   return (
     <>
-      {/* Top Header - Hidden on Chat Screens */}
-      {!['Messages', 'TribeDetail'].includes(activeItem) && (
+      {/* Top Header - Conditionally Hidden */}
+      {!shouldHideHeader && (
         <header className="fixed top-0 left-0 right-0 h-16 bg-top-bar z-50 flex items-center justify-between px-4 md:px-6">
           {/* Left Side: Logo & Desktop Nav */}
           <div className="flex items-center space-x-6 h-full">
@@ -213,7 +217,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeItem, onSelectItem, currentUser
               <img
                 src={theme === 'dark' ? '/white-color-logo.png' : '/black-color-logo.png'}
                 alt="Tribe Logo"
-                className="h-20 w-auto object-contain select-none"
+                className="h-28 w-auto object-contain select-none"
               />
             </div>
             <nav className="hidden md:flex items-center space-x-2">
