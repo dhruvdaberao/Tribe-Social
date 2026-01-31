@@ -310,7 +310,6 @@ const App: React.FC = () => {
             const notificationsPromise = api.fetchNotifications()
                 .then(({ data }) => {
                     setNotifications(data);
-                    setNotifications(data);
                     // saveToCache('notifications', data); // Removed
                 })
                 .catch(e => console.error("Failed to fetch notifications", e));

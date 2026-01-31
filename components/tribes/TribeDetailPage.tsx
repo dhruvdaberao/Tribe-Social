@@ -272,9 +272,20 @@ const TribeDetailPage: React.FC<Props> = ({ currentUser, tribeId: propTribeId })
       }
 
       setMessages(prev => {
-        // 🔥 Fix: Deduplicate by ID and _id to prevent ghost messages
+        // 🔥 Fix: Deduplicate by ID and _id
         const exists = prev.some(m => m.id === message.id || (m as any)._id === (message as any)._id);
         if (exists) return prev;
+
+        // 🔥 Fix: Replace optimistic message if tempId matches
+        if ((message as any).tempId) {
+          const optimisticIndex = prev.findIndex(m => m.id === `temp-${(message as any).tempId}`);
+          if (optimisticIndex !== -1) {
+            const newMessages = [...prev];
+            newMessages[optimisticIndex] = fullMessage;
+            return newMessages;
+          }
+        }
+
         return [...prev, fullMessage];
       });
     };
