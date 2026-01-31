@@ -212,7 +212,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeItem, onSelectItem, currentUser
             <img
               src={theme === 'dark' ? '/white-color-logo.png' : '/black-color-logo.png'}
               alt="Tribe Logo"
-              className="h-12 w-auto object-contain select-none"
+              className="h-14 w-auto object-contain select-none"
             />
           </div>
           <nav className="hidden md:flex items-center space-x-2">
@@ -241,8 +241,8 @@ const Sidebar: React.FC<SidebarProps> = ({ activeItem, onSelectItem, currentUser
           <button onClick={() => onSelectItem('Profile')} aria-label="View Profile" className="flex items-center space-x-3 rounded-full hover:bg-black/10 p-1 transition-colors">
             <UserAvatar user={currentUser} className="w-10 h-10 flex-shrink-0" />
             <div className="hidden lg:block text-left">
-              <p className="font-semibold text-accent-text text-sm leading-tight truncate">{currentUser?.name}</p>
-              <p className="text-accent-text/80 text-xs leading-tight truncate">@{currentUser?.username}</p>
+              <p className="font-semibold text-primary text-sm leading-tight truncate">{currentUser?.name}</p>
+              <p className="text-secondary text-xs leading-tight truncate">@{currentUser?.username}</p>
             </div>
           </button>
         </div>
