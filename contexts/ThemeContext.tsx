@@ -29,12 +29,12 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (theme === 'dark') {
       document.documentElement.classList.add('dark');
-      // Dark Mode Header Color: #332620
-      document.querySelector('meta[name="theme-color"]')?.setAttribute('content', '#332620');
+      // Dark Mode Accent Color: #C9A27E
+      document.querySelector('meta[name="theme-color"]')?.setAttribute('content', '#C9A27E');
     } else {
       document.documentElement.classList.remove('dark');
-      // Light Mode Header Color: #EBE5DD
-      document.querySelector('meta[name="theme-color"]')?.setAttribute('content', '#EBE5DD');
+      // Light Mode Accent Color: #B89A7A
+      document.querySelector('meta[name="theme-color"]')?.setAttribute('content', '#B89A7A');
     }
     localStorage.setItem('theme', theme);
   }, [theme]);

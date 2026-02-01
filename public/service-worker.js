@@ -1,6 +1,6 @@
 // Service Worker for Tribe Social - Push Notifications
 
-const CACHE_NAME = 'tribe-v3-strict'; // Version bump for strict branding
+const CACHE_NAME = 'tribe-v1';
 
 // Install event
 self.addEventListener('install', (event) => {
@@ -8,24 +8,10 @@ self.addEventListener('install', (event) => {
     self.skipWaiting();
 });
 
-// Activate event - FORCE DELETE OLD CACHES
+// Activate event
 self.addEventListener('activate', (event) => {
     console.log('✅ Service Worker: Activated');
-    event.waitUntil(
-        Promise.all([
-            clients.claim(),
-            caches.keys().then((cacheNames) => {
-                return Promise.all(
-                    cacheNames.map((cache) => {
-                        if (cache !== CACHE_NAME) {
-                            console.log('🧹 Clearing old cache:', cache);
-                            return caches.delete(cache);
-                        }
-                    })
-                );
-            })
-        ])
-    );
+    event.waitUntil(clients.claim());
 });
 
 // Push event - receive and display notification
