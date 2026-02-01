@@ -61,7 +61,11 @@ const DiscoverPage: React.FC<DiscoverPageProps> = (props) => {
 
     // Use cached users as fallback if real users haven't loaded yet
     const displayUsers = users.length > 0 ? users : cachedUsers;
-    const otherUsers = useMemo(() => displayUsers.filter(u => u.id !== currentUser.id), [displayUsers, currentUser.id]);
+    const otherUsers = useMemo(() => {
+        return displayUsers
+            .filter(u => u.id !== currentUser.id)
+            .sort((a, b) => b.id.localeCompare(a.id)); // Sort by ID descending (Newest first)
+    }, [displayUsers, currentUser.id]);
 
     const filteredResults = useMemo(() => {
         const term = searchTerm.toLowerCase().trim();
@@ -132,7 +136,7 @@ const DiscoverPage: React.FC<DiscoverPageProps> = (props) => {
                 <div>
                     <h2 className="text-xl font-bold text-primary mb-4 font-display">Newest Users</h2>
                     <div className="space-y-3">
-                        {otherUsers.slice(0, 9).map(user => (
+                        {otherUsers.map(user => (
                             <UserCard
                                 key={user.id}
                                 user={user}
