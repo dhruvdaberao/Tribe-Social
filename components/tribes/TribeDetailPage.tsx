@@ -251,19 +251,17 @@ const TribeDetailPage: React.FC<Props> = ({ currentUser, tribeId: propTribeId })
   }, [id, isMember, joinRoom, leaveRoom, socket]); // 🔥 Added socket dependency
 
   /* ───────────── REAL-TIME RECEIVE ───────────── */
+  /* ───────────── REAL-TIME RECEIVE ───────────── */
   useEffect(() => {
     if (!socket || !id || !isMember) {
       return;
     }
 
     const handleIncoming = (message: TribeMessage) => {
-      // console.log('Received tribe message:', message);
-
       if (message.tribeId !== id) return;
 
       // Ensure sender is populated
       const fullMessage = { ...message };
-      // Fallback if sender is just an ID or missing name
       if (!fullMessage.sender || typeof fullMessage.sender === 'string' || !fullMessage.sender.name) {
         const foundUser = userMap.get(message.senderId);
         if (foundUser) {
@@ -273,20 +271,30 @@ const TribeDetailPage: React.FC<Props> = ({ currentUser, tribeId: propTribeId })
 
       setMessages(prev => {
         // 🔥 Fix: Deduplicate by ID and _id
-        const exists = prev.some(m => m.id === message.id || (m as any)._id === (message as any)._id);
-        if (exists) return prev;
+        const messageMap = new Map();
 
-        // 🔥 Fix: Replace optimistic message if tempId matches
-        if ((message as any).tempId) {
-          const optimisticIndex = prev.findIndex(m => m.id === `temp-${(message as any).tempId}`);
-          if (optimisticIndex !== -1) {
-            const newMessages = [...prev];
-            newMessages[optimisticIndex] = fullMessage;
-            return newMessages;
+        // 1. Add existing messages to map
+        prev.forEach(m => {
+          const key = m.id || (m as any)._id;
+          if (key) messageMap.set(key, m);
+        });
+
+        // 2. Add/Update incoming message
+        const incomingKey = fullMessage.id || (fullMessage as any)._id;
+        if (incomingKey) messageMap.set(incomingKey, fullMessage);
+
+        // 3. Handle Optimistic Updates (Replace temp-id with real id if text matches or if tempId field exists)
+        if ((fullMessage as any).tempId) {
+          const tempKey = `temp-${(fullMessage as any).tempId}`;
+          if (messageMap.has(tempKey)) {
+            messageMap.delete(tempKey); // Remove optimistic version
+            messageMap.set(incomingKey, fullMessage); // Ensure real version is kept
           }
         }
 
-        return [...prev, fullMessage];
+        return Array.from(messageMap.values()).sort((a, b) =>
+          new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+        );
       });
     };
 

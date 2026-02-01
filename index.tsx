@@ -5,6 +5,7 @@ import App from './App';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { AuthProvider } from './contexts/AuthContext';
 import { SocketProvider } from './contexts/SocketContext';
+import ConnectionStatus from './components/layout/ConnectionStatus';
 
 const rootElement = document.getElementById('root');
 if (!rootElement) {
@@ -18,6 +19,7 @@ root.render(
       <ThemeProvider>
         <AuthProvider>
           <SocketProvider>
+            <ConnectionStatus />
             <App />
           </SocketProvider>
         </AuthProvider>

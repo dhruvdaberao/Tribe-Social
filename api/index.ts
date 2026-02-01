@@ -2,6 +2,8 @@
 
 import axios from 'axios';
 
+import axiosRetry from 'axios-retry';
+
 const API_URL = (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'))
   ? 'http://localhost:5001'
   : 'https://tribe-social-backend.onrender.com';
@@ -11,6 +13,16 @@ const API_TIMEOUT_MS = 60000; // 60 seconds for Render cold starts
 const API = axios.create({
   baseURL: `${API_URL}/api`,
   timeout: API_TIMEOUT_MS,
+});
+
+// Retry failed requests 3 times with exponential delay
+axiosRetry(API, {
+  retries: 3,
+  retryDelay: axiosRetry.exponentialDelay,
+  retryCondition: (error) => {
+    // Retry on network errors or 5xx status codes
+    return axiosRetry.isNetworkOrIdempotentRequestError(error) || (error.response?.status ? error.response.status >= 500 : false);
+  }
 });
 
 API.interceptors.request.use(req => {
