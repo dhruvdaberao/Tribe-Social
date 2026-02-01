@@ -258,44 +258,45 @@ const TribeDetailPage: React.FC<Props> = ({ currentUser, tribeId: propTribeId })
     }
 
     const handleIncoming = (message: TribeMessage) => {
+      // 1. Verify it belongs to this tribe
       if (message.tribeId !== id) return;
 
-      // Ensure sender is populated
-      const fullMessage = { ...message };
-      if (!fullMessage.sender || typeof fullMessage.sender === 'string' || !fullMessage.sender.name) {
-        const foundUser = userMap.get(message.senderId);
-        if (foundUser) {
-          fullMessage.sender = foundUser;
-        }
-      }
-
       setMessages(prev => {
-        // 🔥 Fix: Deduplicate by ID and _id
-        const messageMap = new Map();
+        // 2. Prevent processing if message with same ID already exists
+        const exists = prev.some(m => m.id === message.id || (m as any)._id === message.id);
+        if (exists) return prev;
 
-        // 1. Add existing messages to map
-        prev.forEach(m => {
-          const key = m.id || (m as any)._id;
-          if (key) messageMap.set(key, m);
-        });
-
-        // 2. Add/Update incoming message
-        const incomingKey = fullMessage.id || (fullMessage as any)._id;
-        if (incomingKey) messageMap.set(incomingKey, fullMessage);
-
-        // 3. Handle Optimistic Updates (Replace temp-id with real id if text matches or if tempId field exists)
-        if ((fullMessage as any).tempId) {
-          const tempKey = `temp-${(fullMessage as any).tempId}`;
-          if (messageMap.has(tempKey)) {
-            messageMap.delete(tempKey); // Remove optimistic version
-            messageMap.set(incomingKey, fullMessage); // Ensure real version is kept
+        // 3. Ensure sender is populated (fallback to cached user map)
+        const fullMessage = { ...message };
+        if (!fullMessage.sender || typeof fullMessage.sender === 'string' || !fullMessage.sender.name) {
+          const foundUser = userMap.get(message.senderId);
+          if (foundUser) {
+            fullMessage.sender = foundUser;
           }
         }
 
-        return Array.from(messageMap.values()).sort((a, b) =>
+        // 4. Handle Optimistic Replacement
+        // If we have a temp message that matches this new real message (by tempId content), replace it.
+        // The server response usually handles the replacement, but the socket event might arrive first.
+        const tempMatchIndex = prev.findIndex(m => (m as any).id === `temp-${(fullMessage as any).tempId}`);
+
+        if (tempMatchIndex !== -1) {
+          // Replace the temp message with the real one
+          const newMessages = [...prev];
+          newMessages[tempMatchIndex] = fullMessage;
+          return newMessages;
+        }
+
+        // 5. Append new message
+        return [...prev, fullMessage].sort((a, b) =>
           new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
         );
       });
+
+      // Clear unread count immediately since we are viewing it
+      if (document.visibilityState === 'visible') {
+        clearUnreadTribe(id);
+      }
     };
 
     socket.on('newTribeMessage', handleIncoming);
@@ -303,7 +304,7 @@ const TribeDetailPage: React.FC<Props> = ({ currentUser, tribeId: propTribeId })
     return () => {
       socket.off('newTribeMessage', handleIncoming);
     };
-  }, [socket, id, isMember, userMap]);
+  }, [socket, id, isMember, userMap, clearUnreadTribe]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -311,11 +312,9 @@ const TribeDetailPage: React.FC<Props> = ({ currentUser, tribeId: propTribeId })
 
   /* ───────────── SEND MESSAGE ───────────── */
   const handleSend = async (text: string) => {
-    if (!text.trim() || !id || !currentUser) {
-      console.warn('Cannot send message:', { hasText: !!text.trim(), id, hasCurrentUser: !!currentUser });
-      return;
-    }
+    if (!text.trim() || !id || !currentUser) return;
 
+    // 1. Create Optimistic Message with Temporary ID
     const tempId = `temp-${Date.now()}`;
     const optimistic: TribeMessage = {
       id: tempId,
@@ -326,19 +325,28 @@ const TribeDetailPage: React.FC<Props> = ({ currentUser, tribeId: propTribeId })
       timestamp: new Date().toISOString()
     };
 
-    console.log('Sending tribe message:', { text, tribeId: id });
+    // 2. Add to UI immediately
     setMessages(prev => [...prev, optimistic]);
     setIsSending(true);
 
     try {
-      console.log('Calling API to send tribe message');
-      const { data } = await api.sendTribeMessage(id, { text });
-      console.log('Message sent successfully, received response:', data);
-      setMessages(prev => prev.map(m => (m.id === tempId ? data : m)));
+      // 3. Send to Server
+      const { data } = await api.sendTribeMessage(id, { text, tempId: optimistic.id } as any); // Pass tempId to server
+
+      // 4. Replace Optimistic Message with Real One
+      setMessages(prev => {
+        // If socket event already replaced it, do nothing
+        const alreadyReplaced = prev.some(m => m.id === data.id);
+        if (alreadyReplaced) return prev.filter(m => m.id !== tempId);
+
+        return prev.map(m => (m.id === tempId ? data : m));
+      });
+
     } catch (error) {
       console.error('Failed to send message:', error);
+      // Remove optimistic message on failure
       setMessages(prev => prev.filter(m => m.id !== tempId));
-      alert('Failed to send');
+      toast.error('Failed to send message');
     } finally {
       setIsSending(false);
     }

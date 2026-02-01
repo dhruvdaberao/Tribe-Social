@@ -108,7 +108,6 @@ const ChatPage: React.FC<ChatPageProps> = ({ currentUser, allUsers, chukUser, in
       // Update Cache First
       const senderId = message.senderId;
       const receiverId = message.receiverId;
-      // Key logic: if I am sender, valid key is receiver. If I am receiver, valid key is sender.
       const otherUserId = senderId === currentUser.id ? receiverId : senderId;
 
       const cached = messageCache.current.get(otherUserId) || [];
@@ -118,7 +117,23 @@ const ChatPage: React.FC<ChatPageProps> = ({ currentUser, allUsers, chukUser, in
       }
 
       if (isActiveConversation) {
-        setMessages(prev => [...prev, message]);
+        setMessages(prev => {
+          // 🔥 Deduplication Logic
+          const messageMap = new Map();
+          prev.forEach(m => messageMap.set(m.id, m));
+          messageMap.set(message.id, message);
+
+          // Handle Optimistic Replacement if applicable
+          if ((message as any).tempId) {
+            const tempKey = `temp-${(message as any).tempId}`;
+            if (messageMap.has(tempKey)) {
+              messageMap.delete(tempKey);
+              messageMap.set(message.id, message);
+            }
+          }
+
+          return Array.from(messageMap.values()).sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+        });
       }
 
       setConversations(prev => {
@@ -145,7 +160,6 @@ const ChatPage: React.FC<ChatPageProps> = ({ currentUser, allUsers, chukUser, in
 
 
   const handleSelectConversation = useCallback(async (conv: Conversation) => {
-    setActiveConversation(conv);
     setActiveConversation(conv);
 
     const otherUserId = conv.participants.find(p => p.id !== currentUser.id)?.id;
@@ -254,16 +268,16 @@ const ChatPage: React.FC<ChatPageProps> = ({ currentUser, allUsers, chukUser, in
     }
 
     try {
-      await api.sendMessage(otherUserId, { message: text });
+      // 🔥 Send Temp ID to backend so it can be returned
+      await api.sendMessage(otherUserId, { message: text, tempId: tempMessage.id.replace('temp-', '') } as any);
+
       if (activeConversation.id.startsWith('temp-')) {
         const newConversations = await fetchConversations();
         const newConvo = newConversations.find((c: Conversation) => c.participants.some(p => p.id === otherUserId));
         if (newConvo) {
-          // CRITICAL FIX: Update active conversation ID but PRESERVE the current messages state
-          // to prevent the "vanishing message" effect caused by re-fetching/re-setting messages.
           setActiveConversation({
             ...newConvo,
-            messages: messages // Keep the optimistic/sent messages
+            messages: messages
           });
         }
       }
@@ -276,12 +290,10 @@ const ChatPage: React.FC<ChatPageProps> = ({ currentUser, allUsers, chukUser, in
       setIsSending(false);
     }
 
-    // Update Cache With Sent Message
-    // The socket event will likely update it too, but for immediate consistency:
-    const cached = messageCache.current.get(otherUserId) || [];
-    if (!cached.some(m => m.id === tempMessage.id)) { // Very naive check, normally we'd replace temp with real ID later
-      // In this simple implementation, we might duplicate slightly if socket comes fast, but better than missing.
-    }
+    // We rely on socket for the update to replace the temporary message, 
+    // OR we could manually replace it here if API returned the message object. 
+    // api.sendMessage usually returns { success: true, data: Message } but need to check API.
+    // Assuming for now socket is the primary delivery mechanism for consistency.
   };
 
   return (

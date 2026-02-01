@@ -463,22 +463,14 @@ const App: React.FC = () => {
         };
         const handlePostDeleted = (postId: string) => setPosts(prev => prev.filter(p => p.id !== postId));
 
-        // Tribe message handling in App.tsx mainly for global unread counts or if open. 
+        // Tribe message handling in App.tsx mainly for global unread counts. 
         // Specific detail page handles its own history fetch.
-        const handleNewTribeMessage = (message: TribeMessage) => {
-            if (viewedTribe && viewedTribe.id === message.tribeId) {
-                // Ensure sender object is used if available, or fallback to userMap
-                const sender = message.sender || userMap.get(message.senderId!);
+        const handleNewTribeMessage = useCallback((message: TribeMessage) => {
+            // Unread counts are managed by SocketContext. 
+            // TribeDetailPage handles clearing them when active.
+            // App.tsx does not need to manually update global unread state here.
+        }, []);
 
-                if (sender) {
-                    setViewedTribe(prev => {
-                        if (!prev) return null;
-                        if (prev.messages.some(m => m.id === message.id)) return prev;
-                        return { ...prev, messages: [...prev.messages, { ...message, sender }] };
-                    });
-                }
-            }
-        };
         const handleTribeMessageDeleted = ({ tribeId, messageId }: { tribeId: string, messageId: string }) => {
             if (viewedTribe && viewedTribe.id === tribeId) setViewedTribe(prev => prev ? { ...prev, messages: prev.messages.filter(m => m.id !== messageId) } : null);
         };
