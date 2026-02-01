@@ -1,6 +1,6 @@
 {
-    "name": "Tribe-Social",
-    "short_name": "Tribe-Social",
+    "name": "Tribe",
+    "short_name": "Tribe",
     "description": "A social platform to connect with friends and communities",
     "start_url": "/",
     "display": "standalone",
