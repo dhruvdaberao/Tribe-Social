@@ -1,5 +1,5 @@
 
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { Post, User, Tribe } from '../../types';
 import PostCard from '../feed/PostCard';
 import UserCard from '../users/UserCard';
@@ -21,14 +21,30 @@ interface DiscoverPageProps {
     onEditTribe: (tribe: Tribe) => void;
     onSharePost: (post: Post, destination: { type: 'tribe' | 'user', id: string }) => void;
     onLoadMore: () => void;
+    hasMore?: boolean;
 }
 
 const DiscoverPage: React.FC<DiscoverPageProps> = (props) => {
-    const { posts, users, tribes, currentUser, onToggleFollow, onViewProfile, onLikePost, onCommentPost, onDeletePost, onDeleteComment, onViewTribe, onJoinToggle, onEditTribe, onSharePost, onLoadMore } = props;
+    const { posts, users, tribes, currentUser, onToggleFollow, onViewProfile, onLikePost, onCommentPost, onDeletePost, onDeleteComment, onViewTribe, onJoinToggle, onEditTribe, onSharePost, onLoadMore, hasMore } = props;
     const [searchTerm, setSearchTerm] = useState('');
     const [debouncedSearch, setDebouncedSearch] = useState('');
     const [activeTab, setActiveTab] = useState<'users' | 'posts' | 'tribes'>('users');
     const [cachedUsers, setCachedUsers] = useState<User[]>([]);
+
+    const observerTarget = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        const observer = new IntersectionObserver(
+            (entries) => {
+                if (entries[0].isIntersecting && hasMore && onLoadMore) {
+                    onLoadMore();
+                }
+            },
+            { threshold: 0.1 }
+        );
+        if (observerTarget.current) observer.observe(observerTarget.current);
+        return () => { if (observerTarget.current) observer.unobserve(observerTarget.current); };
+    }, [observerTarget, hasMore, onLoadMore]);
 
     // Debounce Search Term (300ms)
     useEffect(() => {
@@ -203,6 +219,11 @@ const DiscoverPage: React.FC<DiscoverPageProps> = (props) => {
                                         onSharePost={onSharePost}
                                     />
                                 ))}
+                                {hasMore && (
+                                    <div ref={observerTarget} className="py-8 flex justify-center w-full">
+                                        <img src="/duckload.gif" alt="Loading..." className="w-12 h-12 opacity-50" />
+                                    </div>
+                                )}
                             </div>
                         ) : <p className="text-secondary text-center p-8">No posts found for '{searchTerm}'.</p>
                     )}

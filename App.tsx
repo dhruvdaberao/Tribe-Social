@@ -100,6 +100,13 @@ const App: React.FC = () => {
     // Track if a chat conversation is active (to hide header/adjust layout)
     const [isChatOpen, setIsChatOpen] = useState(false);
 
+    // ───────────── PAGINATION STATE ─────────────
+    const [feedPage, setFeedPage] = useState(1);
+    const [feedHasMore, setFeedHasMore] = useState(true);
+    const [discoverPage, setDiscoverPage] = useState(1);
+    const [discoverHasMore, setDiscoverHasMore] = useState(true);
+    const [isLoadingMore, setIsLoadingMore] = useState(false);
+
     // ───────────── SWIPE & SCROLL LOGIC ─────────────
     const mainRef = useRef<HTMLDivElement>(null);
     const scrollStore = useRef<Map<string, number>>(new Map());
@@ -281,15 +288,13 @@ const App: React.FC = () => {
                 })
                 .catch(e => console.error("Failed to fetch users", e));
 
-            const postsPromise = api.fetchFeedPosts()
+            const postsPromise = api.fetchFeedPosts(1, 10)
                 .then(async ({ data }) => {
-                    // Populate posts with empty user map initially, real users will fill in via state update or re-render
-                    // actually, wait, we might need users... ensure we have a fallback or minimal population
-                    // For now, simple population. 'users' state update triggers re-render anyway.
+                    // Populate posts with empty user map initially
                     const populatedPosts = data.map((post: any) => populatePost(post, new Map())).filter(Boolean);
                     setPosts(populatedPosts as Post[]);
-                    setPosts(populatedPosts as Post[]);
-                    // saveToCache('posts', populatedPosts.slice(0, 50)); // Removed
+                    setFeedPage(1);
+                    setFeedHasMore(data.length === 10); // If less than limit, no more pages
                 })
                 .catch(e => console.error("Failed to fetch posts", e));
 
@@ -362,23 +367,55 @@ const App: React.FC = () => {
         }
     }, [currentUser, populatePost, setNotifications]);
 
-    const fetchAllPostsForDiscover = useCallback(async (forceRefresh = false) => {
-        if (isAllPostsLoaded && !forceRefresh) return;
+    const handleLoadMoreFeed = useCallback(async () => {
+        if (isLoadingMore || !feedHasMore) return;
+        setIsLoadingMore(true);
+        const nextPage = feedPage + 1;
         try {
-            const { data } = await api.fetchPosts();
-            const populated = data.map((post: any) => populatePost(post, userMap)).filter(Boolean);
-
-            setPosts(prev => {
-                const postMap = new Map(prev.map(p => [p.id, p]));
-                (populated as Post[]).forEach(p => postMap.set(p.id, p));
-                return Array.from(postMap.values()).sort((a: Post, b: Post) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
-            });
-
-            setIsAllPostsLoaded(true);
-        } catch (error) {
-            console.error("Failed to fetch all posts for discover", error);
+            const { data } = await api.fetchFeedPosts(nextPage, 10);
+            if (data.length === 0) {
+                setFeedHasMore(false);
+            } else {
+                const populatedNew = data.map((post: any) => populatePost(post, userMap)).filter(Boolean) as Post[];
+                setPosts(prev => {
+                    const postMap = new Map(prev.map(p => [p.id, p]));
+                    populatedNew.forEach(p => postMap.set(p.id, p)); // Deduplicate
+                    return Array.from(postMap.values()).sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+                });
+                setFeedPage(nextPage);
+                if (data.length < 10) setFeedHasMore(false);
+            }
+        } catch (e) {
+            console.error("Load more feed failed", e);
+        } finally {
+            setIsLoadingMore(false);
         }
-    }, [isAllPostsLoaded, userMap, populatePost]);
+    }, [feedPage, feedHasMore, isLoadingMore, userMap, populatePost]);
+
+    const handleLoadMoreDiscover = useCallback(async () => {
+        if (isLoadingMore || !discoverHasMore) return;
+        setIsLoadingMore(true);
+        const nextPage = discoverPage + 1;
+        try {
+            const { data } = await api.fetchPosts(nextPage, 20); // Discover batch size 20
+            if (data.length === 0) {
+                setDiscoverHasMore(false);
+            } else {
+                const populatedNew = data.map((post: any) => populatePost(post, userMap)).filter(Boolean) as Post[];
+                setPosts(prev => {
+                    const postMap = new Map(prev.map(p => [p.id, p]));
+                    populatedNew.forEach(p => postMap.set(p.id, p));
+                    return Array.from(postMap.values()).sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+                });
+                setDiscoverPage(nextPage);
+                if (data.length < 20) setDiscoverHasMore(false);
+            }
+        } catch (e) {
+            console.error("Load more discover failed", e);
+        } finally {
+            setIsLoadingMore(false);
+        }
+    }, [discoverPage, discoverHasMore, isLoadingMore, userMap, populatePost]);
 
     useEffect(() => {
         if (!isAuthLoading && currentUser) {
@@ -485,20 +522,32 @@ const App: React.FC = () => {
             if (item === 'Profile' && viewedUser?.id !== currentUser?.id) {
                 // Switch to own profile, handled below
             } else if (item !== 'TribeDetail' && item !== 'Settings') {
-                if (mainRef.current) {
-                    if (mainRef.current.scrollTop > 0) {
-                        mainRef.current.scrollTo({ top: 0, behavior: 'smooth' });
-                    } else {
-                        // Already at top -> Soft Refresh
-                        if (item === 'Home') fetchData();
-                        if (item === 'Discover') fetchAllPostsForDiscover(true);
-                        if (item === 'Notifications') (socket as any)?.emit('fetchNotifications');
-                        toast.success('Refreshed');
+                if (mainRef.current.scrollTop > 0) {
+                    mainRef.current.scrollTo({ top: 0, behavior: 'smooth' });
+                } else {
+                    // Already at top -> Soft Refresh
+                    if (item === 'Home') fetchData();
+                    if (item === 'Discover') {
+                        // Reset Discover
+                        setDiscoverPage(1);
+                        setDiscoverHasMore(true);
+                        api.fetchPosts(1, 20).then(({ data }) => {
+                            const populated = data.map((post: any) => populatePost(post, userMap)).filter(Boolean);
+                            setPosts(prev => {
+                                const postMap = new Map(prev.map(p => [p.id, p]));
+                                populated.forEach((p: any) => postMap.set(p.id, p));
+                                return Array.from(postMap.values()).sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+                            });
+                            toast.success('Discover Refreshed');
+                        });
                     }
+                    if (item === 'Notifications') (socket as any)?.emit('fetchNotifications');
+                    toast.success('Refreshed');
                 }
-                return;
             }
+            return;
         }
+
 
         // Start transition
         setIsTransitioning(true);
@@ -1041,11 +1090,42 @@ const App: React.FC = () => {
                     <>
                         <CreatePost currentUser={currentUser} allUsers={visibleUsers} myStories={myStories} onAddPost={handleAddPost} isPosting={isCreatingPost} onOpenStoryCreator={() => setIsCreatingStory(true)} onViewUserStories={handleViewUserStories} />
                         <StoryFeed myStories={myStories} followingUserStories={followingUserStories} currentUser={currentUser} seenStoryAuthors={seenStoryAuthors} onViewUserStories={handleViewUserStories} />
-                        <FeedPage posts={feedPosts} currentUser={currentUser} allUsers={visibleUsers} allTribes={tribes} onLikePost={handleLikePost} onCommentPost={handleCommentPost} onDeletePost={handleDeletePost} onDeleteComment={handleDeleteComment} onViewProfile={handleViewProfile} onSharePost={handleSharePost} onVisitDiscover={() => handleSelectItem('Discover')} />
+                        <FeedPage
+                            posts={feedPosts}
+                            currentUser={currentUser}
+                            allUsers={visibleUsers}
+                            allTribes={tribes}
+                            onLikePost={handleLikePost}
+                            onCommentPost={handleCommentPost}
+                            onDeletePost={handleDeletePost}
+                            onDeleteComment={handleDeleteComment}
+                            onViewProfile={handleViewProfile}
+                            onSharePost={handleSharePost}
+                            onVisitDiscover={() => handleSelectItem('Discover')}
+                            onLoadMore={handleLoadMoreFeed}
+                            hasMore={feedHasMore}
+                        />
                     </>
                 );
             case 'Discover':
-                return <DiscoverPage posts={visiblePosts} users={visibleUsers} tribes={tribes} currentUser={currentUser} onLikePost={handleLikePost} onCommentPost={handleCommentPost} onDeletePost={handleDeletePost} onDeleteComment={handleDeleteComment} onToggleFollow={handleToggleFollow} onViewProfile={handleViewProfile} onViewTribe={handleViewTribe} onJoinToggle={handleJoinToggle} onEditTribe={(tribe) => setEditingTribe(tribe)} onSharePost={handleSharePost} onLoadMore={fetchAllPostsForDiscover} />;
+                return <DiscoverPage
+                    posts={visiblePosts}
+                    users={visibleUsers}
+                    tribes={tribes}
+                    currentUser={currentUser}
+                    onLikePost={handleLikePost}
+                    onCommentPost={handleCommentPost}
+                    onDeletePost={handleDeletePost}
+                    onDeleteComment={handleDeleteComment}
+                    onToggleFollow={handleToggleFollow}
+                    onViewProfile={handleViewProfile}
+                    onViewTribe={handleViewTribe}
+                    onJoinToggle={handleJoinToggle}
+                    onEditTribe={(tribe) => setEditingTribe(tribe)}
+                    onSharePost={handleSharePost}
+                    onLoadMore={handleLoadMoreDiscover}
+                    hasMore={discoverHasMore}
+                />;
             case 'Messages':
                 return <ChatPage currentUser={currentUser} allUsers={visibleUsers} chukUser={PSYDUCK_USER} initialTargetUser={chatTarget} onViewProfile={handleViewProfile} onSharePost={handleSharePost} onConversationStateChange={setIsChatOpen} />;
             case 'Tribes':

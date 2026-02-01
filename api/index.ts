@@ -124,13 +124,13 @@ export const fetchPost = async (id: string) => {
   return { data: normalizeId(res.data) };
 };
 
-export const fetchPosts = async () => {
-  const res = await API.get('/posts');
+export const fetchPosts = async (page = 1, limit = 50) => {
+  const res = await API.get(`/posts?page=${page}&limit=${limit}`);
   return { data: normalizeArray(res.data) };
 };
 
-export const fetchFeedPosts = async () => {
-  const res = await API.get('/posts/feed');
+export const fetchFeedPosts = async (page = 1, limit = 20) => {
+  const res = await API.get(`/posts/feed?page=${page}&limit=${limit}`);
   return { data: normalizeArray(res.data) };
 };
 

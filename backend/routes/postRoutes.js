@@ -574,37 +574,39 @@
 //         // Limit to 10 posts initially to ensure speed
 //         const posts = await Post.find({ user: { $in: userIdsForFeed } })
 //             .sort({ createdAt: -1 })
-//             .limit(10)
-//             .populate('user', 'name username avatarUrl')
-//             .populate('comments.user', 'name username avatarUrl');
+//             .skip(((parseInt(req.query.page) || 1) - 1) * (parseInt(req.query.limit) || 10))
+            .limit(parseInt(req.query.limit) || 10)
+    //             .populate('user', 'name username avatarUrl')
+    //             .populate('comments.user', 'name username avatarUrl');
 
-//         // Robustly format posts, handling cases where users might be deleted (null)
-//         // CRITICAL FIX: Only return posts where post.user is NOT null.
-//         const validPosts = posts.filter(post => post.user !== null).map(post => {
-//             const postObj = post.toJSON();
-//             // Filter comments from deleted users
-//             postObj.comments = postObj.comments.filter(c => c.user !== null);
-//             return postObj;
-//         });
+    //         // Robustly format posts, handling cases where users might be deleted (null)
+    //         // CRITICAL FIX: Only return posts where post.user is NOT null.
+    //         const validPosts = posts.filter(post => post.user !== null).map(post => {
+    //             const postObj = post.toJSON();
+    //             // Filter comments from deleted users
+    //             postObj.comments = postObj.comments.filter(c => c.user !== null);
+    //             return postObj;
+    //         });
 
-//         res.json(validPosts);
+    //         res.json(validPosts);
 
-//     } catch (error) {
-//         console.error("Error in /api/posts/feed route:", error);
-//         // Return empty array instead of 500 to keep app running
-//         res.json([]); 
-//     }
-// });
+    //     } catch (error) {
+    //         console.error("Error in /api/posts/feed route:", error);
+    //         // Return empty array instead of 500 to keep app running
+    //         res.json([]); 
+    //     }
+    // });
 
 
-// // @route   GET /api/posts
-// // @desc    Get all posts for discover - Optimized
-// router.get('/', protect, async (req, res) => {
-//     try {
-//         // Limit to 20 posts to prevent 502 Bad Gateway (OOM)
-//         const posts = await Post.find({})
-//             .sort({ createdAt: -1 })
-//             .limit(20)
+    // // @route   GET /api/posts
+    // // @desc    Get all posts for discover - Optimized
+    // router.get('/', protect, async (req, res) => {
+    //     try {
+    //         // Limit to 20 posts to prevent 502 Bad Gateway (OOM)
+    //         const posts = await Post.find({})
+    //             .sort({ createdAt: -1 })
+    //             .skip(((parseInt(req.query.page) || 1) - 1) * (parseInt(req.query.limit) || 20))
+    .limit(parseInt(req.query.limit) || 20)
 //             .populate('user', 'name username avatarUrl')
 //             .populate('comments.user', 'name username avatarUrl');
 
@@ -840,7 +842,8 @@ router.get('/feed', protect, async (req, res) => {
         // Use simple .find() instead of aggregate to avoid memory limits on free tier
         let posts = await Post.find({ user: { $in: userIdsForFeed } })
             .sort({ createdAt: -1 })
-            .limit(20)
+            .skip(((parseInt(req.query.page) || 1) - 1) * (parseInt(req.query.limit) || 20))
+            .limit(parseInt(req.query.limit) || 20)
             .populate('user', 'name username avatarUrl')
             .populate('comments.user', 'name username avatarUrl');
 
@@ -852,7 +855,8 @@ router.get('/feed', protect, async (req, res) => {
             console.log("⚠️ Feed empty or too small. Fetching global posts as fallback...");
             const globalPosts = await Post.find({})
                 .sort({ createdAt: -1 })
-                .limit(20)
+                .skip(((parseInt(req.query.page) || 1) - 1) * (parseInt(req.query.limit) || 20))
+                .limit(parseInt(req.query.limit) || 20)
                 .populate('user', 'name username avatarUrl')
                 .populate('comments.user', 'name username avatarUrl');
 
@@ -890,7 +894,8 @@ router.get('/', protect, async (req, res) => {
         // Limit to 50 posts to prevent 502 Bad Gateway (OOM)
         const posts = await Post.find({})
             .sort({ createdAt: -1 })
-            .limit(50)
+            .skip(((parseInt(req.query.page) || 1) - 1) * (parseInt(req.query.limit) || 50))
+            .limit(parseInt(req.query.limit) || 50)
             .populate('user', 'name username avatarUrl')
             .populate('comments.user', 'name username avatarUrl');
 
