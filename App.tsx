@@ -465,11 +465,11 @@ const App: React.FC = () => {
 
         // Tribe message handling in App.tsx mainly for global unread counts. 
         // Specific detail page handles its own history fetch.
-        const handleNewTribeMessage = useCallback((message: TribeMessage) => {
+        const handleNewTribeMessage = (message: TribeMessage) => {
             // Unread counts are managed by SocketContext. 
             // TribeDetailPage handles clearing them when active.
             // App.tsx does not need to manually update global unread state here.
-        }, []);
+        };
 
         const handleTribeMessageDeleted = ({ tribeId, messageId }: { tribeId: string, messageId: string }) => {
             if (viewedTribe && viewedTribe.id === tribeId) setViewedTribe(prev => prev ? { ...prev, messages: prev.messages.filter(m => m.id !== messageId) } : null);
