@@ -107,21 +107,30 @@ const App: React.FC = () => {
 
     // Scroll Restoration
     useEffect(() => {
+        const isPrevFullHeight = ['Messages', 'TribeDetail', 'Settings'].includes(prevNavItem);
+
         // Save previous scroll
         if (prevNavItem && !['Settings', 'Profile', 'TribeDetail'].includes(prevNavItem)) {
-            if (mainRef.current) {
-                scrollStore.current.set(prevNavItem, mainRef.current.scrollTop);
+            if (isPrevFullHeight) {
+                if (mainRef.current) {
+                    scrollStore.current.set(prevNavItem, mainRef.current.scrollTop);
+                }
+            } else {
+                scrollStore.current.set(prevNavItem, window.scrollY);
             }
         }
 
         // Restore current scroll
-        if (mainRef.current) {
-            const savedScroll = scrollStore.current.get(activeNavItem) || 0;
-            // Use requestAnimationFrame to ensure DOM is ready
-            requestAnimationFrame(() => {
-                if (mainRef.current) mainRef.current.scrollTop = savedScroll;
-            });
-        }
+        const isCurrentFullHeight = ['Messages', 'TribeDetail', 'Settings'].includes(activeNavItem);
+        const savedScroll = scrollStore.current.get(activeNavItem) || 0;
+
+        requestAnimationFrame(() => {
+            if (isCurrentFullHeight && mainRef.current) {
+                mainRef.current.scrollTop = savedScroll;
+            } else if (!isCurrentFullHeight) {
+                window.scrollTo(0, savedScroll);
+            }
+        });
     }, [activeNavItem, prevNavItem]);
 
     const handleTouchStart = (e: React.TouchEvent) => {
@@ -1080,13 +1089,14 @@ const App: React.FC = () => {
     };
 
     let containerClass = 'max-w-2xl mx-auto px-4 md:px-6 pt-6 pb-24 md:pb-8';
+
     if (isFullHeightPage) {
-        // 🔥 FIX: Height calculation
+        // 🔥 FIX: Height calculation for Messages/Chat
         // Total Height = 100vh
         // If Header Visible (Messages List): - 4rem (Header) - 4rem (Nav) = 8rem
         // If Header Hidden (Chat): - 4rem (Nav) only = 4rem (Bottom Nav + Safe Area handled by CSS env)
         const offset = (activeNavItem === 'Messages' && !isChatOpen) ? '8rem' : '4rem';
-        containerClass = `h-[calc(100vh-${offset})] md:h-[calc(100vh-4rem)]`;
+        containerClass = `h-[calc(100vh-${offset})] md:h-[calc(100vh-4rem)] overflow-y-auto no-scrollbar`; // Inner scroll for Chat
     } else if (isWidePage) {
         containerClass = 'max-w-5xl mx-auto px-4 md:px-6 pt-6 pb-24 md:pb-8';
     }
@@ -1100,17 +1110,16 @@ const App: React.FC = () => {
 
     return (
         <div
-            className="bg-background min-h-screen text-primary overflow-hidden touch-pan-y"
+            className={`bg-background min-h-screen text-primary touch-pan-y ${isFullHeightPage ? 'h-screen overflow-hidden' : ''}`}
             onTouchStart={handleTouchStart}
             onTouchEnd={handleTouchEnd}
         >
             <Toaster />
             <Sidebar activeItem={activeNavItem} onSelectItem={handleSelectItem} currentUser={currentUser} unreadMessageCount={unreadMessageCount} unreadTribeCount={unreadTribeCount} unreadNotificationCount={unreadNotificationCount} isChatOpen={isChatOpen} />
-            <main className={`${shouldHideHeader ? 'pt-0 md:pt-16' : 'pt-16'} pb-16 md:pb-0 h-screen transition-all duration-300`}>
+            <main className={`${shouldHideHeader ? 'pt-0 md:pt-16' : 'pt-16'} pb-16 md:pb-0 transition-all duration-300 ${isFullHeightPage ? 'h-screen' : 'min-h-screen'}`}>
                 <div
                     ref={mainRef}
-                    className={`${containerClass} overflow-y-auto no-scrollbar`}
-                    style={{ height: '100%' }}
+                    className={containerClass}
                 >
                     <ErrorBoundary onReset={() => window.location.reload()}>
                         {renderContent()}
