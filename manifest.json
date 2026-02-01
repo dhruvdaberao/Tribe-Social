@@ -1,20 +1,32 @@
 {
   "short_name": "Tribe",
-  "name": "Tribe Social",
+  "name": "Tribe",
   "icons": [
     {
-      "src": "/tribe.png",
+      "src": "/white-color-logo.png",
       "type": "image/png",
       "sizes": "192x192"
     },
     {
-      "src": "/tribe.png",
+      "src": "/white-color-logo.png",
       "type": "image/png",
       "sizes": "512x512"
+    },
+    {
+      "src": "/white-color-logo.png",
+      "type": "image/png",
+      "sizes": "192x192",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/white-color-logo.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "maskable"
     }
   ],
   "start_url": ".",
   "display": "standalone",
-  "theme_color": "#3B302B",
-  "background_color": "#FAF8F6"
+  "theme_color": "#2B1E17",
+  "background_color": "#2B1E17"
 }
