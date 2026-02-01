@@ -697,19 +697,26 @@ const App: React.FC = () => {
         const originalCurrentUser = { ...currentUser };
         const originalViewedUser = viewedUser ? { ...viewedUser } : null;
 
-        const isFollowing = (currentUser.following || []).includes(targetUserId);
+        // STRICT SAFETY CHECK: Ensure currentUser.following is an array
+        const safeFollowing = Array.isArray(currentUser.following) ? currentUser.following : [];
+        const isFollowing = safeFollowing.includes(targetUserId);
 
         // 2. Optimistic Update: Current User
         setCurrentUser(prev => {
-            if (!prev) return null; // Should not happen given guard
-            const newFollowing = isFollowing
-                ? prev.following.filter(id => id !== targetUserId)
-                : [...prev.following, targetUserId];
+            if (!prev) return null;
+
+            // STRICT SAFETY CHECK: Ensure following is an array
+            const currentFollowing = Array.isArray(prev.following) ? prev.following : [];
+            const isAlreadyFollowing = currentFollowing.includes(targetUserId);
+
+            const newFollowing = isAlreadyFollowing
+                ? currentFollowing.filter(id => id !== targetUserId)
+                : [...currentFollowing, targetUserId];
 
             // Explicitly manage count if it exists
             const newCount = (prev.followingCount !== undefined)
-                ? prev.followingCount + (isFollowing ? -1 : 1)
-                : undefined;
+                ? prev.followingCount + (isAlreadyFollowing ? -1 : 1)
+                : newFollowing.length;
 
             return { ...prev, following: newFollowing, followingCount: newCount };
         });
@@ -717,35 +724,43 @@ const App: React.FC = () => {
         // 3. Optimistic Update: Viewed User (if applicable)
         if (viewedUser) {
             setViewedUser(prev => {
-                if (!prev) return null; // Safety guard
+                if (!prev) return null;
+
+                // STRICT SAFETY CHECK: Ensure lists are arrays
+                const currentFollowers = Array.isArray(prev.followers) ? prev.followers : [];
+                const currentFollowing = Array.isArray(prev.following) ? prev.following : [];
 
                 // If we are viewing the person we just followed/unfollowed
                 if (prev.id === targetUserId) {
-                    const newFollowers = isFollowing
-                        ? prev.followers.filter(id => id !== currentUser.id)
-                        : [...prev.followers, currentUser.id];
+                    const isFollowedByMe = currentFollowers.includes(currentUser.id);
+
+                    const newFollowers = isFollowedByMe
+                        ? currentFollowers.filter(id => id !== currentUser.id)
+                        : [...currentFollowers, currentUser.id];
 
                     const newCount = (prev.followersCount !== undefined)
-                        ? prev.followersCount + (isFollowing ? -1 : 1)
-                        : undefined;
+                        ? prev.followersCount + (isFollowedByMe ? -1 : 1)
+                        : newFollowers.length;
 
                     return {
                         ...prev,
                         followers: newFollowers,
                         followersCount: newCount,
-                        isFollowedByCurrentUser: !isFollowing // Toggle this flag too
+                        isFollowedByCurrentUser: !isFollowedByMe
                     };
                 }
 
                 // If we are viewing our own profile while following someone else
                 if (prev.id === currentUser.id) {
-                    const newFollowing = isFollowing
-                        ? prev.following.filter(id => id !== targetUserId)
-                        : [...prev.following, targetUserId];
+                    const isAlreadyFollowing = currentFollowing.includes(targetUserId);
+
+                    const newFollowing = isAlreadyFollowing
+                        ? currentFollowing.filter(id => id !== targetUserId)
+                        : [...currentFollowing, targetUserId];
 
                     const newCount = (prev.followingCount !== undefined)
-                        ? prev.followingCount + (isFollowing ? -1 : 1)
-                        : undefined;
+                        ? prev.followingCount + (isAlreadyFollowing ? -1 : 1)
+                        : newFollowing.length;
 
                     return { ...prev, following: newFollowing, followingCount: newCount };
                 }

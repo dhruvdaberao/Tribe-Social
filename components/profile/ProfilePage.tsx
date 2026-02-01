@@ -380,11 +380,13 @@ export const ProfilePage: React.FC<ProfilePageProps> = (props) => {
 
 
     const isOwnProfile = user.id === currentUser.id;
-    const isFollowing = (currentUser.following || []).includes(user.id);
+    // Strict safety check for isFollowing
+    const isFollowing = Array.isArray(currentUser.following) && currentUser.following.includes(user.id);
     const canViewLists = isOwnProfile || isFollowing;
 
     const openFollowModal = (type: 'followers' | 'following', userIds: string[]) => {
-        setFollowModal({ isOpen: true, type, userIds });
+        // Strict safety check for userIds passed to modal
+        setFollowModal({ isOpen: true, type, userIds: Array.isArray(userIds) ? userIds : [] });
     }
 
     const handleMessageClick = () => {
@@ -397,10 +399,12 @@ export const ProfilePage: React.FC<ProfilePageProps> = (props) => {
         onToggleFollow(profileUser.id);
 
         // 2. Optimistic Update Local State
-        const willBeFollowing = !(currentUser.following || []).includes(profileUser.id);
+        const safeFollowing = Array.isArray(currentUser.following) ? currentUser.following : [];
+        const isFollowing = safeFollowing.includes(profileUser.id);
+        const willBeFollowing = !isFollowing;
 
         setProfileUser(prev => {
-            const currentFollowers = prev.followers || [];
+            const currentFollowers = Array.isArray(prev.followers) ? prev.followers : [];
             let newFollowers;
 
             if (willBeFollowing) {
@@ -419,7 +423,9 @@ export const ProfilePage: React.FC<ProfilePageProps> = (props) => {
                 ...prev,
                 followers: newFollowers,
                 // Optimistically update counts
-                followersCount: (prev.followersCount || 0) + (willBeFollowing ? 1 : -1),
+                followersCount: (prev.followersCount !== undefined)
+                    ? prev.followersCount + (willBeFollowing ? 1 : -1)
+                    : newFollowers.length,
                 isFollowedByCurrentUser: willBeFollowing
             };
         });
@@ -428,6 +434,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = (props) => {
     // GUARD: Ensure we always have a user to render.
     // Use profileUser (state) if available, otherwise fall back to user (prop).
     // NEVER return null.
+
     const safeUser = profileUser || user;
     if (!safeUser) {
         return <div className="p-8 text-center">Loading profile...</div>;
@@ -536,7 +543,9 @@ export const ProfilePage: React.FC<ProfilePageProps> = (props) => {
                                     title={!canViewLists ? "Follow to view lists" : ""}
                                 >
                                     <span className="font-bold text-primary">
-                                        {safeUser.followingCount !== undefined ? safeUser.followingCount : (safeUser.following || []).length}
+                                        {safeUser.followingCount !== undefined
+                                            ? safeUser.followingCount
+                                            : (Array.isArray(safeUser.following) ? safeUser.following.length : 0)}
                                     </span> <span className="text-secondary">Following</span>
                                 </button>
                                 <button
@@ -546,7 +555,9 @@ export const ProfilePage: React.FC<ProfilePageProps> = (props) => {
                                     title={!canViewLists ? "Follow to view lists" : ""}
                                 >
                                     <span className="font-bold text-primary">
-                                        {safeUser.followersCount !== undefined ? safeUser.followersCount : (safeUser.followers || []).length}
+                                        {safeUser.followersCount !== undefined
+                                            ? safeUser.followersCount
+                                            : (Array.isArray(safeUser.followers) ? safeUser.followers.length : 0)}
                                     </span> <span className="text-secondary">Followers</span>
                                 </button>
                             </div>

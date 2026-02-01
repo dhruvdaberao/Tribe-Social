@@ -48,6 +48,11 @@ const normalizeId = <T extends { _id?: string }>(obj: T) => {
   const normalized: any = {
     id: _id?.toString(),
     ...rest,
+    // Safely default array fields
+    followers: Array.isArray(rest.followers) ? rest.followers : [],
+    following: Array.isArray(rest.following) ? rest.following : [],
+    blockedUsers: Array.isArray(rest.blockedUsers) ? rest.blockedUsers : [],
+    likes: Array.isArray(rest.likes) ? rest.likes : [],
   };
 
   if (normalized.owner) {
