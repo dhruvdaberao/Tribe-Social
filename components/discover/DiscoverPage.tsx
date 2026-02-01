@@ -26,8 +26,17 @@ interface DiscoverPageProps {
 const DiscoverPage: React.FC<DiscoverPageProps> = (props) => {
     const { posts, users, tribes, currentUser, onToggleFollow, onViewProfile, onLikePost, onCommentPost, onDeletePost, onDeleteComment, onViewTribe, onJoinToggle, onEditTribe, onSharePost, onLoadMore } = props;
     const [searchTerm, setSearchTerm] = useState('');
+    const [debouncedSearch, setDebouncedSearch] = useState('');
     const [activeTab, setActiveTab] = useState<'users' | 'posts' | 'tribes'>('users');
     const [cachedUsers, setCachedUsers] = useState<User[]>([]);
+
+    // Debounce Search Term (300ms)
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            setDebouncedSearch(searchTerm);
+        }, 300);
+        return () => clearTimeout(timer);
+    }, [searchTerm]);
 
     // Load cached users immediately on mount
     useEffect(() => {
@@ -68,7 +77,7 @@ const DiscoverPage: React.FC<DiscoverPageProps> = (props) => {
     }, [displayUsers, currentUser.id]);
 
     const filteredResults = useMemo(() => {
-        const term = searchTerm.toLowerCase().trim();
+        const term = debouncedSearch.toLowerCase().trim();
         if (!term) return null;
 
         const tagMatch = term.match(/^#(\w+)/);

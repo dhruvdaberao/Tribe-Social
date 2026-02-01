@@ -52,7 +52,8 @@ const startServer = async () => {
       'http://localhost:5173',
       'http://localhost:3000',
       'https://tribe-social.vercel.app',
-      'https://tribe-social.onrender.com'
+      'https://tribe-social.onrender.com', // Render Backend self-check
+      'https://dhruvdaberao.vercel.app'
     ];
 
     const corsOptions = {
@@ -60,7 +61,7 @@ const startServer = async () => {
         // Allow requests with no origin (like mobile apps or curl requests)
         if (!origin) return callback(null, true);
 
-        if (allowedOrigins.includes(origin) || origin.endsWith('.vercel.app')) {
+        if (allowedOrigins.includes(origin)) {
           callback(null, true);
         } else {
           console.error(`❌ CORS Error: Origin ${origin} not allowed.`);

@@ -32,6 +32,8 @@ const UserAvatar: React.FC<UserAvatarProps> = ({ user, className = 'w-10 h-10', 
             alt={user.name}
             className="w-full h-full object-cover"
             onError={() => setImgError(true)}
+            loading="lazy"
+            decoding="async"
           />
         ) : (
           <UserPlaceholderIcon className="w-full h-full" />

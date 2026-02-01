@@ -890,6 +890,8 @@ const PostCard: React.FC<PostCardProps> = (props) => {
                 className={`w-full h-auto max-h-[500px] object-cover object-center transition-opacity duration-300 ${isImageLoading ? 'opacity-0' : 'opacity-100'}`}
                 onLoad={() => setIsImageLoading(false)}
                 onError={() => { setIsImageLoading(false); setImageError(true); }}
+                loading="lazy"
+                decoding="async"
               />
             )}
           </div>
