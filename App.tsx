@@ -26,6 +26,7 @@ import StoryCreator from './components/stories/StoryCreator';
 import StoryViewer from './components/stories/StoryViewer';
 import StoryFeed from './components/stories/StoryFeed';
 import { Toaster, toast } from './components/common/Toast';
+import { ErrorBoundary } from './components/common/ErrorBoundary';
 import PostViewModal from './components/profile/PostViewModal';
 
 export type NavItem = 'Home' | 'Discover' | 'Messages' | 'Tribes' | 'Notifications' | 'Profile' | 'Psyduck' | 'TribeDetail' | 'Settings';
@@ -1096,7 +1097,9 @@ const App: React.FC = () => {
                     className={`${containerClass} overflow-y-auto no-scrollbar`}
                     style={{ height: '100%' }}
                 >
-                    {renderContent()}
+                    <ErrorBoundary onReset={() => window.location.reload()}>
+                        {renderContent()}
+                    </ErrorBoundary>
                 </div>
             </main>
             {editingTribe && <EditTribeModal

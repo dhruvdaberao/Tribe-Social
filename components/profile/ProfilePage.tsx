@@ -440,7 +440,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = (props) => {
                     {safeUser.id === 'chuk-ai' ? (
                         <img src="/psy-banner.gif" alt="Psyduck Banner" className="w-full h-full object-cover" />
                     ) : safeUser.bannerUrl ? (
-                        <img src={safeUser.bannerUrl} alt={`${safeUser.name}'s banner`} className="w-full h-full object-cover" />
+                        <img src={safeUser.bannerUrl} alt={`${safeUser.name || "User"}'s banner`} className="w-full h-full object-cover" />
                     ) : (
                         <div className="w-full h-full bg-gradient-to-br from-background via-surface to-background" />
                     )}
@@ -460,24 +460,43 @@ export const ProfilePage: React.FC<ProfilePageProps> = (props) => {
                         <div className="w-full sm:w-auto pt-2 sm:pt-4 flex items-center space-x-2">
                             {isOwnProfile ? (
                                 <>
-                                    <button onClick={() => onNavigate('Settings')} className="w-full sm:w-auto font-semibold px-4 py-2 rounded-lg transition-colors bg-surface text-primary border border-border hover:bg-background flex items-center space-x-2">
+                                    <button type="button" onClick={() => onNavigate('Settings')} className="w-full sm:w-auto font-semibold px-4 py-2 rounded-lg transition-colors bg-surface text-primary border border-border hover:bg-background flex items-center space-x-2">
                                         <span>Settings</span>
                                         <SettingsIcon />
                                     </button>
-                                    <button onClick={() => setEditModalOpen(true)} className="w-full sm:w-auto bg-accent text-accent-text font-semibold px-6 py-2 rounded-lg hover:bg-accent-hover transition-colors">
+                                    <button type="button" onClick={() => setEditModalOpen(true)} className="w-full sm:w-auto bg-accent text-accent-text font-semibold px-6 py-2 rounded-lg hover:bg-accent-hover transition-colors">
                                         Edit Profile
                                     </button>
                                 </>
                             ) : (
                                 <>
-                                    <button onClick={() => handleMessageClick()} className="w-full sm:w-auto font-semibold px-6 py-2 rounded-lg transition-colors bg-surface text-primary border border-border hover:bg-background">Message</button>
+                                    <button type="button" onClick={() => handleMessageClick()} className="w-full sm:w-auto font-semibold px-6 py-2 rounded-lg transition-colors bg-surface text-primary border border-border hover:bg-background">Message</button>
                                     {safeUser.id !== 'chuk-ai' && (
-                                        <button onClick={(e) => { e.stopPropagation(); handleToggleFollow(); }} className={`w-full sm:w-auto font-semibold px-6 py-2 rounded-lg transition-colors ${isFollowing ? 'bg-surface text-primary border border-border hover:bg-background' : 'bg-accent text-accent-text hover:bg-accent-hover'}`}>
+                                        <button
+                                            type="button"
+                                            onClick={(e) => {
+                                                e.preventDefault();
+                                                e.stopPropagation();
+                                                handleToggleFollow();
+                                            }}
+                                            className={`w-full sm:w-auto font-semibold px-6 py-2 rounded-lg transition-colors ${isFollowing ? 'bg-surface text-primary border border-border hover:bg-background' : 'bg-accent text-accent-text hover:bg-accent-hover'}`}
+                                        >
                                             {isFollowing ? 'Unfollow' : 'Follow'}
                                         </button>
                                     )}
                                     <div className="relative">
-                                        <button onClick={() => setOptionsOpen(!optionsOpen)} onBlur={() => setTimeout(() => setOptionsOpen(false), 150)} className="p-2 rounded-full bg-surface text-primary border border-border hover:bg-background" aria-label="More options"><OptionsIcon /></button>
+                                        <button
+                                            type="button"
+                                            onClick={(e) => {
+                                                e.preventDefault();
+                                                setOptionsOpen(!optionsOpen);
+                                            }}
+                                            onBlur={() => setTimeout(() => setOptionsOpen(false), 150)}
+                                            className="p-2 rounded-full bg-surface text-primary border border-border hover:bg-background"
+                                            aria-label="More options"
+                                        >
+                                            <OptionsIcon />
+                                        </button>
                                         {optionsOpen && (
                                             <div className="absolute right-0 mt-2 w-48 bg-surface rounded-lg shadow-lg border border-border z-10">
                                                 <ShareButton shareData={{ title: `Check out ${safeUser.name}'s profile on Tribe!`, text: `See what ${safeUser.name} (@${safeUser.username}) is up to.`, url: window.location.href }} className="w-full text-left px-4 py-2 text-primary hover:bg-background rounded-t-lg transition-colors flex items-center space-x-2" onShare={() => setOptionsOpen(false)}>
@@ -500,8 +519,8 @@ export const ProfilePage: React.FC<ProfilePageProps> = (props) => {
                     </div>
 
                     <div className="mt-2">
-                        <h1 className="text-3xl font-bold text-primary font-display">{safeUser.name}</h1>
-                        <p className="text-md text-secondary">@{safeUser.username}</p>
+                        <h1 className="text-3xl font-bold text-primary font-display">{safeUser.name || "User"}</h1>
+                        <p className="text-md text-secondary">@{safeUser.username || "user"}</p>
                         {safeUser.id === 'chuk-ai' ? (
                             <div className="mt-2 p-3 bg-accent/10 rounded-lg border border-accent/20">
                                 <p className="text-sm text-primary italic">
@@ -511,6 +530,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = (props) => {
                         ) : (
                             <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2">
                                 <button
+                                    type="button"
                                     onClick={() => canViewLists && openFollowModal('following', safeUser.following || [])}
                                     className={`hover:underline ${!canViewLists ? 'cursor-not-allowed opacity-50' : ''}`}
                                     title={!canViewLists ? "Follow to view lists" : ""}
@@ -520,6 +540,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = (props) => {
                                     </span> <span className="text-secondary">Following</span>
                                 </button>
                                 <button
+                                    type="button"
                                     onClick={() => canViewLists && openFollowModal('followers', safeUser.followers || [])}
                                     className={`hover:underline ${!canViewLists ? 'cursor-not-allowed opacity-50' : ''}`}
                                     title={!canViewLists ? "Follow to view lists" : ""}
@@ -537,7 +558,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = (props) => {
 
             {isOwnProfile && <CreatePost currentUser={currentUser} allUsers={visibleUsers} myStories={myStories} onAddPost={onAddPost} isPosting={isPosting} onOpenStoryCreator={onOpenStoryCreator} onViewUserStories={onViewUserStories} />}
 
-            <h2 className="text-xl font-bold text-primary my-6 font-display">{isOwnProfile ? "Your Posts" : `${safeUser.name.split(' ')[0]}'s Posts`}</h2>
+            <h2 className="text-xl font-bold text-primary my-6 font-display">{isOwnProfile ? "Your Posts" : `${(safeUser.name || "User").split(' ')[0]}'s Posts`}</h2>
 
             {isLoading ? (
                 <div className="flex justify-center p-8"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div></div>
