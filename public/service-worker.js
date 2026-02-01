@@ -1,6 +1,6 @@
 // Service Worker for Tribe Social - Push Notifications
 
-const CACHE_NAME = 'tribe-v2-nuke'; // Version bump to force re-cache
+const CACHE_NAME = 'tribe-v3-strict'; // Version bump for strict branding
 
 // Install event
 self.addEventListener('install', (event) => {

@@ -1,28 +1,18 @@
 {
-  "short_name": "Tribe",
-  "name": "Tribe",
+  "short_name": "Trive-Socisl",
+  "name": "Trive-Socisl",
   "icons": [
     {
       "src": "/white-color-logo.png",
       "type": "image/png",
-      "sizes": "192x192"
-    },
-    {
-      "src": "/white-color-logo.png",
-      "type": "image/png",
-      "sizes": "512x512"
-    },
-    {
-      "src": "/white-color-logo.png",
-      "type": "image/png",
       "sizes": "192x192",
-      "purpose": "maskable"
+      "purpose": "any"
     },
     {
       "src": "/white-color-logo.png",
       "type": "image/png",
       "sizes": "512x512",
-      "purpose": "maskable"
+      "purpose": "any"
     }
   ],
   "start_url": ".",
