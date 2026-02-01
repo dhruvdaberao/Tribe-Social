@@ -512,10 +512,14 @@ const App: React.FC = () => {
         if (item === activeNavItem) {
             // For Profile, ensure we are on own profile
             if (item === 'Profile' && viewedUser?.id !== currentUser?.id) {
-                // Switch to own profile, handled below
+                // Switch to own profile, handled below - Fall through to transition
             } else if (item !== 'TribeDetail' && item !== 'Settings') {
-                if (mainRef.current.scrollTop > 0) {
-                    mainRef.current.scrollTo({ top: 0, behavior: 'smooth' });
+                const isWindowScroll = window.scrollY > 0;
+                const isMainRefScroll = mainRef.current && mainRef.current.scrollTop > 0;
+
+                if (isWindowScroll || isMainRefScroll) {
+                    if (isWindowScroll) window.scrollTo({ top: 0, behavior: 'smooth' });
+                    if (isMainRefScroll) mainRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
                 } else {
                     // Already at top -> Soft Refresh
                     if (item === 'Home') fetchData();
