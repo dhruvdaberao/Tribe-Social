@@ -6,9 +6,11 @@ const API_URL = (typeof window !== 'undefined' && (window.location.hostname === 
   ? 'http://localhost:5001'
   : 'https://tribe-social-backend.onrender.com';
 
+const API_TIMEOUT_MS = 60000; // 60 seconds for Render cold starts
+
 const API = axios.create({
   baseURL: `${API_URL}/api`,
-  timeout: 60000, // 60 seconds for Render cold starts
+  timeout: API_TIMEOUT_MS,
 });
 
 API.interceptors.request.use(req => {

@@ -13,6 +13,7 @@ import NewMessageModal from './NewMessageModal';
 import * as api from '../../api';
 import { useSocket } from '../../contexts/SocketContext';
 import { toast } from '../common/Toast';
+import { safeSetItem } from '../../utils/safeLocalStorage';
 
 interface ChatPageProps {
   currentUser: User;
@@ -62,7 +63,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ currentUser, allUsers, chukUser, in
       const { data } = await api.fetchConversations();
       setConversations(data);
       // Update cache
-      localStorage.setItem('tribe_storage_conversations', JSON.stringify(data));
+      safeSetItem('tribe_storage_conversations', JSON.stringify(data));
       return data;
     } catch (error) {
       console.error("Failed to fetch conversations", error);

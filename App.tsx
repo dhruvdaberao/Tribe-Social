@@ -6,6 +6,7 @@ import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from './contexts/AuthContext';
 import { useSocket } from './contexts/SocketContext';
+import { safeSetItem, safeClear } from './utils/safeLocalStorage';
 import { User, Post, Tribe, TribeMessage, Notification as NotificationType, Comment, Story } from './types';
 import * as api from './api'; // Assumed in root based on instruction
 
@@ -216,8 +217,8 @@ const App: React.FC = () => {
 
         if (currentVersion !== APP_VERSION) {
             console.log("⚠️ Upgrading App Version: Clearing potentially corrupted storage...");
-            localStorage.clear();
-            localStorage.setItem('app_version', APP_VERSION);
+            safeClear();
+            safeSetItem('app_version', APP_VERSION);
             window.location.reload();
             return;
         }
@@ -255,9 +256,10 @@ const App: React.FC = () => {
         };
     }, []);
 
+    const DEBOUNCE_DELAY_MS = 10000;
     const fetchData = useCallback(async () => {
         // Allow fetch if enough time passed OR if we have no posts yet (first load situation)
-        if (isFetching || (Date.now() - lastFetchTimestamp.current < 10000)) return;
+        if (isFetching || (Date.now() - lastFetchTimestamp.current < DEBOUNCE_DELAY_MS)) return;
 
         if (!currentUser) {
             setIsDataLoaded(false);
