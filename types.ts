@@ -12,6 +12,9 @@ export interface User {
   followers: string[];
   following: string[];
   blockedUsers: string[];
+  followersCount?: number;
+  followingCount?: number;
+  isFollowedByCurrentUser?: boolean;
 }
 
 /* ===================== COMMENTS & POSTS ===================== */

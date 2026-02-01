@@ -628,7 +628,7 @@ const App: React.FC = () => {
         // Clean message format for shared content
         const messageText = post.content.startsWith('Shared Story')
             ? post.content // StoryViewer already formats it
-            : `Shared Post\n/post/${post.id}\n${post.content}`; // Post ID enables the "View Post" CTA
+            : `Shared Post\n/post/${post.id}?owner=${post.author?.username || 'user'}\n${post.content}`; // Post ID enables the "View Post" CTA
 
         const messageData = {
             text: messageText,
@@ -687,33 +687,83 @@ const App: React.FC = () => {
         }
     };
 
+    // FIX: Strictly safe follow toggle
+    // NEVER nullify local state. Use safe updates.
     const handleToggleFollow = async (targetUserId: string) => {
         if (!currentUser || currentUser.id === targetUserId) return;
+
+        // 1. Capture current state for rollback
         const originalCurrentUser = { ...currentUser };
         const originalViewedUser = viewedUser ? { ...viewedUser } : null;
-        const isFollowing = currentUser.following.includes(targetUserId);
 
-        setCurrentUser(prev => prev ? { ...prev, following: isFollowing ? prev.following.filter(id => id !== targetUserId) : [...prev.following, targetUserId] } : null);
+        const isFollowing = (currentUser.following || []).includes(targetUserId);
 
+        // 2. Optimistic Update: Current User
+        setCurrentUser(prev => {
+            if (!prev) return null; // Should not happen given guard
+            const newFollowing = isFollowing
+                ? prev.following.filter(id => id !== targetUserId)
+                : [...prev.following, targetUserId];
+
+            // Explicitly manage count if it exists
+            const newCount = (prev.followingCount !== undefined)
+                ? prev.followingCount + (isFollowing ? -1 : 1)
+                : undefined;
+
+            return { ...prev, following: newFollowing, followingCount: newCount };
+        });
+
+        // 3. Optimistic Update: Viewed User (if applicable)
         if (viewedUser) {
             setViewedUser(prev => {
-                if (!prev) return null;
+                if (!prev) return null; // Safety guard
+
+                // If we are viewing the person we just followed/unfollowed
                 if (prev.id === targetUserId) {
-                    const newFollowers = isFollowing ? prev.followers.filter(id => id !== currentUser.id) : [...prev.followers, currentUser.id];
-                    return { ...prev, followers: newFollowers };
+                    const newFollowers = isFollowing
+                        ? prev.followers.filter(id => id !== currentUser.id)
+                        : [...prev.followers, currentUser.id];
+
+                    const newCount = (prev.followersCount !== undefined)
+                        ? prev.followersCount + (isFollowing ? -1 : 1)
+                        : undefined;
+
+                    return {
+                        ...prev,
+                        followers: newFollowers,
+                        followersCount: newCount,
+                        isFollowedByCurrentUser: !isFollowing // Toggle this flag too
+                    };
                 }
+
+                // If we are viewing our own profile while following someone else
                 if (prev.id === currentUser.id) {
-                    return { ...prev, following: isFollowing ? prev.following.filter(id => id !== targetUserId) : [...prev.following, targetUserId] };
+                    const newFollowing = isFollowing
+                        ? prev.following.filter(id => id !== targetUserId)
+                        : [...prev.following, targetUserId];
+
+                    const newCount = (prev.followingCount !== undefined)
+                        ? prev.followingCount + (isFollowing ? -1 : 1)
+                        : undefined;
+
+                    return { ...prev, following: newFollowing, followingCount: newCount };
                 }
+
                 return prev;
             });
         }
+
+        // 4. API Call
         try {
             await api.toggleFollow(targetUserId);
         } catch (error) {
             console.error('Failed to toggle follow', error);
             toast.error("Action failed. Reverting.");
-            setCurrentUser(originalCurrentUser);
+
+            // 5. Rollback on Error
+            // Use function updates to avoid clobbering other concurrent changes if possible,
+            // but for revert, absolute state restoration is usually safer to ensure consistency.
+            if (originalCurrentUser) setCurrentUser(originalCurrentUser);
             if (originalViewedUser) setViewedUser(originalViewedUser);
         }
     };

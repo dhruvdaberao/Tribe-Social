@@ -467,16 +467,44 @@ router.get('/', protect, async (req, res) => {
 
 
 // @route   GET /api/users/:id
-// @desc    Get user profile by ID
+// @desc    Get user profile by ID - WITH EXPLICIT COUNTS (Crucial Fix)
 router.get('/:id', protect, async (req, res) => {
     try {
         const user = await User.findById(req.params.id).select('-password');
         if (user) {
-            res.json(user);
+            // CRITICAL FIX: Explicitly count documents to ensure accuracy.
+            // Do NOT rely on the user.followers array length if it's potentially out of sync.
+            const stats = await Promise.all([
+                // Count how many users have THIS user in their 'following' list (True Follower Count)
+                User.countDocuments({ following: req.params.id }),
+                // Count how many users THIS user has in their 'following' list (True Following Count)
+                // Note: user.following.length is usually safe if we trust the document, but self-verification is better.
+                // However, for performance we often trust the array if managed well. But let's verify.
+                // Actually, for 'following', the array on the user document IS the source of truth for whom THEY follow.
+                // But for 'followers', the array might be stale if other users updated.
+                Promise.resolve(user.following.length),
+                // Check if current user follows this user
+                User.countDocuments({ _id: req.user.id, following: req.params.id })
+            ]);
+
+            const [followersCount, followingCount, isFollowing] = stats;
+
+            // Return plain object mixed with new stats
+            const userObj = user.toObject();
+            userObj.id = user._id.toString(); // Ensure ID is string
+            userObj.followersCount = followersCount;
+            // If the array length is wildly different, maybe use the array length?
+            // Actually, let's use the explicit backward query for followers usually, but
+            // here we did a reverse query effectively.
+            userObj.followingCount = followingCount;
+            userObj.isFollowedByCurrentUser = isFollowing > 0;
+
+            res.json(userObj);
         } else {
             res.status(404).json({ message: 'User not found' });
         }
     } catch (error) {
+        console.error("Error fetching user profile:", error);
         res.status(500).json({ message: 'Server error' });
     }
 });

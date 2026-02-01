@@ -337,46 +337,83 @@ export const MessageArea: React.FC<MessageAreaProps> = ({ conversation, messages
                     <div className={`px-4 py-2.5 break-words overflow-hidden w-full ${isCurrentUser ? 'bg-accent text-accent-text rounded-2xl rounded-tr-none' : 'bg-surface text-primary shadow-sm rounded-2xl rounded-tl-none'}`}>
 
                       {/* SHARED CONTENT LOGIC */}
-                      {(message.text.includes('Shared a story') || message.text.includes('Shared Story') || message.text.includes('[Shared Story]')) ? (
-                        <div className="flex flex-col min-w-[200px]">
-                          <span className="text-[10px] font-bold opacity-60 uppercase mb-2 tracking-wider">Shared Story</span>
-                          {message.imageUrl && (
-                            <div className="mb-2 rounded-lg overflow-hidden bg-black/10 aspect-video relative">
-                              <img src={message.imageUrl} className="w-full h-full object-cover" alt="Story" />
+                      {(message.text.includes('Shared a story') || message.text.includes('Shared Story') || message.text.includes('[Shared Story]')) ? (() => {
+                        const match = message.text.match(/\/story\/([a-zA-Z0-9-:]+)(\?.*)?/);
+                        const storyId = match ? match[1] : null;
+                        const urlParams = new URLSearchParams(match && match[2] ? match[2] : '');
+                        const owner = urlParams.get('owner');
+                        const expiryStr = urlParams.get('expiry');
+                        const expiry = expiryStr ? parseInt(expiryStr) : null;
+                        const isExpired = expiry ? Date.now() > expiry : false;
+
+                        if (isExpired) {
+                          return (
+                            <div className="flex flex-col min-w-[200px] opacity-75">
+                              <span className="text-[10px] font-bold opacity-60 uppercase mb-1 tracking-wider">Shared Story</span>
+                              {owner && <span className="text-xs text-secondary italic mb-2">Cycle ended for @{owner}</span>}
+
+                              <div className="mb-2 rounded-lg overflow-hidden bg-black/20 aspect-video flex items-center justify-center border border-white/10">
+                                <div className="text-center p-4">
+                                  <p className="text-xs text-white/50">This story is no longer available</p>
+                                </div>
+                              </div>
+                              <button disabled className="mt-1 text-xs font-bold py-1.5 px-4 rounded-full self-start bg-surface/50 text-secondary cursor-not-allowed">
+                                Unavailable
+                              </button>
                             </div>
-                          )}
-                          <button
-                            onClick={() => {
-                              const match = message.text.match(/\/story\/([a-zA-Z0-9-:]+)/);
-                              if (match) window.dispatchEvent(new CustomEvent('open-story', { detail: match[1] }));
-                            }}
-                            className={`mt-1 text-xs font-bold py-1.5 px-4 rounded-full self-start transition-opacity hover:opacity-90 shadow-sm ${isCurrentUser ? 'bg-surface text-primary' : 'bg-primary text-surface'}`}
-                          >
-                            View Story
-                          </button>
-                        </div>
-                      ) : (message.text.includes('Shared a post') || message.text.includes('Shared Post') || message.text.includes('[Shared Post]')) ? (
-                        <div className="flex flex-col min-w-[200px]">
-                          <span className="text-[10px] font-bold opacity-60 uppercase mb-2 tracking-wider">Shared Post</span>
-                          {message.imageUrl && (
-                            <div className="mb-2 rounded-lg overflow-hidden bg-black/10 aspect-video relative">
-                              <img src={message.imageUrl} className="w-full h-full object-cover" alt="Post" />
-                            </div>
-                          )}
-                          <p className="text-sm opacity-90 line-clamp-2 mb-3 italic">
-                            "{message.text.split('\n').filter(line => !line.includes('/post/') && !line.includes('Shared a post') && !line.includes('Shared Post')).join(' ').trim()}"
-                          </p>
-                          <button
-                            onClick={() => {
-                              const match = message.text.match(/\/post\/([a-zA-Z0-9-]+)/);
-                              if (match) window.dispatchEvent(new CustomEvent('open-post', { detail: match[1] }));
-                            }}
-                            className={`text-xs font-bold py-1.5 px-4 rounded-full self-start transition-opacity hover:opacity-90 shadow-sm ${isCurrentUser ? 'bg-surface text-primary' : 'bg-primary text-surface'}`}
-                          >
-                            View Post
-                          </button>
-                        </div>
-                      ) : (
+                          );
+                        }
+
+                        return (
+                          <div className="flex flex-col min-w-[200px]">
+                            <span className="text-[10px] font-bold opacity-60 uppercase mb-1 tracking-wider">Shared Story</span>
+                            {owner && <span className="text-xs text-primary/80 mb-2 font-medium">From @{owner}</span>}
+
+                            {message.imageUrl && (
+                              <div className="mb-2 rounded-lg overflow-hidden bg-black/10 aspect-video relative">
+                                <img src={message.imageUrl} className="w-full h-full object-cover" alt="Story" />
+                              </div>
+                            )}
+                            <button
+                              onClick={() => {
+                                if (storyId) window.dispatchEvent(new CustomEvent('open-story', { detail: storyId }));
+                              }}
+                              className={`mt-1 text-xs font-bold py-1.5 px-4 rounded-full self-start transition-opacity hover:opacity-90 shadow-sm ${isCurrentUser ? 'bg-surface text-primary' : 'bg-primary text-surface'}`}
+                            >
+                              View Story
+                            </button>
+                          </div>
+                        );
+                      })() : (message.text.includes('Shared a post') || message.text.includes('Shared Post') || message.text.includes('[Shared Post]')) ? (() => {
+                        const match = message.text.match(/\/post\/([a-zA-Z0-9-]+)(\?.*)?/);
+                        const postId = match ? match[1] : null;
+                        const urlParams = new URLSearchParams(match && match[2] ? match[2] : '');
+                        const owner = urlParams.get('owner');
+
+                        return (
+                          <div className="flex flex-col min-w-[200px]">
+                            <span className="text-[10px] font-bold opacity-60 uppercase mb-1 tracking-wider">Shared Post</span>
+                            {owner && <span className="text-xs text-primary/80 mb-2 font-medium">From @{owner}</span>}
+
+                            {message.imageUrl && (
+                              <div className="mb-2 rounded-lg overflow-hidden bg-black/10 aspect-video relative">
+                                <img src={message.imageUrl} className="w-full h-full object-cover" alt="Post" />
+                              </div>
+                            )}
+                            <p className="text-sm opacity-90 line-clamp-2 mb-3 italic">
+                              "{message.text.split('\n').filter(line => !line.includes('/post/') && !line.includes('Shared a post') && !line.includes('Shared Post')).join(' ').trim()}"
+                            </p>
+                            <button
+                              onClick={() => {
+                                if (postId) window.dispatchEvent(new CustomEvent('open-post', { detail: postId }));
+                              }}
+                              className={`text-xs font-bold py-1.5 px-4 rounded-full self-start transition-opacity hover:opacity-90 shadow-sm ${isCurrentUser ? 'bg-surface text-primary' : 'bg-primary text-surface'}`}
+                            >
+                              View Post
+                            </button>
+                          </div>
+                        );
+                      })() : (
                         /* NORMAL MESSAGE */
                         <>
                           {message.imageUrl && <img src={message.imageUrl} alt="Shared content" className="mb-2 rounded-lg w-full" />}

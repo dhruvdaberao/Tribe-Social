@@ -297,28 +297,31 @@ export const ProfilePage: React.FC<ProfilePageProps> = (props) => {
     const [isLoading, setIsLoading] = useState(false);
 
     // SYNC STATE WITH PROP (Critical for optimistic updates)
+    // But ONLY if the ID changes. We don't want to overwrite local optimistic state with stale parent props 
+    // during a follow action unless it's a genuine navigation.
     useEffect(() => {
-        setProfileUser(user);
-    }, [user]);
+        if (user.id !== profileUser.id) {
+            setProfileUser(user);
+        }
+    }, [user, profileUser.id]);
 
     // FETCH FULL USER PROFILE (Fixes 0 counts / missing banner)
     useEffect(() => {
+        // FIX: If we already have a valid profile with counts, don't refetch aggressively unless ID changed
+        if (!user.id) return;
+
         const fetchFullProfile = async () => {
-            // ... logic ...
-            // Intentionally omitted here to avoid overwriting optimistic state with stale server state immediately
-            // Ideally this should merge, but for now assuming optimistic update is truer for followers
             try {
                 const { data } = await api.fetchUser(user.id);
                 // Only update if IDs match (avoid race conditions)
-                if (data.id === user.id) {
-                    setProfileUser(prev => ({ ...data, followers: prev.followers, following: prev.following })); // Keep optimistic counts? Or trust server?
-                    // Actually, if we just toggled, server might be stale?
-                    // Let's just update other fields.
+                // AND if we are still mounted (React handles this but good to be careful logic-wise)
+                if (data && data.id === user.id) {
                     setProfileUser(prev => ({
+                        ...prev, // Keep existing client state if fresher? No, server is truth mostly, but array lengths might be stale.
                         ...data,
-                        // Preserve optimistic follow state if we just clicked it
-                        followers: prev.followers,
-                        following: prev.following
+                        // Ensure we don't accidentally zero out counts if server sends undefined
+                        followersCount: data.followersCount !== undefined ? data.followersCount : (data.followers || []).length,
+                        followingCount: data.followingCount !== undefined ? data.followingCount : (data.following || []).length
                     }));
                 }
             } catch (error) {
@@ -388,14 +391,56 @@ export const ProfilePage: React.FC<ProfilePageProps> = (props) => {
         onStartConversation(profileUser);
     }
 
+    // FIX: Optimistic update for follow/unfollow
+    const handleToggleFollow = () => {
+        // 1. Call API/Parent handler
+        onToggleFollow(profileUser.id);
+
+        // 2. Optimistic Update Local State
+        const willBeFollowing = !(currentUser.following || []).includes(profileUser.id);
+
+        setProfileUser(prev => {
+            const currentFollowers = prev.followers || [];
+            let newFollowers;
+
+            if (willBeFollowing) {
+                // Add current user to followers if not already there
+                if (!currentFollowers.includes(currentUser.id)) {
+                    newFollowers = [...currentFollowers, currentUser.id];
+                } else {
+                    newFollowers = currentFollowers;
+                }
+            } else {
+                // Remove current user from followers
+                newFollowers = currentFollowers.filter(id => id !== currentUser.id);
+            }
+
+            return {
+                ...prev,
+                followers: newFollowers,
+                // Optimistically update counts
+                followersCount: (prev.followersCount || 0) + (willBeFollowing ? 1 : -1),
+                isFollowedByCurrentUser: willBeFollowing
+            };
+        });
+    }
+
+    // GUARD: Ensure we always have a user to render.
+    // Use profileUser (state) if available, otherwise fall back to user (prop).
+    // NEVER return null.
+    const safeUser = profileUser || user;
+    if (!safeUser) {
+        return <div className="p-8 text-center">Loading profile...</div>;
+    }
+
     return (
         <div>
             <div className="bg-surface rounded-2xl shadow-sm border border-border mb-6 overflow-hidden">
                 <div className="h-48 md:h-64 bg-background rounded-t-2xl">
-                    {profileUser.id === 'chuk-ai' ? (
+                    {safeUser.id === 'chuk-ai' ? (
                         <img src="/psy-banner.gif" alt="Psyduck Banner" className="w-full h-full object-cover" />
-                    ) : profileUser.bannerUrl ? (
-                        <img src={profileUser.bannerUrl} alt={`${profileUser.name}'s banner`} className="w-full h-full object-cover" />
+                    ) : safeUser.bannerUrl ? (
+                        <img src={safeUser.bannerUrl} alt={`${safeUser.name}'s banner`} className="w-full h-full object-cover" />
                     ) : (
                         <div className="w-full h-full bg-gradient-to-br from-background via-surface to-background" />
                     )}
@@ -405,10 +450,10 @@ export const ProfilePage: React.FC<ProfilePageProps> = (props) => {
                     <div className="flex flex-col sm:flex-row justify-between items-start">
                         <div
                             className="sm:-mt-20 -mt-16 flex-shrink-0 cursor-pointer"
-                            onClick={hasStory ? () => onViewUserStories(profileUser.id) : undefined}
+                            onClick={hasStory ? () => onViewUserStories(safeUser.id) : undefined}
                         >
                             <div className={`w-28 h-28 md:w-36 md:h-36 rounded-full p-1 ${hasStory ? 'bg-accent' : 'bg-transparent'}`}>
-                                <UserAvatar user={profileUser} className="w-full h-full border-4 border-surface" />
+                                <UserAvatar user={safeUser} className="w-full h-full border-4 border-surface" />
                             </div>
                         </div>
 
@@ -426,8 +471,8 @@ export const ProfilePage: React.FC<ProfilePageProps> = (props) => {
                             ) : (
                                 <>
                                     <button onClick={() => handleMessageClick()} className="w-full sm:w-auto font-semibold px-6 py-2 rounded-lg transition-colors bg-surface text-primary border border-border hover:bg-background">Message</button>
-                                    {profileUser.id !== 'chuk-ai' && (
-                                        <button onClick={(e) => { e.stopPropagation(); onToggleFollow(profileUser.id); }} className={`w-full sm:w-auto font-semibold px-6 py-2 rounded-lg transition-colors ${isFollowing ? 'bg-surface text-primary border border-border hover:bg-background' : 'bg-accent text-accent-text hover:bg-accent-hover'}`}>
+                                    {safeUser.id !== 'chuk-ai' && (
+                                        <button onClick={(e) => { e.stopPropagation(); handleToggleFollow(); }} className={`w-full sm:w-auto font-semibold px-6 py-2 rounded-lg transition-colors ${isFollowing ? 'bg-surface text-primary border border-border hover:bg-background' : 'bg-accent text-accent-text hover:bg-accent-hover'}`}>
                                             {isFollowing ? 'Unfollow' : 'Follow'}
                                         </button>
                                     )}
@@ -435,10 +480,10 @@ export const ProfilePage: React.FC<ProfilePageProps> = (props) => {
                                         <button onClick={() => setOptionsOpen(!optionsOpen)} onBlur={() => setTimeout(() => setOptionsOpen(false), 150)} className="p-2 rounded-full bg-surface text-primary border border-border hover:bg-background" aria-label="More options"><OptionsIcon /></button>
                                         {optionsOpen && (
                                             <div className="absolute right-0 mt-2 w-48 bg-surface rounded-lg shadow-lg border border-border z-10">
-                                                <ShareButton shareData={{ title: `Check out ${profileUser.name}'s profile on Tribe!`, text: `See what ${profileUser.name} (@${profileUser.username}) is up to.`, url: window.location.href }} className="w-full text-left px-4 py-2 text-primary hover:bg-background rounded-t-lg transition-colors flex items-center space-x-2" onShare={() => setOptionsOpen(false)}>
+                                                <ShareButton shareData={{ title: `Check out ${safeUser.name}'s profile on Tribe!`, text: `See what ${safeUser.name} (@${safeUser.username}) is up to.`, url: window.location.href }} className="w-full text-left px-4 py-2 text-primary hover:bg-background rounded-t-lg transition-colors flex items-center space-x-2" onShare={() => setOptionsOpen(false)}>
                                                     <ShareIcon /><span>Share Profile</span>
                                                 </ShareButton>
-                                                <button onClick={() => { onStartConversation(profileUser); }} className={`w-full text-left px-4 py-2 hover:bg-background transition-colors flex items-center space-x-2 text-primary`}>
+                                                <button onClick={() => { onStartConversation(safeUser); }} className={`w-full text-left px-4 py-2 hover:bg-background transition-colors flex items-center space-x-2 text-primary`}>
                                                     <BlockIcon /><span>Message User</span>
                                                 </button>
                                                 {/* 
@@ -455,9 +500,9 @@ export const ProfilePage: React.FC<ProfilePageProps> = (props) => {
                     </div>
 
                     <div className="mt-2">
-                        <h1 className="text-3xl font-bold text-primary font-display">{profileUser.name}</h1>
-                        <p className="text-md text-secondary">@{profileUser.username}</p>
-                        {profileUser.id === 'chuk-ai' ? (
+                        <h1 className="text-3xl font-bold text-primary font-display">{safeUser.name}</h1>
+                        <p className="text-md text-secondary">@{safeUser.username}</p>
+                        {safeUser.id === 'chuk-ai' ? (
                             <div className="mt-2 p-3 bg-accent/10 rounded-lg border border-accent/20">
                                 <p className="text-sm text-primary italic">
                                     "Psy... Psyduck has hidden his followers & following list with his Psychic ability! (But he might secretly follow you... Psy!)" 🦆🌀
@@ -466,29 +511,33 @@ export const ProfilePage: React.FC<ProfilePageProps> = (props) => {
                         ) : (
                             <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2">
                                 <button
-                                    onClick={() => canViewLists && openFollowModal('following', profileUser.following || [])}
+                                    onClick={() => canViewLists && openFollowModal('following', safeUser.following || [])}
                                     className={`hover:underline ${!canViewLists ? 'cursor-not-allowed opacity-50' : ''}`}
                                     title={!canViewLists ? "Follow to view lists" : ""}
                                 >
-                                    <span className="font-bold text-primary">{(profileUser.following || []).length}</span> <span className="text-secondary">Following</span>
+                                    <span className="font-bold text-primary">
+                                        {safeUser.followingCount !== undefined ? safeUser.followingCount : (safeUser.following || []).length}
+                                    </span> <span className="text-secondary">Following</span>
                                 </button>
                                 <button
-                                    onClick={() => canViewLists && openFollowModal('followers', profileUser.followers || [])}
+                                    onClick={() => canViewLists && openFollowModal('followers', safeUser.followers || [])}
                                     className={`hover:underline ${!canViewLists ? 'cursor-not-allowed opacity-50' : ''}`}
                                     title={!canViewLists ? "Follow to view lists" : ""}
                                 >
-                                    <span className="font-bold text-primary">{(profileUser.followers || []).length}</span> <span className="text-secondary">Followers</span>
+                                    <span className="font-bold text-primary">
+                                        {safeUser.followersCount !== undefined ? safeUser.followersCount : (safeUser.followers || []).length}
+                                    </span> <span className="text-secondary">Followers</span>
                                 </button>
                             </div>
                         )}
-                        <p className="text-primary mt-4 max-w-2xl whitespace-pre-wrap">{profileUser.bio}</p>
+                        <p className="text-primary mt-4 max-w-2xl whitespace-pre-wrap">{safeUser.bio}</p>
                     </div>
                 </div>
             </div>
 
             {isOwnProfile && <CreatePost currentUser={currentUser} allUsers={visibleUsers} myStories={myStories} onAddPost={onAddPost} isPosting={isPosting} onOpenStoryCreator={onOpenStoryCreator} onViewUserStories={onViewUserStories} />}
 
-            <h2 className="text-xl font-bold text-primary my-6 font-display">{isOwnProfile ? "Your Posts" : `${profileUser.name.split(' ')[0]}'s Posts`}</h2>
+            <h2 className="text-xl font-bold text-primary my-6 font-display">{isOwnProfile ? "Your Posts" : `${safeUser.name.split(' ')[0]}'s Posts`}</h2>
 
             {isLoading ? (
                 <div className="flex justify-center p-8"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div></div>
@@ -502,7 +551,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = (props) => {
                 <div className="bg-surface p-8 text-center rounded-2xl border border-border">
                     <p className="text-secondary">
                         {!isOwnProfile && !isFollowing ? (
-                            <>Follow <span className="font-bold text-primary">{profileUser.name.split(' ')[0]}</span> to see their posts</>
+                            <>Follow <span className="font-bold text-primary">{safeUser.name.split(' ')[0]}</span> to see their posts</>
                         ) : (
                             "No posts yet."
                         )}

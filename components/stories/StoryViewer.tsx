@@ -240,9 +240,14 @@ const StoryViewer: React.FC<StoryViewerProps> = ({ userStories, currentUser, all
   const isLiked = currentStory.likes.includes(currentUser.id);
 
   const handleShare = (destination: { type: 'tribe' | 'user', id: string }) => {
+    // FIX: Added expiry and owner metadata to the URL for better chat handling
+    // Story expires 24h after creation. We'll use the story's actual createdAt + 24h.
+    const createdAtTime = new Date(currentStory.createdAt).getTime();
+    const expiryTime = createdAtTime + (24 * 60 * 60 * 1000);
+
     onSharePost({
       author: user,
-      content: `Shared Story\n/story/${user.id}:${currentStory.id}`,
+      content: `Shared Story\n/story/${user.id}:${currentStory.id}?expiry=${expiryTime}&owner=${user.username}`,
       imageUrl: currentStory.imageUrl,
     }, destination);
   };
