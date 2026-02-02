@@ -6,8 +6,9 @@
 
 
 
+import 'dotenv/config';
 import express from 'express';
-import dotenv from 'dotenv';
+// import dotenv from 'dotenv'; // Loaded via side-effect above
 import cors from 'cors';
 import { createServer } from 'http';
 import { Server } from 'socket.io';

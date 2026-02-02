@@ -35,6 +35,9 @@ export interface Post {
   timestamp: string;
   likes: string[];
   comments: Comment[];
+  likesCount?: number;
+  commentsCount?: number;
+  isLiked?: boolean;
 }
 
 /* ===================== DIRECT MESSAGES ===================== */

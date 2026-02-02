@@ -10,8 +10,8 @@ const userSchema = mongoose.Schema(
     avatarUrl: { type: String, default: null },
     bannerUrl: { type: String, default: null },
     bio: { type: String, default: '' },
-    followers: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
-    following: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+    followersCount: { type: Number, default: 0 },
+    followingCount: { type: Number, default: 0 },
     blockedUsers: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
   },
   {

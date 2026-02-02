@@ -172,6 +172,11 @@ export const likeStory = (id: string) => API.put(`/stories/${id}/like`);
 export const commentOnPost = (id: string, commentData: any) =>
   API.post(`/posts/${id}/comments`, commentData);
 
+export const fetchPostComments = async (postId: string, page = 1, limit = 20) => {
+  const res = await API.get(`/posts/${postId}/comments?page=${page}&limit=${limit}`);
+  return { data: normalizeArray(res.data) };
+};
+
 export const deleteComment = (postId: string, commentId: string) =>
   API.delete(`/posts/${postId}/comments/${commentId}`);
 

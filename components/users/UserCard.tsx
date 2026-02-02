@@ -14,7 +14,7 @@ interface UserCardProps {
 }
 
 const UserCard: React.FC<UserCardProps> = ({ user, currentUser, onToggleFollow, onViewProfile, layout = 'card', isOwnProfile, listType, onRemove }) => {
-    const isFollowing = currentUser.following.includes(user.id);
+    const isFollowing = user.isFollowedByCurrentUser ?? currentUser.following.includes(user.id);
 
     const renderButton = () => {
         // 1. My Following List -> Show "Unfollow"

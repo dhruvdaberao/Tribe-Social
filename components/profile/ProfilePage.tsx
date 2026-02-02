@@ -380,8 +380,8 @@ export const ProfilePage: React.FC<ProfilePageProps> = (props) => {
 
 
     const isOwnProfile = user.id === currentUser.id;
-    // Strict safety check for isFollowing
-    const isFollowing = Array.isArray(currentUser.following) && currentUser.following.includes(user.id);
+    // Scalable check for isFollowing
+    const isFollowing = profileUser.isFollowedByCurrentUser ?? (Array.isArray(currentUser.following) && currentUser.following.includes(user.id));
     const canViewLists = isOwnProfile || isFollowing;
 
     const openFollowModal = (type: 'followers' | 'following', userIds: string[]) => {
@@ -394,39 +394,22 @@ export const ProfilePage: React.FC<ProfilePageProps> = (props) => {
     }
 
     // FIX: Optimistic update for follow/unfollow
+    // FIX: Optimistic update for follow/unfollow
     const handleToggleFollow = () => {
         // 1. Call API/Parent handler
         onToggleFollow(profileUser.id);
 
         // 2. Optimistic Update Local State
-        const safeFollowing = Array.isArray(currentUser.following) ? currentUser.following : [];
-        const isFollowing = safeFollowing.includes(profileUser.id);
-        const willBeFollowing = !isFollowing;
-
         setProfileUser(prev => {
-            const currentFollowers = Array.isArray(prev.followers) ? prev.followers : [];
-            let newFollowers;
-
-            if (willBeFollowing) {
-                // Add current user to followers if not already there
-                if (!currentFollowers.includes(currentUser.id)) {
-                    newFollowers = [...currentFollowers, currentUser.id];
-                } else {
-                    newFollowers = currentFollowers;
-                }
-            } else {
-                // Remove current user from followers
-                newFollowers = currentFollowers.filter(id => id !== currentUser.id);
-            }
+            const wasFollowing = prev.isFollowedByCurrentUser ?? false;
+            const willBeFollowing = !wasFollowing;
 
             return {
                 ...prev,
-                followers: newFollowers,
-                // Optimistically update counts
-                followersCount: (prev.followersCount !== undefined)
-                    ? prev.followersCount + (willBeFollowing ? 1 : -1)
-                    : newFollowers.length,
-                isFollowedByCurrentUser: willBeFollowing
+                // Update Boolean
+                isFollowedByCurrentUser: willBeFollowing,
+                // Update Count
+                followersCount: (prev.followersCount || 0) + (willBeFollowing ? 1 : -1)
             };
         });
     }
