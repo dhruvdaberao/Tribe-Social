@@ -26,7 +26,7 @@ import storyRoutes from './routes/storyRoutes.js';
 import pushRoutes from './routes/pushRoutes.js';
 import { initializeSocket } from './socketManager.js';
 
-dotenv.config();
+// dotenv.config();
 
 // CRITICAL: Fail fast if JWT_SECRET is missing
 if (!process.env.JWT_SECRET) {
