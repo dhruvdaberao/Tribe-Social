@@ -280,7 +280,6 @@ import express from 'express';
 import User from '../models/userModel.js';
 import Post from '../models/postModel.js';
 import Notification from '../models/notificationModel.js';
-import Follow from '../models/followModel.js'; // New Relational Model
 import protect from '../middleware/authMiddleware.js';
 
 const router = express.Router();
@@ -290,23 +289,13 @@ const router = express.Router();
 router.get('/', protect, async (req, res) => {
     try {
         const users = await User.find({})
+            // Optimize: Exclude heavy arrays 'followers' and 'following' to prevent timeouts.
+            // Frontend usually only needs basic info for Discover cards.
+            // If counts are needed, we should project size, but for now let's just minimal select.
             .select('name username avatarUrl bio')
             .sort({ createdAt: -1 })
-            .limit(20)
-            .lean();
-
-        // Fetch following status
-        const userIds = users.map(u => u._id);
-        const myFollows = await Follow.find({ follower: req.user.id, following: { $in: userIds } });
-        const followingIds = new Set(myFollows.map(f => f.following.toString()));
-
-        const validUsers = users.map(user => ({
-            ...user,
-            id: user._id.toString(),
-            isFollowedByCurrentUser: followingIds.has(user._id.toString())
-        }));
-
-        res.json(validUsers);
+            .limit(20);
+        res.json(users);
     } catch (error) {
         console.error("Fetch users error:", error);
         res.status(500).json({ message: 'Server error' });
@@ -323,12 +312,16 @@ router.get('/:id', protect, async (req, res) => {
             // CRITICAL FIX: Explicitly count documents to ensure accuracy.
             // Do NOT rely on the user.followers array length if it's potentially out of sync.
             const stats = await Promise.all([
-                // Count how many users follow THIS user (Follower Count)
-                Follow.countDocuments({ following: req.params.id }),
-                // Count how many users THIS user follows (Following Count)
-                Follow.countDocuments({ follower: req.params.id }),
+                // Count how many users have THIS user in their 'following' list (True Follower Count)
+                User.countDocuments({ following: req.params.id }),
+                // Count how many users THIS user has in their 'following' list (True Following Count)
+                // Note: user.following.length is usually safe if we trust the document, but self-verification is better.
+                // However, for performance we often trust the array if managed well. But let's verify.
+                // Actually, for 'following', the array on the user document IS the source of truth for whom THEY follow.
+                // But for 'followers', the array might be stale if other users updated.
+                Promise.resolve(user.following.length),
                 // Check if current user follows this user
-                Follow.exists({ follower: req.user.id, following: req.params.id })
+                User.countDocuments({ _id: req.user.id, following: req.params.id })
             ]);
 
             const [followersCount, followingCount, isFollowing] = stats;
@@ -341,7 +334,7 @@ router.get('/:id', protect, async (req, res) => {
             // Actually, let's use the explicit backward query for followers usually, but
             // here we did a reverse query effectively.
             userObj.followingCount = followingCount;
-            userObj.isFollowedByCurrentUser = !!isFollowing; // .exists returns object or null
+            userObj.isFollowedByCurrentUser = isFollowing > 0;
 
             res.json(userObj);
         } else {
@@ -419,7 +412,7 @@ router.delete('/profile', protect, async (req, res) => {
 
 
 // @route   PUT /api/users/:id/follow
-// @desc    Follow / Unfollow a user (Dual Write: Arrays + Collection)
+// @desc    Follow / Unfollow a user
 router.put('/:id/follow', protect, async (req, res) => {
     try {
         const userToFollow = await User.findById(req.params.id);
@@ -433,22 +426,12 @@ router.put('/:id/follow', protect, async (req, res) => {
             return res.status(400).json({ message: 'You cannot follow yourself' });
         }
 
-        // Check if already following (Phase 1: Check Follow Collection first, fallback to array if in transition? 
-        // Actually, let's trust the Array for now as source of truth for "isFollowing" in this function to be safe, 
-        // OR check the new collection. We want to be consistent. 
-        // For Phase 1, we check the legacy array to decide toggle state, but sync both.)
-        // Check if already following using the Follow collection source of truth
-        const existingFollow = await Follow.findOne({ follower: currentUser._id, following: userToFollow._id });
+        const isFollowing = currentUser.following.includes(userToFollow._id);
 
-        if (existingFollow) {
+        if (isFollowing) {
             // Unfollow
-            // 1. Remove from Follow Collection
-            await Follow.deleteOne({ _id: existingFollow._id });
-
-            // 2. Update Counters
-            currentUser.followingCount = Math.max(0, (currentUser.followingCount || 0) - 1);
-            userToFollow.followersCount = Math.max(0, (userToFollow.followersCount || 0) - 1);
-
+            currentUser.following = currentUser.following.filter(id => id.toString() !== userToFollow._id.toString());
+            userToFollow.followers = userToFollow.followers.filter(id => id.toString() !== currentUser._id.toString());
             // Delete the corresponding follow notification
             await Notification.deleteOne({
                 recipient: userToFollow._id,
@@ -457,17 +440,8 @@ router.put('/:id/follow', protect, async (req, res) => {
             });
         } else {
             // Follow
-            // 1. Create in Follow Collection
-            try {
-                await Follow.create({ follower: currentUser._id, following: userToFollow._id });
-            } catch (err) {
-                // Ignore duplicate key error if it happens during race conditions
-                if (err.code !== 11000) console.error("Follow creation error", err);
-            }
-
-            // 2. Update Counters
-            currentUser.followingCount = (currentUser.followingCount || 0) + 1;
-            userToFollow.followersCount = (userToFollow.followersCount || 0) + 1;
+            currentUser.following.push(userToFollow._id);
+            userToFollow.followers.push(currentUser._id);
 
             const existingNotification = await Notification.findOne({
                 recipient: userToFollow._id,
@@ -563,15 +537,11 @@ router.put('/:id/remove-follower', protect, async (req, res) => {
         }
 
         // Check if the target user is actually following the current user
-        const followRel = await Follow.findOne({ follower: userToRemove._id, following: currentUser._id });
-
-        if (followRel) {
-            // Remove from Follow Collection
-            await Follow.deleteOne({ _id: followRel._id });
-
-            // Update Counters
-            currentUser.followersCount = Math.max(0, (currentUser.followersCount || 0) - 1);
-            userToRemove.followingCount = Math.max(0, (userToRemove.followingCount || 0) - 1);
+        if (currentUser.followers.includes(userToRemove._id)) {
+            // Remove target from my followers list
+            currentUser.followers = currentUser.followers.filter(id => id.toString() !== userToRemove._id.toString());
+            // Remove me from target's following list
+            userToRemove.following = userToRemove.following.filter(id => id.toString() !== currentUser._id.toString());
 
             await currentUser.save();
             await userToRemove.save();

@@ -679,7 +679,6 @@
 
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { Post, User, Tribe, Comment } from '../../types';
-import * as api from '../../api'; // Import API
 import UserAvatar from '../common/UserAvatar';
 import ShareModal from '../common/ShareModal';
 import ShareButton from '../common/ShareButton';
@@ -749,45 +748,8 @@ const PostCard: React.FC<PostCardProps> = (props) => {
   }, [post.content, isExpanded]);
 
 
-  const [comments, setComments] = useState<Comment[]>([]);
-  const [areCommentsLoaded, setAreCommentsLoaded] = useState(false);
-  const [isLoadingComments, setIsLoadingComments] = useState(false);
-
-  // Use scalable fields
-  const isLiked = post.isLiked ?? post.likes.includes(currentUser.id);
-  const likesCount = post.likesCount ?? post.likes.length;
-  const commentsCount = post.commentsCount ?? post.comments.length;
-
+  const isLiked = post.likes.includes(currentUser.id);
   const isOwnPost = post.author.id === currentUser.id;
-
-  // Fetch comments when opened
-  useEffect(() => {
-    if (showComments && !areCommentsLoaded) {
-      setIsLoadingComments(true);
-      api.fetchPostComments(post.id)
-        .then(({ data }) => {
-          setComments(data);
-          setAreCommentsLoaded(true);
-        })
-        .catch(err => console.error("Failed to load comments", err))
-        .finally(() => setIsLoadingComments(false));
-    }
-  }, [showComments, post.id, areCommentsLoaded]);
-
-  // Handle local comment addition
-  const handleLocalCommentAdd = (newCommentText: string) => {
-    // NOTE: The parent `onComment` logic needs to be aware that it might rely on us refetching or manually adding
-    // For now, we assume parent updates the global state or we update local.
-    // Ideally, we add to local comments list immediately for UI responsiveness
-    const tempComment: Comment = {
-      id: Date.now().toString(),
-      author: currentUser,
-      text: newCommentText,
-      timestamp: new Date().toISOString()
-    };
-    setComments(prev => [...prev, tempComment]);
-    onComment(post.id, newCommentText);
-  };
 
   const handleLikeClick = () => {
     onLike(post.id);
@@ -799,7 +761,7 @@ const PostCard: React.FC<PostCardProps> = (props) => {
   const handleCommentSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (commentText.trim()) {
-      handleLocalCommentAdd(commentText);
+      onComment(post.id, commentText);
       setCommentText('');
     }
   };
@@ -819,11 +781,10 @@ const PostCard: React.FC<PostCardProps> = (props) => {
   };
 
   const visibleComments = useMemo(() => {
-    // Use local comments state instead of post.comments
-    return comments
+    return post.comments
       .filter(comment => !currentUser.blockedUsers.includes(comment.author.id))
       .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
-  }, [comments, currentUser.blockedUsers]);
+  }, [post.comments, currentUser.blockedUsers]);
 
   return (
     <>
@@ -943,11 +904,11 @@ const PostCard: React.FC<PostCardProps> = (props) => {
         )}
 
         {/* Post Actions */}
-        <div className="flex justify-between items-center px-4 py-2 border-t border-b border-border text-secondary text-sm">
+        <div className="flex justify-between items-center px-5 py-2 border-t border-b border-border text-secondary text-sm">
           <div className="flex space-x-2">
-            <span>{likesCount} Likes</span>
+            <span>{post.likes.length} Likes</span>
             <span>·</span>
-            <span className="cursor-pointer hover:underline" onClick={() => setShowComments(prev => !prev)}>{commentsCount} Comments</span>
+            <span className="cursor-pointer hover:underline" onClick={() => setShowComments(prev => !prev)}>{visibleComments.length} Comments</span>
           </div>
         </div>
         <div className="flex justify-around items-center p-1 text-secondary font-semibold">
@@ -994,8 +955,7 @@ const PostCard: React.FC<PostCardProps> = (props) => {
 
             {/* Existing Comments */}
             <div className="space-y-3">
-              {isLoadingComments && <div className="text-center text-sm text-secondary">Loading comments...</div>}
-              {!isLoadingComments && visibleComments.map(comment => (
+              {visibleComments.map(comment => (
                 <div key={comment.id} className="flex items-start space-x-2 group">
                   <div className="w-8 h-8 rounded-full cursor-pointer flex-shrink-0" onClick={() => onViewProfile(comment.author)}>
                     <UserAvatar user={comment.author} className="w-full h-full" />

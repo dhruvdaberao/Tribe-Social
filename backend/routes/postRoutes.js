@@ -542,91 +542,87 @@
 
 
 
-import express from 'express';
-import mongoose from 'mongoose';
-import protect from '../middleware/authMiddleware.js';
-import Post from '../models/postModel.js';
-import User from '../models/userModel.js';
-import Notification from '../models/notificationModel.js';
-import Like from '../models/likeModel.js';
-import Comment from '../models/commentModel.js';
-import cloudinary from '../config/cloudinary.js';
+// import express from 'express';
+// import mongoose from 'mongoose';
+// import protect from '../middleware/authMiddleware.js';
+// import Post from '../models/postModel.js';
+// import User from '../models/userModel.js';
+// import Notification from '../models/notificationModel.js';
 
-const router = express.Router();
+// const router = express.Router();
 
-const fullyPopulatePost = async (post) => {
-    await post.populate('user', 'name username avatarUrl');
-    // Comments not populated anymore - fetched via API lazy load
-    return post;
-};
+// const fullyPopulatePost = async (post) => {
+//     await post.populate('user', 'name username avatarUrl');
+//     await post.populate('comments.user', 'name username avatarUrl');
+//     return post;
+// };
 
-// @route   GET /api/posts/feed
-// @desc    Get posts for feed - Scalable Read
-router.get('/feed', protect, async (req, res) => {
-    try {
-        const currentUser = await User.findById(req.user.id);
-        if (!currentUser) return res.status(401).json({ message: "User not found." });
+// // @route   GET /api/posts/feed
+// // @desc    Get posts for feed - Optimized for Free Tier
+// router.get('/feed', protect, async (req, res) => {
+//     try {
+//         const currentUser = await User.findById(req.user.id);
+//         if (!currentUser) {
+//             return res.status(401).json({ message: "User not found." });
+//         }
 
-        // Get IDs of users to follow
-        const following = await mongoose.model('Follow').find({ follower: req.user.id });
-        const userIdsForFeed = [req.user.id, ...following.map(f => f.following)];
+//         // Filter out any invalid ObjectIds from the following list to prevent crashes
+//         const followingIds = (currentUser.following || []).filter(id => mongoose.Types.ObjectId.isValid(id));
+//         const userIdsForFeed = [currentUser._id, ...followingIds];
 
-        const posts = await Post.find({ user: { $in: userIdsForFeed } })
-            .sort({ createdAt: -1 })
-            .skip(((parseInt(req.query.page) || 1) - 1) * (parseInt(req.query.limit) || 10))
-            .limit(parseInt(req.query.limit) || 10)
-            .populate('user', 'name username avatarUrl')
-            .lean();
+//         // Use simple .find() instead of aggregate to avoid memory limits on free tier
+//         // Limit to 10 posts initially to ensure speed
+//         const posts = await Post.find({ user: { $in: userIdsForFeed } })
+//             .sort({ createdAt: -1 })
+//             .skip(((parseInt(req.query.page) || 1) - 1) * (parseInt(req.query.limit) || 10))
+//             .limit(parseInt(req.query.limit) || 10)
+//             .populate('user', 'name username avatarUrl')
+//             .populate('comments.user', 'name username avatarUrl');
 
-        // Fetch isLiked status
-        const postIds = posts.map(p => p._id);
-        const myLikes = await Like.find({ user: req.user.id, post: { $in: postIds } });
-        const likedPostIds = new Set(myLikes.map(l => l.post.toString()));
+//         // Robustly format posts, handling cases where users might be deleted (null)
+//         // CRITICAL FIX: Only return posts where post.user is NOT null.
+//         const validPosts = posts.filter(post => post.user !== null).map(post => {
+//             const postObj = post.toJSON();
+//             // Filter comments from deleted users
+//             postObj.comments = postObj.comments.filter(c => c.user !== null);
+//             return postObj;
+//         });
 
-        const validPosts = posts.filter(post => post.user).map(post => ({
-            ...post,
-            id: post._id.toString(),
-            isLiked: likedPostIds.has(post._id.toString()),
-        }));
+//         res.json(validPosts);
 
-        res.json(validPosts);
-
-    } catch (error) {
-        console.error("Error in /api/posts/feed route:", error);
-        res.json([]);
-    }
-});
+//     } catch (error) {
+//         console.error("Error in /api/posts/feed route:", error);
+//         // Return empty array instead of 500 to keep app running
+//         res.json([]); 
+//     }
+// });
 
 
-// @route   GET /api/posts
-// @desc    Get all posts (Discover) - Scalable Read
-router.get('/', protect, async (req, res) => {
-    try {
-        const posts = await Post.find({})
-            .sort({ createdAt: -1 })
-            .skip(((parseInt(req.query.page) || 1) - 1) * (parseInt(req.query.limit) || 20))
-            .limit(parseInt(req.query.limit) || 20)
-            .populate('user', 'name username avatarUrl')
-            .lean();
+// // @route   GET /api/posts
+// // @desc    Get all posts for discover - Optimized
+// router.get('/', protect, async (req, res) => {
+//     try {
+//         // Limit to 20 posts to prevent 502 Bad Gateway (OOM)
+//         const posts = await Post.find({})
+//             .sort({ createdAt: -1 })
+//             .skip(((parseInt(req.query.page) || 1) - 1) * (parseInt(req.query.limit) || 20))
+//             // .limit(parseInt(req.query.limit) || 20)
+//             .populate('user', 'name username avatarUrl')
+//             .populate('comments.user', 'name username avatarUrl');
 
-        // Fetch isLiked status
-        const postIds = posts.map(p => p._id);
-        const myLikes = await Like.find({ user: req.user.id, post: { $in: postIds } });
-        const likedPostIds = new Set(myLikes.map(l => l.post.toString()));
+//         const validPosts = posts.filter(post => post.user !== null).map(post => {
+//             const postObj = post.toJSON();
+//             postObj.comments = postObj.comments.filter(c => c.user !== null);
+//             return postObj;
+//         });
 
-        const validPosts = posts.filter(post => post.user).map(post => ({
-            ...post,
-            id: post._id.toString(),
-            isLiked: likedPostIds.has(post._id.toString()),
-        }));
+//         res.json(validPosts);
 
-        res.json(validPosts);
-
-    } catch (error) {
-        console.error("Discover posts route error:", error);
-        res.json([]);
-    }
-});
+//     } catch (error) {
+//         console.error("Discover posts route error:", error);
+//         res.json([]);
+//     }
+// });
 
 // // @route   GET /api/posts/:id
 // router.get('/:id', protect, async (req, res) => {
@@ -807,88 +803,131 @@ router.get('/', protect, async (req, res) => {
 
 
 
+import express from 'express';
+import mongoose from 'mongoose';
+import protect from '../middleware/authMiddleware.js';
+import Post from '../models/postModel.js';
+import User from '../models/userModel.js';
+import Notification from '../models/notificationModel.js';
+import cloudinary from '../config/cloudinary.js';
 
-// @route   GET /api/posts
-// @desc    Get all posts for discover - Optimized
-// @route   GET /api/posts
-// @desc    Get all posts for discover - Optimized
-router.get('/', protect, async (req, res) => {
+const router = express.Router();
+
+const fullyPopulatePost = async (post) => {
+    await post.populate('user', 'name username avatarUrl');
+    await post.populate('comments.user', 'name username avatarUrl');
+    return post;
+};
+
+// @route   GET /api/posts/feed
+// @desc    Get posts for feed - Optimized for Free Tier
+// @route   GET /api/posts/feed
+// @desc    Get posts for feed - Optimized with Fallback
+router.get('/feed', protect, async (req, res) => {
     try {
-        const posts = await Post.find({})
-            .select('-likes -comments')
+        console.log("----------------------------------");
+        console.log(`🔍 GET /api/posts/feed - User: ${req.user.id}`);
+
+        const currentUser = await User.findById(req.user.id);
+        if (!currentUser) {
+            return res.status(401).json({ message: "User not found." });
+        }
+
+        // Filter out any invalid ObjectIds from the following list to prevent crashes
+        const followingIds = (currentUser.following || []).filter(id => mongoose.Types.ObjectId.isValid(id));
+        const userIdsForFeed = [currentUser._id, ...followingIds];
+
+        console.log(`📋 Feed for users: ${userIdsForFeed.length} (Self + ${followingIds.length} following)`);
+
+        // Use simple .find() instead of aggregate to avoid memory limits on free tier
+        let posts = await Post.find({ user: { $in: userIdsForFeed } })
             .sort({ createdAt: -1 })
-            .skip(((parseInt(req.query.page) || 1) - 1) * (parseInt(req.query.limit) || 50))
-            .limit(parseInt(req.query.limit) || 50)
-            .populate('user', 'name username avatarUrl');
+            .skip(((parseInt(req.query.page) || 1) - 1) * (parseInt(req.query.limit) || 20))
+            .limit(parseInt(req.query.limit) || 20)
+            .populate('user', 'name username avatarUrl')
+            .populate('comments.user', 'name username avatarUrl');
 
-        // BATCH LIKE CHECK
-        const postIds = posts.map(p => p._id);
-        const myLikes = await Like.find({ user: req.user.id, post: { $in: postIds } }).select('post');
-        const likedPostIds = new Set(myLikes.map(l => l.post.toString()));
+        console.log(`✅ Personalized feed found: ${posts.length} posts`);
 
+        // FALLBACK: If feed is empty (new user or inactive following), show global posts
+        // "Remove over-restrictive filters temporarily" (Phase 2 Requirement)
+        if (posts.length === 0) {
+            console.log("⚠️ Feed empty or too small. Fetching global posts as fallback...");
+            const globalPosts = await Post.find({})
+                .sort({ createdAt: -1 })
+                .skip(((parseInt(req.query.page) || 1) - 1) * (parseInt(req.query.limit) || 20))
+                .limit(parseInt(req.query.limit) || 20)
+                .populate('user', 'name username avatarUrl')
+                .populate('comments.user', 'name username avatarUrl');
+
+            posts = globalPosts;
+            console.log(`✅ Fallback feed found: ${posts.length} posts`);
+        }
+
+        // Robustly format posts, handling cases where users might be deleted (null)
+        // CRITICAL FIX: Only return posts where post.user is NOT null.
         const validPosts = posts.filter(post => post.user !== null).map(post => {
-            const postObj = post.toObject();
-            postObj.id = post._id.toString();
-            postObj.isLiked = likedPostIds.has(post._id.toString());
-            postObj.likesCount = post.likesCount || 0;
-            postObj.commentsCount = post.commentsCount || 0;
-            delete postObj.likes;
-            delete postObj.comments;
+            const postObj = post.toJSON();
+            // Filter comments from deleted users
+            postObj.comments = postObj.comments.filter(c => c.user !== null);
             return postObj;
         });
 
+        console.log(`📤 Returning ${validPosts.length} posts to frontend.`);
         res.json(validPosts);
 
     } catch (error) {
-        console.error("Discover posts route error:", error);
+        console.error("❌ Error in /api/posts/feed route:", error);
+        // Return empty array instead of 500 to keep app running
         res.json([]);
     }
 });
 
-// @route   GET /api/posts/:id/comments
-// @desc    Get comments for a post with pagination
-router.get('/:id/comments', protect, async (req, res) => {
+
+// @route   GET /api/posts
+// @desc    Get all posts for discover - Optimized
+router.get('/', protect, async (req, res) => {
     try {
-        const page = parseInt(req.query.page) || 1;
-        const limit = parseInt(req.query.limit) || 20;
-        const skip = (page - 1) * limit;
+        console.log("----------------------------------");
+        console.log("🔍 GET /api/posts - Fetching Discover feed");
 
-        const comments = await Comment.find({ post: req.params.id })
-            .sort({ createdAt: 1 }) // Chronological
-            .skip(skip)
-            .limit(limit)
-            .populate('user', 'name username avatarUrl');
+        // Limit to 50 posts to prevent 502 Bad Gateway (OOM)
+        const posts = await Post.find({})
+            .sort({ createdAt: -1 })
+            .skip(((parseInt(req.query.page) || 1) - 1) * (parseInt(req.query.limit) || 50))
+            .limit(parseInt(req.query.limit) || 50)
+            .populate('user', 'name username avatarUrl')
+            .populate('comments.user', 'name username avatarUrl');
 
-        res.json(comments);
+        const validPosts = posts.filter(post => post.user !== null).map(post => {
+            const postObj = post.toJSON();
+            postObj.comments = postObj.comments.filter(c => c.user !== null);
+            return postObj;
+        });
+
+        console.log(`✅ Discover found: ${validPosts.length} posts`);
+        res.json(validPosts);
+
     } catch (error) {
-        res.status(500).json({ message: 'Server Error' });
+        console.error("❌ Discover posts route error:", error);
+        res.json([]);
     }
 });
 
-// @route   GET /api/posts/user/:id
-// @desc    Get posts by a specific user
 // @route   GET /api/posts/user/:id
 // @desc    Get posts by a specific user
 router.get('/user/:id', protect, async (req, res) => {
     try {
         const posts = await Post.find({ user: req.params.id })
-            .select('-likes -comments')
             .sort({ createdAt: -1 })
             .populate('user', 'name username avatarUrl')
-            .lean();
+            .populate('comments.user', 'name username avatarUrl');
 
-        // BATCH LIKE CHECK
-        const postIds = posts.map(p => p._id);
-        const myLikes = await Like.find({ user: req.user.id, post: { $in: postIds } }).select('post');
-        const likedPostIds = new Set(myLikes.map(l => l.post.toString()));
-
-        const validPosts = posts.filter(post => post.user !== null).map(post => ({
-            ...post,
-            id: post._id.toString(),
-            isLiked: likedPostIds.has(post._id.toString()),
-            likesCount: post.likesCount || 0,
-            commentsCount: post.commentsCount || 0
-        }));
+        const validPosts = posts.filter(post => post.user !== null).map(post => {
+            const postObj = post.toJSON();
+            postObj.comments = postObj.comments.filter(c => c.user !== null);
+            return postObj;
+        });
 
         res.json(validPosts);
     } catch (error) {
@@ -899,30 +938,14 @@ router.get('/user/:id', protect, async (req, res) => {
 
 // @route   GET /api/posts/:id
 // @desc    Get a single post by ID
-// @route   GET /api/posts/:id
-// @desc    Get a single post by ID
 router.get('/:id', protect, async (req, res) => {
     try {
-        let post = await Post.findById(req.params.id)
-            .select('-likes -comments')
-            .populate('user', 'name username avatarUrl')
-            .lean();
-
+        let post = await Post.findById(req.params.id);
         if (!post) {
             return res.status(404).json({ message: 'Post not found' });
         }
-
-        const isLiked = await Like.exists({ user: req.user.id, post: req.params.id });
-
-        const postObj = {
-            ...post,
-            id: post._id.toString(),
-            isLiked: !!isLiked,
-            likesCount: post.likesCount || 0,
-            commentsCount: post.commentsCount || 0
-        };
-
-        res.json(postObj);
+        post = await fullyPopulatePost(post);
+        res.json(post);
     } catch (error) {
         res.status(500).json({ message: 'Server Error' });
     }
@@ -1011,22 +1034,11 @@ router.put('/:id/like', protect, async (req, res) => {
         let post = await Post.findById(req.params.id);
         if (!post) return res.status(404).json({ message: 'Post not found' });
 
-        const existingLike = await Like.findOne({ user: req.user.id, post: post._id });
-        const isLiked = !!existingLike;
-
+        const isLiked = post.likes.some(like => like.equals(req.user.id));
         if (isLiked) {
-            // Unliking
-            await Like.deleteOne({ _id: existingLike._id });
-            post.likesCount = Math.max(0, (post.likesCount || 0) - 1);
+            post.likes = post.likes.filter(like => !like.equals(req.user.id));
         } else {
-            // Liking
-            try {
-                await Like.create({ user: req.user.id, post: post._id });
-            } catch (err) {
-                if (err.code !== 11000) console.error("Like creation error", err);
-            }
-            post.likesCount = (post.likesCount || 0) + 1;
-
+            post.likes.push(req.user.id);
             if (post.user.toString() !== req.user.id) {
                 const existingNotification = await Notification.findOne({
                     recipient: post.user,
@@ -1052,10 +1064,9 @@ router.put('/:id/like', protect, async (req, res) => {
         }
 
         await post.save();
-        // Return scalable payload
-        res.json({ id: post._id, likesCount: post.likesCount, isLiked: !isLiked });
+        // Return light payload
+        res.json({ id: post._id, likes: post.likes });
     } catch (error) {
-        console.error(error);
         res.status(500).json({ message: 'Server Error' });
     }
 });
@@ -1068,11 +1079,8 @@ router.post('/:id/comments', protect, async (req, res) => {
         let post = await Post.findById(req.params.id);
         if (!post) return res.status(404).json({ message: 'Post not found' });
 
-        // New Collection (Single Source of Truth)
-        const commentDoc = await Comment.create({ user: req.user.id, post: post._id, text });
-
-        // Update Counter
-        post.commentsCount = (post.commentsCount || 0) + 1;
+        const newComment = { text, user: req.user.id };
+        post.comments.push(newComment);
 
         if (post.user.toString() !== req.user.id) {
             const recentNotification = await Notification.findOne({
@@ -1099,22 +1107,14 @@ router.post('/:id/comments', protect, async (req, res) => {
             }
         }
 
-        await post.save();
-        // Return proper scalable structure (or just the comment)
-        // Frontend expects the full post object usually in legacy, but we moved to optimistic.
-        // Let's return the comment doc + updated post counts if needed.
-        // For compatibility with old "updatedPost" return, we'll try to stick close, 
-        // but removing 'comments' array means 'fullyPopulatePost' will break if we don't fix it too.
-        // But 'fullyPopulatePost' populates 'comments.user'. Since we removed 'comments', it might error or do nothing.
-        // So we should return just the comment or a light post.
-
-        res.status(201).json(commentDoc);
+        let updatedPost = await post.save();
+        updatedPost = await fullyPopulatePost(updatedPost);
+        req.io.emit('postUpdated', updatedPost);
+        res.status(201).json(updatedPost);
     } catch (error) {
         res.status(500).json({ message: 'Server Error' });
     }
 });
-
-
 
 // @route   DELETE /api/posts/:id/comments/:comment_id
 router.delete('/:id/comments/:comment_id', protect, async (req, res) => {
@@ -1122,20 +1122,19 @@ router.delete('/:id/comments/:comment_id', protect, async (req, res) => {
         let post = await Post.findById(req.params.id);
         if (!post) return res.status(404).json({ message: 'Post not found' });
 
-        const comment = await Comment.findById(req.params.comment_id);
+        const comment = post.comments.find(c => c._id.toString() === req.params.comment_id);
         if (!comment) return res.status(404).json({ message: 'Comment does not exist' });
 
         if (comment.user.toString() !== req.user.id && post.user.toString() !== req.user.id) {
             return res.status(401).json({ message: 'User not authorized' });
         }
 
-        await comment.deleteOne();
+        post.comments = post.comments.filter(c => c._id.toString() !== req.params.comment_id);
 
-        post.commentsCount = Math.max(0, (post.commentsCount || 0) - 1);
-
-        await post.save();
-        // Return success message or updated counts
-        res.json({ id: post._id, commentsCount: post.commentsCount });
+        let updatedPost = await post.save();
+        updatedPost = await fullyPopulatePost(updatedPost);
+        req.io.emit('postUpdated', updatedPost);
+        res.json(updatedPost);
     } catch (error) {
         res.status(500).json({ message: 'Server Error' });
     }

@@ -6,9 +6,8 @@
 
 
 
-import 'dotenv/config';
 import express from 'express';
-// import dotenv from 'dotenv'; // Loaded via side-effect above
+import dotenv from 'dotenv';
 import cors from 'cors';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
@@ -26,7 +25,7 @@ import storyRoutes from './routes/storyRoutes.js';
 import pushRoutes from './routes/pushRoutes.js';
 import { initializeSocket } from './socketManager.js';
 
-// dotenv.config();
+dotenv.config();
 
 // CRITICAL: Fail fast if JWT_SECRET is missing
 if (!process.env.JWT_SECRET) {

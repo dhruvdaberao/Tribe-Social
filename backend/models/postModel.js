@@ -54,7 +54,25 @@
 
 import mongoose from 'mongoose';
 
+const commentSchema = mongoose.Schema(
+  {
+    user: { type: mongoose.Schema.Types.ObjectId, required: true, ref: 'User' },
+    text: { type: String, required: true },
+  },
+  {
+    timestamps: { createdAt: true, updatedAt: false }
+  }
+);
 
+commentSchema.set('toJSON', {
+  transform: (document, returnedObject) => {
+    returnedObject.id = returnedObject._id.toString();
+    returnedObject.timestamp = returnedObject.createdAt;
+    delete returnedObject._id;
+    delete returnedObject.createdAt;
+    delete returnedObject.updatedAt;
+  }
+});
 
 const postSchema = mongoose.Schema(
   {
@@ -64,8 +82,8 @@ const postSchema = mongoose.Schema(
     imagePublicId: { type: String },
     mediaType: { type: String, enum: ['image', 'video'], default: 'image' },
     duration: { type: Number }, // In seconds, for videos
-    likesCount: { type: Number, default: 0 },
-    commentsCount: { type: Number, default: 0 },
+    likes: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+    comments: [commentSchema],
   },
   {
     timestamps: true,
