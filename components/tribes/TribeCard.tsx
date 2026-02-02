@@ -39,7 +39,7 @@ const EditIconWrapper = styled.div`
   z-index: 10;
   
   &:hover {
-    background: ${({ theme }) => theme.hoverBackground}; // Light hover
+    background: ${({ theme }) => theme.hover}; // Light hover
   }
 `;
 
@@ -193,7 +193,17 @@ const TribeCard: React.FC<TribeCardProps> = ({ tribe, currentUser, allUsers, onE
       return;
     }
 
-    if (!confirm(`Leave ${tribe.name}?`)) return;
+    if (isOwner) {
+      if (tribe.members.length > 1) {
+        toast.error('You must transfer the Chief role before leaving.');
+        if (onEdit) onEdit(tribe);
+        return;
+      }
+      // If they are the only member, allow leaving (which effectively deletes/empties tribe or backend handles it)
+      if (!confirm(`You are the last member. Leaving will leave the tribe empty. Continue?`)) return;
+    } else {
+      if (!confirm(`Leave ${tribe.name}?`)) return;
+    }
 
     console.log('Attempting to leave tribe:', tribe.name, tribe.id);
     setIsJoining(true);
@@ -275,16 +285,14 @@ const TribeCard: React.FC<TribeCardProps> = ({ tribe, currentUser, allUsers, onE
               }}>
                 Chat
               </Button>
-              {!isOwner && (
-                <Button
-                  $variant="primary"
-                  onClick={handleLeave}
-                  disabled={isJoining}
-                  style={{ color: theme.text }}
-                >
-                  {isJoining ? 'Leaving...' : 'Leave'}
-                </Button>
-              )}
+              <Button
+                $variant="primary"
+                onClick={handleLeave}
+                disabled={isJoining}
+                style={{ color: theme.text }}
+              >
+                {isJoining ? 'Leaving...' : 'Leave'}
+              </Button>
             </>
           )}
 
@@ -305,6 +313,7 @@ const TribeCard: React.FC<TribeCardProps> = ({ tribe, currentUser, allUsers, onE
         onClose={() => setIsMembersModalOpen(false)}
         memberIds={tribe.members}
         userMap={userMap}
+        ownerId={tribe.owner}
         onViewProfile={(user) => {
           setIsMembersModalOpen(false);
           if (onViewProfile) onViewProfile(user);

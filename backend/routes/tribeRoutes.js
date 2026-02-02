@@ -82,6 +82,15 @@ router.put('/:id', protect, async (req, res) => {
             return res.status(403).json({ message: 'Not authorized' });
         }
 
+        if (req.body.owner) {
+            const newOwnerId = req.body.owner;
+            const isMember = tribe.members.some(m => m.toString() === newOwnerId.toString());
+            if (!isMember) {
+                return res.status(400).json({ message: 'New Chief must be a member' });
+            }
+            tribe.owner = newOwnerId;
+        }
+
         tribe.name = req.body.name || tribe.name;
         tribe.description = req.body.description || tribe.description;
         if (req.body.avatarUrl !== undefined) tribe.avatarUrl = req.body.avatarUrl;

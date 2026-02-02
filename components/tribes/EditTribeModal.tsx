@@ -11,6 +11,7 @@ interface EditTribeModalProps {
   onClose: () => void;
   onSuccess: (updatedTribe: Tribe) => void;
   onDelete?: (tribeId: string) => void;
+  allUsers: import('../../types').User[];
 }
 
 const Overlay = styled.div`
@@ -129,9 +130,11 @@ const DeleteButton = styled.button`
   }
 `;
 
-const EditTribeModal: React.FC<EditTribeModalProps> = ({ tribe, onClose, onSuccess, onDelete }) => {
+const EditTribeModal: React.FC<EditTribeModalProps> = ({ tribe, onClose, onSuccess, onDelete, allUsers }) => {
+  const [name, setName] = useState(tribe.name);
   const [description, setDescription] = useState(tribe.description);
-  const [avatarUrl, setAvatarUrl] = useState(tribe.avatarUrl || ''); // Use avatarUrl property
+  const [avatarUrl, setAvatarUrl] = useState(tribe.avatarUrl || '');
+  const [ownerId, setOwnerId] = useState(tribe.owner);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [isMediaModalOpen, setIsMediaModalOpen] = useState(false);
@@ -139,6 +142,10 @@ const EditTribeModal: React.FC<EditTribeModalProps> = ({ tribe, onClose, onSucce
   const theme = useTheme();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
+
+  const members = React.useMemo(() => {
+    return allUsers.filter(u => tribe.members.includes(u.id));
+  }, [allUsers, tribe.members]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -164,18 +171,33 @@ const EditTribeModal: React.FC<EditTribeModalProps> = ({ tribe, onClose, onSucce
     setError('');
 
     try {
-      const updatedData = {
+      if (ownerId !== tribe.owner) {
+        const confirmTransfer = window.confirm("You are about to transfer the Chief role. You will no longer be Chief of this tribe. Are you sure?");
+        if (!confirmTransfer) {
+          setIsSubmitting(false);
+          return;
+        }
+      }
+
+      const updatedData: any = {
+        name,
         description,
         avatarUrl
       };
+
+      if (ownerId !== tribe.owner) {
+        updatedData.owner = ownerId;
+      }
 
       const updatedTribe = await api.updateTribe(tribe.id, updatedData);
       onSuccess(updatedTribe.data);
       onClose();
       toast.success('Tribe updated successfully');
-    } catch (err) {
+    } catch (err: any) {
       console.error('Failed to update tribe:', err);
-      setError('Failed to update tribe. Please try again.');
+      // Handle "New Chief must be a member" error specifically if needed
+      const msg = err.response?.data?.message || 'Failed to update tribe. Please try again.';
+      setError(msg);
     } finally {
       setIsSubmitting(false);
     }
@@ -237,7 +259,51 @@ const EditTribeModal: React.FC<EditTribeModalProps> = ({ tribe, onClose, onSucce
               }}>+</div>
             </div>
           </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <label style={{ fontSize: '0.9rem', fontWeight: 600, color: theme.textSecondary }}>Tribe Name</label>
+            <input
+              value={name}
+              onChange={e => setName(e.target.value)}
+              placeholder="Tribe Name"
+              required
+              style={{
+                padding: '1rem',
+                borderRadius: '8px',
+                border: `1px solid ${theme.border}`,
+                background: theme.background,
+                color: theme.text,
+                fontFamily: "'Outfit', sans-serif",
+                outline: 'none'
+              }}
+            />
+          </div>
+
           <TextArea value={description} onChange={e => setDescription(e.target.value)} placeholder="Description" required />
+
+          {/* Transfer Chief Section */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <label style={{ fontSize: '0.9rem', fontWeight: 600, color: theme.textSecondary }}>Chief (Transfer Role)</label>
+            <select
+              value={ownerId}
+              onChange={e => setOwnerId(e.target.value)}
+              style={{
+                padding: '1rem',
+                borderRadius: '8px',
+                border: `1px solid ${theme.border}`,
+                background: theme.background,
+                color: theme.text,
+                fontFamily: "'Outfit', sans-serif",
+                outline: 'none'
+              }}
+            >
+              {members.map(member => (
+                <option key={member.id} value={member.id}>
+                  {member.name} (@{member.username}) {member.id === tribe.owner ? '(Current)' : ''}
+                </option>
+              ))}
+            </select>
+          </div>
 
           <Button type="submit" disabled={isSubmitting}>{isSubmitting ? 'Saving...' : 'Save Changes'}</Button>
         </Form>
@@ -255,7 +321,7 @@ const EditTribeModal: React.FC<EditTribeModalProps> = ({ tribe, onClose, onSucce
         onSelectCamera={() => cameraInputRef.current?.click()}
         onSelectGallery={() => fileInputRef.current?.click()}
       />
-    </Overlay>
+    </Overlay >
   );
 };
 

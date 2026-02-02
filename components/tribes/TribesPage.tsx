@@ -273,6 +273,7 @@ const TribesPage: React.FC<TribesPageProps> = ({ currentUser, unreadTribeCount }
           onClose={() => setEditingTribe(null)}
           onSuccess={handleTribeUpdated}
           onDelete={handleTribeDeleted}
+          allUsers={allUsers}
         />
       )}
     </Container>

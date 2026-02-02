@@ -131,9 +131,9 @@ const TribeMessageArea: React.FC<TribeMessageAreaProps> = ({
                     {/* SHARED STORY CARD */}
                     {(message.text.includes('Shared a story') || message.text.includes('Shared Story') || message.text.includes('[Shared Story]')) ? (
                       <div className="flex flex-col min-w-[200px]">
-                        <span className="text-[10px] font-bold opacity-60 uppercase mb-2 tracking-wider">Shared Story</span>
+                        <span className="text-[10px] font-bold text-secondary uppercase mb-2 tracking-wider">Shared Story</span>
                         {message.imageUrl && (
-                          <div className="mb-2 rounded-lg overflow-hidden bg-black/10 aspect-video relative">
+                          <div className="mb-2 rounded-lg overflow-hidden bg-secondary aspect-video relative">
                             <img src={message.imageUrl} className="w-full h-full object-cover" alt="Story" />
                           </div>
                         )}

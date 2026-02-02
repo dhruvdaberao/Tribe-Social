@@ -7,11 +7,11 @@ interface TribeMembersModalProps {
   onClose: () => void;
   memberIds: string[];
   userMap: Map<string, User>;
- onViewProfile?: (user: User) => void;
-
+  onViewProfile?: (user: User) => void;
+  ownerId?: string;
 }
 
-const TribeMembersModal: React.FC<TribeMembersModalProps> = ({ isOpen, onClose, memberIds, userMap, onViewProfile }) => {
+const TribeMembersModal: React.FC<TribeMembersModalProps> = ({ isOpen, onClose, memberIds, userMap, onViewProfile, ownerId }) => {
   const [searchTerm, setSearchTerm] = useState('');
 
   const members = useMemo(() => {
@@ -26,7 +26,7 @@ const TribeMembersModal: React.FC<TribeMembersModalProps> = ({ isOpen, onClose, 
       user.username.toLowerCase().includes(term)
     );
   }, [searchTerm, members]);
-  
+
   if (!isOpen) return null;
 
   return (
@@ -57,7 +57,14 @@ const TribeMembersModal: React.FC<TribeMembersModalProps> = ({ isOpen, onClose, 
                 >
                   <UserAvatar user={user} className="w-10 h-10 flex-shrink-0" />
                   <div className="ml-3 overflow-hidden">
-                    <p className="font-semibold text-primary truncate">{user.name}</p>
+                    <div className="flex items-center gap-2">
+                      <p className="font-semibold text-primary truncate">{user.name}</p>
+                      {ownerId && user.id === ownerId && (
+                        <span className="px-2 py-0.5 rounded-full bg-accent/20 text-accent text-xs font-bold border border-accent/30">
+                          Chief
+                        </span>
+                      )}
+                    </div>
                     <p className="text-sm text-secondary truncate">@{user.username}</p>
                   </div>
                 </div>

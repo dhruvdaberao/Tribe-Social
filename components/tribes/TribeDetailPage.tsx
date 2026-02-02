@@ -356,6 +356,17 @@ const TribeDetailPage: React.FC<Props> = ({ currentUser, tribeId: propTribeId })
   const handleJoinToggle = async () => {
     if (!id || !tribe || !currentUser) return;
 
+    // Check if Chief trying to leave
+    if (tribe.owner === currentUser.id && tribe.members.includes(currentUser.id)) {
+      if (tribe.members.length > 1) {
+        toast.error('You must transfer the Chief role before leaving.');
+        setIsEditOpen(true);
+        return;
+      }
+      // If last member, confirm delete/leave
+      if (!confirm(`You are the last member. Leaving will leave the tribe empty. Continue?`)) return;
+    }
+
     const optimistic = {
       ...tribe,
       members: tribe.members.includes(currentUser.id)
@@ -419,7 +430,7 @@ const TribeDetailPage: React.FC<Props> = ({ currentUser, tribeId: propTribeId })
             </ActionButton>
           )}
 
-          {currentUser && tribe && tribe.owner !== currentUser.id && (
+          {currentUser && tribe && (
             <ActionButton onClick={handleJoinToggle}>
               {isMember ? <LogOut size={18} /> : <LogIn size={18} />}
             </ActionButton>
@@ -462,6 +473,7 @@ const TribeDetailPage: React.FC<Props> = ({ currentUser, tribeId: propTribeId })
             setIsEditOpen(false);
           }}
           onDelete={handleDeleteTribe}
+          allUsers={allUsers}
         />
       )}
 
@@ -471,6 +483,7 @@ const TribeDetailPage: React.FC<Props> = ({ currentUser, tribeId: propTribeId })
           onClose={() => setIsMembersOpen(false)}
           memberIds={tribe.members}
           userMap={userMap}
+          ownerId={tribe.owner}
         />
       )}
     </PageContainer>
