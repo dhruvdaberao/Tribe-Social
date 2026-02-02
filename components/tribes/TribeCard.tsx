@@ -289,7 +289,6 @@ const TribeCard: React.FC<TribeCardProps> = ({ tribe, currentUser, allUsers, onE
                 $variant="primary"
                 onClick={handleLeave}
                 disabled={isJoining}
-                style={{ color: theme.text }}
               >
                 {isJoining ? 'Leaving...' : 'Leave'}
               </Button>
