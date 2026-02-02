@@ -217,7 +217,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeItem, onSelectItem, currentUser
             <img
               src={theme === 'dark' ? '/dark.png' : '/light.png'}
               alt="Tribe Logo"
-              className="h-20 w-auto object-contain select-none"
+              className="h-10 w-auto object-contain select-none"
             />
           </div>
           <nav className="hidden md:flex items-center space-x-2">
