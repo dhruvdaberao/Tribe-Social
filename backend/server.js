@@ -90,11 +90,6 @@ const startServer = async () => {
       next();
     });
 
-    // 🔥 FIX: Serve Uploads Folder (Profile Pictures, Banners, etc.)
-    const uploadsPath = path.join(process.cwd(), 'uploads');
-    app.use('/uploads', express.static(uploadsPath));
-    console.log(`📂 Serving static files from: ${uploadsPath}`);
-
     console.log("✅ Middleware configured.");
 
     console.log("3. Initializing Socket.IO...");

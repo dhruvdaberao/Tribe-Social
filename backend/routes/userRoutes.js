@@ -66,8 +66,21 @@ router.put('/profile', protect, async (req, res) => {
             user.name = req.body.name || user.name;
             user.username = req.body.username || user.username;
             user.bio = req.body.bio ?? user.bio;
-            user.avatarUrl = req.body.avatarUrl === null ? null : req.body.avatarUrl || user.avatarUrl;
-            user.bannerUrl = req.body.bannerUrl === null ? null : req.body.bannerUrl || user.bannerUrl;
+
+            // Cloudinary Uploads for Base64 Images
+            if (req.body.avatarUrl && req.body.avatarUrl !== user.avatarUrl) {
+                const { uploadBase64ToCloudinary } = await import('../utils/cloudinaryHelper.js');
+                user.avatarUrl = await uploadBase64ToCloudinary(req.body.avatarUrl, 'tribe_avatars');
+            } else if (req.body.avatarUrl === null) {
+                user.avatarUrl = null;
+            }
+
+            if (req.body.bannerUrl && req.body.bannerUrl !== user.bannerUrl) {
+                const { uploadBase64ToCloudinary } = await import('../utils/cloudinaryHelper.js');
+                user.bannerUrl = await uploadBase64ToCloudinary(req.body.bannerUrl, 'tribe_banners');
+            } else if (req.body.bannerUrl === null) {
+                user.bannerUrl = null;
+            }
 
             if (req.body.email) user.email = req.body.email;
             if (req.body.password) user.password = req.body.password;

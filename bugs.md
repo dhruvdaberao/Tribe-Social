@@ -27,15 +27,15 @@
 - **Risk**: Slow initial load time. As data grows, the app will become unresponsive on start.
 - **Fix**: **[DONE]** Implemented lazy loading. Split monolithic `fetchData` into `fetchFeed`, `fetchTribes`, etc. Updated `App.tsx` to fetch data only when the relevant route is visited.
 
-### 2. Dependencies Mixing
+### 2. Dependencies Mixing **[FIXED]**
 - **Issue**: Root `package.json` contains both backend (`express`, `mongoose`) and frontend (`react`, `vite`) dependencies.
 - **Risk**: Bloated node_modules, potential deployment confusion, and slower CI/CD.
-- **Fix**: Separate into `/frontend` and `/backend` directories with distinct `package.json` files (Monorepo structure).
+- **Fix**: **[DONE]** Separated into `/frontend` and `/backend` directories with distinct `package.json` files. Created root `package.json` to orchestrate scripts (`npm run dev:frontend`, `dev:backend`).
 
-### 3. Local File Storage
+### 3. Local File Storage **[FIXED]**
 - **Issue**: Backend serves `uploads` from local disk (`app.use('/uploads'...)`).
-- **Risk**: If deployed on ephemeral containers (like Render, Heroku, Vercel), uploaded files will disappear on restart/deploy.
-- **Fix**: Use Cloud Storage (AWS S3, Cloudinary, Firebase Storage) for uploads.
+- **Risk**: Images break on cloud deployment (Vercel/Render don't persist disk).
+- **Fix**: **[DONE]** Migrated all image uploads (User Profile, Banner, Tribe Avatar) to Cloudinary. Removed local file serving from `server.js`.
 
 ## 🔴 Priority 3: Market Compliance (App Store Rejection Risks)
 

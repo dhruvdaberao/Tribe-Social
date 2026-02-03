@@ -57,10 +57,16 @@ router.post('/', protect, async (req, res) => {
             return res.status(400).json({ message: 'Tribe name already exists' });
         }
 
+        let finalAvatarUrl = null;
+        if (avatarUrl) {
+            const { uploadBase64ToCloudinary } = await import('../utils/cloudinaryHelper.js');
+            finalAvatarUrl = await uploadBase64ToCloudinary(avatarUrl, 'tribe_avatars');
+        }
+
         const tribe = await Tribe.create({
             name,
             description,
-            avatarUrl: avatarUrl || null,
+            avatarUrl: finalAvatarUrl,
             owner: req.user.id,
             members: [req.user.id]
         });
@@ -93,7 +99,15 @@ router.put('/:id', protect, async (req, res) => {
 
         tribe.name = req.body.name || tribe.name;
         tribe.description = req.body.description || tribe.description;
-        if (req.body.avatarUrl !== undefined) tribe.avatarUrl = req.body.avatarUrl;
+
+        if (req.body.avatarUrl !== undefined) {
+            if (req.body.avatarUrl && req.body.avatarUrl !== tribe.avatarUrl) {
+                const { uploadBase64ToCloudinary } = await import('../utils/cloudinaryHelper.js');
+                tribe.avatarUrl = await uploadBase64ToCloudinary(req.body.avatarUrl, 'tribe_avatars');
+            } else if (req.body.avatarUrl === null) {
+                tribe.avatarUrl = null;
+            }
+        }
 
         const updated = await tribe.save();
         res.status(200).json(updated);
