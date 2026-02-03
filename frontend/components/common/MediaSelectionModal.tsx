@@ -139,43 +139,43 @@ const IconWrapper = styled.div`
 // Redoing Styled Components with safe keys from theme.ts
 
 interface MediaSelectionModalProps {
-    isOpen: boolean;
-    onClose: () => void;
-    onSelectCamera: () => void;
-    onSelectGallery: () => void;
+  isOpen: boolean;
+  onClose: () => void;
+  onSelectCamera: () => void;
+  onSelectGallery: () => void;
 }
 
 const MediaSelectionModal: React.FC<MediaSelectionModalProps> = ({ isOpen, onClose, onSelectCamera, onSelectGallery }) => {
-    if (!isOpen) return null;
+  if (!isOpen) return null;
 
-    return (
-        <Overlay onClick={onClose}>
-            <ModalContainer onClick={(e) => e.stopPropagation()}>
-                <Header>
-                    <h3>Add Media</h3>
-                    <CloseButton onClick={onClose}>
-                        <X size={24} />
-                    </CloseButton>
-                </Header>
+  return (
+    <Overlay onClick={onClose}>
+      <ModalContainer onClick={(e) => e.stopPropagation()}>
+        <Header>
+          <h3>Add Media</h3>
+          <CloseButton onClick={onClose}>
+            <X size={24} />
+          </CloseButton>
+        </Header>
 
-                <OptionsGrid>
-                    <OptionButton onClick={() => { onSelectCamera(); onClose(); }}>
-                        <IconWrapper>
-                            <Camera size={24} />
-                        </IconWrapper>
-                        <span>Take Photo</span>
-                    </OptionButton>
+        <OptionsGrid>
+          <OptionButton onClick={() => { onSelectCamera(); onClose(); }}>
+            <IconWrapper>
+              <Camera size={24} />
+            </IconWrapper>
+            <span>Take Photo</span>
+          </OptionButton>
 
-                    <OptionButton onClick={() => { onSelectGallery(); onClose(); }}>
-                        <IconWrapper>
-                            <ImageIcon size={24} />
-                        </IconWrapper>
-                        <span>Gallery</span>
-                    </OptionButton>
-                </OptionsGrid>
-            </ModalContainer>
-        </Overlay>
-    );
+          <OptionButton onClick={() => { onSelectGallery(); onClose(); }}>
+            <IconWrapper>
+              <ImageIcon size={24} />
+            </IconWrapper>
+            <span>Gallery</span>
+          </OptionButton>
+        </OptionsGrid>
+      </ModalContainer>
+    </Overlay>
+  );
 };
 
 export default MediaSelectionModal;
