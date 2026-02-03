@@ -5,6 +5,7 @@ import styled from 'styled-components';
 import { Tribe, TribeMessage, User } from '../../types';
 import * as api from '../../api';
 import { useSocket } from '../../contexts/SocketContext';
+import { useGlobalContent } from '../../contexts/GlobalContentContext';
 import TribeMessageArea from '../chat/TribeMessageArea';
 import TribeMembersModal from './TribeMembersModal';
 import EditTribeModal from './EditTribeModal';
@@ -113,10 +114,12 @@ const TribeDetailPage: React.FC<Props> = ({ currentUser, tribeId: propTribeId })
   const id = propTribeId || params.tribeId;
 
   const { socket, joinRoom, leaveRoom, clearUnreadTribe } = useSocket();
+  const { tribes: allTribes } = useGlobalContent();
 
   // Optimistic init from navigation state
-  const [tribe, setTribe] = useState<Tribe | null>(null);
+  const cachedTribe = useMemo(() => allTribes.find(t => t.id === id), [allTribes, id]);
 
+  const [tribe, setTribe] = useState<Tribe | null>(() => cachedTribe || null);
 
   const [messages, setMessages] = useState<TribeMessage[]>([]);
   const [areMessagesLoading, setAreMessagesLoading] = useState(false);
@@ -129,7 +132,7 @@ const TribeDetailPage: React.FC<Props> = ({ currentUser, tribeId: propTribeId })
 
   const bottomRef = useRef<HTMLDivElement>(null);
 
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(!cachedTribe);
 
   /* ───────────── LOAD TRIBE FIRST ───────────── */
   useEffect(() => {

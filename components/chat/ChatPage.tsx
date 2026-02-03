@@ -26,11 +26,23 @@ interface ChatPageProps {
 }
 
 const ChatPage: React.FC<ChatPageProps> = ({ currentUser, allUsers, chukUser, initialTargetUser, onViewProfile, onSharePost, onConversationStateChange }) => {
-  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [conversations, setConversations] = useState<Conversation[]>(() => {
+    try {
+      const cached = localStorage.getItem('tribe_storage_conversations');
+      return cached ? JSON.parse(cached) : [];
+    } catch {
+      return [];
+    }
+  });
+
   const [activeConversation, setActiveConversation] = useState<Conversation | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoadingMessages, setIsLoadingMessages] = useState(false);
-  const [isLoadingConversations, setIsLoadingConversations] = useState(true);
+
+  // Only show loading if we have NO cached conversations
+  const [isLoadingConversations, setIsLoadingConversations] = useState(() => {
+    return !localStorage.getItem('tribe_storage_conversations');
+  });
   const [isMessageAreaVisible, setMessageAreaVisible] = useState(false);
   const [isNewMessageModalOpen, setNewMessageModalOpen] = useState(false);
   const [isSending, setIsSending] = useState(false);
@@ -76,18 +88,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ currentUser, allUsers, chukUser, in
   useEffect(() => {
     let mounted = true;
 
-    // 1️⃣ Load cached conversations instantly
-    const cached = localStorage.getItem('tribe_storage_conversations');
-    if (cached) {
-      try {
-        const parsed = JSON.parse(cached);
-        if (Array.isArray(parsed)) {
-          setConversations(parsed);
-          setIsLoadingConversations(false);
-        }
-      } catch { }
-    }
-
+    // 1️⃣ Cache loaded in initial state.
     // 2️⃣ Fetch fresh data in background
     fetchConversations().then(() => {
       if (!mounted) return;

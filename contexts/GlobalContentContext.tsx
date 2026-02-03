@@ -98,7 +98,20 @@ export const GlobalContentProvider: React.FC<{ children: React.ReactNode }> = ({
     // --- Global State ---
     const [users, setUsers] = useState<User[]>([]);
     const [posts, setPosts] = useState<Post[]>([]);
-    const [tribes, setTribes] = useState<Tribe[]>([]);
+
+    // 🔥 Cache Tribes for Instant Load
+    const [tribes, setTribes] = useState<Tribe[]>(() => {
+        try {
+            const cached = localStorage.getItem('tribe_storage_tribes');
+            return cached ? JSON.parse(cached) : [];
+        } catch { return []; }
+    });
+
+    useEffect(() => {
+        if (tribes.length > 0) {
+            localStorage.setItem('tribe_storage_tribes', JSON.stringify(tribes));
+        }
+    }, [tribes]);
     const [myStories, setMyStories] = useState<Story[]>([]);
     const [followingUserStories, setFollowingUserStories] = useState<{ user: User, stories: Story[] }[]>([]);
 
