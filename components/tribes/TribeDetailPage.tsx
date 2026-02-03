@@ -106,11 +106,11 @@ interface Props {
 }
 
 const TribeDetailPage: React.FC<Props> = ({ currentUser, tribeId: propTribeId }) => {
-  const params = useParams<{ id: string }>();
+  const params = useParams<{ tribeId: string }>();
   const navigate = useNavigate();
 
   // Resolve ID: Prefer prop (from App.tsx manual routing) -> Then param (if used in Route)
-  const id = propTribeId || params.id;
+  const id = propTribeId || params.tribeId;
 
   const { socket, joinRoom, leaveRoom, clearUnreadTribe } = useSocket();
 
