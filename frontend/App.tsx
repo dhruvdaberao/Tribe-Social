@@ -284,6 +284,7 @@ const MainLayout: React.FC = () => {
                                         onUpdateUser: handleUpdateUser,
                                         onAddPost: handleAddPost,
                                         onToggleFollow: handleToggleFollow,
+                                        onToggleBlock: handleToggleBlock,
                                         onStartConversation: handleStartConversation,
                                         onNavigate: handleNavigation,
                                         onSharePost: handleSharePost,
