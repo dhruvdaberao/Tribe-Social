@@ -215,6 +215,7 @@ router.post('/:id/messages', protect, async (req, res) => {
 
         const responseMessage = {
             id: populated._id.toString(),
+            tempId: req.body.tempId, // 🔥 Return tempId for optimistic UI deduplication
             tribeId: tribe._id.toString(),
             sender: populated.sender,
             senderId: req.user.id,

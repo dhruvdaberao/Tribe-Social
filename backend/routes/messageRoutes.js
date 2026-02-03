@@ -215,7 +215,10 @@ router.post('/send/:receiverId', protect, async (req, res) => {
 
         await newMessage.save();
 
-        const responseMessage = newMessage.toJSON();
+        const responseMessage = {
+            ...newMessage.toJSON(),
+            tempId: req.body.tempId // 🔥 Return tempId for optimistic UI deduplication
+        };
 
         // Emit the message to the specific room for this DM
         // Room Name Convention: dm-{sorted(id1, id2)}
