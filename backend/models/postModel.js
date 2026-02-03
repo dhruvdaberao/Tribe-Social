@@ -82,8 +82,12 @@ const postSchema = mongoose.Schema(
     imagePublicId: { type: String },
     mediaType: { type: String, enum: ['image', 'video'], default: 'image' },
     duration: { type: Number }, // In seconds, for videos
+    // Deprecated Arrays (Kept for migration safety)
     likes: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
     comments: [commentSchema],
+    // New Scalable Count Fields
+    likesCount: { type: Number, default: 0 },
+    commentsCount: { type: Number, default: 0 },
   },
   {
     timestamps: true,

@@ -1,0 +1,4 @@
+App.tsx(1207,31): error TS2741: Property 'allUsers' is missing in type '{ tribe: Tribe; onClose: () => void; onSuccess: (updatedTribe: Tribe) => void; }' but required in type 'EditTribeModalProps'.
+components/common/MediaSelectionModal.tsx(93,44): error TS2339: Property 'borderColor' does not exist on type 'DefaultTheme'.
+components/tribes/CreateTribeModal.tsx(63,44): error TS2339: Property 'borderColor' does not exist on type 'DefaultTheme'.
+components/tribes/CreateTribeModal.tsx(76,44): error TS2339: Property 'borderColor' does not exist on type 'DefaultTheme'.
