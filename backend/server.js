@@ -73,9 +73,13 @@ const startServer = async () => {
       allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin', 'Access-Control-Request-Method', 'Access-Control-Request-Headers']
     };
 
-    console.log("2. Configuring CORS and Express middleware...");
+    // 2. Configuring CORS and Express middleware...
     app.use(cors(corsOptions));
-    app.use(express.json({ limit: '50mb' }));
+
+    // 🔥 PER-ROUTE PAYLOAD LIMITS (Security Fix)
+    // ----------------------------------------------------
+    const standardPayload = express.json({ limit: '100kb' }); // For Auth, Notifications, simple text
+    const largePayload = express.json({ limit: '50mb' });     // For Base64 Images (Posts, Profiles, Messages)
 
     // Global Error Handler for JSON parsing errors
     app.use((err, req, res, next) => {
@@ -109,16 +113,20 @@ const startServer = async () => {
     });
 
     console.log("4. Registering API routes...");
-    app.use('/api/auth', authRoutes);
-    app.use('/api/posts', postRoutes);
-    app.use('/api/users', userRoutes);
-    app.use('/api/messages', messageRoutes);
-    app.use('/api/tribes', tribeRoutes);
-    app.use('/api/notifications', notificationRoutes);
-    app.use('/api/ai', aiRoutes);
-    app.use('/api/stories', storyRoutes);
-    app.use('/api/push', pushRoutes);
-    console.log("✅ API routes registered.");
+    // 🔒 Strict Limits (High Security)
+    app.use('/api/auth', standardPayload, authRoutes);
+    app.use('/api/notifications', standardPayload, notificationRoutes);
+    app.use('/api/ai', standardPayload, aiRoutes);
+    app.use('/api/push', standardPayload, pushRoutes);
+
+    // 📸 Large Limits (Content Creation)
+    app.use('/api/posts', largePayload, postRoutes);
+    app.use('/api/users', largePayload, userRoutes);
+    app.use('/api/messages', largePayload, messageRoutes);
+    app.use('/api/tribes', largePayload, tribeRoutes);
+    app.use('/api/stories', largePayload, storyRoutes);
+
+    console.log("✅ API routes registered with security limits.");
 
     app.get('/', (req, res) => {
       res.send('Tribe API is running...');

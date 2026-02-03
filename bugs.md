@@ -15,10 +15,10 @@
   - Implemented `react-router-dom` `<Routes>` for clean, declarative navigation.
   - Reduced `App.tsx` to ~280 lines focusing only on Layout and Routing configuration.
 
-### 3. Payload & Security
-- **Issue**: `server.js` uses `express.json({ limit: '50mb' })`.
-- **Risk**: DoS vulnerability. Attackers can flood the server with large payloads.
-- **Fix**: Reduce limit for JSON (e.g., 100kb). Use specific endpoint configuration for file uploads if base64 is necessary (though multipart/form-data is better).
+### 3. Payload & Security **[FIXED]**
+- **Issue**: `server.js` uses `express.json({ limit: '50mb' })` globally.
+- **Risk**: DoS vulnerability. Attackers can flood the server with large payloads on non-essential routes (e.g., Auth).
+- **Fix**: **[DONE]** Removed global limit. applied 100kb limit to strict routes (Auth, Notifications, AI) and only allowed 50mb on routes that require Base64 image uploads (Posts, Users, Messages).
 
 ## 🟠 Priority 2: Major (Should Fix)
 
