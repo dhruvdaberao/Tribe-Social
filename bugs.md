@@ -22,10 +22,10 @@
 
 ## 🟠 Priority 2: Major (Should Fix)
 
-### 1. Performance - Frontend Data Loading
+### 1. Performance - Frontend Data Loading **[FIXED]**
 - **Issue**: `fetchData` in `App.tsx` loads **Users, Posts, Tribes, Notifications, and Stories** all at once on initial load.
 - **Risk**: Slow initial load time. As data grows, the app will become unresponsive on start.
-- **Fix**: Implement lazy loading / pagination. Fetch data only when the tab/page is visited.
+- **Fix**: **[DONE]** Implemented lazy loading. Split monolithic `fetchData` into `fetchFeed`, `fetchTribes`, etc. Updated `App.tsx` to fetch data only when the relevant route is visited.
 
 ### 2. Dependencies Mixing
 - **Issue**: Root `package.json` contains both backend (`express`, `mongoose`) and frontend (`react`, `vite`) dependencies.

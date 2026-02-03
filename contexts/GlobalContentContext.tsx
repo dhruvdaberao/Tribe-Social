@@ -51,7 +51,10 @@ interface GlobalContentContextType {
     setEditingTribe: (tribe: Tribe | null) => void;
 
     // Actions
-    fetchData: () => Promise<void>;
+    // Actions
+    fetchGlobalEssential: () => Promise<void>;
+    fetchFeed: () => Promise<void>;
+    fetchTribes: () => Promise<void>;
     handleLoadMoreFeed: () => Promise<void>;
     handleLoadMoreDiscover: () => Promise<void>;
 
@@ -186,59 +189,74 @@ export const GlobalContentProvider: React.FC<{ children: React.ReactNode }> = ({
         };
     }, []);
 
-    // --- Fetch Data ---
-    const fetchData = useCallback(async () => {
-        if (isFetching || (Date.now() - lastFetchTimestamp.current < DEBOUNCE_DELAY_MS)) return;
-        if (!currentUser) {
-            setIsDataLoaded(false);
-            return;
-        }
+    // --- Fetch Actions (Lazy Loading) ---
 
-        setIsFetching(true);
-        lastFetchTimestamp.current = Date.now();
-
+    // 1. Global Essential (Users & Notifications) - Runs on App Init
+    const fetchGlobalEssential = useCallback(async () => {
+        if (!currentUser) return;
         try {
-            const usersPromise = api.fetchUsers().then(({ data }) => setUsers(data)).catch(console.error);
-            const postsPromise = api.fetchFeedPosts(1, 10).then(({ data }) => {
-                const populatedPosts = data.map((post: any) => populatePost(post, new Map())).filter(Boolean);
-                setPosts(populatedPosts as Post[]);
-                setFeedPage(1);
-                setFeedHasMore(data.length === 10);
-            }).catch(console.error);
-
-            const tribesPromise = api.fetchTribes().then(({ data }) => {
-                if (data.length === 0 && tribesRetryCount.current === 0) {
-                    tribesRetryCount.current = 1;
-                    setTimeout(() => {
-                        api.fetchTribes().then(({ data: retryData }) => {
-                            setTribes(retryData.map((tribe: any) => ({ ...tribe, messages: [] })));
-                        }).catch(console.error);
-                    }, 1500);
-                    return [];
-                }
-                setTribes(data.map((tribe: any) => ({ ...tribe, messages: [] })));
-            }).catch(console.error);
-
-            const notificationsPromise = api.fetchNotifications().then(({ data }) => setNotifications(data)).catch(console.error);
-            const myStoriesPromise = api.fetchMyStories().then(({ data }) => setMyStories(data)).catch(console.error);
-            const followingStoriesPromise = api.fetchFollowingStories().then(({ data }) => setFollowingUserStories(data)).catch(console.error);
-
-            await Promise.allSettled([usersPromise, postsPromise, tribesPromise, notificationsPromise, myStoriesPromise, followingStoriesPromise]);
+            // Fetch users (top 20) in background for search/avatars
+            api.fetchUsers().then(({ data }) => setUsers(data)).catch(console.error);
+            // Fetch notifications
+            api.fetchNotifications().then(({ data }) => setNotifications(data)).catch(console.error);
             setIsDataLoaded(true);
-
         } catch (error) {
-            console.error("Background data fetch error:", error);
+            console.error("Global fetch error:", error);
+        }
+    }, [currentUser, setNotifications]);
+
+    // 2. Feed & Stories (Home Page)
+    const fetchFeed = useCallback(async () => {
+        if (!currentUser || posts.length > 0) return; // Dedupe if already loaded (or add forceRefresh arg later)
+        setIsFetching(true);
+        try {
+            const { data } = await api.fetchFeedPosts(1, 10);
+            const populatedPosts = data.map((post: any) => populatePost(post, new Map())).filter(Boolean);
+            setPosts(populatedPosts as Post[]);
+            setFeedPage(1);
+            setFeedHasMore(data.length === 10);
+
+            // Stories often go with Feed
+            api.fetchMyStories().then(({ data }) => setMyStories(data)).catch(console.error);
+            api.fetchFollowingStories().then(({ data }) => setFollowingUserStories(data)).catch(console.error);
+        } catch (error) {
+            console.error("Feed fetch error:", error);
         } finally {
             setIsFetching(false);
         }
-    }, [currentUser, populatePost, setNotifications, isFetching]);
+    }, [currentUser, posts.length, populatePost]);
 
-    // Initial Load
+    // 3. Tribes (Tribes Page)
+    const fetchTribes = useCallback(async () => {
+        if (!currentUser) return;
+        // Even if we have cached tribes, we refresh in background
+        try {
+            const { data } = await api.fetchTribes();
+            // Preserve messages if they exist in state but not in basic fetch
+            setTribes(prev => {
+                const prevMap = new Map(prev.map(t => [t.id, t]));
+                return data.map((t: any) => {
+                    const existing = prevMap.get(t.id);
+                    return { ...t, messages: existing ? existing.messages : [] };
+                });
+            });
+        } catch (error) {
+            console.error("Tribes fetch error:", error);
+        }
+    }, [currentUser]);
+
+    // 4. Detailed Users (Discover Page) - Existing `fetchUsers` is small, so we can re-use or expand.
+    // For now, `fetchGlobalEssential` covers the basic list.
+
+    // Old fetchData alias for backward compatibility (optional, but cleaner to remove)
+    // const fetchData = useCallback(async () => { await fetchGlobalEssential(); await fetchFeed(); await fetchTribes(); }, [fetchGlobalEssential, fetchFeed, fetchTribes]);
+
+    // Initial Essential Load (Users, Notifications)
     useEffect(() => {
         if (!isAuthLoading && currentUser) {
-            fetchData();
+            fetchGlobalEssential();
         }
-    }, [isAuthLoading, currentUser, fetchData]);
+    }, [isAuthLoading, currentUser, fetchGlobalEssential]);
 
 
     // --- Load More ---
@@ -722,7 +740,7 @@ export const GlobalContentProvider: React.FC<{ children: React.ReactNode }> = ({
         viewingUserStories, setViewingUserStories,
         isCreatingStory, setIsCreatingStory,
         editingTribe, setEditingTribe,
-        fetchData, handleLoadMoreFeed, handleLoadMoreDiscover,
+        fetchGlobalEssential, fetchFeed, fetchTribes, handleLoadMoreFeed, handleLoadMoreDiscover,
         handleAddPost, handleLikePost, handleCommentPost, handleDeletePost, handleDeleteComment, handleSharePost,
         handleToggleFollow, handleToggleBlock, handleUpdateUser, handleDeleteAccount,
         handleJoinToggle, handleCreateTribe, handleEditTribe, handleDeleteTribe,

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import { Tribe, User } from '../../types';
 import * as api from '../../api';
+import { useGlobalContent } from '../../contexts/GlobalContentContext';
 import TribeCard from './TribeCard';
 import CreateTribeModal from './CreateTribeModal';
 import EditTribeModal from './EditTribeModal';
@@ -72,120 +73,25 @@ interface TribesPageProps {
 }
 
 const TribesPage: React.FC<TribesPageProps> = ({ currentUser, unreadTribeCount }) => {
-  const [tribes, setTribes] = useState<Tribe[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const {
+    tribes,
+    userMap, // or visibleUsers if needed, but userMap is good for lookups? Actually TribeCard uses allUsers array 
+    visibleUsers: allUsers,
+    fetchTribes,
+    handleCreateTribe,
+    handleEditTribe,
+    handleDeleteTribe,
+    handleJoinToggle
+  } = useGlobalContent();
+
+  const [isLoading, setIsLoading] = useState(tribes.length === 0);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [editingTribe, setEditingTribe] = useState<Tribe | null>(null);
-  const [allUsers, setAllUsers] = useState<User[]>([]);
 
-  // ───────────── INSTANT CACHE HYDRATION + BACKGROUND REFRESH ─────────────
+  // Lazy Fetch on Mount
   useEffect(() => {
-    let mounted = true;
-
-    // Load cached tribes instantly (only if they use `id` format)
-    const cached = localStorage.getItem('tribe_storage_tribes');
-    if (cached) {
-      try {
-        const parsed = JSON.parse(cached);
-        if (Array.isArray(parsed) && parsed.every(t => t.id)) {
-          setTribes(parsed);
-          setIsLoading(false);
-        }
-      } catch { }
-    }
-
-
-    // 2️⃣ Fetch fresh data in background
-    const fetchData = async () => {
-      try {
-        const [tribesRes, usersRes] = await Promise.all([
-          api.fetchTribes(),
-          api.fetchUsers()
-        ]);
-
-        if (!mounted) return;
-
-        setTribes(tribesRes.data);
-        setAllUsers(usersRes.data);
-        setIsLoading(false);
-        setError(null); // 🔥 Fix: Clear error on success
-
-        localStorage.setItem(
-          'tribe_storage_tribes',
-          JSON.stringify(tribesRes.data)
-        );
-      } catch (err) {
-        console.error(err);
-        if (mounted) {
-          // Only show error if we have ZERO tribes (otherwise we just failed refresh)
-          // But kept simple: just set error text, rendering logic handles visibility
-          setError('Failed to load tribes');
-          setIsLoading(false);
-        }
-      }
-    };
-
-    fetchData();
-
-    return () => {
-      mounted = false;
-    };
-  }, []);
-
-  // ───────────── CRUD HANDLERS ─────────────
-  const handleTribeCreated = (newTribe: Tribe) => {
-    setTribes(prev => {
-      const updated = [newTribe, ...prev];
-      localStorage.setItem('tribe_storage_tribes', JSON.stringify(updated));
-      return updated;
-    });
-    setIsCreateModalOpen(false);
-  };
-
-  const handleTribeUpdated = (updated: Tribe) => {
-    setTribes(prev => {
-      const updatedList = prev.map(t => t.id === updated.id ? updated : t);
-      localStorage.setItem('tribe_storage_tribes', JSON.stringify(updatedList));
-      return updatedList;
-    });
-    setEditingTribe(null);
-  };
-
-  const handleTribeDeleted = async (tribeId: string) => {
-    await api.deleteTribe(tribeId);
-    setTribes(prev => {
-      const updated = prev.filter(t => t.id !== tribeId);
-      localStorage.setItem('tribe_storage_tribes', JSON.stringify(updated));
-      return updated;
-    });
-    setEditingTribe(null);
-  };
-
-  const handleJoinToggle = async (tribeId: string) => {
-    console.log('handleJoinToggle called with tribeId:', tribeId);
-
-    try {
-      console.log('Calling API to join/leave tribe:', tribeId);
-      const { data: updatedTribe } = await api.joinTribe(tribeId);
-      console.log('API response - Updated tribe:', updatedTribe);
-
-      setTribes(prev => {
-        const updated = prev.map(t => t.id === tribeId ? updatedTribe : t);
-        localStorage.setItem('tribe_storage_tribes', JSON.stringify(updated));
-        console.log('Updated tribes state with new membership');
-        return updated;
-      });
-    } catch (error) {
-      console.error('Failed to join/leave tribe:', error);
-      console.error('Error details:', {
-        tribeId,
-        errorMessage: error instanceof Error ? error.message : 'Unknown error',
-        errorStack: error instanceof Error ? error.stack : undefined
-      });
-      throw error;
-    }
-  };
+    fetchTribes().finally(() => setIsLoading(false));
+  }, [fetchTribes]);
 
   // ───────────── FILTERING ─────────────
   const myTribes = tribes.filter(
@@ -207,11 +113,9 @@ const TribesPage: React.FC<TribesPageProps> = ({ currentUser, unreadTribeCount }
         </CreateButton>
       </Header>
 
-      {error && tribes.length === 0 && <LoadingMessage>{error}</LoadingMessage>}
-
       {isLoading && tribes.length === 0 && (
         <LoadingMessage>
-          <img src="/busstop.gif" width={100} />
+          <img src="/busstop.gif" width={100} alt="Loading..." />
           <p>Loading tribes…</p>
         </LoadingMessage>
       )}
@@ -234,7 +138,7 @@ const TribesPage: React.FC<TribesPageProps> = ({ currentUser, unreadTribeCount }
                 currentUser={currentUser}
                 allUsers={allUsers}
                 onEdit={setEditingTribe}
-                onJoinToggle={handleJoinToggle}
+                onJoinToggle={(id) => handleJoinToggle(id)}
                 unreadCount={unreadTribeCount?.[tribe.id] || 0}
               />
             ))}
@@ -252,7 +156,7 @@ const TribesPage: React.FC<TribesPageProps> = ({ currentUser, unreadTribeCount }
                 tribe={tribe}
                 currentUser={currentUser}
                 allUsers={allUsers}
-                onJoinToggle={handleJoinToggle}
+                onJoinToggle={(id) => handleJoinToggle(id)}
                 unreadCount={unreadTribeCount?.[tribe.id] || 0}
               />
             ))}
@@ -263,7 +167,10 @@ const TribesPage: React.FC<TribesPageProps> = ({ currentUser, unreadTribeCount }
       {isCreateModalOpen && (
         <CreateTribeModal
           onClose={() => setIsCreateModalOpen(false)}
-          onSuccess={handleTribeCreated}
+          onSuccess={() => {
+            fetchTribes();
+            setIsCreateModalOpen(false);
+          }}
         />
       )}
 
@@ -271,8 +178,11 @@ const TribesPage: React.FC<TribesPageProps> = ({ currentUser, unreadTribeCount }
         <EditTribeModal
           tribe={editingTribe}
           onClose={() => setEditingTribe(null)}
-          onSuccess={handleTribeUpdated}
-          onDelete={handleTribeDeleted}
+          onSuccess={() => {
+            fetchTribes();
+            setEditingTribe(null);
+          }}
+          onDelete={() => handleDeleteTribe(editingTribe.id)}
           allUsers={allUsers}
         />
       )}

@@ -57,7 +57,7 @@ const MainLayout: React.FC = () => {
         viewingUserStories, setViewingUserStories,
         isCreatingStory, setIsCreatingStory,
         editingTribe, setEditingTribe,
-        fetchData, handleLoadMoreFeed, handleLoadMoreDiscover,
+        fetchFeed, fetchTribes, handleLoadMoreFeed, handleLoadMoreDiscover,
         handleAddPost, handleLikePost, handleCommentPost, handleDeletePost, handleDeleteComment, handleSharePost,
         handleToggleFollow, handleToggleBlock, handleUpdateUser, handleDeleteAccount,
         handleJoinToggle, handleCreateTribe, handleEditTribe, handleDeleteTribe,
@@ -71,7 +71,6 @@ const MainLayout: React.FC = () => {
     const [viewedTribe, setViewedTribe] = useState<Tribe | null>(null); // Keep locally for syncing with TribeDetail if used as prop, but Router handles ID usually.
     // Actually TribeDetail fetches its own data or uses props. 
     // In monolithic App.tsx, viewedTribe was used to pass to TribeDetail.
-    // But TribeDetail has a useEffect to fetch messages?
     // Let's rely on TribeDetail logic, but we might need to pass partial tribe data if available.
 
     // Derived NavItem
@@ -95,6 +94,12 @@ const MainLayout: React.FC = () => {
     const isFullHeightPage = ['Messages', 'TribeDetail', 'Settings'].includes(activeNavItem);
     const isWidePage = ['Discover', 'Tribes', 'Profile'].includes(activeNavItem);
 
+    // Lazy Data Loading Trigger
+    useEffect(() => {
+        if (activeNavItem === 'Home') fetchFeed();
+        if (activeNavItem === 'Tribes') fetchTribes();
+    }, [activeNavItem, fetchFeed, fetchTribes]);
+
     // Scroll Restoration & Management
     useEffect(() => {
         if (!isFullHeightPage) {
@@ -108,7 +113,8 @@ const MainLayout: React.FC = () => {
     const handleNavigation = (item: NavItem) => {
         if (item === activeNavItem) {
             // Refresh Logic
-            if (item === 'Home') fetchData();
+            if (item === 'Home') fetchFeed();
+            if (item === 'Tribes') fetchTribes();
             if (item === 'Notifications') toast.success('Refreshed'); // Socket handles it
 
             const isWindowScroll = window.scrollY > 0;
@@ -301,7 +307,7 @@ const MainLayout: React.FC = () => {
             {editingTribe && <EditTribeModal
                 tribe={editingTribe}
                 onClose={() => setEditingTribe(null)}
-                onSuccess={(updatedTribe) => { /* handled in Context or we refresh */ fetchData(); setEditingTribe(null); toast.success("Tribe updated"); }}
+                onSuccess={(updatedTribe) => { /* handled in Context or we refresh */ fetchTribes(); setEditingTribe(null); toast.success("Tribe updated"); }}
                 allUsers={users}
             />}
             {isCreatingStory && <StoryCreator onClose={() => setIsCreatingStory(false)} onCreate={handleCreateStory} />}
