@@ -1,14 +1,11 @@
 
-
-
-
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from './contexts/AuthContext';
 import { useSocket } from './contexts/SocketContext';
+import { GlobalContentProvider, useGlobalContent } from './contexts/GlobalContentContext';
 import { safeSetItem, safeClear } from './utils/safeLocalStorage';
 import { User, Post, Tribe, TribeMessage, Notification as NotificationType, Comment, Story } from './types';
-import * as api from './api'; // Assumed in root based on instruction
 
 // Components
 import Sidebar from './components/layout/Sidebar';
@@ -44,1026 +41,345 @@ const PSYDUCK_USER: User = {
     blockedUsers: [],
 };
 
-// Use LocalStorage Only for Preferences
-import { safeSet, safeGet } from './utils/storage';
-
-const App: React.FC = () => {
-    const { currentUser, setCurrentUser, logout, isLoading: isAuthLoading } = useAuth();
-    const { socket, notifications, setNotifications, unreadCounts, unreadMessageCount, unreadTribeCount, unreadNotificationCount, clearUnreadTribe } = useSocket();
+const MainLayout: React.FC = () => {
+    const { currentUser, logout } = useAuth();
+    const { unreadMessageCount, unreadTribeCount, unreadNotificationCount, clearUnreadTribe, notifications, unreadCounts } = useSocket();
+    const location = useLocation();
+    const navigate = useNavigate();
 
     // Global State
-    const [users, setUsers] = useState<User[]>([]);
-    const [posts, setPosts] = useState<Post[]>([]);
-    const [tribes, setTribes] = useState<Tribe[]>([]);
-    const [myStories, setMyStories] = useState<Story[]>([]);
-    const [followingUserStories, setFollowingUserStories] = useState<{ user: User, stories: Story[] }[]>([]);
+    const {
+        users, posts, tribes, myStories, followingUserStories,
+        isDataLoaded, isFetching, isCreatingPost,
+        feedPage, feedHasMore, discoverPage, discoverHasMore, isLoadingMore,
+        userMap, visiblePosts, visibleUsers,
+        viewingPost, setViewingPost,
+        viewingUserStories, setViewingUserStories,
+        isCreatingStory, setIsCreatingStory,
+        editingTribe, setEditingTribe,
+        fetchData, handleLoadMoreFeed, handleLoadMoreDiscover,
+        handleAddPost, handleLikePost, handleCommentPost, handleDeletePost, handleDeleteComment, handleSharePost,
+        handleToggleFollow, handleToggleBlock, handleUpdateUser, handleDeleteAccount,
+        handleJoinToggle, handleCreateTribe, handleEditTribe, handleDeleteTribe,
+        handleCreateStory, handleDeleteStory, handleLikeStory,
+        handleViewPost, handleViewUserStories
+    } = useGlobalContent();
 
-    // Load seen stories from local storage
-    const [seenStoryAuthors, setSeenStoryAuthors] = useState<Set<string>>(() => {
-        try {
-            const saved = localStorage.getItem('tribe_storage_seen_stories');
-            return saved ? new Set(JSON.parse(saved)) : new Set();
-        } catch (e) {
-            return new Set();
-        }
-    });
-
-    // Persist seen stories
-    useEffect(() => {
-        try {
-            localStorage.setItem('tribe_storage_seen_stories', JSON.stringify(Array.from(seenStoryAuthors)));
-        } catch (e) {
-            console.error("Failed to save seen stories", e);
-        }
-    }, [seenStoryAuthors]);
-
-    const [isDataLoaded, setIsDataLoaded] = useState(false);
-    const [isFetching, setIsFetching] = useState(false);
-    const [isCreatingPost, setIsCreatingPost] = useState(false);
-    const [isAllPostsLoaded, setIsAllPostsLoaded] = useState(false);
-
-    // Use refs for timestamps to avoid re-renders
-    const lastFetchTimestamp = useRef<number>(0);
-    const tribesRetryCount = useRef<number>(0);
-
-
-    // Navigation & Modal State
-    const [activeNavItem, setActiveNavItem] = useState<NavItem>('Home');
-    const [prevNavItem, setPrevNavItem] = useState<NavItem>('Home');
-    const [isTransitioning, setIsTransitioning] = useState(false);
-    const [viewedUser, setViewedUser] = useState<User | null>(null);
-
-    // URL Sync for Tribes
-    const navigate = useNavigate();
-    const location = useLocation();
-
-    // Track if a chat conversation is active (to hide header/adjust layout)
+    // Local UI State
     const [isChatOpen, setIsChatOpen] = useState(false);
-
-    // ───────────── PAGINATION STATE ─────────────
-    const [feedPage, setFeedPage] = useState(1);
-    const [feedHasMore, setFeedHasMore] = useState(true);
-    const [discoverPage, setDiscoverPage] = useState(1);
-    const [discoverHasMore, setDiscoverHasMore] = useState(true);
-    const [isLoadingMore, setIsLoadingMore] = useState(false);
-
-    // ───────────── SWIPE & SCROLL LOGIC ─────────────
     const mainRef = useRef<HTMLDivElement>(null);
-    const scrollStore = useRef<Map<string, number>>(new Map());
-    const touchStart = useRef<{ x: number, y: number } | null>(null);
-    const NAV_ORDER: NavItem[] = ['Home', 'Discover', 'Messages', 'Notifications', 'Tribes'];
+    const [viewedTribe, setViewedTribe] = useState<Tribe | null>(null); // Keep locally for syncing with TribeDetail if used as prop, but Router handles ID usually.
+    // Actually TribeDetail fetches its own data or uses props. 
+    // In monolithic App.tsx, viewedTribe was used to pass to TribeDetail.
+    // But TribeDetail has a useEffect to fetch messages?
+    // Let's rely on TribeDetail logic, but we might need to pass partial tribe data if available.
 
-    // Scroll Restoration
-    useEffect(() => {
-        const isPrevFullHeight = ['Messages', 'TribeDetail', 'Settings'].includes(prevNavItem);
-
-        // Save previous scroll
-        if (prevNavItem && !['Settings', 'Profile', 'TribeDetail'].includes(prevNavItem)) {
-            if (isPrevFullHeight) {
-                if (mainRef.current) {
-                    scrollStore.current.set(prevNavItem, mainRef.current.scrollTop);
-                }
-            } else {
-                scrollStore.current.set(prevNavItem, window.scrollY);
-            }
+    // Derived NavItem
+    const getNavItemFromPath = (pathname: string): NavItem => {
+        if (pathname === '/' || pathname === '/feed') return 'Home';
+        if (pathname.startsWith('/discover')) return 'Discover';
+        if (pathname.startsWith('/messages')) return 'Messages';
+        if (pathname.startsWith('/tribes')) {
+            // If simply /tribes -> Tribes
+            // If /tribes/123 -> TribeDetail
+            return pathname.split('/').filter(Boolean).length > 1 ? 'TribeDetail' : 'Tribes';
         }
-
-        // Restore current scroll
-        const isCurrentFullHeight = ['Messages', 'TribeDetail', 'Settings'].includes(activeNavItem);
-        const savedScroll = scrollStore.current.get(activeNavItem) || 0;
-
-        requestAnimationFrame(() => {
-            if (isCurrentFullHeight && mainRef.current) {
-                mainRef.current.scrollTop = savedScroll;
-            } else if (!isCurrentFullHeight) {
-                window.scrollTo(0, savedScroll);
-            }
-        });
-    }, [activeNavItem, prevNavItem]);
-
-    const handleTouchStart = (e: React.TouchEvent) => {
-        touchStart.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+        if (pathname.startsWith('/notifications')) return 'Notifications';
+        if (pathname.startsWith('/profile')) return 'Profile';
+        if (pathname.startsWith('/settings')) return 'Settings';
+        if (pathname.startsWith('/psyduck')) return 'Psyduck';
+        return 'Home';
     };
 
-    const handleTouchEnd = (e: React.TouchEvent) => {
-        if (!touchStart.current) return;
+    const activeNavItem = getNavItemFromPath(location.pathname);
+    const isFullHeightPage = ['Messages', 'TribeDetail', 'Settings'].includes(activeNavItem);
+    const isWidePage = ['Discover', 'Tribes', 'Profile'].includes(activeNavItem);
 
-        const touchEnd = { x: e.changedTouches[0].clientX, y: e.changedTouches[0].clientY };
-        const deltaX = touchStart.current.x - touchEnd.x;
-        const deltaY = touchStart.current.y - touchEnd.y;
-
-        // Settings: > 50px horiz swipe, < 30px vert variance
-        if (Math.abs(deltaX) > 50 && Math.abs(deltaY) < 30) {
-            // Ignore if in active chat or specific pages
-            if (isChatOpen || ['TribeDetail', 'Settings', 'Profile'].includes(activeNavItem)) return;
-
-            const currentIndex = NAV_ORDER.indexOf(activeNavItem);
-            if (currentIndex === -1) return;
-
-            if (deltaX > 0) {
-                // Swipe Left -> Next Tab
-                if (currentIndex < NAV_ORDER.length - 1) {
-                    handleSelectItem(NAV_ORDER[currentIndex + 1]);
-                }
-            } else {
-                // Swipe Right -> Prev Tab
-                if (currentIndex > 0) {
-                    handleSelectItem(NAV_ORDER[currentIndex - 1]);
-                }
-            }
+    // Scroll Restoration & Management
+    useEffect(() => {
+        if (!isFullHeightPage) {
+            window.scrollTo(0, 0); // Simple scroll top on route change for non-chat pages
+        } else if (mainRef.current) {
+            mainRef.current.scrollTo(0, 0);
         }
-        touchStart.current = null;
+    }, [location.pathname, isFullHeightPage]);
+
+
+    const handleNavigation = (item: NavItem) => {
+        if (item === activeNavItem) {
+            // Refresh Logic
+            if (item === 'Home') fetchData();
+            if (item === 'Notifications') toast.success('Refreshed'); // Socket handles it
+
+            const isWindowScroll = window.scrollY > 0;
+            const isMainRefScroll = mainRef.current && mainRef.current.scrollTop > 0;
+            if (isWindowScroll) window.scrollTo({ top: 0, behavior: 'smooth' });
+            if (isMainRefScroll) mainRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
+            return;
+        }
+
+        // Navigation Logic
+        switch (item) {
+            case 'Home': navigate('/'); break;
+            case 'Discover': navigate('/discover'); break;
+            case 'Messages': navigate('/messages'); break;
+            case 'Tribes': navigate('/tribes'); break;
+            case 'Notifications': navigate('/notifications'); break;
+            case 'Profile': navigate(`/profile/${currentUser?.id}`); break;
+            case 'Settings': navigate('/settings'); break;
+            case 'Psyduck': navigate('/psyduck'); break;
+            case 'TribeDetail': break; // Usually not clicked directly from sidebar
+        }
     };
 
-    // Listen for custom "open-story" event from Chat
+    // Render Helpers
+    const containerClass = isFullHeightPage
+        ? `h-[calc(100vh-${(activeNavItem === 'Messages' && !isChatOpen ? '8rem' : '4rem')})] md:h-[calc(100vh-4rem)] overflow-y-auto no-scrollbar`
+        : isWidePage ? 'max-w-5xl mx-auto px-4 md:px-6 pt-6 pb-24 md:pb-8'
+            : 'max-w-2xl mx-auto px-4 md:px-6 pt-6 pb-24 md:pb-8';
+
+    const shouldHideHeader = activeNavItem === 'TribeDetail' || (activeNavItem === 'Messages' && isChatOpen);
+
+    // Legacy wrappers for components expecting props
+    // We pass handlers that forward to GlobalContent
+
+    // View Profile Wrapper
+    const handleViewProfile = (user: User) => {
+        navigate(`/profile/${user.id}`);
+    };
+
+    const handleViewTribe = (tribe: Tribe) => {
+        setViewedTribe(tribe); // cache for detail
+        clearUnreadTribe(tribe.id);
+        navigate(`/tribes/${tribe.id}`);
+    };
+
+    const handleStartConversation = (user: User) => {
+        navigate('/messages', { state: { targetUser: user } });
+    };
+
+    return (
+        <div className={`bg-background min-h-screen text-primary touch-pan-y ${isFullHeightPage ? 'h-screen overflow-hidden' : ''}`}>
+            <Toaster />
+            <Sidebar
+                activeItem={activeNavItem}
+                onSelectItem={handleNavigation}
+                currentUser={currentUser}
+                unreadMessageCount={unreadMessageCount}
+                unreadTribeCount={unreadTribeCount}
+                unreadNotificationCount={unreadNotificationCount}
+                isChatOpen={isChatOpen}
+            />
+
+            <main className={`${shouldHideHeader ? 'pt-0 md:pt-16' : 'pt-16'} pb-16 md:pb-0 transition-all duration-300 ${isFullHeightPage ? 'h-screen' : 'min-h-screen'}`}>
+                <div ref={mainRef} className={containerClass}>
+                    <ErrorBoundary onReset={() => window.location.reload()}>
+                        <Routes>
+                            <Route path="/" element={
+                                <>
+                                    <CreatePost currentUser={currentUser} allUsers={visibleUsers} myStories={myStories} onAddPost={handleAddPost} isPosting={isCreatingPost} onOpenStoryCreator={() => setIsCreatingStory(true)} onViewUserStories={handleViewUserStories} />
+                                    <StoryFeed myStories={myStories} followingUserStories={followingUserStories} currentUser={currentUser} seenStoryAuthors={new Set()} onViewUserStories={handleViewUserStories} />
+                                    <FeedPage
+                                        posts={visiblePosts.filter(p => (currentUser?.following || []).includes(p.author.id) || p.author.id === currentUser?.id)}
+                                        currentUser={currentUser}
+                                        allUsers={visibleUsers}
+                                        allTribes={tribes}
+                                        onLikePost={handleLikePost}
+                                        onCommentPost={handleCommentPost}
+                                        onDeletePost={handleDeletePost}
+                                        onDeleteComment={handleDeleteComment}
+                                        onViewProfile={handleViewProfile}
+                                        onSharePost={handleSharePost}
+                                        onVisitDiscover={() => navigate('/discover')}
+                                        onLoadMore={handleLoadMoreFeed}
+                                        hasMore={feedHasMore}
+                                    />
+                                </>
+                            } />
+
+                            <Route path="/discover" element={
+                                <DiscoverPage
+                                    posts={visiblePosts}
+                                    users={visibleUsers}
+                                    tribes={tribes}
+                                    currentUser={currentUser}
+                                    onLikePost={handleLikePost}
+                                    onCommentPost={handleCommentPost}
+                                    onDeletePost={handleDeletePost}
+                                    onDeleteComment={handleDeleteComment}
+                                    onToggleFollow={(id) => handleToggleFollow(id)}
+                                    onViewProfile={handleViewProfile}
+                                    onViewTribe={handleViewTribe}
+                                    onJoinToggle={handleJoinToggle}
+                                    onEditTribe={setEditingTribe}
+                                    onSharePost={handleSharePost}
+                                    onLoadMore={handleLoadMoreDiscover}
+                                    hasMore={discoverHasMore}
+                                />
+                            } />
+
+                            <Route path="/messages" element={
+                                <ChatWrapper
+                                    currentUser={currentUser}
+                                    allUsers={visibleUsers}
+                                    psyduck={PSYDUCK_USER}
+                                    onViewProfile={handleViewProfile}
+                                    onSharePost={handleSharePost}
+                                    setIsChatOpen={setIsChatOpen}
+                                />
+                            } />
+
+                            <Route path="/psyduck" element={
+                                <ChatPage
+                                    currentUser={currentUser}
+                                    allUsers={visibleUsers}
+                                    chukUser={PSYDUCK_USER}
+                                    initialTargetUser={PSYDUCK_USER}
+                                    onViewProfile={handleViewProfile}
+                                    onSharePost={handleSharePost}
+                                    onConversationStateChange={setIsChatOpen}
+                                />
+                            } />
+
+                            <Route path="/tribes" element={
+                                <TribesPage currentUser={currentUser!} unreadTribeCount={unreadCounts.tribes} />
+                            } />
+
+                            <Route path="/tribes/:tribeId" element={
+                                <TribeDetailPage currentUser={currentUser} />
+                            } />
+
+                            <Route path="/notifications" element={
+                                <NotificationsPage
+                                    notifications={notifications}
+
+
+                                    allTribes={tribes}
+                                    currentUser={currentUser!}
+                                    onViewProfile={handleViewProfile}
+                                    onViewMessage={handleStartConversation}
+                                    onViewPost={handleViewPost}
+                                    onViewTribe={handleViewTribe}
+                                    onViewStory={handleViewUserStories}
+                                />
+                            } />
+
+                            <Route path="/profile/:userId" element={
+                                <ProfileWrapper
+                                    users={users} visibleUsers={visibleUsers} tribes={tribes} posts={visiblePosts}
+                                    currentUser={currentUser} myStories={myStories} followingUserStories={followingUserStories}
+                                    // pass actions...
+                                    handlers={{
+                                        onLikePost: handleLikePost,
+                                        onCommentPost: handleCommentPost,
+                                        onDeletePost: handleDeletePost,
+                                        onDeleteComment: handleDeleteComment,
+                                        onViewProfile: handleViewProfile,
+                                        onUpdateUser: handleUpdateUser,
+                                        onAddPost: handleAddPost,
+                                        onToggleFollow: handleToggleFollow,
+                                        onStartConversation: handleStartConversation,
+                                        onNavigate: handleNavigation,
+                                        onSharePost: handleSharePost,
+                                        onOpenStoryCreator: () => setIsCreatingStory(true),
+                                        onViewUserStories: handleViewUserStories
+                                    }}
+                                    isPosting={isCreatingPost}
+                                />
+                            } />
+
+                            <Route path="/settings" element={
+                                <SettingsPage currentUser={currentUser} allUsers={users} onLogout={logout} onDeleteAccount={handleDeleteAccount} onToggleBlock={handleToggleBlock} onBack={() => navigate(`/profile/${currentUser?.id}`)} />
+                            } />
+
+                        </Routes>
+                    </ErrorBoundary>
+                </div>
+            </main>
+
+            {/* Modals */}
+            {editingTribe && <EditTribeModal
+                tribe={editingTribe}
+                onClose={() => setEditingTribe(null)}
+                onSuccess={(updatedTribe) => { /* handled in Context or we refresh */ fetchData(); setEditingTribe(null); toast.success("Tribe updated"); }}
+                allUsers={users}
+            />}
+            {isCreatingStory && <StoryCreator onClose={() => setIsCreatingStory(false)} onCreate={handleCreateStory} />}
+            {viewingUserStories && <StoryViewer userStories={viewingUserStories} currentUser={currentUser} allUsers={visibleUsers} allTribes={tribes} onClose={() => setViewingUserStories(null)} onDelete={handleDeleteStory} onLike={handleLikeStory} onSharePost={handleSharePost} initialStoryId={viewingUserStories.initialStoryId} />}
+            {viewingPost && <PostViewModal post={viewingPost} currentUser={currentUser} allUsers={visibleUsers} allTribes={tribes} onLike={handleLikePost} onComment={handleCommentPost} onDeletePost={handleDeletePost} onDeleteComment={handleDeleteComment} onViewProfile={handleViewProfile} onSharePost={handleSharePost} onClose={() => setViewingPost(null)} />}
+
+        </div>
+    );
+}
+
+// Wrapper for Profile to extract params and feed ProfilePage
+const ProfileWrapper = ({ users, visibleUsers, tribes, posts, currentUser, myStories, followingUserStories, handlers, isPosting }: any) => {
+    const { userId } = React.useMemo(() => {
+        const params = new URLSearchParams(window.location.search); // Wait, params via useParams
+        return { userId: window.location.pathname.split('/').pop() };
+    }, [window.location.pathname]); // Simple hack or useParams
+
+    // Better: use useParams
+    // But I cannot use hook inside callback or here easily without importing.
+    // I can stick to Route element usage if I define component outside.
+    // Or just inline it.
+
+    // Actually, let's use a real component.
+    return <ProfilePageContent userId={userId} users={users} visibleUsers={visibleUsers} tribes={tribes} posts={posts} currentUser={currentUser} myStories={myStories} followingUserStories={followingUserStories} handlers={handlers} isPosting={isPosting} />
+};
+
+import { useParams } from 'react-router-dom';
+
+const ProfilePageContent = ({ userId, users, visibleUsers, tribes, posts, currentUser, myStories, followingUserStories, handlers, isPosting }: any) => {
+    const params = useParams();
+    const targetId = params.userId || userId;
+
+    const viewedUser = users.find((u: User) => u.id === targetId) || (targetId === currentUser?.id ? currentUser : null);
+
+    if (!viewedUser) return <div className="text-center p-8">User not found</div>;
+
+    const userPosts = posts.filter((p: Post) => p.author.id === viewedUser.id);
+    const userHasStory = myStories.some((s: Story) => s.user === viewedUser.id) || followingUserStories.some((us: any) => us.user.id === viewedUser.id);
+
+    return <ProfilePage
+        user={viewedUser}
+        allUsers={users}
+        visibleUsers={visibleUsers}
+        allTribes={tribes}
+        posts={userPosts}
+        currentUser={currentUser}
+        hasStory={userHasStory}
+        {...handlers}
+        isPosting={isPosting}
+        myStories={myStories}
+    />;
+};
+
+// Wrapper for Chat to handle location state
+const ChatWrapper = ({ currentUser, allUsers, psyduck, onViewProfile, onSharePost, setIsChatOpen }: any) => {
+    const location = useLocation();
+    const initialTargetUser = location.state?.targetUser || null;
+    return <ChatPage currentUser={currentUser} allUsers={allUsers} chukUser={psyduck} initialTargetUser={initialTargetUser} onViewProfile={onViewProfile} onSharePost={onSharePost} onConversationStateChange={setIsChatOpen} />;
+}
+
+
+const App: React.FC = () => {
+    const { currentUser, isLoading: isAuthLoading } = useAuth();
+
+    // Version Check
     useEffect(() => {
-        const handleOpenStory = (e: any) => {
-            const payload = e.detail;
-            if (payload) {
-                const [userId, storyId] = payload.split(':');
-                handleViewUserStories(userId, undefined, storyId);
-            }
-        };
-
-        const handleOpenPost = (e: any) => {
-            const postId = e.detail;
-            if (postId) {
-                handleViewPost(postId);
-            }
-        };
-
-        window.addEventListener('open-story', handleOpenStory);
-        window.addEventListener('open-post', handleOpenPost);
-        return () => {
-            window.removeEventListener('open-story', handleOpenStory);
-            window.removeEventListener('open-post', handleOpenPost);
-        };
-    }, []);
-
-    useEffect(() => {
-        if (location.pathname === '/tribes' || location.pathname === '/tribes/') {
-            setActiveNavItem('Tribes');
-        } else if (location.pathname.startsWith('/tribes/')) {
-            setActiveNavItem('TribeDetail');
-        }
-    }, [location.pathname]);
-
-    // ... existing code ...
-    const [viewedTribe, setViewedTribe] = useState<Tribe | null>(null);
-    const [viewingPost, setViewingPost] = useState<Post | null>(null);
-    const [editingTribe, setEditingTribe] = useState<Tribe | null>(null);
-    const [chatTarget, setChatTarget] = useState<User | null>(null);
-    const [isCreatingStory, setIsCreatingStory] = useState(false);
-    const [viewingUserStories, setViewingUserStories] = useState<{ user: User, stories: Story[], initialStoryId?: string } | null>(null);
-
-    // Initialize from SessionStorage for instant load
-    useEffect(() => {
-        // PERMANENT FIX: Force clear storage if version mismatch to remove bad tokens
-        const APP_VERSION = 'v4'; // Increment this to force logout everyone
+        const APP_VERSION = 'v4';
         const currentVersion = localStorage.getItem('app_version');
-
         if (currentVersion !== APP_VERSION) {
-            console.log("⚠️ Upgrading App Version: Clearing potentially corrupted storage...");
             safeClear();
             safeSetItem('app_version', APP_VERSION);
             window.location.reload();
-            return;
         }
-
-        // ZOMBIE CHECK: If currentUser exists but token is missing, logout immediately
         if (localStorage.getItem('currentUser') && !localStorage.getItem('token')) {
-            console.warn("🧟 Zombie Session Detected: User exists but Token missing. Logging out...");
             localStorage.clear();
             window.location.href = '/login';
-            return;
         }
-
-        // REMOVED CACHING LOGIC to prevent storage quota errors.
-        // Data is now fetched fresh on every load.
     }, []);
-
-    const userMap = useMemo(() => {
-        const map = new Map(users.map((user: User) => [user.id, user]));
-        map.set(PSYDUCK_USER.id, PSYDUCK_USER);
-        return map;
-    }, [users]);
-
-    const populatePost = useCallback((postFromApi: any, userMapToUse: Map<string, User>): Post | null => {
-        const { user: author, ...restOfPost } = postFromApi;
-        // If author is null (deleted user), skip
-        if (!author) return null;
-
-        return {
-            ...restOfPost,
-            author, // Assuming author is already populated object from backend
-            comments: restOfPost.comments ? restOfPost.comments.map((comment: any) => {
-                const { user, ...restOfComment } = comment;
-                return { ...restOfComment, author: user };
-            }).filter((c: any) => c.author) : [],
-        };
-    }, []);
-
-    const DEBOUNCE_DELAY_MS = 10000;
-    const fetchData = useCallback(async () => {
-        // Allow fetch if enough time passed OR if we have no posts yet (first load situation)
-        if (isFetching || (Date.now() - lastFetchTimestamp.current < DEBOUNCE_DELAY_MS)) return;
-
-        if (!currentUser) {
-            setIsDataLoaded(false);
-            return;
-        }
-
-        setIsFetching(true);
-        lastFetchTimestamp.current = Date.now();
-
-        try {
-            // Decoupled fetching strategy: fire all requests, update state AS SOON as each finishes.
-            // This prevents a slow request (e.g. Feed) from blocking a fast request (e.g. Tribes).
-
-            const usersPromise = api.fetchUsers()
-                .then(({ data }) => {
-                    setUsers(data);
-                    setUsers(data);
-                    // saveToCache('users', data); // Removed
-                })
-                .catch(e => console.error("Failed to fetch users", e));
-
-            const postsPromise = api.fetchFeedPosts(1, 10)
-                .then(async ({ data }) => {
-                    // Populate posts with empty user map initially
-                    const populatedPosts = data.map((post: any) => populatePost(post, new Map())).filter(Boolean);
-                    setPosts(populatedPosts as Post[]);
-                    setFeedPage(1);
-                    setFeedHasMore(data.length === 10); // If less than limit, no more pages
-                })
-                .catch(e => console.error("Failed to fetch posts", e));
-
-            const tribesPromise = api.fetchTribes()
-                .then(({ data }) => {
-                    if (data.length === 0 && tribesRetryCount.current === 0) {
-                        console.warn("⚠️ Tribes list empty. Retrying fetch once...");
-                        tribesRetryCount.current = 1;
-                        setTimeout(() => {
-                            api.fetchTribes().then(({ data: retryData }) => {
-                                const populated = retryData.map((tribe: any) => ({ ...tribe, messages: [] }));
-                                setTribes(populated);
-                                setTribes(populated);
-                                // saveToCache('tribes', populated); // Removed
-                                if (retryData.length > 0) console.log("✅ Retry successful: Tribes loaded.");
-                            }).catch(e => console.error("❌ Tribe retry failed", e));
-                        }, 1500);
-                        // Return empty for now so we resolve
-                        return [];
-                    } else {
-                        const populatedTribes = data.map((tribe: any) => ({ ...tribe, messages: [] }));
-                        setTribes(populatedTribes);
-                        setTribes(populatedTribes);
-                        // saveToCache('tribes', populatedTribes); // Removed
-                        return populatedTribes;
-                    }
-                })
-                .catch(e => console.error("Failed to fetch tribes", e));
-
-            const notificationsPromise = api.fetchNotifications()
-                .then(({ data }) => {
-                    setNotifications(data);
-                    // saveToCache('notifications', data); // Removed
-                })
-                .catch(e => console.error("Failed to fetch notifications", e));
-
-            const myStoriesPromise = api.fetchMyStories()
-                .then(({ data }) => {
-                    setMyStories(data);
-                    setMyStories(data);
-                    // saveToCache('myStories', data); // Removed
-                })
-                .catch(e => console.error("Failed to fetch my stories", e));
-
-            const followingStoriesPromise = api.fetchFollowingStories()
-                .then(({ data }) => {
-                    setFollowingUserStories(data);
-                    setFollowingUserStories(data);
-                    // saveToCache('followingStories', data); // Removed
-                })
-                .catch(e => console.error("Failed to fetch stories", e));
-
-            // Wait for all to finish only to set "isFetching" to false and "Data Loaded" to true.
-            // But the UI will already be populated by the individual .then blocks above!
-            await Promise.allSettled([
-                usersPromise,
-                postsPromise,
-                tribesPromise,
-                notificationsPromise,
-                myStoriesPromise,
-                followingStoriesPromise
-            ]);
-
-            setIsDataLoaded(true);
-
-        } catch (error) {
-            console.error("Background data fetch error:", error);
-        } finally {
-            setIsFetching(false);
-        }
-    }, [currentUser, populatePost, setNotifications]);
-
-    const handleLoadMoreFeed = useCallback(async () => {
-        if (isLoadingMore || !feedHasMore) return;
-        setIsLoadingMore(true);
-        const nextPage = feedPage + 1;
-        try {
-            const { data } = await api.fetchFeedPosts(nextPage, 10);
-            if (data.length === 0) {
-                setFeedHasMore(false);
-            } else {
-                const populatedNew = data.map((post: any) => populatePost(post, userMap)).filter(Boolean) as Post[];
-                setPosts(prev => {
-                    const postMap = new Map(prev.map(p => [p.id, p]));
-                    populatedNew.forEach(p => postMap.set(p.id, p)); // Deduplicate
-                    return Array.from(postMap.values()).sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
-                });
-                setFeedPage(nextPage);
-                if (data.length < 10) setFeedHasMore(false);
-            }
-        } catch (e) {
-            console.error("Load more feed failed", e);
-        } finally {
-            setIsLoadingMore(false);
-        }
-    }, [feedPage, feedHasMore, isLoadingMore, userMap, populatePost]);
-
-    const handleLoadMoreDiscover = useCallback(async () => {
-        if (isLoadingMore || !discoverHasMore) return;
-        setIsLoadingMore(true);
-        const nextPage = discoverPage + 1;
-        try {
-            const { data } = await api.fetchPosts(nextPage, 20); // Discover batch size 20
-            if (data.length === 0) {
-                setDiscoverHasMore(false);
-            } else {
-                const populatedNew = data.map((post: any) => populatePost(post, userMap)).filter(Boolean) as Post[];
-                setPosts(prev => {
-                    const postMap = new Map(prev.map(p => [p.id, p]));
-                    populatedNew.forEach(p => postMap.set(p.id, p));
-                    return Array.from(postMap.values()).sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
-                });
-                setDiscoverPage(nextPage);
-                if (data.length < 20) setDiscoverHasMore(false);
-            }
-        } catch (e) {
-            console.error("Load more discover failed", e);
-        } finally {
-            setIsLoadingMore(false);
-        }
-    }, [discoverPage, discoverHasMore, isLoadingMore, userMap, populatePost]);
-
-    useEffect(() => {
-        if (!isAuthLoading && currentUser) {
-            fetchData();
-        }
-    }, [fetchData, isAuthLoading, currentUser]);
-
-    // Socket Setup
-    useEffect(() => {
-        if (socket && tribes.length > 0 && currentUser) {
-            const myTribeIds = tribes.filter(t => t.members.includes(currentUser.id)).map(t => t.id);
-            myTribeIds.forEach(tribeId => {
-                socket.emit('joinRoom', `tribe-${tribeId}`);
-            });
-        }
-    }, [socket, tribes, currentUser]);
-
-    useEffect(() => {
-        if (!socket || !viewedTribe || !viewedTribe.id) return;
-        const room = `tribe-${viewedTribe.id}`;
-        socket.emit('joinRoom', room);
-        return () => { socket.emit('leaveRoom', room); };
-    }, [socket, viewedTribe?.id]);
-
-    useEffect(() => {
-        if (!socket || !userMap.size) return;
-        const handleNewPost = (post: any) => {
-            const populated = populatePost(post, userMap);
-            if (populated) {
-                setPosts(prev => {
-                    const optimisticPostIndex = prev.findIndex(p => p.id === `temp-${post.tempId}`);
-                    if (optimisticPostIndex > -1) {
-                        const newPosts = [...prev];
-                        newPosts[optimisticPostIndex] = populated;
-                        return newPosts;
-                    }
-                    if (prev.some(p => p.id === populated.id)) return prev;
-                    return [populated, ...prev].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
-                });
-            }
-        };
-        const handlePostUpdated = (updatedPost: any) => {
-            const populated = populatePost(updatedPost, userMap);
-            if (populated) setPosts(prev => prev.map(p => p.id === populated.id ? populated : p));
-        };
-        const handlePostDeleted = (postId: string) => setPosts(prev => prev.filter(p => p.id !== postId));
-
-        // Tribe message handling in App.tsx mainly for global unread counts. 
-        // Specific detail page handles its own history fetch.
-        const handleNewTribeMessage = (message: TribeMessage) => {
-            // Unread counts are managed by SocketContext. 
-            // TribeDetailPage handles clearing them when active.
-            // App.tsx does not need to manually update global unread state here.
-        };
-
-        const handleTribeMessageDeleted = ({ tribeId, messageId }: { tribeId: string, messageId: string }) => {
-            if (viewedTribe && viewedTribe.id === tribeId) setViewedTribe(prev => prev ? { ...prev, messages: prev.messages.filter(m => m.id !== messageId) } : null);
-        };
-        const handleUserUpdated = (updatedUser: User) => {
-            setUsers(prev => prev.map(u => u.id === updatedUser.id ? updatedUser : u));
-            if (currentUser?.id === updatedUser.id) setCurrentUser(updatedUser);
-            if (viewedUser?.id === updatedUser.id) setViewedUser(updatedUser);
-        };
-        const handleTribeDeleted = (tribeId: string) => {
-            setTribes(prev => prev.filter(t => t.id !== tribeId));
-            if (viewedTribe?.id === tribeId) {
-                setViewedTribe(null);
-                setActiveNavItem('Tribes');
-                toast.info('This tribe has been deleted by the owner.');
-            }
-        };
-
-        socket.on('newPost', handleNewPost);
-        socket.on('postUpdated', handlePostUpdated);
-        socket.on('postDeleted', handlePostDeleted);
-        socket.on('newTribeMessage', handleNewTribeMessage);
-        socket.on('tribeMessageDeleted', handleTribeMessageDeleted);
-        socket.on('userUpdated', handleUserUpdated);
-        socket.on('tribeDeleted', handleTribeDeleted);
-
-        return () => {
-            socket.off('newPost', handleNewPost);
-            socket.off('postUpdated', handlePostUpdated);
-            socket.off('postDeleted', handlePostDeleted);
-            socket.off('newTribeMessage', handleNewTribeMessage);
-            socket.off('tribeMessageDeleted', handleTribeMessageDeleted);
-            socket.off('userUpdated', handleUserUpdated);
-            socket.off('tribeDeleted', handleTribeDeleted);
-        };
-    }, [socket, userMap, populatePost, currentUser?.id, setCurrentUser, viewedUser?.id, viewedTribe, isCreatingPost]);
-
-    const handleSelectItem = (item: NavItem) => {
-        // Tab Reselect Logic: Scroll to Top or Refresh
-        if (item === activeNavItem) {
-            // For Profile, ensure we are on own profile
-            if (item === 'Profile' && viewedUser?.id !== currentUser?.id) {
-                // Switch to own profile, handled below - Fall through to transition
-            } else if (item !== 'TribeDetail' && item !== 'Settings') {
-                const isWindowScroll = window.scrollY > 0;
-                const isMainRefScroll = mainRef.current && mainRef.current.scrollTop > 0;
-
-                if (isWindowScroll || isMainRefScroll) {
-                    if (isWindowScroll) window.scrollTo({ top: 0, behavior: 'smooth' });
-                    if (isMainRefScroll) mainRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
-                } else {
-                    // Already at top -> Soft Refresh
-                    if (item === 'Home') fetchData();
-                    if (item === 'Discover') {
-                        // Reset Discover
-                        setDiscoverPage(1);
-                        setDiscoverHasMore(true);
-                        api.fetchPosts(1, 20).then(({ data }) => {
-                            const populated = data.map((post: any) => populatePost(post, userMap)).filter(Boolean);
-                            setPosts(prev => {
-                                const postMap = new Map(prev.map(p => [p.id, p]));
-                                populated.forEach((p: any) => postMap.set(p.id, p));
-                                return Array.from(postMap.values()).sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
-                            });
-                            toast.success('Discover Refreshed');
-                        });
-                    }
-                    if (item === 'Notifications') (socket as any)?.emit('fetchNotifications');
-                    toast.success('Refreshed');
-                }
-            }
-            return;
-        }
-
-
-        // Start transition
-        setIsTransitioning(true);
-        setPrevNavItem(activeNavItem);
-
-        setChatTarget(null);
-        if (item === 'Profile') {
-            // Logic for profile can be complex (own profile vs others), but if we click "Profile" in nav, usually means own profile.
-            // If we are already on own profile, scroll to top.
-            if (activeNavItem === 'Profile' && viewedUser?.id === currentUser?.id) {
-                window.scrollTo({ top: 0, behavior: 'smooth' });
-                setIsTransitioning(false);
-                return;
-            }
-            setViewedUser(currentUser);
-        } else if (item !== 'Settings') {
-            setViewedUser(null);
-        }
-        if (item !== 'TribeDetail') setViewedTribe(null);
-        if (item === 'Psyduck') {
-            handleStartConversation(PSYDUCK_USER);
-            setIsTransitioning(false);
-            return;
-        }
-        setActiveNavItem(item);
-        window.scrollTo({ top: 0, behavior: 'smooth' }); // Also scroll to top on new navigation
-
-        // End transition after a brief delay
-        setTimeout(() => {
-            setIsTransitioning(false);
-        }, 100);
-    };
-
-    const handleViewProfile = (user: User) => {
-        setViewedUser(user);
-        setActiveNavItem('Profile');
-    };
-
-    const handleStartConversation = (targetUser: User) => {
-        setChatTarget(targetUser);
-        setActiveNavItem('Messages');
-    };
-
-    const handleAddPost = async (content: string, imageUrl?: string, mediaType?: 'image' | 'video', duration?: number) => {
-        if (!currentUser) return;
-        setIsCreatingPost(true);
-        const tempId = Date.now().toString();
-        // Optimistic update
-        const tempPost: Post = {
-            id: `temp-${tempId}`,
-            author: currentUser,
-            content: content,
-            imageUrl: imageUrl,
-            mediaType: mediaType || 'image', // Optimistic update needs this
-            duration: duration,
-            timestamp: new Date().toISOString(),
-            likes: [],
-            comments: [],
-        };
-        setPosts(prev => [tempPost, ...prev]);
-
-        try {
-            await api.createPost({ content, imageUrl, tempId, mediaType, duration });
-            toast.success("Post created successfully!");
-        } catch (error) {
-            console.error("Failed to add post:", error);
-            toast.error("Could not create post. Please try again.");
-            setPosts(prev => prev.filter(p => p.id !== `temp-${tempId}`));
-        } finally {
-            setIsCreatingPost(false);
-        }
-    };
-
-    const handleLikePost = async (postId: string) => {
-        if (!currentUser) return;
-        const originalPosts = [...posts];
-        setPosts(prev => prev.map(p => {
-            if (p.id === postId) {
-                const isLiked = p.likes.includes(currentUser.id);
-                return { ...p, likes: isLiked ? p.likes.filter(id => id !== currentUser.id) : [...p.likes, currentUser.id] };
-            }
-            return p;
-        }));
-        try {
-            await api.likePost(postId);
-        } catch (error) {
-            console.error("Failed to like post:", error);
-            toast.error("Like failed. Reverting.");
-            setPosts(originalPosts);
-        }
-    };
-
-    const handleCommentPost = async (postId: string, text: string) => {
-        if (!currentUser) return;
-        const tempCommentId = `temp-${Date.now()}`;
-        const tempComment: Comment = { id: tempCommentId, author: currentUser, text, timestamp: new Date().toISOString() };
-        setPosts(prev => prev.map(p => p.id === postId ? { ...p, comments: [...p.comments, tempComment] } : p));
-        try {
-            await api.commentOnPost(postId, { text });
-        } catch (error) {
-            console.error("Failed to comment:", error);
-            toast.error("Failed to post comment.");
-            setPosts(prev => prev.map(p => p.id === postId ? { ...p, comments: p.comments.filter(c => c.id !== tempCommentId) } : p));
-        }
-    };
-
-    const handleDeletePost = async (postId: string) => {
-        if (!currentUser) return;
-        // Optimistic delete
-        const originalPosts = posts;
-        setPosts(prev => prev.filter(p => p.id !== postId));
-
-        try {
-            await api.deletePost(postId);
-            toast.success("Post deleted.");
-        } catch (error) {
-            console.error("Failed to delete post:", error);
-            toast.error("Could not delete post.");
-            setPosts(originalPosts);
-        }
-    };
-
-    const handleDeleteComment = async (postId: string, commentId: string) => {
-        if (!currentUser) return;
-        const originalPosts = posts;
-        setPosts(prev => prev.map(p => p.id === postId ? { ...p, comments: p.comments.filter(c => c.id !== commentId) } : p));
-        try {
-            await api.deleteComment(postId, commentId);
-        } catch (error) {
-            console.error("Failed to delete comment:", error);
-            toast.error("Could not delete comment.");
-            setPosts(originalPosts);
-        }
-    };
-
-    const handleSharePost = async (post: any, destination: { type: 'tribe' | 'user', id: string, name?: string }) => {
-        if (!currentUser) return;
-
-        // Clean message format for shared content
-        const messageText = post.content.startsWith('Shared Story')
-            ? post.content // StoryViewer already formats it
-            : `Shared Post\n/post/${post.id}?owner=${post.author?.username || 'user'}\n${post.content}`; // Post ID enables the "View Post" CTA
-
-        const messageData = {
-            text: messageText,
-            imageUrl: post.imageUrl,
-            sender: currentUser,
-            timestamp: new Date().toISOString(),
-        };
-        try {
-            if (destination.type === 'tribe') {
-                await api.sendTribeMessage(destination.id, { text: messageData.text, imageUrl: messageData.imageUrl });
-                toast.success(`Post successfully shared to tribe!`);
-            } else {
-                await api.sendMessage(destination.id, { message: messageData.text, imageUrl: messageData.imageUrl });
-                toast.success(`Post successfully shared with user!`);
-            }
-        } catch (error) {
-            console.error("Failed to share post:", error);
-            toast.error("Could not share post. Please try again.");
-        }
-    };
-
-    const handleViewPost = async (postId: string) => {
-        let post = posts.find(p => p.id === postId);
-        if (!post) {
-            try {
-                toast.info("Loading post...");
-                const { data } = await api.fetchPost(postId);
-                const populatedPost = populatePost(data, userMap);
-                if (populatedPost) {
-                    setPosts(prev => {
-                        const postExists = prev.some(p => p.id === populatedPost.id);
-                        return postExists ? prev : [populatedPost, ...prev];
-                    });
-                    post = populatedPost;
-                }
-            } catch (error) {
-                console.error("Failed to fetch single post:", error);
-                toast.error("Could not load the post. It may have been deleted.");
-                return;
-            }
-        }
-        if (post) {
-            setViewingPost(post);
-        } else {
-            toast.error("Could not find the post. It may have been deleted.");
-        }
-    };
-
-    const handleUpdateUser = async (updatedUserData: Partial<User>) => {
-        if (!currentUser) return;
-        try {
-            await api.updateProfile(updatedUserData);
-            toast.success("Profile updated!");
-        } catch (error) {
-            console.error("Failed to update user:", error);
-        }
-    };
-
-    // FIX: Strictly safe follow toggle
-    // NEVER nullify local state. Use safe updates.
-    const handleToggleFollow = async (targetUserId: string) => {
-        if (!currentUser || currentUser.id === targetUserId) return;
-
-        // 1. Capture current state for rollback
-        const originalCurrentUser = { ...currentUser };
-        const originalViewedUser = viewedUser ? { ...viewedUser } : null;
-
-        // STRICT SAFETY CHECK: Ensure currentUser.following is an array
-        const safeFollowing = Array.isArray(currentUser.following) ? currentUser.following : [];
-        const isFollowing = safeFollowing.includes(targetUserId);
-
-        // 2. Optimistic Update: Current User
-        setCurrentUser(prev => {
-            if (!prev) return null;
-
-            // STRICT SAFETY CHECK: Ensure following is an array
-            const currentFollowing = Array.isArray(prev.following) ? prev.following : [];
-            const isAlreadyFollowing = currentFollowing.includes(targetUserId);
-
-            const newFollowing = isAlreadyFollowing
-                ? currentFollowing.filter(id => id !== targetUserId)
-                : [...currentFollowing, targetUserId];
-
-            // Explicitly manage count if it exists
-            const newCount = (prev.followingCount !== undefined)
-                ? prev.followingCount + (isAlreadyFollowing ? -1 : 1)
-                : newFollowing.length;
-
-            return { ...prev, following: newFollowing, followingCount: newCount };
-        });
-
-        // 3. Optimistic Update: Viewed User (if applicable)
-        if (viewedUser) {
-            setViewedUser(prev => {
-                if (!prev) return null;
-
-                // STRICT SAFETY CHECK: Ensure lists are arrays
-                const currentFollowers = Array.isArray(prev.followers) ? prev.followers : [];
-                const currentFollowing = Array.isArray(prev.following) ? prev.following : [];
-
-                // If we are viewing the person we just followed/unfollowed
-                if (prev.id === targetUserId) {
-                    const isFollowedByMe = currentFollowers.includes(currentUser.id);
-
-                    const newFollowers = isFollowedByMe
-                        ? currentFollowers.filter(id => id !== currentUser.id)
-                        : [...currentFollowers, currentUser.id];
-
-                    const newCount = (prev.followersCount !== undefined)
-                        ? prev.followersCount + (isFollowedByMe ? -1 : 1)
-                        : newFollowers.length;
-
-                    return {
-                        ...prev,
-                        followers: newFollowers,
-                        followersCount: newCount,
-                        isFollowedByCurrentUser: !isFollowedByMe
-                    };
-                }
-
-                // If we are viewing our own profile while following someone else
-                if (prev.id === currentUser.id) {
-                    const isAlreadyFollowing = currentFollowing.includes(targetUserId);
-
-                    const newFollowing = isAlreadyFollowing
-                        ? currentFollowing.filter(id => id !== targetUserId)
-                        : [...currentFollowing, targetUserId];
-
-                    const newCount = (prev.followingCount !== undefined)
-                        ? prev.followingCount + (isAlreadyFollowing ? -1 : 1)
-                        : newFollowing.length;
-
-                    return { ...prev, following: newFollowing, followingCount: newCount };
-                }
-
-                return prev;
-            });
-        }
-
-        // 4. API Call
-        try {
-            await api.toggleFollow(targetUserId);
-        } catch (error) {
-            console.error('Failed to toggle follow', error);
-            toast.error("Action failed. Reverting.");
-
-            // 5. Rollback on Error
-            // Use function updates to avoid clobbering other concurrent changes if possible,
-            // but for revert, absolute state restoration is usually safer to ensure consistency.
-            if (originalCurrentUser) setCurrentUser(originalCurrentUser);
-            if (originalViewedUser) setViewedUser(originalViewedUser);
-        }
-    };
-
-    const handleToggleBlock = async (targetUserId: string) => {
-        if (!currentUser) return;
-        const originalUser = { ...currentUser };
-        const isBlocked = (currentUser.blockedUsers || []).includes(targetUserId);
-        setCurrentUser(prev => prev ? { ...prev, blockedUsers: isBlocked ? (prev.blockedUsers || []).filter(id => id !== targetUserId) : [...(prev.blockedUsers || []), targetUserId] } : null);
-        try {
-            await api.toggleBlock(targetUserId);
-            toast.success(isBlocked ? "User unblocked." : "User blocked.");
-        } catch (error) {
-            console.error('Failed to toggle block', error);
-            toast.error("Action failed. Reverting.");
-            setCurrentUser(originalUser);
-        }
-    };
-
-    const handleDeleteAccount = async () => {
-        if (window.confirm("Are you sure? This action is irreversible.")) {
-            try {
-                await api.deleteAccount();
-                toast.success("Account deleted successfully.");
-                logout();
-            } catch (error) {
-                console.error("Failed to delete account:", error);
-                toast.error("Could not delete account. Please try again.");
-            }
-        }
-    };
-
-    const handleJoinToggle = async (tribeId: string) => {
-        if (!currentUser) return;
-        try {
-            const { data: updatedTribe } = await api.joinTribe(tribeId);
-            setTribes(tribes.map(t => t.id === tribeId ? { ...t, members: updatedTribe.members } : t));
-            if (viewedTribe?.id === tribeId) {
-                setViewedTribe(prev => prev ? { ...prev, members: updatedTribe.members } : null);
-            }
-        } catch (error) {
-            console.error("Failed to join/leave tribe:", error);
-        }
-    };
-
-    const handleCreateTribe = async (name: string, description: string, avatarUrl?: string) => {
-        try {
-            const { data: newTribe } = await api.createTribe({ name, description, avatarUrl });
-            setTribes(prev => [{ ...newTribe, messages: [] }, ...prev]);
-            toast.success(`Tribe "${name}" created!`);
-        } catch (error) {
-            console.error("Failed to create tribe:", error);
-        }
-    };
-
-    const handleViewTribe = async (tribe: Tribe) => {
-        try {
-            clearUnreadTribe(tribe.id);
-            // Don't rely on global state for messages, just set the tribe object
-            // The TribeDetailPage component will fetch its own messages on mount
-            setViewedTribe({ ...tribe, messages: [] });
-            navigate(`/tribes/${tribe.id}`);
-        } catch (error) {
-            console.error("Failed to set tribe view:", error);
-        }
-    };
-
-    const handleEditTribe = async (tribeId: string, name: string, description: string, avatarUrl?: string | null) => {
-        try {
-            const { data: updatedTribeData } = await api.updateTribe(tribeId, { name, description, avatarUrl });
-            setTribes(tribes.map(t => (t.id === tribeId ? { ...t, ...updatedTribeData } : t)));
-            if (viewedTribe && viewedTribe.id === tribeId) {
-                setViewedTribe(prev => prev ? { ...prev, ...updatedTribeData } : null);
-            }
-            setEditingTribe(null);
-            toast.success("Tribe details updated.");
-        } catch (error) {
-            console.error("Failed to edit tribe:", error);
-        }
-    };
-
-    const handleSendTribeMessage = async (tribeId: string, text: string, imageUrl?: string) => {
-        if (!currentUser || !viewedTribe) return;
-        try {
-            await api.sendTribeMessage(tribeId, { text, imageUrl });
-        } catch (error) {
-            console.error("Failed to send tribe message:", error);
-        }
-    };
-
-    const handleDeleteTribeMessage = async (tribeId: string, messageId: string) => {
-        const originalMessages = viewedTribe?.messages || [];
-        if (viewedTribe) setViewedTribe(prev => prev ? { ...prev, messages: prev.messages.filter(m => m.id !== messageId) } : null);
-        try {
-            await api.deleteTribeMessage(tribeId, messageId);
-        } catch (error) {
-            console.error("Failed to delete tribe message", error);
-            toast.error("Could not delete message.");
-            if (viewedTribe) setViewedTribe(prev => prev ? { ...prev, messages: originalMessages } : null);
-        }
-    }
-
-    const handleDeleteTribe = async (tribeId: string) => {
-        try {
-            await api.deleteTribe(tribeId);
-            setEditingTribe(null);
-        } catch (error) {
-            console.error("Failed to delete tribe", error);
-            toast.error("Could not delete tribe.");
-        }
-    }
-
-    const handleCreateStory = async (storyData: Omit<Story, 'id' | 'user' | 'createdAt' | 'author' | 'likes'>) => {
-        try {
-            const { data: newStory } = await api.createStory(storyData);
-            setMyStories(prev => [newStory, ...prev]);
-            setIsCreatingStory(false);
-            handleViewUserStories(currentUser!.id, [newStory, ...myStories]);
-            toast.success("Story posted!");
-        } catch (error) {
-            console.error("Failed to create story:", error);
-            toast.error("Could not post story. Please try again.");
-        }
-    };
-
-    const handleDeleteStory = async (storyId: string) => {
-        const originalStories = myStories;
-        setMyStories(prev => prev.filter(s => s.id !== storyId));
-        setViewingUserStories(null);
-        try {
-            await api.deleteStory(storyId);
-            toast.success("Story deleted.");
-        } catch (error) {
-            console.error("Failed to delete story:", error);
-            toast.error("Could not delete story.");
-            setMyStories(originalStories);
-        }
-    };
-
-    const handleLikeStory = async (storyId: string) => {
-        if (!currentUser) return;
-
-        const optimisticUpdate = (storiesState: typeof followingUserStories) =>
-            storiesState.map(userStoryGroup => ({
-                ...userStoryGroup,
-                stories: userStoryGroup.stories.map(story => {
-                    if (story.id === storyId) {
-                        const isLiked = story.likes.includes(currentUser.id);
-                        return {
-                            ...story,
-                            likes: isLiked ? story.likes.filter(id => id !== currentUser.id) : [...story.likes, currentUser.id]
-                        };
-                    }
-                    return story;
-                })
-            }));
-
-        const originalFollowingStories = followingUserStories;
-        setFollowingUserStories(optimisticUpdate(followingUserStories));
-        if (viewingUserStories) {
-            setViewingUserStories(prev => prev ? { ...prev, stories: optimisticUpdate([{ ...prev }])[0].stories } : null);
-        }
-
-        try {
-            await api.likeStory(storyId);
-        } catch (error) {
-            console.error("Failed to like story:", error);
-            toast.error("Like failed. Reverting.");
-            setFollowingUserStories(originalFollowingStories);
-        }
-    };
-
-    const handleViewUserStories = async (userId: string, stories?: Story[], initialStoryId?: string) => {
-        let userStoryData;
-        if (userId === currentUser?.id) {
-            userStoryData = { user: currentUser, stories: stories || myStories, initialStoryId };
-        } else {
-            const foundUserStories = followingUserStories.find(us => us.user.id === userId);
-            if (foundUserStories) {
-                userStoryData = { ...foundUserStories, initialStoryId };
-            } else {
-                try {
-                    let user = userMap.get(userId) || users.find(u => u.id === userId);
-                    if (!user) {
-                        try {
-                            const { data } = await api.fetchUser(userId);
-                            user = data;
-                        } catch (e) {
-                            console.error("Failed to fetch user for story:", e);
-                        }
-                    }
-
-                    if (user) {
-                        const { data: userStories } = await api.fetchUserStories(userId);
-                        if (userStories.length > 0) {
-                            userStoryData = { user, stories: userStories as Story[], initialStoryId };
-                        } else {
-                            toast.info("This story is no longer available.");
-                        }
-                    }
-                } catch (e) {
-                    console.error("Failed to load user stories", e);
-                    toast.error("Could not load story.");
-                }
-            }
-        }
-
-        if (userStoryData && userStoryData.stories.length > 0) {
-            setViewingUserStories(userStoryData);
-            setSeenStoryAuthors(prev => {
-                const newSet = new Set(prev);
-                newSet.add(userId);
-                localStorage.setItem('seenStoryAuthors', JSON.stringify(Array.from(newSet)));
-                return newSet;
-            });
-        }
-    };
-
-
-    const visiblePosts = useMemo(() => {
-        if (!currentUser) return [];
-        return posts.filter(p => !(currentUser.blockedUsers || []).includes(p.author.id) && !(p.author.blockedUsers || []).includes(currentUser.id));
-    }, [posts, currentUser]);
-
-    const visibleUsers = useMemo(() => {
-        if (!currentUser) return [];
-        return users.filter(u => !(currentUser.blockedUsers || []).includes(u.id) && !(u.blockedUsers || []).includes(currentUser.id));
-    }, [users, currentUser]);
 
     if (isAuthLoading) {
         return <div className="min-h-screen bg-background flex flex-col items-center justify-center"><img src="/duckload.gif" alt="Loading..." className="w-24 h-24" /><h1 className="mt-4 text-xl font-semibold text-primary">Loading...</h1></div>;
@@ -1071,154 +387,25 @@ const App: React.FC = () => {
 
     if (!currentUser) return <LoginPage />;
 
-    if (!isDataLoaded && isFetching && posts.length === 0) {
-        return <div className="min-h-screen bg-background flex flex-col items-center justify-center"><img src="/duckload.gif" alt="Loading..." className="w-24 h-24" /><h1 className="mt-4 text-xl font-semibold text-primary">Loading...</h1></div>;
-    }
-
-    const isFullHeightPage = ['Messages', 'TribeDetail', 'Settings'].includes(activeNavItem);
-    const isWidePage = ['Discover', 'Tribes', 'Profile'].includes(activeNavItem);
-
-    const renderContent = () => {
-        switch (activeNavItem) {
-            case 'Home':
-                const feedPosts = visiblePosts.filter(p => (currentUser.following || []).includes(p.author.id) || p.author.id === currentUser.id);
-                return (
-                    <>
-                        <CreatePost currentUser={currentUser} allUsers={visibleUsers} myStories={myStories} onAddPost={handleAddPost} isPosting={isCreatingPost} onOpenStoryCreator={() => setIsCreatingStory(true)} onViewUserStories={handleViewUserStories} />
-                        <StoryFeed myStories={myStories} followingUserStories={followingUserStories} currentUser={currentUser} seenStoryAuthors={seenStoryAuthors} onViewUserStories={handleViewUserStories} />
-                        <FeedPage
-                            posts={feedPosts}
-                            currentUser={currentUser}
-                            allUsers={visibleUsers}
-                            allTribes={tribes}
-                            onLikePost={handleLikePost}
-                            onCommentPost={handleCommentPost}
-                            onDeletePost={handleDeletePost}
-                            onDeleteComment={handleDeleteComment}
-                            onViewProfile={handleViewProfile}
-                            onSharePost={handleSharePost}
-                            onVisitDiscover={() => handleSelectItem('Discover')}
-                            onLoadMore={handleLoadMoreFeed}
-                            hasMore={feedHasMore}
-                        />
-                    </>
-                );
-            case 'Discover':
-                return <DiscoverPage
-                    posts={visiblePosts}
-                    users={visibleUsers}
-                    tribes={tribes}
-                    currentUser={currentUser}
-                    onLikePost={handleLikePost}
-                    onCommentPost={handleCommentPost}
-                    onDeletePost={handleDeletePost}
-                    onDeleteComment={handleDeleteComment}
-                    onToggleFollow={handleToggleFollow}
-                    onViewProfile={handleViewProfile}
-                    onViewTribe={handleViewTribe}
-                    onJoinToggle={handleJoinToggle}
-                    onEditTribe={(tribe) => setEditingTribe(tribe)}
-                    onSharePost={handleSharePost}
-                    onLoadMore={handleLoadMoreDiscover}
-                    hasMore={discoverHasMore}
-                />;
-            case 'Messages':
-                return <ChatPage currentUser={currentUser} allUsers={visibleUsers} chukUser={PSYDUCK_USER} initialTargetUser={chatTarget} onViewProfile={handleViewProfile} onSharePost={handleSharePost} onConversationStateChange={setIsChatOpen} />;
-            case 'Tribes':
-                return (
-                    <TribesPage
-                        currentUser={currentUser!}
-                        unreadTribeCount={unreadCounts.tribes}
-                    />
-                );
-            case 'TribeDetail':
-                // 🔥 FIX: Robust ID extraction
-                const pathParts = location.pathname.split('/');
-                const urlTribeId = pathParts[pathParts.length - 1] || pathParts[pathParts.length - 2]; // Handle trailing slash
-                // Ensure it's not "tribes" or empty
-                const effectiveTribeId = (urlTribeId && urlTribeId !== 'tribes') ? urlTribeId : viewedTribe?.id;
-
-                if (!effectiveTribeId) return <div className="text-center p-8">Tribe not found.</div>;
-
-                return <TribeDetailPage
-                    currentUser={currentUser}
-                    tribeId={effectiveTribeId}
-                />;
-            case 'Notifications':
-                return (
-                    <NotificationsPage
-                        notifications={notifications}
-                        allTribes={tribes}
-                        currentUser={currentUser!}
-                        onViewProfile={handleViewProfile} onViewMessage={handleStartConversation} onViewPost={handleViewPost} onViewTribe={handleViewTribe} onViewStory={handleViewUserStories} />
-                );
-            case 'Profile':
-                if (!viewedUser || (currentUser.blockedUsers || []).includes(viewedUser.id) || (viewedUser.blockedUsers || []).includes(currentUser.id)) {
-                    return <div className="text-center p-8">User not found or is blocked.</div>;
-                }
-                const userPosts = visiblePosts.filter(p => p.author.id === viewedUser.id);
-                const userHasStory = myStories.some(s => s.user === viewedUser.id) || followingUserStories.some(us => us.user.id === viewedUser.id);
-                return <ProfilePage user={viewedUser} allUsers={users} visibleUsers={visibleUsers} allTribes={tribes} posts={userPosts} currentUser={currentUser} hasStory={userHasStory} onLikePost={handleLikePost} onCommentPost={handleCommentPost} onDeletePost={handleDeletePost} onDeleteComment={handleDeleteComment} onViewProfile={handleViewProfile} onUpdateUser={handleUpdateUser} onAddPost={handleAddPost} isPosting={isCreatingPost} onToggleFollow={handleToggleFollow} onStartConversation={handleStartConversation} onNavigate={handleSelectItem} onSharePost={handleSharePost} onOpenStoryCreator={() => setIsCreatingStory(true)} myStories={myStories} onViewUserStories={handleViewUserStories} />;
-            case 'Settings':
-                return <SettingsPage currentUser={currentUser} allUsers={users} onLogout={logout} onDeleteAccount={handleDeleteAccount} onToggleBlock={handleToggleBlock} onBack={() => handleSelectItem('Profile')} />;
-            default:
-                return <div>Page not found</div>;
-        }
-    };
-
-    let containerClass = 'max-w-2xl mx-auto px-4 md:px-6 pt-6 pb-24 md:pb-8';
-
-    if (isFullHeightPage) {
-        // 🔥 FIX: Height calculation for Messages/Chat
-        // Total Height = 100vh
-        // If Header Visible (Messages List): - 4rem (Header) - 4rem (Nav) = 8rem
-        // If Header Hidden (Chat): - 4rem (Nav) only = 4rem (Bottom Nav + Safe Area handled by CSS env)
-        const offset = (activeNavItem === 'Messages' && !isChatOpen) ? '8rem' : '4rem';
-        containerClass = `h-[calc(100vh-${offset})] md:h-[calc(100vh-4rem)] overflow-y-auto no-scrollbar`; // Inner scroll for Chat
-    } else if (isWidePage) {
-        containerClass = 'max-w-5xl mx-auto px-4 md:px-6 pt-6 pb-24 md:pb-8';
-    }
-
-    // 🔥 FIX: Padding logic
-    // Messages List -> Show Header (pt-16)
-    // Messages Chat -> Hide Header (pt-0)
-    // TribeDetail -> Hide Header (pt-0)
-    // Others -> Show Header (pt-16)
-    const shouldHideHeader = activeNavItem === 'TribeDetail' || (activeNavItem === 'Messages' && isChatOpen);
-
     return (
-        <div
-            className={`bg-background min-h-screen text-primary touch-pan-y ${isFullHeightPage ? 'h-screen overflow-hidden' : ''}`}
-            onTouchStart={handleTouchStart}
-            onTouchEnd={handleTouchEnd}
-        >
-            <Toaster />
-            <Sidebar activeItem={activeNavItem} onSelectItem={handleSelectItem} currentUser={currentUser} unreadMessageCount={unreadMessageCount} unreadTribeCount={unreadTribeCount} unreadNotificationCount={unreadNotificationCount} isChatOpen={isChatOpen} />
-            <main className={`${shouldHideHeader ? 'pt-0 md:pt-16' : 'pt-16'} pb-16 md:pb-0 transition-all duration-300 ${isFullHeightPage ? 'h-screen' : 'min-h-screen'}`}>
-                <div
-                    ref={mainRef}
-                    className={containerClass}
-                >
-                    <ErrorBoundary onReset={() => window.location.reload()}>
-                        {renderContent()}
-                    </ErrorBoundary>
-                </div>
-            </main>
-            {editingTribe && <EditTribeModal
-                tribe={editingTribe}
-                onClose={() => setEditingTribe(null)}
-                onSuccess={(updatedTribe) => {
-                    setTribes(prev => prev.map(t => t.id === updatedTribe.id ? { ...updatedTribe, messages: t.messages } : t));
-                    setEditingTribe(null);
-                    toast.success("Tribe updated successfully");
-                }}
-                allUsers={users}
-            />}
-            {isCreatingStory && <StoryCreator onClose={() => setIsCreatingStory(false)} onCreate={handleCreateStory} />}
-            {viewingUserStories && <StoryViewer userStories={viewingUserStories} currentUser={currentUser} allUsers={visibleUsers} allTribes={tribes} onClose={() => setViewingUserStories(null)} onDelete={handleDeleteStory} onLike={handleLikeStory} onSharePost={handleSharePost} initialStoryId={viewingUserStories.initialStoryId} />}
-            {viewingPost && <PostViewModal post={viewingPost} currentUser={currentUser} allUsers={visibleUsers} allTribes={tribes} onLike={handleLikePost} onComment={handleCommentPost} onDeletePost={handleDeletePost} onDeleteComment={handleDeleteComment} onViewProfile={handleViewProfile} onSharePost={handleSharePost} onClose={() => setViewingPost(null)} />}
-        </div>
+        <GlobalContentProvider>
+            <NotificationsConsumer>
+                <MainLayout />
+            </NotificationsConsumer>
+        </GlobalContentProvider>
     );
 };
+
+// Helper to provide notifications from SocketContext to NotificationsPage
+// Since NotificationsPage needs 'notifications' prop which was in App state.
+// In MainLayout, I can access it via useSocket().
+// I did passing in Route. 
+// Route path="/notifications" element={<NotificationsPage notifications={notifications} ... />}
+// In MainLayout: const { notifications } = useSocket(); (Need to destruct it)
+// I destructed unreadCounts... I should add notifications to destructure.
+
+const NotificationsConsumer: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+    return <>{children}</>;
+} // useless wrapper for now but structure is fine.
 
 export default App;

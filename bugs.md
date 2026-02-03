@@ -2,18 +2,18 @@
 
 ## 🚨 Priority 1: Critical (Must Fix)
 
-### 1. Database Scalability (MongoDB Schema)
+### 1. Database Scalability (MongoDB Schema) **[FIXED]**
 - **Issue**: `User` model (`followers`, `following`) and `Post` model (`likes`, `comments`) use **unbounded arrays**.
 - **Risk**: MongoDB documents have a 16MB limit. If a user has 100k followers or a post has 10k comments/likes, the document will fail to save, causing the app to crash for popular content.
-- **Fix**: Move `followers`, `following`, `likes`, and `comments` to separate collections (e.g., `Follow`, `Like`, `Comment` collections) and reference them.
+- **Fix**: **[DONE]** Moved `followers`, `following`, `likes`, and `comments` to separate collections (`Follow`, `Like`, `Comment`) and refactored all routes to use them.
 
-### 2. Frontend Architecture (Monolith `App.tsx`)
+### 2. Frontend Architecture (Monolith `App.tsx`) **[FIXED]**
 - **Issue**: `App.tsx` is >1200 lines and handles **all** logic: routing, data fetching, socket events, optimistic UI updates, and scroll management.
 - **Risk**: Extremely hard to maintain, debug, and test. Any state change causes the entire app to re-render.
-- **Fix**: Refactor `App.tsx` by:
-  - Moving data fetching to React Query (TanStack Query) or custom hooks (`useFeed`, `useTribes`).
-  - Using a proper Router setup (`react-router-dom` <Routes>) instead of manual conditional rendering.
-  - Moving Socket event listeners to specific context or hook subscribers.
+- **Fix**: **[DONE]** Refactored `App.tsx` by:
+  - Created `GlobalContentContext` to manage state, data fetching, and socket listeners.
+  - Implemented `react-router-dom` `<Routes>` for clean, declarative navigation.
+  - Reduced `App.tsx` to ~280 lines focusing only on Layout and Routing configuration.
 
 ### 3. Payload & Security
 - **Issue**: `server.js` uses `express.json({ limit: '50mb' })`.
