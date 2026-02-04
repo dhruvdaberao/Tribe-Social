@@ -77,8 +77,6 @@ const MainLayout: React.FC = () => {
     const mainRef = useRef<HTMLDivElement>(null);
     const [viewedTribe, setViewedTribe] = useState<Tribe | null>(null); // Keep locally for syncing with TribeDetail if used as prop, but Router handles ID usually.
     const [reportTarget, setReportTarget] = useState<{ type: 'post' | 'user'; id: string } | null>(null);
-    const [swipeDirection, setSwipeDirection] = useState<'left' | 'right' | null>(null);
-    const swipeStartRef = useRef<{ x: number; y: number } | null>(null);
     // Actually TribeDetail fetches its own data or uses props. 
     // In monolithic App.tsx, viewedTribe was used to pass to TribeDetail.
     // Let's rely on TribeDetail logic, but we might need to pass partial tribe data if available.
@@ -426,7 +424,7 @@ const MainLayout: React.FC = () => {
             />}
             {isCreatingStory && <StoryCreator onClose={() => setIsCreatingStory(false)} onCreate={handleCreateStory} />}
             {viewingUserStories && <StoryViewer userStories={viewingUserStories} currentUser={currentUser} allUsers={visibleUsers} allTribes={tribes} onClose={() => setViewingUserStories(null)} onDelete={handleDeleteStory} onLike={handleLikeStory} onSharePost={handleSharePost} initialStoryId={viewingUserStories.initialStoryId} />}
-            {viewingPost && <PostViewModal post={viewingPost} currentUser={currentUser} allUsers={visibleUsers} allTribes={tribes} onLike={handleLikePost} onComment={handleCommentPost} onDeletePost={handleDeletePost} onHidePost={handleHidePost} onDeleteComment={handleDeleteComment} onViewProfile={handleViewProfile} onSharePost={handleSharePost} onReportPost={(postId) => openReportModal('post', postId)} onClose={() => setViewingPost(null)} />}
+            {viewingPost && <PostViewModal post={viewingPost} currentUser={currentUser} allUsers={visibleUsers} allTribes={tribes} onLike={handleLikePost} onComment={handleCommentPost} onDeletePost={handleDeletePost} onDeleteComment={handleDeleteComment} onViewProfile={handleViewProfile} onSharePost={handleSharePost} onReportPost={(postId) => openReportModal('post', postId)} onClose={() => setViewingPost(null)} />}
             {reportTarget && (
                 <ReportModal
                     targetType={reportTarget.type}
