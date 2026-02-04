@@ -272,7 +272,7 @@ interface ProfilePageProps {
     onAddPost: (content: string, imageUrl?: string) => void;
     isPosting: boolean;
     onToggleFollow: (targetUserId: string) => void;
-    onToggleBlock: (targetUserId: string) => void;
+    onToggleBlock: (targetUserId: string) => Promise<boolean>;
     onStartConversation: (user: User) => void;
     onNavigate: (item: NavItem) => void;
     onSharePost: (post: Post, destination: { type: 'tribe' | 'user', id: string }) => void;
@@ -511,7 +511,14 @@ export const ProfilePage: React.FC<ProfilePageProps> = (props) => {
                                                 <ShareButton shareData={{ title: `Check out ${safeUser.name}'s profile on Tribe!`, text: `See what ${safeUser.name} (@${safeUser.username}) is up to.`, url: window.location.href }} className="w-full text-left px-4 py-2 text-primary hover:bg-background rounded-t-lg transition-colors flex items-center space-x-2" onShare={() => setOptionsOpen(false)}>
                                                     <ShareIcon /><span>Share Profile</span>
                                                 </ShareButton>
-                                                <button onClick={() => { onToggleBlock(safeUser.id); setOptionsOpen(false); toast.success(isBlocked ? "User unblocked successfully" : "User blocked successfully"); }} className={`w-full text-left px-4 py-2 hover:bg-background rounded-b-lg transition-colors flex items-center space-x-2 ${isBlocked ? 'text-secondary' : 'text-red-500'}`}>
+                                                <button onClick={async () => {
+                                                    // @ts-ignore
+                                                    const success = await onToggleBlock(safeUser.id);
+                                                    setOptionsOpen(false);
+                                                    if (success && !isBlocked) {
+                                                        onNavigate('Discover');
+                                                    }
+                                                }} className={`w-full text-left px-4 py-2 hover:bg-background rounded-b-lg transition-colors flex items-center space-x-2 ${isBlocked ? 'text-secondary' : 'text-red-500'}`}>
                                                     <BlockIcon /><span>{isBlocked ? 'Unblock User' : 'Block User'}</span>
                                                 </button>
                                             </div>

@@ -67,7 +67,7 @@ interface GlobalContentContextType {
     handleSharePost: (post: any, destination: { type: 'tribe' | 'user', id: string, name?: string }) => Promise<void>;
 
     handleToggleFollow: (targetUserId: string, viewedUser?: User | null, setViewedUser?: React.Dispatch<React.SetStateAction<User | null>>) => Promise<void>;
-    handleToggleBlock: (targetUserId: string) => Promise<void>;
+    handleToggleBlock: (targetUserId: string) => Promise<boolean>;
     handleUpdateUser: (data: Partial<User>) => Promise<void>;
     handleDeleteAccount: () => Promise<void>;
 
@@ -540,17 +540,19 @@ export const GlobalContentProvider: React.FC<{ children: React.ReactNode }> = ({
     };
 
     const handleToggleBlock = async (targetUserId: string) => {
-        if (!currentUser) return;
+        if (!currentUser) return false;
         const originalUser = { ...currentUser };
         const isBlocked = (currentUser.blockedUsers || []).includes(targetUserId);
         setCurrentUser(prev => prev ? { ...prev, blockedUsers: isBlocked ? (prev.blockedUsers || []).filter(id => id !== targetUserId) : [...(prev.blockedUsers || []), targetUserId] } : null);
         try {
             await api.toggleBlock(targetUserId);
-            toast.success(isBlocked ? "User unblocked." : "User blocked.");
+            toast.success(isBlocked ? "User unblocked." : "User blocked successfully");
+            return true;
         } catch (error) {
             console.error('Failed to block', error);
             toast.error("Action failed.");
             setCurrentUser(originalUser);
+            return false;
         }
     };
 
