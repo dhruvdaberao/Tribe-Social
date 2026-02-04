@@ -348,7 +348,14 @@ export const GlobalContentProvider: React.FC<{ children: React.ReactNode }> = ({
 
         const handleUserUpdated = (updatedUser: User) => {
             setUsers(prev => prev.map(u => u.id === updatedUser.id ? updatedUser : u));
-            if (currentUser?.id === updatedUser.id) setCurrentUser(updatedUser);
+            if (currentUser?.id === updatedUser.id) {
+                // ✅ FIX: Merge updates but preserve following/followers to keep optimistic updates
+                setCurrentUser(prev => ({
+                    ...updatedUser,
+                    following: prev.following,  // Preserve optimistic follow updates
+                    followers: prev.followers,  // Preserve optimistic follower updates
+                }));
+            }
         };
 
         const handleTribeDeleted = (tribeId: string) => {
