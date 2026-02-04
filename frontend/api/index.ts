@@ -266,3 +266,10 @@ export const fetchNotifications = async () => {
 
 export const markNotificationsRead = () =>
   API.put('/notifications/read');
+
+/* ───────────── MODERATION ───────────── */
+export const reportPost = (postId: string) =>
+  API.post('/moderation/report-post', { postId });
+
+export const reportUser = (targetUserId: string) =>
+  API.post('/moderation/report-user', { targetUserId });

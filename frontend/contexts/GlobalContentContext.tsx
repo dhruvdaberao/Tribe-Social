@@ -68,6 +68,8 @@ interface GlobalContentContextType {
 
     handleToggleFollow: (targetUserId: string, viewedUser?: User | null, setViewedUser?: React.Dispatch<React.SetStateAction<User | null>>) => Promise<void>;
     handleToggleBlock: (targetUserId: string) => Promise<boolean>;
+    handleReportPost: (postId: string) => Promise<void>;
+    handleReportUser: (targetUserId: string) => Promise<void>;
     handleUpdateUser: (data: Partial<User>) => Promise<void>;
     handleDeleteAccount: () => Promise<void>;
 
@@ -556,6 +558,26 @@ export const GlobalContentProvider: React.FC<{ children: React.ReactNode }> = ({
         }
     };
 
+    const handleReportPost = async (postId: string) => {
+        try {
+            await api.reportPost(postId);
+            toast.success("Post reported. Thank you for making Tribe safer.");
+        } catch (error) {
+            console.error("Failed to report post:", error);
+            toast.error("Failed to report post.");
+        }
+    };
+
+    const handleReportUser = async (targetUserId: string) => {
+        try {
+            await api.reportUser(targetUserId);
+            toast.success("User reported. We will review this account.");
+        } catch (error) {
+            console.error("Failed to report user:", error);
+            toast.error("Failed to report user.");
+        }
+    };
+
     const handleUpdateUser = async (updatedUserData: Partial<User>) => {
         try {
             await api.updateProfile(updatedUserData);
@@ -754,7 +776,8 @@ export const GlobalContentProvider: React.FC<{ children: React.ReactNode }> = ({
         handleToggleFollow, handleToggleBlock, handleUpdateUser, handleDeleteAccount,
         handleJoinToggle, handleCreateTribe, handleEditTribe, handleDeleteTribe,
         handleCreateStory, handleDeleteStory, handleLikeStory,
-        handleViewPost, handleViewUserStories
+        handleViewPost, handleViewUserStories,
+        handleReportPost, handleReportUser
     };
 
     return <GlobalContentContext.Provider value={value}>{children}</GlobalContentContext.Provider>;

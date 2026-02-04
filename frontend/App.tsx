@@ -12,6 +12,7 @@ import Sidebar from './components/layout/Sidebar';
 import FeedPage from './components/feed/FeedPage';
 import { ProfilePage } from './components/profile/ProfilePage';
 import ChatPage from './components/chat/ChatPage';
+import RulesPage from './pages/RulesPage';
 import DiscoverPage from './components/discover/DiscoverPage';
 import LoginPage from './components/auth/LoginPage';
 import TribesPage from './components/tribes/TribesPage';
@@ -62,7 +63,8 @@ const MainLayout: React.FC = () => {
         handleToggleFollow, handleToggleBlock, handleUpdateUser, handleDeleteAccount,
         handleJoinToggle, handleCreateTribe, handleEditTribe, handleDeleteTribe,
         handleCreateStory, handleDeleteStory, handleLikeStory,
-        handleViewPost, handleViewUserStories
+        handleViewPost, handleViewUserStories,
+        handleReportPost, handleReportUser
     } = useGlobalContent();
 
     // Local UI State
@@ -198,6 +200,7 @@ const MainLayout: React.FC = () => {
                                         onDeleteComment={handleDeleteComment}
                                         onViewProfile={handleViewProfile}
                                         onSharePost={handleSharePost}
+                                        onReportPost={handleReportPost}
                                         onVisitDiscover={() => navigate('/discover')}
                                         onLoadMore={handleLoadMoreFeed}
                                         hasMore={feedHasMore}
@@ -219,8 +222,10 @@ const MainLayout: React.FC = () => {
                                     onViewProfile={handleViewProfile}
                                     onViewTribe={handleViewTribe}
                                     onJoinToggle={handleJoinToggle}
+                                    onJoinToggle={handleJoinToggle}
                                     onEditTribe={setEditingTribe}
                                     onSharePost={handleSharePost}
+                                    onReportPost={handleReportPost}
                                     onLoadMore={handleLoadMoreDiscover}
                                     hasMore={discoverHasMore}
                                 />
@@ -291,7 +296,13 @@ const MainLayout: React.FC = () => {
                                         onNavigate: handleNavigation,
                                         onSharePost: handleSharePost,
                                         onOpenStoryCreator: () => setIsCreatingStory(true),
-                                        onViewUserStories: handleViewUserStories
+                                        onStartConversation: handleStartConversation,
+                                        onNavigate: handleNavigation,
+                                        onSharePost: handleSharePost,
+                                        onOpenStoryCreator: () => setIsCreatingStory(true),
+                                        onViewUserStories: handleViewUserStories,
+                                        onReportPost: handleReportPost,
+                                        onReportUser: handleReportUser
                                     }}
                                     isPosting={isCreatingPost}
                                 />
@@ -315,7 +326,7 @@ const MainLayout: React.FC = () => {
             />}
             {isCreatingStory && <StoryCreator onClose={() => setIsCreatingStory(false)} onCreate={handleCreateStory} />}
             {viewingUserStories && <StoryViewer userStories={viewingUserStories} currentUser={currentUser} allUsers={visibleUsers} allTribes={tribes} onClose={() => setViewingUserStories(null)} onDelete={handleDeleteStory} onLike={handleLikeStory} onSharePost={handleSharePost} initialStoryId={viewingUserStories.initialStoryId} />}
-            {viewingPost && <PostViewModal post={viewingPost} currentUser={currentUser} allUsers={visibleUsers} allTribes={tribes} onLike={handleLikePost} onComment={handleCommentPost} onDeletePost={handleDeletePost} onDeleteComment={handleDeleteComment} onViewProfile={handleViewProfile} onSharePost={handleSharePost} onClose={() => setViewingPost(null)} />}
+            {viewingPost && <PostViewModal post={viewingPost} currentUser={currentUser} allUsers={visibleUsers} allTribes={tribes} onLike={handleLikePost} onComment={handleCommentPost} onDeletePost={handleDeletePost} onDeleteComment={handleDeleteComment} onViewProfile={handleViewProfile} onSharePost={handleSharePost} onReportPost={handleReportPost} onClose={() => setViewingPost(null)} />}
 
         </div>
     );

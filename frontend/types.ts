@@ -15,6 +15,7 @@ export interface User {
   followersCount?: number;
   followingCount?: number;
   isFollowedByCurrentUser?: boolean;
+  isAdmin?: boolean;
 }
 
 /* ===================== COMMENTS & POSTS ===================== */

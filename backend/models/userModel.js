@@ -17,6 +17,9 @@ const userSchema = mongoose.Schema(
     followersCount: { type: Number, default: 0 },
     followingCount: { type: Number, default: 0 },
     blockedUsers: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+    // Moderation
+    isAdmin: { type: Boolean, default: false },
+    reports: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }], // Users who reported this account
   },
   {
     timestamps: true,

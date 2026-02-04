@@ -23,6 +23,7 @@ import notificationRoutes from './routes/notificationRoutes.js';
 import aiRoutes from './routes/aiRoutes.js';
 import storyRoutes from './routes/storyRoutes.js';
 import pushRoutes from './routes/pushRoutes.js';
+import moderationRoutes from './routes/moderationRoutes.js';
 import { initializeSocket } from './socketManager.js';
 
 dotenv.config();
@@ -110,8 +111,14 @@ const startServer = async () => {
     console.log("4. Registering API routes...");
     // 🔒 Strict Limits (High Security)
     app.use('/api/auth', standardPayload, authRoutes);
+    // ... (existing imports)
+
+    // ...
+
     app.use('/api/notifications', standardPayload, notificationRoutes);
+    app.use('/api/moderation', standardPayload, moderationRoutes); // 🔥 MODERATION ROUTES
     app.use('/api/ai', standardPayload, aiRoutes);
+    // ...
     app.use('/api/push', standardPayload, pushRoutes);
 
     // 📸 Large Limits (Content Creation)

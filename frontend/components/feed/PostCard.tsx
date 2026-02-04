@@ -717,11 +717,12 @@ interface PostCardProps {
   onDeleteComment: (postId: string, commentId: string) => void;
   onViewProfile: (user: User) => void;
   onSharePost: (post: Post, destination: { type: 'tribe' | 'user', id: string }) => void;
+  onReportPost: (postId: string) => void;
   onModalClose?: () => void;
 }
 
 const PostCard: React.FC<PostCardProps> = (props) => {
-  const { post, currentUser, allUsers, allTribes, onLike, onComment, onDeletePost, onDeleteComment, onViewProfile, onSharePost, onModalClose } = props;
+  const { post, currentUser, allUsers, allTribes, onLike, onComment, onDeletePost, onDeleteComment, onViewProfile, onSharePost, onReportPost, onModalClose } = props;
   const [commentText, setCommentText] = useState('');
   const [showComments, setShowComments] = useState(false);
   const [optionsOpen, setOptionsOpen] = useState(false);
@@ -840,7 +841,22 @@ const PostCard: React.FC<PostCardProps> = (props) => {
                     <ExternalLinkIcon className="h-4 w-4" />
                     <span>Share Externally</span>
                   </ShareButton>
-                  {isOwnPost && (
+
+                  {!isOwnPost && (
+                    <button
+                      onClick={() => {
+                        onReportPost(post.id);
+                        setOptionsOpen(false);
+                      }}
+                      className="w-full text-left px-4 py-2 text-yellow-500 hover:bg-yellow-500/10 transition-colors flex items-center space-x-2"
+                      role="menuitem"
+                    >
+                      <FlagIcon className="h-4 w-4" />
+                      <span>Report Post</span>
+                    </button>
+                  )}
+
+                  {(isOwnPost || currentUser.isAdmin) && (
                     <button
                       onClick={handleDeletePostClick}
                       className="w-full text-left px-4 py-2 text-red-500 hover:bg-red-500/10 rounded-b-lg transition-colors flex items-center space-x-2"
@@ -1027,6 +1043,12 @@ const ExternalLinkIcon = ({ className = 'h-5 w-5' }: { className?: string }) => 
   </svg>
 );
 const BackIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>;
+const FlagIcon = ({ className = 'h-5 w-5' }: { className?: string }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 21v-8a2 2 0 01-2-1.85V5a2 2 0 012-1.85 2 2 0 012 1.85v6.3a2 2 0 002-1.85 2 2 0 012 1.85v6.3a2 2 0 002-1.85V5" />
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 17h16" />
+  </svg>
+);
 
 
 export default PostCard;
