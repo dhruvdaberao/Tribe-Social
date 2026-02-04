@@ -7,7 +7,7 @@ const RulesPoliciesPage: React.FC = () => {
     const navigate = useNavigate();
 
     return (
-        <div className="max-w-2xl mx-auto px-4 py-8">
+        <div className="max-w-2xl mx-auto px-4 py-8 pb-24">
             <button onClick={() => navigate('/settings')} className="mb-6 flex items-center text-secondary hover:text-primary transition-colors">
                 <ArrowLeft size={20} className="mr-2" /> Back
             </button>
@@ -64,6 +64,10 @@ const RulesPoliciesPage: React.FC = () => {
 
                 <div className="mt-12 pt-6 border-t border-border text-center text-secondary text-xs">
                     Last updated: {new Date().toLocaleDateString()}
+                </div>
+
+                <div className="flex justify-center mt-12 opacity-80 hover:opacity-100 transition-opacity">
+                    <img src="/noodles.gif" alt="Tribe Mascot" className="w-40 h-auto rounded-lg" />
                 </div>
             </div>
         </div>

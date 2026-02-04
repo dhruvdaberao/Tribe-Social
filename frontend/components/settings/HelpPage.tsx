@@ -49,6 +49,10 @@ const HelpPage: React.FC = () => {
               </li>
             </ul>
           </div>
+
+          <div className="flex justify-center mt-12 opacity-80 hover:opacity-100 transition-opacity">
+            <img src="/noodles.gif" alt="Tribe Mascot" className="w-40 h-auto rounded-lg" />
+          </div>
         </div>
       </div>
     </div>

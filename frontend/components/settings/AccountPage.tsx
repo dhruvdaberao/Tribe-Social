@@ -22,7 +22,7 @@ const AccountPage: React.FC<AccountPageProps> = ({ currentUser, allUsers, onLogo
     const [isAccountInfoModalOpen, setAccountInfoModalOpen] = useState(false);
 
     return (
-        <div className="max-w-2xl mx-auto px-4 py-8">
+        <div className="max-w-2xl mx-auto px-4 py-8 pb-24">
             <button onClick={() => navigate('/settings')} className="mb-6 flex items-center text-secondary hover:text-primary transition-colors">
                 <ArrowLeft size={20} className="mr-2" /> Back
             </button>
