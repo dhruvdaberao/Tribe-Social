@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { User } from '../../types';
 import UserAvatar from '../common/UserAvatar';
 
@@ -14,14 +14,37 @@ interface UserCardProps {
 }
 
 const UserCard: React.FC<UserCardProps> = ({ user, currentUser, onToggleFollow, onViewProfile, layout = 'card', isOwnProfile, listType, onRemove }) => {
-    const isFollowing = currentUser.following.includes(user.id);
+    // Use local state to persist follow status and prevent reversion from stale props
+    const [isFollowing, setIsFollowing] = useState(() =>
+        Array.isArray(currentUser.following) && currentUser.following.includes(user.id)
+    );
+
+    // Only update when the user ID changes or currentUser.following changes meaningfully
+    // This prevents reverting when props refresh with stale data
+    useEffect(() => {
+        const currentlyFollowing = Array.isArray(currentUser.following) && currentUser.following.includes(user.id);
+        setIsFollowing(currentlyFollowing);
+    }, [user.id, currentUser.following, currentUser.id]);
+
+    const handleFollowClick = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        // Optimistically update local state immediately
+        setIsFollowing(!isFollowing);
+        // Call parent handler
+        onToggleFollow(user.id);
+    };
 
     const renderButton = () => {
+        // CRITICAL FIX: Don't show follow button for own profile
+        if (user.id === currentUser.id) {
+            return null;
+        }
+
         // 1. My Following List -> Show "Unfollow"
         if (isOwnProfile && listType === 'following') {
             return (
                 <button
-                    onClick={(e) => { e.stopPropagation(); onToggleFollow(user.id); }}
+                    onClick={handleFollowClick}
                     className="font-semibold px-4 py-1.5 rounded-lg transition-colors text-sm ml-2 flex-shrink-0 bg-surface text-primary border border-border hover:bg-red-50 hover:text-red-600 hover:border-red-200"
                 >
                     Unfollow
@@ -44,7 +67,7 @@ const UserCard: React.FC<UserCardProps> = ({ user, currentUser, onToggleFollow, 
         // 3. Default Behavior (Visiting someone else, or Search)
         return (
             <button
-                onClick={(e) => { e.stopPropagation(); onToggleFollow(user.id); }}
+                onClick={handleFollowClick}
                 className={`font-semibold px-4 py-1.5 rounded-lg transition-colors text-sm ml-2 flex-shrink-0 ${isFollowing
                     ? 'bg-surface text-primary border border-border hover:bg-background'
                     : 'bg-accent text-accent-text hover:bg-accent-hover'
