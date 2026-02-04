@@ -1,110 +1,213 @@
-
 import express from 'express';
 import protect from '../middleware/authMiddleware.js';
+import requireAdmin from '../middleware/adminMiddleware.js';
+import Report from '../models/reportModel.js';
+import ModerationAction from '../models/moderationActionModel.js';
 import Post from '../models/postModel.js';
 import User from '../models/userModel.js';
 import Notification from '../models/notificationModel.js';
 
 const router = express.Router();
 
-/**
- * Report a Post
- * Endpoint: POST /api/moderation/report-post
- * Body: { postId }
- */
-router.post('/report-post', protect, async (req, res) => {
-    try {
-        const { postId } = req.body;
-        const reporterId = req.user._id;
+const getActionStatus = (actionType) => {
+  if (actionType === 'dismiss') return 'dismissed';
+  return 'actioned';
+};
 
-        const post = await Post.findById(postId);
-        if (!post) {
-            return res.status(404).json({ message: 'Post not found' });
-        }
+const applyPostAction = async ({ post, actionType, adminId }) => {
+  const now = new Date();
+  switch (actionType) {
+    case 'hide':
+      post.isHidden = true;
+      post.hiddenAt = now;
+      post.hiddenBy = adminId;
+      break;
+    case 'unhide':
+      post.isHidden = false;
+      post.hiddenAt = null;
+      post.hiddenBy = null;
+      break;
+    case 'delete':
+      post.isDeleted = true;
+      post.deletedAt = now;
+      post.deletedBy = adminId;
+      break;
+    case 'restore':
+      post.isDeleted = false;
+      post.deletedAt = null;
+      post.deletedBy = null;
+      break;
+    default:
+      break;
+  }
+  await post.save();
+};
 
-        // Add report if not already reported by this user
-        // Since IDs are objects, convert to string for comparison or rely on mongoose includes logic (which works but safer to stringify)
-        // Actually mongoose arrays of ObjectIds usually support includes if passed ObjectId, but let's be safe.
-        const alreadyReported = post.reports.some(id => id.toString() === reporterId.toString());
+const applyUserAction = async ({ user, actionType, adminId }) => {
+  const now = new Date();
+  switch (actionType) {
+    case 'ban':
+      user.isBanned = true;
+      user.bannedAt = now;
+      user.bannedBy = adminId;
+      break;
+    case 'unban':
+      user.isBanned = false;
+      user.bannedAt = null;
+      user.bannedBy = null;
+      break;
+    case 'delete':
+      user.isDeleted = true;
+      user.deletedAt = now;
+      user.deletedBy = adminId;
+      break;
+    case 'restore':
+      user.isDeleted = false;
+      user.deletedAt = null;
+      user.deletedBy = null;
+      break;
+    default:
+      break;
+  }
+  await user.save();
+};
 
-        if (!alreadyReported) {
-            post.reports.push(reporterId);
-            await post.save();
-        }
+const sendReportNotifications = async ({ reporterIds, adminId, message, targetType, targetId }) => {
+  if (!message || reporterIds.length === 0) return;
+  await Promise.all(
+    reporterIds.map((reporterId) =>
+      Notification.create({
+        recipient: reporterId,
+        sender: adminId,
+        type: 'admin_action',
+        text: message,
+        postId: targetType === 'post' ? targetId : undefined,
+      })
+    )
+  );
+};
 
-        // Check Auto-Deletion Threshold (5 reports)
-        if (post.reports.length >= 5) {
-            const ownerId = post.user;
+router.post('/action', protect, requireAdmin, async (req, res) => {
+  try {
+    const { targetType, targetId, actionType, reason = '', message = '' } = req.body;
 
-            // Delete the post
-            await Post.findByIdAndDelete(postId);
-
-            // Notify the owner
-            await Notification.create({
-                recipient: ownerId,
-                sender: reporterId, // Or we could make this system/null if schema allows, but safer to put reporter or a dedicated admin ID
-                type: 'message', // using 'message' as a fallback since 'system' isn't in schema enum from types.ts (check schema?)
-                // Schema enum: 'like' | 'comment' | 'follow' | 'message' | 'story_like' | 'tribe_join'
-                // We'll use 'message' and custom text.
-                text: "Your post has been removed after multiple community reports. Please help us maintain a respectful and positive Tribe environment.",
-                read: false,
-                timestamp: new Date().toISOString()
-            });
-
-            return res.status(200).json({ message: 'Post reported and deleted due to community reports.' });
-        }
-
-        res.status(200).json({ message: 'Post reported successfully.' });
-
-    } catch (error) {
-        console.error('Error reporting post:', error);
-        res.status(500).json({ message: 'Server error' });
+    if (!targetType || !targetId || !actionType) {
+      return res.status(400).json({ message: 'targetType, targetId, and actionType are required.' });
     }
+
+    const allowedActions = ['hide', 'unhide', 'delete', 'restore', 'warn', 'dismiss', 'ban', 'unban'];
+    if (!allowedActions.includes(actionType)) {
+      return res.status(400).json({ message: 'Invalid actionType.' });
+    }
+
+    let targetDoc = null;
+    if (targetType === 'post') {
+      targetDoc = await Post.findById(targetId);
+      if (!targetDoc) return res.status(404).json({ message: 'Post not found.' });
+      await applyPostAction({ post: targetDoc, actionType, adminId: req.user.id });
+    }
+
+    if (targetType === 'user') {
+      targetDoc = await User.findById(targetId);
+      if (!targetDoc) return res.status(404).json({ message: 'User not found.' });
+      await applyUserAction({ user: targetDoc, actionType, adminId: req.user.id });
+    }
+
+    const status = getActionStatus(actionType);
+    await Report.updateMany(
+      { targetType, targetId },
+      { $set: { status } }
+    );
+
+    const reports = await Report.find({ targetType, targetId }).select('reporterId').lean();
+    const reporterIds = [...new Set(reports.map((report) => report.reporterId.toString()))];
+    await sendReportNotifications({ reporterIds, adminId: req.user.id, message, targetType, targetId });
+
+    const moderationAction = await ModerationAction.create({
+      adminId: req.user.id,
+      targetType,
+      targetId,
+      actionType,
+      reason,
+      messageSent: message,
+    });
+
+    res.json({ message: 'Action recorded.', action: moderationAction });
+  } catch (error) {
+    console.error('Moderation action error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
 });
 
-/**
- * Report a User
- * Endpoint: POST /api/moderation/report-user
- * Body: { targetUserId }
- */
-router.post('/report-user', protect, async (req, res) => {
-    try {
-        const { targetUserId } = req.body;
-        const reporterId = req.user._id;
+router.get('/posts', protect, requireAdmin, async (req, res) => {
+  try {
+    const {
+      status,
+      keyword,
+      username,
+      tags,
+      page = 1,
+      limit = 20,
+    } = req.query;
 
-        if (targetUserId === reporterId.toString()) {
-            return res.status(400).json({ message: "You cannot report yourself." });
-        }
-
-        const user = await User.findById(targetUserId);
-        if (!user) {
-            return res.status(404).json({ message: 'User not found' });
-        }
-
-        // Immunity Check for "Pika"
-        if (user.username.toLowerCase() === 'pika') {
-            return res.status(200).json({ message: 'Report received.' });
-        }
-
-        const alreadyReported = user.reports.some(id => id.toString() === reporterId.toString());
-
-        if (!alreadyReported) {
-            user.reports.push(reporterId);
-            await user.save();
-        }
-
-        // Check Auto-Deletion Threshold (15 reports)
-        if (user.reports.length >= 15) {
-            await User.findByIdAndDelete(targetUserId);
-            return res.status(200).json({ message: 'User reported and account suspended due to community reports.' });
-        }
-
-        res.status(200).json({ message: 'User reported successfully.' });
-
-    } catch (error) {
-        console.error('Error reporting user:', error);
-        res.status(500).json({ message: 'Server error' });
+    const query = {};
+    if (status === 'hidden') query.isHidden = true;
+    if (status === 'deleted') query.isDeleted = true;
+    if (!status) {
+      query.isDeleted = { $ne: true };
     }
+
+    const contentFilters = [];
+    if (keyword) {
+      contentFilters.push({ content: { $regex: keyword, $options: 'i' } });
+    }
+
+    if (tags) {
+      const tagList = tags
+        .split(',')
+        .map((tag) => tag.trim())
+        .filter(Boolean)
+        .map((tag) => tag.replace(/^#/, ''));
+      if (tagList.length > 0) {
+        contentFilters.push({
+          content: { $regex: tagList.map((tag) => `#${tag}`).join('|'), $options: 'i' },
+        });
+      }
+    }
+
+    if (contentFilters.length === 1) {
+      query.content = contentFilters[0].content;
+    }
+    if (contentFilters.length > 1) {
+      query.$and = contentFilters;
+    }
+
+    if (username) {
+      const users = await User.find({ username: { $regex: username, $options: 'i' } }).select('_id');
+      query.user = { $in: users.map((user) => user._id) };
+    }
+
+    const skip = (parseInt(page, 10) - 1) * parseInt(limit, 10);
+    const [posts, total] = await Promise.all([
+      Post.find(query)
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(parseInt(limit, 10))
+        .populate('user', 'name username avatarUrl')
+        .lean(),
+      Post.countDocuments(query),
+    ]);
+
+    res.json({
+      posts,
+      total,
+      page: parseInt(page, 10),
+      pages: Math.ceil(total / parseInt(limit, 10)),
+    });
+  } catch (error) {
+    console.error('Moderation posts error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
 });
 
 export default router;
