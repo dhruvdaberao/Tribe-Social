@@ -77,6 +77,8 @@ const MainLayout: React.FC = () => {
     const mainRef = useRef<HTMLDivElement>(null);
     const [viewedTribe, setViewedTribe] = useState<Tribe | null>(null); // Keep locally for syncing with TribeDetail if used as prop, but Router handles ID usually.
     const [reportTarget, setReportTarget] = useState<{ type: 'post' | 'user'; id: string } | null>(null);
+    const [swipeDirection, setSwipeDirection] = useState<'left' | 'right' | null>(null);
+    const swipeStartRef = useRef<{ x: number; y: number } | null>(null);
     // Actually TribeDetail fetches its own data or uses props. 
     // In monolithic App.tsx, viewedTribe was used to pass to TribeDetail.
     // Let's rely on TribeDetail logic, but we might need to pass partial tribe data if available.
