@@ -71,9 +71,9 @@ const AboutPage: React.FC = () => {
                     </div>
                 </div>
 
-                {/* Gif with proper padding */}
-                <div className="bg-background/50 p-8 flex justify-center border-t border-border mt-8">
-                    <img src="/noodles.gif" alt="Noodles eating gif" className="w-48 h-auto rounded-lg shadow-sm opacity-80 hover:opacity-100 transition-opacity" />
+                {/* Gif with proper padding to show fully */}
+                <div className="flex justify-center mt-12 opacity-80 hover:opacity-100 transition-opacity">
+                    <img src="/noodles.gif" alt="Noodles eating gif" className="w-48 h-auto rounded-lg" />
                 </div>
             </div>
 
