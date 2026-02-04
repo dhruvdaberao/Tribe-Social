@@ -24,7 +24,7 @@ const UserCard: React.FC<UserCardProps> = ({ user, currentUser, onToggleFollow, 
     useEffect(() => {
         const currentlyFollowing = Array.isArray(currentUser.following) && currentUser.following.includes(user.id);
         setIsFollowing(currentlyFollowing);
-    }, [user.id, currentUser.following, currentUser.id]);
+    }, [user.id]); // ✅ FIX: Only depend on user.id, NOT currentUser.following
 
     const handleFollowClick = (e: React.MouseEvent) => {
         e.stopPropagation();
