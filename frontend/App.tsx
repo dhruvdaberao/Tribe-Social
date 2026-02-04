@@ -460,8 +460,22 @@ import { useParams } from 'react-router-dom';
 const ProfilePageContent = ({ userId, users, visibleUsers, tribes, posts, currentUser, myStories, followingUserStories, handlers, isPosting }: any) => {
     const params = useParams();
     const targetId = params.userId || userId;
+    const [fetchedUser, setFetchedUser] = useState<User | null>(null);
+    const [isLoading, setIsLoading] = useState(false);
 
-    const viewedUser = users.find((u: User) => u.id === targetId) || (targetId === currentUser?.id ? currentUser : null);
+    const viewedUser = users.find((u: User) => u.id === targetId) || (targetId === currentUser?.id ? currentUser : null) || fetchedUser;
+
+    useEffect(() => {
+        if (!viewedUser && targetId) {
+            setIsLoading(true);
+            api.fetchUser(targetId)
+                .then(({ data }) => setFetchedUser(data))
+                .catch(() => { }) // handled by UI showing not found
+                .finally(() => setIsLoading(false));
+        }
+    }, [targetId, viewedUser]);
+
+    if (isLoading) return <div className="text-center p-8"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div></div>;
 
     if (!viewedUser) return <div className="text-center p-8">User not found</div>;
 
