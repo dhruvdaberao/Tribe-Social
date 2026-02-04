@@ -27,8 +27,8 @@ const HelpPage: React.FC = () => {
             <p className="text-secondary text-sm mb-4">
               For account issues, bug reports, or general inquiries, please email us directly.
             </p>
-            <a href="mailto:support@tribesocial.com" className="text-accent hover:underline font-medium">
-              support@tribesocial.com
+            <a href="mailto:contact.tribesocial@gmail.com" className="text-accent hover:underline font-medium">
+              contact.tribesocial@gmail.com
             </a>
           </div>
 
