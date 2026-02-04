@@ -7,7 +7,7 @@ const HelpPage: React.FC = () => {
   const navigate = useNavigate();
 
   return (
-    <div className="max-w-2xl mx-auto px-4 py-8">
+    <div className="max-w-2xl mx-auto px-4 py-8 pb-40">
       <button onClick={() => navigate('/settings')} className="mb-6 flex items-center text-secondary hover:text-primary transition-colors">
         <ArrowLeft size={20} className="mr-2" /> Back
       </button>

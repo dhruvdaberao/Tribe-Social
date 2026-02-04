@@ -33,10 +33,12 @@ const Modal = styled.div`
   border-radius: 12px;
   width: 90%;
   max-width: 500px;
-  max-height: 90vh;
+  max-height: 85vh;
   overflow-y: auto;
   position: relative;
   border: 1px solid ${props => props.theme.border};
+  display: flex;
+  flex-direction: column;
 `;
 
 const Header = styled.div`
