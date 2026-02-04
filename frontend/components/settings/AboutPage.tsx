@@ -16,11 +16,6 @@ const AboutPage: React.FC = () => {
                 <div className="p-8">
                     {/* Header */}
                     <div className="flex flex-col items-center text-center mb-8">
-                        <img
-                            src="/logo-text.png"
-                            alt="Tribe Logo"
-                            className="h-16 w-auto mb-4 object-contain"
-                        />
                         <h1 className="text-3xl font-bold font-display text-primary">Tribe Social</h1>
                         <p className="text-secondary mt-2">Version 4.0.0</p>
                     </div>

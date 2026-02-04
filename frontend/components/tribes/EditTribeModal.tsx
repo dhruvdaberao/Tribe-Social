@@ -77,14 +77,14 @@ const Form = styled.form`
 
 const TextArea = styled.textarea`
   width: 100%;
-  padding: 1rem;
+  padding: 0.75rem;
   border-radius: 8px;
   border: 1px solid ${props => props.theme.border};
   background: ${props => props.theme.background};
   color: ${props => props.theme.text};
   font-family: 'Outfit', sans-serif;
   resize: vertical;
-  min-height: 100px;
+  min-height: 60px;
 
   &:focus {
     outline: none;
@@ -240,24 +240,24 @@ const EditTribeModal: React.FC<EditTribeModalProps> = ({ tribe, onClose, onSucce
             onChange={handleFileChange}
           />
 
-          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 20 }}>
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 10 }}>
             <div
               style={{ position: 'relative', cursor: 'pointer' }}
               onClick={() => setIsMediaModalOpen(true)}
             >
               <div style={{
-                width: 100, height: 100, borderRadius: '50%',
+                width: 70, height: 70, borderRadius: '50%',
                 background: avatarUrl ? `url(${avatarUrl}) center / cover` : theme.secondary,
                 border: `2px dashed ${theme.textSecondary}`,
                 display: 'flex', alignItems: 'center', justifyContent: 'center'
               }}>
-                {!avatarUrl && <Camera size={40} color={theme.cardBackground} strokeWidth={1.5} />}
+                {!avatarUrl && <Camera size={28} color={theme.cardBackground} strokeWidth={1.5} />}
               </div>
               <div style={{
-                position: 'absolute', bottom: 0, right: 0,
+                position: 'absolute', bottom: -2, right: -2,
                 background: theme.primary, borderRadius: '50%',
-                width: 30, height: 30, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                color: 'white', fontSize: 18, border: `1px solid ${theme.primary}`
+                width: 24, height: 24, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                color: 'white', fontSize: 16, border: `1px solid ${theme.primary}`
               }}>+</div>
             </div>
           </div>
