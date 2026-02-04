@@ -46,6 +46,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ currentUser, allUsers, chukUser, in
   const [isMessageAreaVisible, setMessageAreaVisible] = useState(false);
   const [isNewMessageModalOpen, setNewMessageModalOpen] = useState(false);
   const [isSending, setIsSending] = useState(false);
+  const [isInitializing, setIsInitializing] = useState(!!initialTargetUser);
   // Cache for messages: key is conversationId (or otherUserId), value is Message[]
   const messageCache = React.useRef<Map<string, Message[]>>(new Map());
   const { socket, onlineUsers, clearUnreadMessages, unreadCounts, setActiveChatPartnerId } = useSocket();
@@ -181,6 +182,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ currentUser, allUsers, chukUser, in
     if (otherUserId === chukUser.id) {
       setMessages([{ id: 'chuk-intro', senderId: chukUser.id, receiverId: currentUser.id, text: `Psy... Hi ${currentUser.name.split(' ')[0]}! I'm Psyduck! What's on your mind? ...Psy? 🦆`, timestamp: new Date().toISOString() }]);
       setMessageAreaVisible(true);
+      setIsInitializing(false); // Clear loading state
       return;
     }
 
@@ -227,10 +229,14 @@ const ChatPage: React.FC<ChatPageProps> = ({ currentUser, allUsers, chukUser, in
   }, [conversations, currentUser.id, handleSelectConversation, chukUser.id, socket]);
 
   useEffect(() => {
-    if (initialTargetUser) {
+    if (initialTargetUser && !activeConversation) {
+      setIsInitializing(true);
       handleStartNewConversation(initialTargetUser);
+      // Fallback timeout in case initialization stalls
+      const timeout = setTimeout(() => setIsInitializing(false), 2000);
+      return () => clearTimeout(timeout);
     }
-  }, [initialTargetUser, handleStartNewConversation]);
+  }, [initialTargetUser?.id]); // Only depend on ID to prevent re-runs
 
   const handleBackToList = () => {
     if (activeConversation) {
@@ -314,8 +320,13 @@ const ChatPage: React.FC<ChatPageProps> = ({ currentUser, allUsers, chukUser, in
       >
         {activeConversation ? (
           <MessageArea key={activeConversation.id} conversation={activeConversation} messages={messages} isLoading={isLoadingMessages} currentUser={currentUser} userMap={userMap} isSending={isSending} onSendMessage={handleSendMessage} onBack={handleBackToList} onViewProfile={onViewProfile} />
+        ) : isInitializing ? (
+          <div className="flex w-full h-full flex-col items-center justify-center text-center p-8">
+            <img src="/duckload.gif" alt="Loading..." className="w-20 h-20 mb-4" />
+            <p className="text-secondary text-lg">Loading Psyduck chat...</p>
+          </div>
         ) : (
-          <div className="hidden md:flex w-full h-full flex-col items-center justify-center text-center p-8">
+          <div className="flex w-full h-full flex-col items-center justify-center text-center p-8">
             <div className="w-24 h-24 text-secondary mb-4">
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1}><path strokeLinecap="round" strokeLinejoin="round" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" /></svg>
             </div>
