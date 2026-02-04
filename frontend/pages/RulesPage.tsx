@@ -44,15 +44,18 @@ const RulesPage: React.FC = () => {
                     </section>
 
                     <section>
-                        <h2 className="text-xl font-bold text-accent mb-3">4. Reporting Violations</h2>
+                        <h2 className="text-xl font-bold text-accent mb-3">4. Reporting Violations & Auto-Moderation</h2>
                         <p className="leading-relaxed text-secondary-text">
                             If you see something that violates these rules, use the <strong>Report</strong> button on the post or user profile.
-                            Our moderation system (including our AI assistant Pika) automatically reviews reports.
+                            Our moderation system uses automated thresholds to maintain community safety:
                         </p>
-                        <ul className="list-disc list-inside mt-2 text-secondary ml-4">
-                            <li>5 reports on a post will automatically remove it.</li>
-                            <li>15 reports on a user account may lead to automatic suspension.</li>
+                        <ul className="list-disc list-inside mt-3 text-secondary ml-4 space-y-2">
+                            <li><strong className="text-primary">Posts:</strong> A post receiving <strong>5 reports</strong> will be automatically deleted.</li>
+                            <li><strong className="text-primary">Accounts:</strong> A user account receiving <strong>15 reports</strong> will be automatically suspended/deleted.</li>
                         </ul>
+                        <p className="leading-relaxed text-secondary-text mt-3 text-sm italic">
+                            Valid reports help keep Tribe safe. False reporting may lead to action against your own account.
+                        </p>
                     </section>
 
                     <section>
