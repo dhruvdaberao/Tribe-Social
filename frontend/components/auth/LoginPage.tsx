@@ -4,6 +4,7 @@ import { useTheme } from '../../contexts/ThemeContext';
 import axios from 'axios';
 import * as api from '../../api';
 import { toast } from '../common/Toast';
+import PasswordInput from '../common/PasswordInput';
 
 interface AuthContextType {
   login: (email: string, password: string) => Promise<void>;
@@ -143,7 +144,13 @@ const LoginPage: React.FC = () => {
             {(mode === 'login' || mode === 'register') && (
               <div className="mb-2">
                 <label className="block text-secondary text-sm font-semibold mb-2">Password</label>
-                <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full p-3 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-accent text-primary" placeholder="••••••••" disabled={isLoading} />
+                <PasswordInput
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full p-3 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-accent text-primary"
+                  placeholder="••••••••"
+                  disabled={isLoading}
+                />
               </div>
             )}
 

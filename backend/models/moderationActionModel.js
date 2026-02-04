@@ -3,7 +3,7 @@ import mongoose from 'mongoose';
 const moderationActionSchema = mongoose.Schema(
   {
     adminId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-    targetType: { type: String, enum: ['post', 'user', 'tribe'], required: true },
+    targetType: { type: String, enum: ['post', 'user'], required: true },
     targetId: { type: mongoose.Schema.Types.ObjectId, required: true },
     actionType: {
       type: String,

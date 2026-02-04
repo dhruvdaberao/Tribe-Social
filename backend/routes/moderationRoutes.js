@@ -67,49 +67,10 @@ const applyUserAction = async ({ user, actionType, adminId }) => {
       user.deletedAt = null;
       user.deletedBy = null;
       break;
-    case 'hide':
-      user.isHidden = true;
-      user.hiddenAt = now;
-      user.hiddenBy = adminId;
-      break;
-    case 'unhide':
-      user.isHidden = false;
-      user.hiddenAt = null;
-      user.hiddenBy = null;
-      break;
     default:
       break;
   }
   await user.save();
-};
-
-const applyTribeAction = async ({ tribe, actionType, adminId }) => {
-  const now = new Date();
-  switch (actionType) {
-    case 'hide':
-      tribe.isHidden = true;
-      tribe.hiddenAt = now;
-      tribe.hiddenBy = adminId;
-      break;
-    case 'unhide':
-      tribe.isHidden = false;
-      tribe.hiddenAt = null;
-      tribe.hiddenBy = null;
-      break;
-    case 'delete':
-      tribe.isDeleted = true;
-      tribe.deletedAt = now;
-      tribe.deletedBy = adminId;
-      break;
-    case 'restore':
-      tribe.isDeleted = false;
-      tribe.deletedAt = null;
-      tribe.deletedBy = null;
-      break;
-    default:
-      break;
-  }
-  await tribe.save();
 };
 
 const sendReportNotifications = async ({ reporterIds, adminId, message, targetType, targetId }) => {
@@ -151,12 +112,6 @@ router.post('/action', protect, requireAdmin, async (req, res) => {
       targetDoc = await User.findById(targetId);
       if (!targetDoc) return res.status(404).json({ message: 'User not found.' });
       await applyUserAction({ user: targetDoc, actionType, adminId: req.user.id });
-    }
-
-    if (targetType === 'tribe') {
-      targetDoc = await Tribe.findById(targetId);
-      if (!targetDoc) return res.status(404).json({ message: 'Tribe not found.' });
-      await applyTribeAction({ tribe: targetDoc, actionType, adminId: req.user.id });
     }
 
     const status = getActionStatus(actionType);
@@ -252,90 +207,6 @@ router.get('/posts', protect, requireAdmin, async (req, res) => {
     });
   } catch (error) {
     console.error('Moderation posts error:', error);
-    res.status(500).json({ message: 'Server error' });
-  }
-});
-
-router.get('/users', protect, requireAdmin, async (req, res) => {
-  try {
-    const { status, search, page = 1, limit = 20 } = req.query;
-    const query = {};
-    if (status === 'hidden') query.isHidden = true;
-    if (status === 'deleted') query.isDeleted = true;
-    if (!status) {
-      query.isDeleted = { $ne: true };
-    }
-
-    if (search) {
-      query.$or = [
-        { username: { $regex: search, $options: 'i' } },
-        { name: { $regex: search, $options: 'i' } },
-        { bio: { $regex: search, $options: 'i' } },
-        { _id: search },
-      ];
-    }
-
-    const skip = (parseInt(page, 10) - 1) * parseInt(limit, 10);
-    const [users, total] = await Promise.all([
-      User.find(query)
-        .sort({ createdAt: -1 })
-        .skip(skip)
-        .limit(parseInt(limit, 10))
-        .select('name username avatarUrl bio isHidden hiddenAt isDeleted createdAt'),
-      User.countDocuments(query),
-    ]);
-
-    res.json({
-      users,
-      total,
-      page: parseInt(page, 10),
-      pages: Math.ceil(total / parseInt(limit, 10)),
-    });
-  } catch (error) {
-    console.error('Moderation users error:', error);
-    res.status(500).json({ message: 'Server error' });
-  }
-});
-
-router.get('/tribes', protect, requireAdmin, async (req, res) => {
-  try {
-    const { status, search, page = 1, limit = 20 } = req.query;
-    const query = {};
-    if (status === 'hidden') query.isHidden = true;
-    if (status === 'deleted') query.isDeleted = true;
-    if (!status) {
-      query.isDeleted = { $ne: true };
-    }
-
-    if (search) {
-      const ownerMatches = await User.find({ username: { $regex: search.replace(/^@/, ''), $options: 'i' } }).select('_id');
-      query.$or = [
-        { name: { $regex: search, $options: 'i' } },
-        { description: { $regex: search, $options: 'i' } },
-        { owner: { $in: ownerMatches.map((user) => user._id) } },
-        { _id: search },
-      ];
-    }
-
-    const skip = (parseInt(page, 10) - 1) * parseInt(limit, 10);
-    const [tribes, total] = await Promise.all([
-      Tribe.find(query)
-        .sort({ createdAt: -1 })
-        .skip(skip)
-        .limit(parseInt(limit, 10))
-        .populate('owner', 'name username avatarUrl')
-        .lean(),
-      Tribe.countDocuments(query),
-    ]);
-
-    res.json({
-      tribes,
-      total,
-      page: parseInt(page, 10),
-      pages: Math.ceil(total / parseInt(limit, 10)),
-    });
-  } catch (error) {
-    console.error('Moderation tribes error:', error);
     res.status(500).json({ message: 'Server error' });
   }
 });

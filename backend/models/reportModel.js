@@ -3,8 +3,8 @@ import mongoose from 'mongoose';
 const reportSchema = mongoose.Schema(
   {
     reporterId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
-    targetType: { type: String, enum: ['post', 'user', 'tribe'], required: true, index: true },
-    targetModel: { type: String, enum: ['Post', 'User', 'Tribe'], required: true },
+    targetType: { type: String, enum: ['post', 'user'], required: true, index: true },
+    targetModel: { type: String, enum: ['Post', 'User'], required: true },
     targetId: { type: mongoose.Schema.Types.ObjectId, required: true, refPath: 'targetModel', index: true },
     reason: { type: String, required: true },
     details: { type: String, default: '' },
@@ -18,8 +18,6 @@ reportSchema.pre('validate', function setTargetModel(next) {
     this.targetModel = 'Post';
   } else if (this.targetType === 'user') {
     this.targetModel = 'User';
-  } else if (this.targetType === 'tribe') {
-    this.targetModel = 'Tribe';
   }
   next();
 });

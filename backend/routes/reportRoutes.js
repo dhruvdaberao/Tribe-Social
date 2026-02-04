@@ -23,7 +23,7 @@ router.post('/', protect, reportLimiter, async (req, res) => {
       return res.status(400).json({ message: 'targetType, targetId, and reason are required.' });
     }
 
-    if (!['post', 'user', 'tribe'].includes(targetType)) {
+    if (!['post', 'user'].includes(targetType)) {
       return res.status(400).json({ message: 'Invalid targetType.' });
     }
 
@@ -38,12 +38,6 @@ router.post('/', protect, reportLimiter, async (req, res) => {
       }
       const user = await User.findById(targetId);
       if (!user) return res.status(404).json({ message: 'User not found.' });
-    }
-
-    if (targetType === 'tribe') {
-      const { default: Tribe } = await import('../models/tribeModel.js');
-      const tribe = await Tribe.findById(targetId);
-      if (!tribe) return res.status(404).json({ message: 'Tribe not found.' });
     }
 
     const since = new Date(Date.now() - 24 * 60 * 60 * 1000);

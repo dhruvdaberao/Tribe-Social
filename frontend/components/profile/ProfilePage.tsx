@@ -444,7 +444,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = (props) => {
                 followers: newFollowers,
                 // Optimistically update counts
                 followersCount: (prev.followersCount !== undefined)
-                    ? prev.followersCount + (willBeFollowing ? 1 : -1)
+                    ? Math.max(0, prev.followersCount + (willBeFollowing ? 1 : -1))
                     : newFollowers.length,
                 isFollowedByCurrentUser: willBeFollowing
             };
@@ -462,7 +462,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = (props) => {
 
     return (
         <div>
-            <div className="bg-surface rounded-2xl shadow-sm border border-border mb-6 overflow-hidden">
+            <div className="bg-surface rounded-2xl shadow-sm border border-border mb-6">
                 <div className="h-48 md:h-64 bg-background rounded-t-2xl overflow-hidden">
                     {safeUser.id === 'chuk-ai' ? (
                         <img src="/psy-banner.gif" alt="Psyduck Banner" className="w-full h-full object-cover" />
