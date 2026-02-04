@@ -75,6 +75,7 @@ import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 import { Resend } from 'resend';
 import User from '../models/userModel.js';
+import adminUsers from '../config/adminUsers.js';
 import OTP from '../models/otpModel.js';
 
 const router = express.Router();
@@ -97,7 +98,9 @@ router.post('/register', async (req, res) => {
     if (userExists) return res.status(400).json({ message: 'An account with this email already exists.' });
     const usernameExists = await User.findOne({ username });
     if (usernameExists) return res.status(400).json({ message: 'This username is already taken.' });
-    const user = await User.create({ name, username, email, password });
+    const adminSet = adminUsers.map((admin) => admin.toLowerCase());
+    const isAdmin = adminSet.includes(username.toLowerCase());
+    const user = await User.create({ name, username, email, password, isAdmin });
     if (user) {
       res.status(201).json({ token: generateToken(user._id), user: user });
     } else {
@@ -114,6 +117,12 @@ router.post('/login', async (req, res) => {
   try {
     const user = await User.findOne({ email });
     if (user && (await user.matchPassword(password))) {
+      const adminSet = adminUsers.map((admin) => admin.toLowerCase());
+      const isAdmin = adminSet.includes(user.username.toLowerCase());
+      if (isAdmin && !user.isAdmin) {
+        user.isAdmin = true;
+        await user.save();
+      }
       res.json({ token: generateToken(user._id), user: user });
     } else {
       res.status(401).json({ message: 'Invalid email or password' });

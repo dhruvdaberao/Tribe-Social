@@ -37,7 +37,7 @@ router.get('/feed', protect, async (req, res) => {
 
         // Fetch Posts (Paginated)
         // Don't populate arrays from DB
-        let posts = await Post.find({ user: { $in: userIdsForFeed } })
+        let posts = await Post.find({ user: { $in: userIdsForFeed }, isHidden: { $ne: true }, isDeleted: { $ne: true } })
             .select('-likes -comments') // Exclude heavy arrays
             .sort({ createdAt: -1 })
             .skip(((parseInt(req.query.page) || 1) - 1) * (parseInt(req.query.limit) || 20))
@@ -48,7 +48,7 @@ router.get('/feed', protect, async (req, res) => {
 
         if (posts.length === 0) {
             console.log("⚠️ Feed empty. Fetching global posts...");
-            posts = await Post.find({})
+            posts = await Post.find({ isHidden: { $ne: true }, isDeleted: { $ne: true } })
                 .select('-likes -comments')
                 .sort({ createdAt: -1 })
                 .skip(((parseInt(req.query.page) || 1) - 1) * (parseInt(req.query.limit) || 20))
@@ -105,7 +105,7 @@ router.get('/', protect, async (req, res) => {
         console.log("----------------------------------");
         console.log("🔍 GET /api/posts - Fetching Discover feed");
 
-        let posts = await Post.find({})
+        let posts = await Post.find({ isHidden: { $ne: true }, isDeleted: { $ne: true } })
             .select('-likes -comments')
             .sort({ createdAt: -1 })
             .skip(((parseInt(req.query.page) || 1) - 1) * (parseInt(req.query.limit) || 50))
@@ -148,7 +148,7 @@ router.get('/', protect, async (req, res) => {
 // @desc    Get posts by a specific user - Scalable
 router.get('/user/:id', protect, async (req, res) => {
     try {
-        let posts = await Post.find({ user: req.params.id })
+        let posts = await Post.find({ user: req.params.id, isHidden: { $ne: true }, isDeleted: { $ne: true } })
             .select('-likes -comments')
             .sort({ createdAt: -1 })
             .populate('user', 'name username avatarUrl');
@@ -188,6 +188,11 @@ router.get('/:id', protect, async (req, res) => {
     try {
         let post = await Post.findById(req.params.id).select('-likes -comments').populate('user', 'name username avatarUrl');
         if (!post) {
+            return res.status(404).json({ message: 'Post not found' });
+        }
+        const isOwner = post.user?.id?.toString() === req.user.id;
+        const isAdmin = req.user?.isAdmin;
+        if ((post.isHidden || post.isDeleted) && !isOwner && !isAdmin) {
             return res.status(404).json({ message: 'Post not found' });
         }
 

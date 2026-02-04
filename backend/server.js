@@ -24,6 +24,7 @@ import aiRoutes from './routes/aiRoutes.js';
 import storyRoutes from './routes/storyRoutes.js';
 import pushRoutes from './routes/pushRoutes.js';
 import moderationRoutes from './routes/moderationRoutes.js';
+import reportRoutes from './routes/reportRoutes.js';
 import { initializeSocket } from './socketManager.js';
 
 dotenv.config();
@@ -117,6 +118,7 @@ const startServer = async () => {
 
     app.use('/api/notifications', standardPayload, notificationRoutes);
     app.use('/api/moderation', standardPayload, moderationRoutes); // 🔥 MODERATION ROUTES
+    app.use('/api/reports', standardPayload, reportRoutes);
     app.use('/api/ai', standardPayload, aiRoutes);
     // ...
     app.use('/api/push', standardPayload, pushRoutes);

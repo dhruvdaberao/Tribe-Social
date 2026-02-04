@@ -6,6 +6,7 @@ import { useSocket } from './contexts/SocketContext';
 import { GlobalContentProvider, useGlobalContent } from './contexts/GlobalContentContext';
 import { safeSetItem, safeClear } from './utils/safeLocalStorage';
 import { User, Post, Tribe, TribeMessage, Notification as NotificationType, Comment, Story } from './types';
+import * as api from './api';
 
 // Components
 import Sidebar from './components/layout/Sidebar';
@@ -30,6 +31,8 @@ import StoryFeed from './components/stories/StoryFeed';
 import { Toaster, toast } from './components/common/Toast';
 import { ErrorBoundary } from './components/common/ErrorBoundary';
 import PostViewModal from './components/profile/PostViewModal';
+import ReportModal from './components/moderation/ReportModal';
+import AdminSettingsPage from './pages/admin/AdminSettingsPage';
 
 export type NavItem = 'Home' | 'Discover' | 'Messages' | 'Tribes' | 'Notifications' | 'Profile' | 'Psyduck' | 'TribeDetail' | 'Settings';
 
@@ -66,14 +69,14 @@ const MainLayout: React.FC = () => {
         handleToggleFollow, handleToggleBlock, handleUpdateUser, handleDeleteAccount,
         handleJoinToggle, handleCreateTribe, handleEditTribe, handleDeleteTribe,
         handleCreateStory, handleDeleteStory, handleLikeStory,
-        handleViewPost, handleViewUserStories,
-        handleReportPost, handleReportUser
+        handleViewPost, handleViewUserStories
     } = useGlobalContent();
 
     // Local UI State
     const [isChatOpen, setIsChatOpen] = useState(false);
     const mainRef = useRef<HTMLDivElement>(null);
     const [viewedTribe, setViewedTribe] = useState<Tribe | null>(null); // Keep locally for syncing with TribeDetail if used as prop, but Router handles ID usually.
+    const [reportTarget, setReportTarget] = useState<{ type: 'post' | 'user'; id: string } | null>(null);
     // Actually TribeDetail fetches its own data or uses props. 
     // In monolithic App.tsx, viewedTribe was used to pass to TribeDetail.
     // Let's rely on TribeDetail logic, but we might need to pass partial tribe data if available.
@@ -171,6 +174,28 @@ const MainLayout: React.FC = () => {
         navigate('/messages', { state: { targetUser: user } });
     };
 
+    const openReportModal = (type: 'post' | 'user', id: string) => {
+        setReportTarget({ type, id });
+    };
+
+    const handleSubmitReport = async (payload: { reason: string; details: string }) => {
+        if (!reportTarget) return;
+        try {
+            await api.createReport({
+                targetType: reportTarget.type,
+                targetId: reportTarget.id,
+                reason: payload.reason,
+                details: payload.details,
+            });
+            toast.success("Report submitted. Thank you for keeping Tribe safe.");
+        } catch (error) {
+            console.error("Failed to submit report:", error);
+            toast.error("Failed to submit report.");
+        } finally {
+            setReportTarget(null);
+        }
+    };
+
     return (
         <div className={`bg-background min-h-screen text-primary touch-pan-y ${isFullHeightPage ? 'h-screen overflow-hidden' : ''}`}>
             <Toaster />
@@ -203,7 +228,7 @@ const MainLayout: React.FC = () => {
                                         onDeleteComment={handleDeleteComment}
                                         onViewProfile={handleViewProfile}
                                         onSharePost={handleSharePost}
-                                        onReportPost={handleReportPost}
+                                        onReportPost={(postId) => openReportModal('post', postId)}
                                         onVisitDiscover={() => navigate('/discover')}
                                         onLoadMore={handleLoadMoreFeed}
                                         hasMore={feedHasMore}
@@ -227,7 +252,7 @@ const MainLayout: React.FC = () => {
                                     onJoinToggle={handleJoinToggle}
                                     onEditTribe={setEditingTribe}
                                     onSharePost={handleSharePost}
-                                    onReportPost={handleReportPost}
+                                    onReportPost={(postId) => openReportModal('post', postId)}
                                     onLoadMore={handleLoadMoreDiscover}
                                     hasMore={discoverHasMore}
                                 />
@@ -299,8 +324,8 @@ const MainLayout: React.FC = () => {
                                         onSharePost: handleSharePost,
                                         onOpenStoryCreator: () => setIsCreatingStory(true),
                                         onViewUserStories: handleViewUserStories,
-                                        onReportPost: handleReportPost,
-                                        onReportUser: handleReportUser
+                                        onReportPost: (postId: string) => openReportModal('post', postId),
+                                        onReportUser: (userId: string) => openReportModal('user', userId)
                                     }}
                                     isPosting={isCreatingPost}
                                 />
@@ -315,6 +340,16 @@ const MainLayout: React.FC = () => {
                             <Route path="/settings/help" element={<HelpPage />} />
                             <Route path="/settings/about" element={<AboutPage />} />
                             <Route path="/settings/rules" element={<RulesPoliciesPage />} />
+                            <Route
+                                path="/admin"
+                                element={
+                                    currentUser?.isAdmin ? (
+                                        <AdminSettingsPage currentUser={currentUser} />
+                                    ) : (
+                                        <Navigate to="/settings" replace />
+                                    )
+                                }
+                            />
 
                         </Routes>
                     </ErrorBoundary>
@@ -330,7 +365,14 @@ const MainLayout: React.FC = () => {
             />}
             {isCreatingStory && <StoryCreator onClose={() => setIsCreatingStory(false)} onCreate={handleCreateStory} />}
             {viewingUserStories && <StoryViewer userStories={viewingUserStories} currentUser={currentUser} allUsers={visibleUsers} allTribes={tribes} onClose={() => setViewingUserStories(null)} onDelete={handleDeleteStory} onLike={handleLikeStory} onSharePost={handleSharePost} initialStoryId={viewingUserStories.initialStoryId} />}
-            {viewingPost && <PostViewModal post={viewingPost} currentUser={currentUser} allUsers={visibleUsers} allTribes={tribes} onLike={handleLikePost} onComment={handleCommentPost} onDeletePost={handleDeletePost} onDeleteComment={handleDeleteComment} onViewProfile={handleViewProfile} onSharePost={handleSharePost} onReportPost={handleReportPost} onClose={() => setViewingPost(null)} />}
+            {viewingPost && <PostViewModal post={viewingPost} currentUser={currentUser} allUsers={visibleUsers} allTribes={tribes} onLike={handleLikePost} onComment={handleCommentPost} onDeletePost={handleDeletePost} onDeleteComment={handleDeleteComment} onViewProfile={handleViewProfile} onSharePost={handleSharePost} onReportPost={(postId) => openReportModal('post', postId)} onClose={() => setViewingPost(null)} />}
+            {reportTarget && (
+                <ReportModal
+                    targetType={reportTarget.type}
+                    onClose={() => setReportTarget(null)}
+                    onSubmit={handleSubmitReport}
+                />
+            )}
 
         </div>
     );

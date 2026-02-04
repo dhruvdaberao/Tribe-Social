@@ -268,8 +268,28 @@ export const markNotificationsRead = () =>
   API.put('/notifications/read');
 
 /* ───────────── MODERATION ───────────── */
-export const reportPost = (postId: string) =>
-  API.post('/moderation/report-post', { postId });
+export const createReport = (payload: { targetType: 'post' | 'user'; targetId: string; reason: string; details?: string }) =>
+  API.post('/reports', payload);
 
-export const reportUser = (targetUserId: string) =>
-  API.post('/moderation/report-user', { targetUserId });
+export const fetchReports = (params: Record<string, any>) =>
+  API.get('/reports', { params });
+
+export const updateReportStatus = (id: string, status: string) =>
+  API.patch(`/reports/${id}`, { status });
+
+export const applyModerationAction = (payload: {
+  targetType: 'post' | 'user';
+  targetId: string;
+  actionType: string;
+  reason?: string;
+  message?: string;
+}) => API.post('/moderation/action', payload);
+
+export const fetchModerationPosts = (params: Record<string, any>) =>
+  API.get('/moderation/posts', { params });
+
+export const reportPost = (postId: string, reason = 'Other', details = '') =>
+  createReport({ targetType: 'post', targetId: postId, reason, details });
+
+export const reportUser = (targetUserId: string, reason = 'Other', details = '') =>
+  createReport({ targetType: 'user', targetId: targetUserId, reason, details });

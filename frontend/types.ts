@@ -16,6 +16,9 @@ export interface User {
   followingCount?: number;
   isFollowedByCurrentUser?: boolean;
   isAdmin?: boolean;
+  isBanned?: boolean;
+  bannedAt?: string | null;
+  isDeleted?: boolean;
 }
 
 /* ===================== COMMENTS & POSTS ===================== */
@@ -38,6 +41,10 @@ export interface Post {
   comments: Comment[];
   likesCount?: number;
   commentsCount?: number;
+  isHidden?: boolean;
+  hiddenAt?: string | null;
+  isDeleted?: boolean;
+  deletedAt?: string | null;
 }
 
 /* ===================== DIRECT MESSAGES ===================== */
@@ -101,13 +108,40 @@ export interface Notification {
   | 'follow'
   | 'message'
   | 'story_like'
-  | 'tribe_join';
+  | 'tribe_join'
+  | 'admin_action';
+  text?: string;
   read: boolean;
   postId?: string;
   storyId?: string;
   tribeId?: string;
   commentId?: string;
   timestamp: string;
+}
+
+/* ===================== MODERATION ===================== */
+export interface Report {
+  id: string;
+  reporterId: User;
+  targetType: 'post' | 'user';
+  targetId: any;
+  reason: string;
+  details?: string;
+  status: 'open' | 'reviewed' | 'dismissed' | 'actioned';
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ModerationAction {
+  id: string;
+  adminId: string;
+  targetType: 'post' | 'user';
+  targetId: string;
+  actionType: 'hide' | 'unhide' | 'delete' | 'restore' | 'warn' | 'dismiss' | 'ban' | 'unban';
+  reason?: string;
+  messageSent?: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 /* ===================== STORIES ===================== */
