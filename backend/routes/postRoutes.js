@@ -37,7 +37,7 @@ router.get('/feed', protect, async (req, res) => {
 
         // Fetch Posts (Paginated)
         // Don't populate arrays from DB
-        let posts = await Post.find({ user: { $in: userIdsForFeed } })
+        let posts = await Post.find({ user: { $in: userIdsForFeed }, isHidden: { $ne: true }, isDeleted: { $ne: true } })
             .select('-likes -comments') // Exclude heavy arrays
             .sort({ createdAt: -1 })
             .skip(((parseInt(req.query.page) || 1) - 1) * (parseInt(req.query.limit) || 20))
@@ -48,7 +48,7 @@ router.get('/feed', protect, async (req, res) => {
 
         if (posts.length === 0) {
             console.log("⚠️ Feed empty. Fetching global posts...");
-            posts = await Post.find({})
+            posts = await Post.find({ isHidden: { $ne: true }, isDeleted: { $ne: true } })
                 .select('-likes -comments')
                 .sort({ createdAt: -1 })
                 .skip(((parseInt(req.query.page) || 1) - 1) * (parseInt(req.query.limit) || 20))
@@ -105,7 +105,7 @@ router.get('/', protect, async (req, res) => {
         console.log("----------------------------------");
         console.log("🔍 GET /api/posts - Fetching Discover feed");
 
-        let posts = await Post.find({})
+        let posts = await Post.find({ isHidden: { $ne: true }, isDeleted: { $ne: true } })
             .select('-likes -comments')
             .sort({ createdAt: -1 })
             .skip(((parseInt(req.query.page) || 1) - 1) * (parseInt(req.query.limit) || 50))
@@ -148,7 +148,7 @@ router.get('/', protect, async (req, res) => {
 // @desc    Get posts by a specific user - Scalable
 router.get('/user/:id', protect, async (req, res) => {
     try {
-        let posts = await Post.find({ user: req.params.id })
+        let posts = await Post.find({ user: req.params.id, isHidden: { $ne: true }, isDeleted: { $ne: true } })
             .select('-likes -comments')
             .sort({ createdAt: -1 })
             .populate('user', 'name username avatarUrl');
@@ -188,6 +188,11 @@ router.get('/:id', protect, async (req, res) => {
     try {
         let post = await Post.findById(req.params.id).select('-likes -comments').populate('user', 'name username avatarUrl');
         if (!post) {
+            return res.status(404).json({ message: 'Post not found' });
+        }
+        const isOwner = post.user?.id?.toString() === req.user.id;
+        const isAdmin = req.user?.isAdmin;
+        if ((post.isHidden || post.isDeleted) && !isOwner && !isAdmin) {
             return res.status(404).json({ message: 'Post not found' });
         }
 
@@ -267,22 +272,64 @@ router.delete('/:id', protect, async (req, res) => {
         if (!post) {
             return res.status(404).json({ message: 'Post not found' });
         }
-        // Allow if user is owner OR admin (for future use)
-        if (post.user.toString() !== req.user.id) {
+        // Allow if user is owner OR admin
+        if (post.user.toString() !== req.user.id && !req.user.isAdmin) {
             return res.status(401).json({ message: 'User not authorized' });
         }
 
-        if (post.imagePublicId) {
-            try {
-                await cloudinary.uploader.destroy(post.imagePublicId);
-            } catch (err) {
-                console.error("Failed to delete image from Cloudinary:", err);
-            }
-        }
+        post.isDeleted = true;
+        post.deletedAt = new Date();
+        post.deletedBy = req.user.id;
+        await post.save();
 
-        await post.deleteOne();
         req.io.emit('postDeleted', req.params.id);
         res.json({ message: 'Post removed' });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Server Error' });
+    }
+});
+
+// @route   PATCH /api/posts/:id/hide
+router.patch('/:id/hide', protect, async (req, res) => {
+    try {
+        const post = await Post.findById(req.params.id);
+        if (!post) {
+            return res.status(404).json({ message: 'Post not found' });
+        }
+        if (post.user.toString() !== req.user.id && !req.user.isAdmin) {
+            return res.status(401).json({ message: 'User not authorized' });
+        }
+
+        post.isHidden = true;
+        post.hiddenAt = new Date();
+        post.hiddenBy = req.user.id;
+        await post.save();
+
+        res.json({ message: 'Post hidden', post });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Server Error' });
+    }
+});
+
+// @route   PATCH /api/posts/:id/unhide
+router.patch('/:id/unhide', protect, async (req, res) => {
+    try {
+        const post = await Post.findById(req.params.id);
+        if (!post) {
+            return res.status(404).json({ message: 'Post not found' });
+        }
+        if (post.user.toString() !== req.user.id && !req.user.isAdmin) {
+            return res.status(401).json({ message: 'User not authorized' });
+        }
+
+        post.isHidden = false;
+        post.hiddenAt = null;
+        post.hiddenBy = null;
+        await post.save();
+
+        res.json({ message: 'Post unhidden', post });
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: 'Server Error' });

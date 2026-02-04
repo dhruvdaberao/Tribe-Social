@@ -25,6 +25,12 @@ const tribeSchema = mongoose.Schema(
         type: mongoose.Schema.Types.ObjectId, 
         ref: 'User' 
     }],
+    isHidden: { type: Boolean, default: false },
+    hiddenAt: { type: Date },
+    hiddenBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    isDeleted: { type: Boolean, default: false },
+    deletedAt: { type: Date },
+    deletedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   },
   {
     timestamps: true,

@@ -401,7 +401,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { User } from '../../types';
-import { User as UserIcon, HelpCircle, Info, Shield, ChevronRight, ArrowLeft } from 'lucide-react';
+import { User as UserIcon, HelpCircle, Info, Shield, ShieldCheck, ChevronRight, ArrowLeft } from 'lucide-react';
 
 interface SettingsPageProps {
   currentUser: User;
@@ -441,6 +441,13 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ currentUser, onBack }) => {
             text="Rules & Policies"
             onClick={() => navigate('/settings/rules')}
           />
+          {currentUser?.isAdmin && (
+            <SettingsNavItem
+              icon={<ShieldCheck size={24} />}
+              text="Admin Settings"
+              onClick={() => navigate('/admin')}
+            />
+          )}
         </div>
       </div>
 

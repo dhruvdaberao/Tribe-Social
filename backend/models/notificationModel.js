@@ -34,7 +34,8 @@ import mongoose from 'mongoose';
 const notificationSchema = mongoose.Schema({
     recipient: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
     sender: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-    type: { type: String, enum: ['like', 'comment', 'follow', 'message', 'story_like', 'tribe_join'], required: true },
+    type: { type: String, enum: ['like', 'comment', 'follow', 'message', 'story_like', 'tribe_join', 'admin_action'], required: true },
+    text: { type: String, default: '' },
     read: { type: Boolean, default: false },
     postId: { type: mongoose.Schema.Types.ObjectId, ref: 'Post' },
     storyId: { type: mongoose.Schema.Types.ObjectId, ref: 'Story' },

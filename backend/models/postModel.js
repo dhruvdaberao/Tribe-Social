@@ -37,6 +37,12 @@ const postSchema = mongoose.Schema(
     commentsCount: { type: Number, default: 0 },
     // Moderation
     reports: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }], // Users who reported this post
+    isHidden: { type: Boolean, default: false },
+    hiddenAt: { type: Date },
+    hiddenBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    isDeleted: { type: Boolean, default: false },
+    deletedAt: { type: Date },
+    deletedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   },
   {
     timestamps: true,

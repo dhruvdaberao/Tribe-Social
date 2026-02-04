@@ -266,6 +266,7 @@ interface ProfilePageProps {
     onLikePost: (postId: string) => void;
     onCommentPost: (postId: string, text: string) => void;
     onDeletePost: (postId: string) => void;
+    onHidePost?: (postId: string) => void;
     onDeleteComment: (postId: string, commentId: string) => void;
     onViewProfile: (user: User) => void;
     onUpdateUser: (updatedUser: Partial<User>) => void;
@@ -286,13 +287,18 @@ interface ProfilePageProps {
 export const ProfilePage: React.FC<ProfilePageProps> = (props) => {
     const {
         user, allUsers, visibleUsers, allTribes, posts, currentUser, hasStory,
-        onLikePost, onCommentPost, onDeletePost, onDeleteComment,
+        onLikePost, onCommentPost, onDeletePost, onHidePost, onDeleteComment,
         onViewProfile, onUpdateUser, onAddPost, isPosting, onToggleFollow, onToggleBlock,
         onStartConversation, onNavigate, onSharePost, onOpenStoryCreator,
         myStories, onViewUserStories, onReportPost, onReportUser
     } = props;
     const [isEditModalOpen, setEditModalOpen] = useState(false);
-    const [followModal, setFollowModal] = useState<{ isOpen: boolean, type: 'followers' | 'following', userIds: string[] }>({ isOpen: false, type: 'followers', userIds: [] });
+    const [followModal, setFollowModal] = useState<{
+        isOpen: boolean;
+        type: 'followers' | 'following';
+        users: User[];
+        isLoading: boolean;
+    }>({ isOpen: false, type: 'followers', users: [], isLoading: false });
     const [optionsOpen, setOptionsOpen] = useState(false);
     const [viewingPost, setViewingPost] = useState<Post | null>(null);
     const [profilePosts, setProfilePosts] = useState<Post[]>(posts);
@@ -346,11 +352,9 @@ export const ProfilePage: React.FC<ProfilePageProps> = (props) => {
                     setProfilePosts(mapped);
                 } else {
                     // Fallback to props (cached)
-                    console.log("UserProfile: API returned empty, using cached props.");
                     setProfilePosts(posts);
                 }
             } catch (error) {
-                console.error("UserProfile: Failed to fetch posts, fallback to cache.", error);
                 setProfilePosts(posts);
             } finally {
                 setIsLoading(false);
@@ -388,9 +392,21 @@ export const ProfilePage: React.FC<ProfilePageProps> = (props) => {
     const isBlocked = Array.isArray(currentUser.blockedUsers) && currentUser.blockedUsers.includes(user.id);
     const canViewLists = isOwnProfile || isFollowing;
 
-    const openFollowModal = (type: 'followers' | 'following', userIds: string[]) => {
-        // Strict safety check for userIds passed to modal
-        setFollowModal({ isOpen: true, type, userIds: Array.isArray(userIds) ? userIds : [] });
+    const openFollowModal = async (type: 'followers' | 'following') => {
+        setFollowModal({ isOpen: true, type, users: [], isLoading: true });
+        try {
+            const response = type === 'followers'
+                ? await api.fetchUserFollowers(safeUser.id)
+                : await api.fetchUserFollowing(safeUser.id);
+            const list = Array.isArray(response.data) ? response.data : [];
+            if (!Array.isArray(response.data)) {
+                toast.error("Unable to load list.");
+            }
+            setFollowModal({ isOpen: true, type, users: list, isLoading: false });
+        } catch (error) {
+            setFollowModal({ isOpen: true, type, users: [], isLoading: false });
+            toast.error("Unable to load list.");
+        }
     }
 
     const handleMessageClick = () => {
@@ -446,8 +462,8 @@ export const ProfilePage: React.FC<ProfilePageProps> = (props) => {
 
     return (
         <div>
-            <div className="bg-surface rounded-2xl shadow-sm border border-border mb-6">
-                <div className="h-48 md:h-64 bg-background rounded-t-2xl">
+            <div className="bg-surface rounded-2xl shadow-sm border border-border mb-6 overflow-hidden">
+                <div className="h-48 md:h-64 bg-background rounded-t-2xl overflow-hidden">
                     {safeUser.id === 'chuk-ai' ? (
                         <img src="/psy-banner.gif" alt="Psyduck Banner" className="w-full h-full object-cover" />
                     ) : safeUser.bannerUrl ? (
@@ -547,7 +563,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = (props) => {
                             <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2">
                                 <button
                                     type="button"
-                                    onClick={() => canViewLists && openFollowModal('following', safeUser.following || [])}
+                                    onClick={() => canViewLists && openFollowModal('following')}
                                     className={`hover:underline ${!canViewLists ? 'cursor-not-allowed opacity-50' : ''}`}
                                     title={!canViewLists ? "Follow to view lists" : ""}
                                 >
@@ -559,7 +575,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = (props) => {
                                 </button>
                                 <button
                                     type="button"
-                                    onClick={() => canViewLists && openFollowModal('followers', safeUser.followers || [])}
+                                    onClick={() => canViewLists && openFollowModal('followers')}
                                     className={`hover:underline ${!canViewLists ? 'cursor-not-allowed opacity-50' : ''}`}
                                     title={!canViewLists ? "Follow to view lists" : ""}
                                 >
@@ -609,6 +625,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = (props) => {
                     onLike={handleLike}
                     onComment={onCommentPost}
                     onDeletePost={handleDelete}
+                    onHidePost={onHidePost}
                     onDeleteComment={onDeleteComment}
                     onViewProfile={(userToView) => { setViewingPost(null); onViewProfile(userToView); }}
                     onSharePost={onSharePost}
@@ -622,14 +639,14 @@ export const ProfilePage: React.FC<ProfilePageProps> = (props) => {
             {followModal.isOpen && (
                 <FollowListModal
                     title={followModal.type === 'followers' ? 'Followers' : 'Following'}
-                    userIds={followModal.userIds}
-                    allUsers={allUsers}
+                    users={followModal.users}
                     currentUser={currentUser}
-                    onClose={() => setFollowModal({ isOpen: false, type: 'followers', userIds: [] })}
+                    onClose={() => setFollowModal({ isOpen: false, type: 'followers', users: [], isLoading: false })}
                     onToggleFollow={onToggleFollow}
-                    onViewProfile={(userToView) => { setFollowModal({ isOpen: false, type: 'followers', userIds: [] }); onViewProfile(userToView); }}
+                    onViewProfile={(userToView) => { setFollowModal({ isOpen: false, type: 'followers', users: [], isLoading: false }); onViewProfile(userToView); }}
                     isOwnProfile={isOwnProfile}
                     listType={followModal.type}
+                    isLoading={followModal.isLoading}
                 />
             )}
         </div>

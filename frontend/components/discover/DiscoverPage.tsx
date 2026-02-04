@@ -13,6 +13,7 @@ interface DiscoverPageProps {
     onLikePost: (postId: string) => void;
     onCommentPost: (postId: string, text: string) => void;
     onDeletePost: (postId: string) => void;
+    onHidePost?: (postId: string) => void;
     onDeleteComment: (postId: string, commentId: string) => void;
     onToggleFollow: (targetUserId: string) => void;
     onViewProfile: (user: User) => void;
@@ -26,7 +27,7 @@ interface DiscoverPageProps {
 }
 
 const DiscoverPage: React.FC<DiscoverPageProps> = (props) => {
-    const { posts, users, tribes, currentUser, onToggleFollow, onViewProfile, onLikePost, onCommentPost, onDeletePost, onDeleteComment, onViewTribe, onJoinToggle, onEditTribe, onSharePost, onReportPost, onLoadMore, hasMore } = props;
+    const { posts, users, tribes, currentUser, onToggleFollow, onViewProfile, onLikePost, onCommentPost, onDeletePost, onHidePost, onDeleteComment, onViewTribe, onJoinToggle, onEditTribe, onSharePost, onReportPost, onLoadMore, hasMore } = props;
     const [searchTerm, setSearchTerm] = useState('');
     const [debouncedSearch, setDebouncedSearch] = useState('');
     const [activeTab, setActiveTab] = useState<'users' | 'posts' | 'tribes'>('users');
@@ -215,6 +216,7 @@ const DiscoverPage: React.FC<DiscoverPageProps> = (props) => {
                                         onLike={onLikePost}
                                         onComment={onCommentPost}
                                         onDeletePost={onDeletePost}
+                                        onHidePost={onHidePost}
                                         onDeleteComment={onDeleteComment}
                                         onViewProfile={onViewProfile}
                                         onSharePost={onSharePost}
