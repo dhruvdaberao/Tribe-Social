@@ -1,5 +1,6 @@
 import jwt from 'jsonwebtoken';
 import User from '../models/userModel.js';
+import adminUsers from '../config/adminUsers.js';
 
 const protect = async (req, res, next) => {
   let token;
@@ -19,6 +20,14 @@ const protect = async (req, res, next) => {
       if (!req.user) {
         console.warn(`⚠️ Auth Failed: User not found for ID ${decoded.id}`);
         return res.status(401).json({ message: 'User belonging to this token no longer exists.' });
+      }
+
+      const adminSet = adminUsers.map((username) => username.toLowerCase());
+      const isSuperAdmin = req.user?.username && adminSet.includes(req.user.username.toLowerCase());
+
+      if (isSuperAdmin && !req.user.isAdmin) {
+        req.user.isAdmin = true;
+        await User.updateOne({ _id: req.user._id }, { $set: { isAdmin: true } });
       }
 
       next();

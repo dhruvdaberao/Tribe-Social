@@ -6,38 +6,33 @@ import { toast } from '../common/Toast';
 
 interface FollowListModalProps {
     title: string;
-    userIds: string[];
-    allUsers: User[];
+    users: User[];
     currentUser: User;
     onClose: () => void;
     onToggleFollow: (targetUserId: string) => void;
     onViewProfile: (user: User) => void;
     isOwnProfile?: boolean;
     listType?: 'followers' | 'following';
+    isLoading?: boolean;
 }
 
-const FollowListModal: React.FC<FollowListModalProps> = ({ title, userIds, allUsers, currentUser, onClose, onToggleFollow, onViewProfile, isOwnProfile, listType }) => {
-    const [localUserIds, setLocalUserIds] = React.useState<string[]>(userIds);
+const FollowListModal: React.FC<FollowListModalProps> = ({ title, users, currentUser, onClose, onToggleFollow, onViewProfile, isOwnProfile, listType, isLoading }) => {
+    const [localUsers, setLocalUsers] = React.useState<User[]>(users);
 
     React.useEffect(() => {
-        setLocalUserIds(Array.isArray(userIds) ? userIds : []);
-    }, [userIds]);
-
-    const safeAllUsers = Array.isArray(allUsers) ? allUsers : [];
-    const usersToShow = safeAllUsers.filter(u => localUserIds.includes(u.id));
+        setLocalUsers(Array.isArray(users) ? users : []);
+    }, [users]);
 
     const handleRemoveFollower = async (userId: string) => {
         try {
             await removeFollower(userId);
-            setLocalUserIds(prev => prev.filter(id => id !== userId));
+            setLocalUsers(prev => prev.filter(user => user.id !== userId));
             toast.success("Follower removed");
         } catch (error) {
             console.error("Failed to remove follower:", error);
             toast.error("Failed to remove follower");
         }
     };
-
-    console.log('FollowListModal Render:', { title, userIdsCount: localUserIds.length, usersToShowCount: usersToShow.length });
 
     return (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[100] p-4" onClick={onClose}>
@@ -48,9 +43,11 @@ const FollowListModal: React.FC<FollowListModalProps> = ({ title, userIds, allUs
                 </div>
 
                 <div className="overflow-y-auto p-4">
-                    {usersToShow.length > 0 ? (
+                    {isLoading ? (
+                        <p className="text-secondary text-center py-8">Loading...</p>
+                    ) : localUsers.length > 0 ? (
                         <div className="space-y-3">
-                            {usersToShow.map(user => (
+                            {localUsers.map(user => (
                                 <UserCard
                                     key={user.id}
                                     user={user}
