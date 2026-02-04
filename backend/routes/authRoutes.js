@@ -77,6 +77,7 @@ import { Resend } from 'resend';
 import User from '../models/userModel.js';
 import adminUsers from '../config/adminUsers.js';
 import OTP from '../models/otpModel.js';
+import Follow from '../models/followModel.js';
 
 const router = express.Router();
 
@@ -101,6 +102,22 @@ router.post('/register', async (req, res) => {
     const adminSet = adminUsers.map((admin) => admin.toLowerCase());
     const isAdmin = adminSet.includes(username.toLowerCase());
     const user = await User.create({ name, username, email, password, isAdmin });
+
+    // Auto-follow 'Tribe' official account
+    if (user) {
+      try {
+        const tribeAccount = await User.findOne({ username: { $regex: /^tribe$/i } });
+        if (tribeAccount && tribeAccount._id.toString() !== user._id.toString()) {
+          await Follow.create({ follower: user._id, following: tribeAccount._id });
+          await User.findByIdAndUpdate(tribeAccount._id, { $inc: { followersCount: 1 } });
+          await User.findByIdAndUpdate(user._id, { $inc: { followingCount: 1 } });
+          user.followingCount = 1; // Update in-memory object
+        }
+      } catch (followError) {
+        console.error("Auto-follow error:", followError);
+      }
+    }
+
     if (user) {
       res.status(201).json({ token: generateToken(user._id), user: user });
     } else {

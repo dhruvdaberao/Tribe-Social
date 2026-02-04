@@ -122,6 +122,15 @@ const MainLayout: React.FC = () => {
 
     const handleNavigation = (item: NavItem) => {
         if (item === activeNavItem) {
+            // Exception: If clicking Profile while on another user's profile, navigate instead of refreshing
+            if (item === 'Profile') {
+                const currentPathId = window.location.pathname.split('/').pop();
+                if (currentPathId !== currentUser?.id) {
+                    navigate(`/profile/${currentUser?.id}`);
+                    return;
+                }
+            }
+
             // Refresh Logic
             if (item === 'Home') fetchFeed();
             if (item === 'Tribes') fetchTribes();
