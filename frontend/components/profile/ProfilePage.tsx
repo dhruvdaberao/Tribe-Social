@@ -509,16 +509,12 @@ export const ProfilePage: React.FC<ProfilePageProps> = (props) => {
                                             <OptionsIcon />
                                         </button>
                                         {optionsOpen && (
-                                            <div className="absolute right-0 mt-2 w-56 bg-surface rounded-lg shadow-lg border border-border z-10 text-sm overflow-hidden">
+                                            <div className="absolute right-0 mt-2 w-48 bg-surface rounded-lg shadow-lg border border-border z-10 overflow-hidden">
                                                 <ShareButton shareData={{ title: `Check out ${safeUser.name}'s profile on Tribe!`, text: `See what ${safeUser.name} (@${safeUser.username}) is up to.`, url: window.location.href }} className="w-full text-left px-4 py-3 text-primary hover:bg-background transition-colors flex items-center space-x-2" onShare={() => setOptionsOpen(false)}>
-                                                    <ShareIcon className="h-4 w-4" /><span>Share Profile</span>
+                                                    <ShareIcon className="h-5 w-5" /><span>Share Profile</span>
                                                 </ShareButton>
-                                                <button onClick={() => { handleMessageClick(); setOptionsOpen(false); }} className={`w-full text-left px-4 py-3 hover:bg-background transition-colors flex items-center space-x-2 text-primary`}>
-                                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" /></svg>
-                                                    <span>Message</span>
-                                                </button>
                                                 <button onClick={() => { onReportUser(safeUser.id); setOptionsOpen(false); }} className={`w-full text-left px-4 py-3 hover:bg-red-500/10 text-red-500 transition-colors flex items-center space-x-2`}>
-                                                    <FlagIcon className="h-4 w-4" /><span>Report User</span>
+                                                    <FlagIcon className="h-5 w-5" /><span>Report User</span>
                                                 </button>
                                                 <button onClick={async () => {
                                                     // @ts-ignore
@@ -527,8 +523,8 @@ export const ProfilePage: React.FC<ProfilePageProps> = (props) => {
                                                     if (success && !isBlocked) {
                                                         onNavigate('Discover');
                                                     }
-                                                }} className={`w-full text-left px-4 py-3 hover:bg-background rounded-b-lg transition-colors flex items-center space-x-2 ${isBlocked ? 'text-secondary' : 'text-red-500'} border-t border-border`}>
-                                                    <BlockIcon className="h-4 w-4" /><span>{isBlocked ? 'Unblock User' : 'Block User'}</span>
+                                                }} className={`w-full text-left px-4 py-3 hover:bg-background transition-colors flex items-center space-x-2 ${isBlocked ? 'text-secondary' : 'text-red-500'} border-t border-border`}>
+                                                    <BlockIcon className="h-5 w-5" /><span>{isBlocked ? 'Unblock User' : 'Block User'}</span>
                                                 </button>
                                             </div>
                                         )}
