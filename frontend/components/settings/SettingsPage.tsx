@@ -398,195 +398,67 @@
 
 
 
-import React, { useState } from 'react';
+import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { User } from '../../types';
-import BlockedListModal from '../profile/BlockedListModal';
-import HelpPage from './HelpPage';
-import AboutUsPage from './AboutUsPage';
-import * as api from '../../api'; // Assumed root based on instruction
-import { toast } from '../common/Toast';
-import { User as UserIconLucide, HelpCircle, Info, Ban, LogOut, Trash2, ChevronRight, ArrowLeft } from 'lucide-react';
+import { User as UserIcon, HelpCircle, Info, Shield, ChevronRight, ArrowLeft } from 'lucide-react';
 
 interface SettingsPageProps {
   currentUser: User;
-  allUsers: User[];
-  onLogout: () => void;
-  onDeleteAccount: () => void;
-  onToggleBlock: (targetUserId: string) => void;
   onBack: () => void;
 }
 
-type SettingsTab = 'Account' | 'Help' | 'About';
-
-const SettingsPage: React.FC<SettingsPageProps> = (props) => {
-  const { currentUser, allUsers, onLogout, onDeleteAccount, onToggleBlock, onBack } = props;
-  const [activeTab, setActiveTab] = useState<SettingsTab>('Account');
-  const [isBlockedModalOpen, setBlockedModalOpen] = useState(false);
-  const [isDeleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
-  const [isAccountInfoModalOpen, setAccountInfoModalOpen] = useState(false);
-
-  const renderContent = () => {
-    switch (activeTab) {
-      case 'Account':
-        return (
-          <>
-            <SettingsButton icon={<UserIcon />} text="Account Information" detail={`@${currentUser.username}`} onClick={() => setAccountInfoModalOpen(true)} />
-            <SettingsButton icon={<BlockIcon />} text="Blocked Users" detail={`${(currentUser.blockedUsers || []).length} users`} onClick={() => setBlockedModalOpen(true)} />
-            <SettingsButton icon={<LogoutIcon />} text="Logout" onClick={onLogout} />
-            <SettingsButton icon={<TrashIcon />} text="Delete Account" onClick={() => setDeleteConfirmOpen(true)} isDestructive />
-          </>
-        );
-      case 'Help':
-        return <HelpPage />;
-      case 'About':
-        return <AboutUsPage />;
-      default:
-        return null;
-    }
-  };
+const SettingsPage: React.FC<SettingsPageProps> = ({ currentUser, onBack }) => {
+  const navigate = useNavigate();
 
   return (
-    <div className="h-full flex flex-col md:flex-row bg-surface md:rounded-2xl md:border md:border-border md:shadow-lg overflow-hidden">
-      {/* Sidebar */}
-      <div className="flex-shrink-0 md:w-64 border-b md:border-b-0 md:border-r border-border p-4">
-        <div className="flex items-center space-x-3 mb-6">
-          <button onClick={onBack} className="p-2 -ml-2 text-primary hover:bg-background rounded-full"><BackIcon /></button>
-          <h1 className="text-2xl font-bold font-display text-primary">Settings</h1>
-        </div>
-        <nav className="space-y-1">
-          <NavItem text="Account" icon={<UserIcon />} isActive={activeTab === 'Account'} onClick={() => setActiveTab('Account')} />
-          <NavItem text="Help & Support" icon={<HelpIcon />} isActive={activeTab === 'Help'} onClick={() => setActiveTab('Help')} />
-          <NavItem text="About Tribe" icon={<InfoIcon />} isActive={activeTab === 'About'} onClick={() => setActiveTab('About')} />
-        </nav>
-      </div>
+    <div className="max-w-2xl mx-auto px-4 py-8">
+      <button onClick={onBack} className="mb-6 flex items-center text-secondary hover:text-primary transition-colors">
+        <ArrowLeft size={20} className="mr-2" /> Back to Profile
+      </button>
 
-      {/* Content */}
-      <div className="flex-1 p-4 md:p-8 overflow-y-auto flex flex-col h-full">
-        <h2 className="text-2xl font-bold font-display text-primary mb-6 flex-shrink-0">{activeTab}</h2>
+      <div className="bg-surface rounded-2xl shadow-sm border border-border p-6">
+        <h1 className="text-2xl font-bold font-display text-primary mb-6">Settings</h1>
 
-        <div className="flex-1 space-y-4">
-          {renderContent()}
-        </div>
-
-        <div className="mt-auto flex justify-center flex-shrink-0 py-4 opacity-80 pt-8">
-          <img src="/noodles.gif" alt="Noodles eating gif" className="w-48 h-auto rounded-lg shadow-sm" />
+        <div className="space-y-4">
+          <SettingsNavItem
+            icon={<UserIcon size={24} />}
+            text="Account"
+            onClick={() => navigate('/settings/account')}
+          />
+          <SettingsNavItem
+            icon={<HelpCircle size={24} />}
+            text="Help & Support"
+            onClick={() => navigate('/settings/help')}
+          />
+          <SettingsNavItem
+            icon={<Info size={24} />}
+            text="About Tribe"
+            onClick={() => navigate('/settings/about')}
+          />
+          <SettingsNavItem
+            icon={<Shield size={24} />}
+            text="Rules & Policies"
+            onClick={() => navigate('/settings/rules')}
+          />
         </div>
       </div>
 
-      {isAccountInfoModalOpen && <AccountInfoModal user={currentUser} onClose={() => setAccountInfoModalOpen(false)} />}
-      {isBlockedModalOpen && <BlockedListModal userIds={currentUser.blockedUsers || []} allUsers={allUsers} onClose={() => setBlockedModalOpen(false)} onToggleBlock={onToggleBlock} />}
-      {isDeleteConfirmOpen && <DeleteAccountModal onClose={() => setDeleteConfirmOpen(false)} onConfirm={onDeleteAccount} />}
-    </div>
-  );
-};
-
-// Account Info Modal (Update Email, Pass, Name)
-const AccountInfoModal: React.FC<{ user: User; onClose: () => void }> = ({ user, onClose }) => {
-  const [formData, setFormData] = useState({
-    name: user.name,
-    username: user.username,
-    email: '', // Don't pre-fill sensitive fields if desired, or fetch fresh
-    password: ''
-  });
-  const [isLoading, setIsLoading] = useState(false);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
-    try {
-      const updateData: any = { name: formData.name, username: formData.username };
-      if (formData.email) updateData.email = formData.email;
-      if (formData.password) updateData.password = formData.password;
-
-      await api.updateProfile(updateData);
-      toast.success("Account updated successfully!");
-      onClose();
-    } catch (error) {
-      console.error("Failed to update account:", error);
-      toast.error("Failed to update account. Try again.");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" onClick={onClose}>
-      <div className="bg-surface rounded-2xl shadow-xl w-full max-w-md border border-border" onClick={e => e.stopPropagation()}>
-        <div className="p-4 flex justify-between items-center border-b border-border">
-          <h2 className="text-xl font-bold text-primary">Edit Account Info</h2>
-          <button onClick={onClose} className="text-secondary hover:text-primary text-2xl leading-none">&times;</button>
-        </div>
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
-          <div>
-            <label className="text-sm font-semibold text-secondary">Name</label>
-            <input type="text" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} className="w-full mt-1 p-2 bg-background border border-border rounded-lg text-primary focus:outline-none focus:ring-2 focus:ring-accent" />
-          </div>
-          <div>
-            <label className="text-sm font-semibold text-secondary">Username</label>
-            <input type="text" value={formData.username} onChange={e => setFormData({ ...formData, username: e.target.value })} className="w-full mt-1 p-2 bg-background border border-border rounded-lg text-primary focus:outline-none focus:ring-2 focus:ring-accent" />
-          </div>
-          <div>
-            <label className="text-sm font-semibold text-secondary">New Email (Optional)</label>
-            <input type="email" placeholder="Enter new email" value={formData.email} onChange={e => setFormData({ ...formData, email: e.target.value })} className="w-full mt-1 p-2 bg-background border border-border rounded-lg text-primary focus:outline-none focus:ring-2 focus:ring-accent" />
-          </div>
-          <div>
-            <label className="text-sm font-semibold text-secondary">New Password (Optional)</label>
-            <input type="password" placeholder="Enter new password" value={formData.password} onChange={e => setFormData({ ...formData, password: e.target.value })} className="w-full mt-1 p-2 bg-background border border-border rounded-lg text-primary focus:outline-none focus:ring-2 focus:ring-accent" />
-          </div>
-          <div className="flex justify-end pt-4">
-            <button type="button" onClick={onClose} className="text-secondary font-semibold px-4 py-2 rounded-lg hover:bg-background mr-2">Cancel</button>
-            <button type="submit" disabled={isLoading} className="bg-accent text-accent-text font-semibold px-6 py-2 rounded-lg hover:bg-accent-hover transition-colors disabled:opacity-50">
-              {isLoading ? 'Saving...' : 'Save Changes'}
-            </button>
-          </div>
-        </form>
+      <div className="mt-8 text-center text-secondary text-sm">
+        Tribe Social v4.0.0
       </div>
     </div>
   );
 };
 
-const NavItem: React.FC<{ text: string, icon: React.ReactNode, isActive: boolean, onClick: () => void }> = ({ text, icon, isActive, onClick }) => (
-  <button onClick={onClick} className={`w-full flex items-center space-x-3 p-2.5 rounded-lg font-semibold text-left transition-colors ${isActive ? 'bg-accent text-accent-text' : 'text-primary hover:bg-background'}`}>
-    <span className="w-6 h-6">{icon}</span>
-    <span>{text}</span>
-  </button>
-)
-
-const SettingsButton: React.FC<{ icon: React.ReactNode, text: string, detail?: string, onClick: () => void, isDestructive?: boolean }> = ({ icon, text, detail, onClick, isDestructive }) => (
-  <button onClick={onClick} className={`w-full flex items-center justify-between p-4 rounded-lg transition-colors ${isDestructive ? 'bg-red-500/10 text-red-500 hover:bg-red-500/20' : 'bg-background hover:bg-border'}`}>
+const SettingsNavItem: React.FC<{ icon: React.ReactNode, text: string, onClick: () => void }> = ({ icon, text, onClick }) => (
+  <button onClick={onClick} className="w-full flex items-center justify-between p-4 bg-background hover:bg-border rounded-xl transition-colors group">
     <div className="flex items-center space-x-4">
-      <span className="w-6 h-6">{icon}</span>
-      <span className="font-semibold">{text}</span>
+      <span className="text-primary group-hover:text-accent transition-colors">{icon}</span>
+      <span className="font-semibold text-primary">{text}</span>
     </div>
-    <div className="flex items-center space-x-2 text-secondary">
-      {detail && <span>{detail}</span>}
-      <span className="w-5 h-5"><ChevronRightIcon /></span>
-    </div>
+    <ChevronRight size={20} className="text-secondary" />
   </button>
-)
-
-const DeleteAccountModal: React.FC<{ onClose: () => void, onConfirm: () => void }> = ({ onClose, onConfirm }) => (
-  <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-    <div className="bg-surface rounded-2xl shadow-xl w-full max-w-md p-6 border border-border">
-      <h2 className="text-xl font-bold text-primary">Delete Account</h2>
-      <p className="text-secondary my-4">Are you sure you want to permanently delete your account and all of your data? This action is irreversible.</p>
-      <div className="flex justify-end space-x-4 mt-6">
-        <button onClick={onClose} className="text-secondary font-semibold px-4 py-2 rounded-lg hover:bg-background">Cancel</button>
-        <button onClick={() => { onConfirm(); onClose(); }} className="bg-red-600 text-white font-semibold px-6 py-2 rounded-lg hover:bg-red-700">Confirm Delete</button>
-      </div>
-    </div>
-  </div>
 );
-
-// ICONS
-// Using Lucide-React icons for consistency and calmness
-const UserIcon = () => <UserIconLucide size={24} strokeWidth={1.75} />;
-const HelpIcon = () => <HelpCircle size={24} strokeWidth={1.75} />;
-const InfoIcon = () => <Info size={24} strokeWidth={1.75} />;
-const BlockIcon = () => <Ban size={24} strokeWidth={1.75} />;
-const LogoutIcon = () => <LogOut size={24} strokeWidth={1.75} />;
-const TrashIcon = () => <Trash2 size={24} strokeWidth={1.75} />;
-const ChevronRightIcon = () => <ChevronRight size={20} strokeWidth={1.75} />;
-const BackIcon = () => <ArrowLeft size={24} strokeWidth={1.75} />;
 
 export default SettingsPage;

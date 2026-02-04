@@ -12,7 +12,6 @@ import Sidebar from './components/layout/Sidebar';
 import FeedPage from './components/feed/FeedPage';
 import { ProfilePage } from './components/profile/ProfilePage';
 import ChatPage from './components/chat/ChatPage';
-import RulesPage from './pages/RulesPage';
 import DiscoverPage from './components/discover/DiscoverPage';
 import LoginPage from './components/auth/LoginPage';
 import TribesPage from './components/tribes/TribesPage';
@@ -21,6 +20,10 @@ import EditTribeModal from './components/tribes/EditTribeModal';
 import CreatePost from './components/feed/CreatePost';
 import NotificationsPage from './components/notifications/NotificationsPage';
 import SettingsPage from './components/settings/SettingsPage';
+import AccountPage from './components/settings/AccountPage';
+import HelpPage from './components/settings/HelpPage';
+import AboutPage from './components/settings/AboutPage';
+import RulesPoliciesPage from './pages/RulesPoliciesPage';
 import StoryCreator from './components/stories/StoryCreator';
 import StoryViewer from './components/stories/StoryViewer';
 import StoryFeed from './components/stories/StoryFeed';
@@ -222,7 +225,6 @@ const MainLayout: React.FC = () => {
                                     onViewProfile={handleViewProfile}
                                     onViewTribe={handleViewTribe}
                                     onJoinToggle={handleJoinToggle}
-                                    onJoinToggle={handleJoinToggle}
                                     onEditTribe={setEditingTribe}
                                     onSharePost={handleSharePost}
                                     onReportPost={handleReportPost}
@@ -296,10 +298,6 @@ const MainLayout: React.FC = () => {
                                         onNavigate: handleNavigation,
                                         onSharePost: handleSharePost,
                                         onOpenStoryCreator: () => setIsCreatingStory(true),
-                                        onStartConversation: handleStartConversation,
-                                        onNavigate: handleNavigation,
-                                        onSharePost: handleSharePost,
-                                        onOpenStoryCreator: () => setIsCreatingStory(true),
                                         onViewUserStories: handleViewUserStories,
                                         onReportPost: handleReportPost,
                                         onReportUser: handleReportUser
@@ -309,8 +307,14 @@ const MainLayout: React.FC = () => {
                             } />
 
                             <Route path="/settings" element={
-                                <SettingsPage currentUser={currentUser} allUsers={users} onLogout={logout} onDeleteAccount={handleDeleteAccount} onToggleBlock={handleToggleBlock} onBack={() => navigate(`/profile/${currentUser?.id}`)} />
+                                <SettingsPage currentUser={currentUser} onBack={() => navigate(`/profile/${currentUser?.id}`)} />
                             } />
+                            <Route path="/settings/account" element={
+                                <AccountPage currentUser={currentUser} allUsers={users} onLogout={logout} onDeleteAccount={handleDeleteAccount} onToggleBlock={handleToggleBlock} />
+                            } />
+                            <Route path="/settings/help" element={<HelpPage />} />
+                            <Route path="/settings/about" element={<AboutPage />} />
+                            <Route path="/settings/rules" element={<RulesPoliciesPage />} />
 
                         </Routes>
                     </ErrorBoundary>

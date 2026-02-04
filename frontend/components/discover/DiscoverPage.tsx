@@ -20,12 +20,13 @@ interface DiscoverPageProps {
     onJoinToggle: (tribeId: string) => Promise<void>;
     onEditTribe: (tribe: Tribe) => void;
     onSharePost: (post: Post, destination: { type: 'tribe' | 'user', id: string }) => void;
+    onReportPost: (postId: string) => void;
     onLoadMore: () => void;
     hasMore?: boolean;
 }
 
 const DiscoverPage: React.FC<DiscoverPageProps> = (props) => {
-    const { posts, users, tribes, currentUser, onToggleFollow, onViewProfile, onLikePost, onCommentPost, onDeletePost, onDeleteComment, onViewTribe, onJoinToggle, onEditTribe, onSharePost, onLoadMore, hasMore } = props;
+    const { posts, users, tribes, currentUser, onToggleFollow, onViewProfile, onLikePost, onCommentPost, onDeletePost, onDeleteComment, onViewTribe, onJoinToggle, onEditTribe, onSharePost, onReportPost, onLoadMore, hasMore } = props;
     const [searchTerm, setSearchTerm] = useState('');
     const [debouncedSearch, setDebouncedSearch] = useState('');
     const [activeTab, setActiveTab] = useState<'users' | 'posts' | 'tribes'>('users');
@@ -217,6 +218,7 @@ const DiscoverPage: React.FC<DiscoverPageProps> = (props) => {
                                         onDeleteComment={onDeleteComment}
                                         onViewProfile={onViewProfile}
                                         onSharePost={onSharePost}
+                                        onReportPost={onReportPost}
                                     />
                                 ))}
                                 {hasMore && (
