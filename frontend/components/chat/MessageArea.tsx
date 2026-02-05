@@ -203,25 +203,47 @@ interface MessageAreaProps {
   currentUser: User;
   userMap: Map<string, User>;
   isSending: boolean;
-  onSendMessage: (text: string) => void;
+  isUploading: boolean;
+  uploadProgress?: number | null;
+  hasMore?: boolean;
+  isLoadingMore?: boolean;
+  onLoadMore?: () => void;
+  onSendMessage: (payload: { text?: string; attachment?: File }) => void;
   onBack: () => void;
   onViewProfile: (user: User) => void;
 }
 
-export const MessageArea: React.FC<MessageAreaProps> = ({ conversation, messages, isLoading, currentUser, userMap, isSending, onSendMessage, onBack, onViewProfile }) => {
+export const MessageArea: React.FC<MessageAreaProps> = ({
+  conversation,
+  messages,
+  isLoading,
+  currentUser,
+  userMap,
+  isSending,
+  isUploading,
+  uploadProgress,
+  hasMore,
+  isLoadingMore,
+  onLoadMore,
+  onSendMessage,
+  onBack,
+  onViewProfile
+}) => {
   const [inputText, setInputText] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const otherParticipantId = conversation.participants.find(p => p.id !== currentUser.id)?.id;
   const otherParticipant = otherParticipantId ? userMap.get(otherParticipantId) : null;
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const { socket, onlineUsers } = useSocket();
 
   const isOtherUserOnline = otherParticipantId ? onlineUsers.includes(otherParticipantId) : false;
 
   useEffect(() => {
+    if (isLoadingMore) return;
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages, isLoading]);
+  }, [messages, isLoading, isLoadingMore]);
 
   useEffect(() => {
     if (!socket) return;
@@ -257,13 +279,26 @@ export const MessageArea: React.FC<MessageAreaProps> = ({ conversation, messages
   const handleSendMessage = (e: React.FormEvent) => {
     e.preventDefault();
     if (inputText.trim()) {
-      onSendMessage(inputText);
+      onSendMessage({ text: inputText });
       setInputText('');
       if (socket && otherParticipantId) {
         if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
         socket.emit('stopTyping', { roomId: `dm-${[currentUser.id, otherParticipantId].sort().join('-')}`, userId: currentUser.id, userName: currentUser.name });
         typingTimeoutRef.current = null;
       }
+    }
+  };
+
+  const handleAttachFile = (file: File) => {
+    if (!file) return;
+    onSendMessage({ attachment: file });
+  };
+
+  const handleScroll = () => {
+    if (!onLoadMore || !hasMore || isLoadingMore) return;
+    const container = scrollContainerRef.current;
+    if (container && container.scrollTop < 120) {
+      onLoadMore();
     }
   };
 
@@ -283,9 +318,47 @@ export const MessageArea: React.FC<MessageAreaProps> = ({ conversation, messages
     );
   }
 
+  const renderAttachment = (message: Message) => {
+    const attachmentUrl = message.attachmentUrl || message.imageUrl;
+    const attachmentType = message.attachmentType || (message.imageUrl ? 'image/*' : null);
+
+    if (!attachmentUrl) return null;
+
+    if (attachmentType?.startsWith('image/')) {
+      return <img src={attachmentUrl} alt={message.attachmentName || 'Attachment'} className="mb-2 rounded-lg w-full" />;
+    }
+
+    if (attachmentType?.startsWith('video/')) {
+      return (
+        <video controls className="mb-2 rounded-lg w-full">
+          <source src={attachmentUrl} />
+        </video>
+      );
+    }
+
+    if (attachmentType?.startsWith('audio/')) {
+      return (
+        <audio controls className="mb-2 w-full">
+          <source src={attachmentUrl} />
+        </audio>
+      );
+    }
+
+    return (
+      <a
+        href={attachmentUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="mb-2 inline-flex items-center gap-2 rounded-lg border border-border bg-background px-3 py-2 text-xs text-primary hover:bg-surface"
+      >
+        <span className="font-semibold">Attachment</span>
+        {message.attachmentName && <span className="text-secondary">{message.attachmentName}</span>}
+      </a>
+    );
+  };
+
   return (
-    // Removed rounded corners from the outer container
-    <div className="flex flex-col h-full bg-background">
+    <div className="flex flex-col h-full bg-background min-h-0">
       <div className="sticky top-0 flex items-center p-3 border-b border-border bg-surface flex-shrink-0 z-50">
         <button onClick={onBack} className="md:hidden p-2 mr-2 text-primary">
           <BackIcon />
@@ -310,13 +383,18 @@ export const MessageArea: React.FC<MessageAreaProps> = ({ conversation, messages
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-4">
-        {isLoading ? (
+      <div ref={scrollContainerRef} onScroll={handleScroll} className="flex-1 overflow-y-auto p-4">
+        {isLoading && messages.length === 0 ? (
           <div className="w-full h-full flex items-center justify-center">
-            <img src="/duckload.gif" alt="Loading messages..." className="w-16 h-16" />
+            <div className="w-10 h-10 border-2 border-accent border-t-transparent rounded-full animate-spin" />
           </div>
         ) : (
           <div className="flex flex-col space-y-2">
+            {isLoadingMore && (
+              <div className="flex justify-center py-2">
+                <div className="w-6 h-6 border-2 border-accent border-t-transparent rounded-full animate-spin" />
+              </div>
+            )}
             {messages.map(message => {
               const isCurrentUser = message.senderId === currentUser.id;
               const sender = isCurrentUser ? currentUser : userMap.get(message.senderId);
@@ -416,7 +494,7 @@ export const MessageArea: React.FC<MessageAreaProps> = ({ conversation, messages
                       })() : (
                         /* NORMAL MESSAGE */
                         <>
-                          {message.imageUrl && <img src={message.imageUrl} alt="Shared content" className="mb-2 rounded-lg w-full" />}
+                          {renderAttachment(message)}
                           <div className="text-sm leading-relaxed">
                             {sender?.id === 'chuk-ai' ? (
                               <MarkdownRenderer text={message.text} />
@@ -427,7 +505,9 @@ export const MessageArea: React.FC<MessageAreaProps> = ({ conversation, messages
                         </>
                       )}
                     </div>
-                    <p className="text-xs text-secondary mt-1.5 px-1">{sentAt}</p>
+                    <p className="text-xs text-secondary mt-1.5 px-1">
+                      {message.status === 'sending' ? 'Sending…' : message.status === 'failed' ? 'Failed to send' : sentAt}
+                    </p>
                   </div>
                 </div>
               );
@@ -445,14 +525,17 @@ export const MessageArea: React.FC<MessageAreaProps> = ({ conversation, messages
         )}
       </div>
 
-      <div className="p-4 bg-background border-t border-border flex-shrink-0 z-20 w-full">
+      <div className="sticky bottom-0 p-4 bg-background border-t border-border flex-shrink-0 z-20 w-full pb-[calc(1rem+env(safe-area-inset-bottom))]">
         <ChatInput
           value={inputText}
           onChange={handleInputChange}
           onSend={handleSendMessage}
+          onAttachFile={handleAttachFile}
           placeholder="Type a message..."
           disabled={!inputText.trim()}
           isSending={isSending}
+          isUploading={isUploading}
+          uploadProgress={uploadProgress ?? undefined}
         />
       </div>
     </div>

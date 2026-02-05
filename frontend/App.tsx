@@ -36,6 +36,7 @@ import AdminSettingsPage from './pages/admin/AdminSettingsPage';
 import AdminPostsPage from './pages/admin/AdminPostsPage';
 import AdminUsersPage from './pages/admin/AdminUsersPage';
 import AdminTribesPage from './pages/admin/AdminTribesPage';
+import SuperAdminPage from './pages/admin/SuperAdminPage';
 
 export type NavItem = 'Home' | 'Discover' | 'Messages' | 'Tribes' | 'Notifications' | 'Profile' | 'Psyduck' | 'TribeDetail' | 'Settings';
 
@@ -98,7 +99,7 @@ const MainLayout: React.FC = () => {
         }
         if (pathname.startsWith('/notifications')) return 'Notifications';
         if (pathname.startsWith('/profile')) return 'Profile';
-        if (pathname.startsWith('/settings')) return 'Settings';
+        if (pathname.startsWith('/settings') || pathname.startsWith('/admin') || pathname.startsWith('/super-admin')) return 'Settings';
         if (pathname.startsWith('/psyduck')) return 'Psyduck';
         return 'Home';
     };
@@ -458,6 +459,16 @@ const MainLayout: React.FC = () => {
                                         <AdminTribesPage />
                                     ) : (
                                         <Navigate to="/settings" replace />
+                                    )
+                                }
+                            />
+                            <Route
+                                path="/admin/super"
+                                element={
+                                    currentUser?.isSuperAdmin ? (
+                                        <SuperAdminPage />
+                                    ) : (
+                                        <Navigate to="/admin" replace />
                                     )
                                 }
                             />

@@ -23,6 +23,7 @@ const LoginPage: React.FC = () => {
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
   const [username, setUsername] = useState('');
+  const [usernameError, setUsernameError] = useState('');
   const [otp, setOtp] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -44,6 +45,8 @@ const LoginPage: React.FC = () => {
     }
   };
 
+  const isValidUsername = (value: string) => /^[a-z0-9]+(?:\.[a-z0-9]+)*$/.test(value);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -55,6 +58,9 @@ const LoginPage: React.FC = () => {
         await auth.login(email, password);
       } else if (mode === 'register') {
         if (!name || !username || !email || !password) throw new Error('Fill all fields.');
+        if (!isValidUsername(username)) {
+          throw new Error('Username must be lowercase and can only include letters, numbers, and single dots.');
+        }
         await auth.register(name, username, email, password);
       } else if (mode === 'forgot') {
         if (!email) throw new Error('Enter your email.');
@@ -109,7 +115,7 @@ const LoginPage: React.FC = () => {
             <img
               src={theme === 'dark' ? '/white-color-logo.png' : '/black-color-logo.png'}
               alt="Tribe Logo"
-              className="h-32 w-auto object-contain select-none"
+              className="h-36 sm:h-40 md:h-44 w-auto object-contain select-none"
             />
           </div>
           <p className="text-secondary mt-2">Connect with your community.</p>
@@ -129,7 +135,25 @@ const LoginPage: React.FC = () => {
                 </div>
                 <div className="mb-4">
                   <label className="block text-secondary text-sm font-semibold mb-2">Username</label>
-                  <input type="text" value={username} onChange={(e) => setUsername(e.target.value)} className="w-full p-3 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-accent text-primary" placeholder="alexj" disabled={isLoading} />
+                  <input
+                    type="text"
+                    value={username}
+                    onChange={(e) => {
+                      const next = e.target.value.toLowerCase();
+                      setUsername(next);
+                      if (!next) {
+                        setUsernameError('');
+                      } else if (!isValidUsername(next)) {
+                        setUsernameError('Lowercase only. Use letters, numbers, and single dots.');
+                      } else {
+                        setUsernameError('');
+                      }
+                    }}
+                    className="w-full p-3 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-accent text-primary"
+                    placeholder="alex.jordan"
+                    disabled={isLoading}
+                  />
+                  {usernameError && <p className="text-xs text-red-500 mt-2">{usernameError}</p>}
                 </div>
               </>
             )}

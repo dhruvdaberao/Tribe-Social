@@ -210,13 +210,13 @@ export const fetchConversations = async () => {
   return { data: normalizeArray(res.data) };
 };
 
-export const fetchMessages = async (otherUserId: string) => {
-  const res = await API.get(`/messages/${otherUserId}`);
+export const fetchMessages = async (otherUserId: string, params?: { limit?: number; before?: string }) => {
+  const res = await API.get(`/messages/${otherUserId}`, { params });
   return { data: normalizeArray(res.data) };
 };
 
-export const sendMessage = (receiverId: string, messageData: any) =>
-  API.post(`/messages/send/${receiverId}`, messageData);
+export const sendMessage = (receiverId: string, messageData: any, config?: { onUploadProgress?: (event: any) => void }) =>
+  API.post(`/messages/send/${receiverId}`, messageData, config);
 
 /* ───────────── TRIBES ───────────── */
 export const fetchTribes = async () => {
@@ -250,8 +250,8 @@ export const joinTribe = async (id: string) => {
 };
 
 
-export const fetchTribeMessages = async (id: string) => {
-  const res = await API.get(`/tribes/${id}/messages`);
+export const fetchTribeMessages = async (id: string, params?: { limit?: number; before?: string }) => {
+  const res = await API.get(`/tribes/${id}/messages`, { params });
   return {
     data: res.data.map((m: any) => ({
       id: m._id,
@@ -261,12 +261,16 @@ export const fetchTribeMessages = async (id: string) => {
       text: m.text,
       timestamp: m.timestamp,
       imageUrl: m.imageUrl,
+      attachmentUrl: m.attachmentUrl,
+      attachmentType: m.attachmentType,
+      attachmentName: m.attachmentName,
+      attachmentSize: m.attachmentSize,
     })),
   };
 };
 
-export const sendTribeMessage = async (id: string, messageData: any) => {
-  const res = await API.post(`/tribes/${id}/messages`, messageData);
+export const sendTribeMessage = async (id: string, messageData: any, config?: { onUploadProgress?: (event: any) => void }) => {
+  const res = await API.post(`/tribes/${id}/messages`, messageData, config);
   return {
     data: {
       id: res.data._id,
@@ -276,6 +280,10 @@ export const sendTribeMessage = async (id: string, messageData: any) => {
       text: res.data.text,
       timestamp: res.data.timestamp,
       imageUrl: res.data.imageUrl,
+      attachmentUrl: res.data.attachmentUrl,
+      attachmentType: res.data.attachmentType,
+      attachmentName: res.data.attachmentName,
+      attachmentSize: res.data.attachmentSize,
     },
   };
 };
@@ -297,7 +305,13 @@ export const markNotificationsRead = () =>
   API.put('/notifications/read');
 
 /* ───────────── MODERATION ───────────── */
-export const createReport = (payload: { targetType: 'post' | 'user' | 'tribe'; targetId: string; reason: string; details?: string }) =>
+export const createReport = (payload: {
+  targetType: 'post' | 'user' | 'tribe';
+  targetId: string;
+  reason: string;
+  details?: string;
+  escalatedToSuperAdmin?: boolean;
+}) =>
   API.post('/reports', payload);
 
 export const fetchReports = (params: Record<string, any>) =>
@@ -319,6 +333,9 @@ export const fetchModerationPosts = (params: Record<string, any>) =>
 
 export const fetchModerationUsers = (params: Record<string, any>) =>
   API.get('/moderation/users', { params });
+
+export const updateUserRole = (userId: string, payload: { isAdmin?: boolean; isSuperAdmin?: boolean }) =>
+  API.patch(`/moderation/users/${userId}/role`, payload);
 
 export const fetchModerationTribes = (params: Record<string, any>) =>
   API.get('/moderation/tribes', { params });

@@ -10,7 +10,12 @@ interface TribeMessageAreaProps {
   isLoading: boolean;
   currentUser: User;
   isSending: boolean;
-  onSendMessage: (text: string) => void;
+  isUploading: boolean;
+  uploadProgress?: number | null;
+  hasMore?: boolean;
+  isLoadingMore?: boolean;
+  onLoadMore?: () => void;
+  onSendMessage: (payload: { text?: string; attachment?: File }) => void;
   onViewProfile?: (user: User) => void;
 }
 
@@ -20,22 +25,81 @@ const TribeMessageArea: React.FC<TribeMessageAreaProps> = ({
   isLoading,
   currentUser,
   isSending,
+  isUploading,
+  uploadProgress,
+  hasMore,
+  isLoadingMore,
+  onLoadMore,
   onSendMessage,
   onViewProfile
 }) => {
   const [inputText, setInputText] = useState('');
   const bottomRef = useRef<HTMLDivElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   /* ───────────── SCROLL TO BOTTOM SAFELY ───────────── */
   useEffect(() => {
+    if (isLoadingMore) return;
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+  }, [messages, isLoadingMore]);
 
   const handleSend = (e: React.FormEvent) => {
     e.preventDefault();
     if (!inputText.trim()) return;
-    onSendMessage(inputText);
+    onSendMessage({ text: inputText });
     setInputText('');
+  };
+
+  const handleAttachFile = (file: File) => {
+    if (!file) return;
+    onSendMessage({ attachment: file });
+  };
+
+  const handleScroll = () => {
+    if (!onLoadMore || !hasMore || isLoadingMore) return;
+    const container = scrollContainerRef.current;
+    if (container && container.scrollTop < 120) {
+      onLoadMore();
+    }
+  };
+
+  const renderAttachment = (message: TribeMessage) => {
+    const attachmentUrl = message.attachmentUrl || message.imageUrl;
+    const attachmentType = message.attachmentType || (message.imageUrl ? 'image/*' : null);
+
+    if (!attachmentUrl) return null;
+
+    if (attachmentType?.startsWith('image/')) {
+      return <img src={attachmentUrl} className="mb-2 rounded-lg w-full" alt={message.attachmentName || 'attachment'} />;
+    }
+
+    if (attachmentType?.startsWith('video/')) {
+      return (
+        <video controls className="mb-2 rounded-lg w-full">
+          <source src={attachmentUrl} />
+        </video>
+      );
+    }
+
+    if (attachmentType?.startsWith('audio/')) {
+      return (
+        <audio controls className="mb-2 w-full">
+          <source src={attachmentUrl} />
+        </audio>
+      );
+    }
+
+    return (
+      <a
+        href={attachmentUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="mb-2 inline-flex items-center gap-2 rounded-lg border border-border bg-background px-3 py-2 text-xs text-primary hover:bg-surface"
+      >
+        <span className="font-semibold">Attachment</span>
+        {message.attachmentName && <span className="text-secondary">{message.attachmentName}</span>}
+      </a>
+    );
   };
 
   return (
@@ -47,6 +111,8 @@ const TribeMessageArea: React.FC<TribeMessageAreaProps> = ({
       "
     >
       <div
+        ref={scrollContainerRef}
+        onScroll={handleScroll}
         className="
           flex-1 overflow-y-auto w-full
           px-4 py-3
@@ -55,12 +121,13 @@ const TribeMessageArea: React.FC<TribeMessageAreaProps> = ({
       >
         {isLoading && messages.length === 0 && (
           <div className="h-full flex flex-col items-center justify-center opacity-70">
-            <img
-              src="/busstop.gif"
-              alt="Loading messages"
-              className="w-24 h-auto mb-2"
-            />
+            <div className="w-10 h-10 border-2 border-accent border-t-transparent rounded-full animate-spin mb-3" />
             <p className="text-sm text-secondary">Loading conversation…</p>
+          </div>
+        )}
+        {isLoadingMore && (
+          <div className="flex justify-center">
+            <div className="w-6 h-6 border-2 border-accent border-t-transparent rounded-full animate-spin" />
           </div>
         )}
 
@@ -170,9 +237,9 @@ const TribeMessageArea: React.FC<TribeMessageAreaProps> = ({
                         </button>
                       </div>
                     ) : (
-                      /* NORMAL MESSAGE (Text + Optional Image) */
-                      <>
-                        {message.imageUrl && <img src={message.imageUrl} className="mb-2 rounded-lg w-full" alt="shared" />}
+                    /* NORMAL MESSAGE (Text + Optional Image) */
+                    <>
+                        {renderAttachment(message)}
                         <p className="text-sm whitespace-pre-wrap break-words">
                           {message.text}
                           {/* Simple URL Link detection */}
@@ -192,7 +259,7 @@ const TribeMessageArea: React.FC<TribeMessageAreaProps> = ({
                   </div>
 
                   <span className="text-[10px] opacity-60 mt-1 ml-1">
-                    {sentAt}
+                    {message.status === 'sending' ? 'Sending…' : message.status === 'failed' ? 'Failed to send' : sentAt}
                   </span>
                 </div>
               </div>
@@ -218,21 +285,26 @@ const TribeMessageArea: React.FC<TribeMessageAreaProps> = ({
       {/* ───────────── INPUT BAR (MOBILE SAFE) ───────────── */}
       <div
         className="
+          sticky bottom-0
           p-4 
           bg-background 
           border-t border-border
           flex-shrink-0 
           z-20
           w-full
+          pb-[calc(1rem+env(safe-area-inset-bottom))]
         "
       >
         <ChatInput
           value={inputText}
           onChange={e => setInputText(e.target.value)}
           onSend={handleSend}
+          onAttachFile={handleAttachFile}
           placeholder={`Message ${tribe.name}…`}
           disabled={!inputText.trim()}
           isSending={isSending}
+          isUploading={isUploading}
+          uploadProgress={uploadProgress ?? undefined}
         />
       </div>
     </div>

@@ -1,3 +1,3 @@
-const superAdmins = ['pika', 'tribe'];
+const superAdmins = ['pika', 'Tribe'];
 
 export default superAdmins;

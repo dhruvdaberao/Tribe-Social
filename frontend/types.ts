@@ -21,6 +21,8 @@ export interface User {
   bannedAt?: string | null;
   isHidden?: boolean;
   hiddenAt?: string | null;
+  isDisabled?: boolean;
+  disabledAt?: string | null;
   isDeleted?: boolean;
   deletedAt?: string | null;
   lastModerationAt?: string | null;
@@ -60,6 +62,12 @@ export interface Message {
   text: string;
   timestamp: string;
   imageUrl?: string;
+  attachmentUrl?: string | null;
+  attachmentType?: string | null;
+  attachmentName?: string | null;
+  attachmentSize?: number | null;
+  status?: 'sending' | 'failed';
+  clientTempId?: string;
 }
 
 export interface Conversation {
@@ -105,6 +113,12 @@ export interface TribeMessage {
   text: string;
   timestamp: string;
   imageUrl?: string;
+  attachmentUrl?: string | null;
+  attachmentType?: string | null;
+  attachmentName?: string | null;
+  attachmentSize?: number | null;
+  status?: 'sending' | 'failed';
+  clientTempId?: string;
 }
 
 /* ===================== NOTIFICATIONS ===================== */
