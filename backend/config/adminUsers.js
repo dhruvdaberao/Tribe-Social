@@ -1,3 +1,3 @@
-const adminUsers = ['pika', 'dekisugi'];
+const adminUsers = ['pika', 'Dekisugi'];
 
 export default adminUsers;
