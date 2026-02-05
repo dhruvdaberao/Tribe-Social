@@ -99,6 +99,7 @@ const MainLayout: React.FC = () => {
         }
         if (pathname.startsWith('/notifications')) return 'Notifications';
         if (pathname.startsWith('/profile')) return 'Profile';
+        if (pathname.startsWith('/admin')) return 'Settings';
         if (pathname.startsWith('/settings')) return 'Settings';
         if (pathname.startsWith('/psyduck')) return 'Psyduck';
         return 'Home';

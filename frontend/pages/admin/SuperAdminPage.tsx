@@ -157,10 +157,10 @@ const AdminLeadersPanel: React.FC = () => {
         </div>
         <button
           onClick={() => setShowCreateModal(true)}
-          className="inline-flex items-center gap-2 rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-accent-text hover:bg-accent/90"
+          className="inline-flex items-center gap-2 rounded-lg bg-accent px-5 py-2.5 text-base font-semibold text-accent-text hover:bg-accent/90"
         >
           <UserPlus size={16} />
-          Create New Admin
+          Create Admin
         </button>
       </div>
 

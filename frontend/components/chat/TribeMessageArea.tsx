@@ -11,6 +11,11 @@ interface TribeMessageAreaProps {
   currentUser: User;
   isSending: boolean;
   onSendMessage: (text: string) => void;
+  onSendAttachment: (file: File) => void;
+  isUploadingAttachment: boolean;
+  hasMoreMessages: boolean;
+  onLoadOlder: () => void;
+  isLoadingOlder: boolean;
   onViewProfile?: (user: User) => void;
 }
 
@@ -21,6 +26,11 @@ const TribeMessageArea: React.FC<TribeMessageAreaProps> = ({
   currentUser,
   isSending,
   onSendMessage,
+  onSendAttachment,
+  isUploadingAttachment,
+  hasMoreMessages,
+  onLoadOlder,
+  isLoadingOlder,
   onViewProfile
 }) => {
   const [inputText, setInputText] = useState('');
@@ -38,6 +48,38 @@ const TribeMessageArea: React.FC<TribeMessageAreaProps> = ({
     setInputText('');
   };
 
+  const renderAttachment = (message: TribeMessage) => {
+    if (!message.attachmentUrl || !message.attachmentType) return null;
+    if (message.attachmentType.startsWith('video/')) {
+      return <video controls src={message.attachmentUrl} className="w-full rounded-lg mb-2" />;
+    }
+    if (message.attachmentType.startsWith('audio/')) {
+      return <audio controls src={message.attachmentUrl} className="w-full mb-2" />;
+    }
+    if (message.attachmentType === 'application/pdf') {
+      return (
+        <a
+          href={message.attachmentUrl}
+          target="_blank"
+          rel="noreferrer"
+          className="flex items-center gap-2 text-sm font-semibold text-primary underline mb-2"
+        >
+          {message.attachmentName || 'Open PDF'}
+        </a>
+      );
+    }
+    return (
+      <a
+        href={message.attachmentUrl}
+        target="_blank"
+        rel="noreferrer"
+        className="text-sm font-semibold text-primary underline mb-2 block"
+      >
+        {message.attachmentName || 'View attachment'}
+      </a>
+    );
+  };
+
   return (
     <div
       className="
@@ -51,17 +93,25 @@ const TribeMessageArea: React.FC<TribeMessageAreaProps> = ({
           flex-1 overflow-y-auto w-full
           px-4 py-3
           space-y-4
+          min-h-0
         "
       >
         {isLoading && messages.length === 0 && (
           <div className="h-full flex flex-col items-center justify-center opacity-70">
-            <img
-              src="/busstop.gif"
-              alt="Loading messages"
-              className="w-24 h-auto mb-2"
-            />
+            <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin mb-2" />
             <p className="text-sm text-secondary">Loading conversation…</p>
           </div>
+        )}
+
+        {!isLoading && hasMoreMessages && (
+          <button
+            type="button"
+            onClick={onLoadOlder}
+            disabled={isLoadingOlder}
+            className="self-center text-xs font-semibold text-secondary hover:text-primary"
+          >
+            {isLoadingOlder ? 'Loading earlier...' : 'Load earlier messages'}
+          </button>
         )}
 
         {!isLoading &&
@@ -173,6 +223,7 @@ const TribeMessageArea: React.FC<TribeMessageAreaProps> = ({
                       /* NORMAL MESSAGE (Text + Optional Image) */
                       <>
                         {message.imageUrl && <img src={message.imageUrl} className="mb-2 rounded-lg w-full" alt="shared" />}
+                        {renderAttachment(message)}
                         <p className="text-sm whitespace-pre-wrap break-words">
                           {message.text}
                           {/* Simple URL Link detection */}
@@ -193,6 +244,7 @@ const TribeMessageArea: React.FC<TribeMessageAreaProps> = ({
 
                   <span className="text-[10px] opacity-60 mt-1 ml-1">
                     {sentAt}
+                    {message.id.startsWith('temp-') && <span className="ml-2 italic">Sending...</span>}
                   </span>
                 </div>
               </div>
@@ -219,11 +271,13 @@ const TribeMessageArea: React.FC<TribeMessageAreaProps> = ({
       <div
         className="
           p-4 
+          pb-[calc(1rem+env(safe-area-inset-bottom))]
           bg-background 
           border-t border-border
           flex-shrink-0 
           z-20
           w-full
+          sticky bottom-0
         "
       >
         <ChatInput
@@ -233,6 +287,8 @@ const TribeMessageArea: React.FC<TribeMessageAreaProps> = ({
           placeholder={`Message ${tribe.name}…`}
           disabled={!inputText.trim()}
           isSending={isSending}
+          onAttach={onSendAttachment}
+          isUploading={isUploadingAttachment}
         />
       </div>
     </div>

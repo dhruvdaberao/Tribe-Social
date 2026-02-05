@@ -5,6 +5,7 @@ import axios from 'axios';
 import * as api from '../../api';
 import { toast } from '../common/Toast';
 import PasswordInput from '../common/PasswordInput';
+import { isValidUsername, normalizeUsername, usernameValidationMessage } from '../../utils/usernameValidation';
 
 interface AuthContextType {
   login: (email: string, password: string) => Promise<void>;
@@ -27,6 +28,7 @@ const LoginPage: React.FC = () => {
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [resendTimer, setResendTimer] = useState(0);
+  const [usernameError, setUsernameError] = useState('');
 
   useEffect(() => {
     let interval: any;
@@ -55,7 +57,12 @@ const LoginPage: React.FC = () => {
         await auth.login(email, password);
       } else if (mode === 'register') {
         if (!name || !username || !email || !password) throw new Error('Fill all fields.');
-        await auth.register(name, username, email, password);
+        const normalized = normalizeUsername(username);
+        if (!isValidUsername(normalized)) {
+          setUsernameError(usernameValidationMessage);
+          throw new Error('Please fix the username format.');
+        }
+        await auth.register(name, normalized, email, password);
       } else if (mode === 'forgot') {
         if (!email) throw new Error('Enter your email.');
         await api.forgotPassword(email);
@@ -109,7 +116,7 @@ const LoginPage: React.FC = () => {
             <img
               src={theme === 'dark' ? '/white-color-logo.png' : '/black-color-logo.png'}
               alt="Tribe Logo"
-              className="h-32 w-auto object-contain select-none"
+              className="h-40 sm:h-32 md:h-36 w-auto object-contain select-none"
             />
           </div>
           <p className="text-secondary mt-2">Connect with your community.</p>
@@ -129,7 +136,25 @@ const LoginPage: React.FC = () => {
                 </div>
                 <div className="mb-4">
                   <label className="block text-secondary text-sm font-semibold mb-2">Username</label>
-                  <input type="text" value={username} onChange={(e) => setUsername(e.target.value)} className="w-full p-3 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-accent text-primary" placeholder="alexj" disabled={isLoading} />
+                  <input
+                    type="text"
+                    value={username}
+                    onChange={(e) => {
+                      const normalized = normalizeUsername(e.target.value);
+                      setUsername(normalized);
+                      if (!normalized) {
+                        setUsernameError('');
+                        return;
+                      }
+                      setUsernameError(isValidUsername(normalized) ? '' : usernameValidationMessage);
+                    }}
+                    className="w-full p-3 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-accent text-primary"
+                    placeholder="alex.j"
+                    disabled={isLoading}
+                  />
+                  {usernameError && (
+                    <p className="text-xs text-red-400 mt-2">{usernameError}</p>
+                  )}
                 </div>
               </>
             )}

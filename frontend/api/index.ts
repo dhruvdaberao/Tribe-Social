@@ -210,9 +210,14 @@ export const fetchConversations = async () => {
   return { data: normalizeArray(res.data) };
 };
 
-export const fetchMessages = async (otherUserId: string) => {
-  const res = await API.get(`/messages/${otherUserId}`);
-  return { data: normalizeArray(res.data) };
+export const fetchMessages = async (otherUserId: string, params?: { limit?: number; before?: string }) => {
+  const res = await API.get(`/messages/${otherUserId}`, { params });
+  return {
+    data: {
+      messages: normalizeArray(res.data.messages || []),
+      hasMore: res.data.hasMore ?? false
+    }
+  };
 };
 
 export const sendMessage = (receiverId: string, messageData: any) =>
@@ -250,18 +255,25 @@ export const joinTribe = async (id: string) => {
 };
 
 
-export const fetchTribeMessages = async (id: string) => {
-  const res = await API.get(`/tribes/${id}/messages`);
+export const fetchTribeMessages = async (id: string, params?: { limit?: number; before?: string }) => {
+  const res = await API.get(`/tribes/${id}/messages`, { params });
+  const messages = res.data.messages || [];
   return {
-    data: res.data.map((m: any) => ({
-      id: m._id,
-      tribeId: id,
-      sender: m.sender,
-      senderId: m.sender?._id || m.senderId,
-      text: m.text,
-      timestamp: m.timestamp,
-      imageUrl: m.imageUrl,
-    })),
+    data: {
+      messages: messages.map((m: any) => ({
+        id: m._id || m.id,
+        tribeId: id,
+        sender: m.sender,
+        senderId: m.sender?._id || m.senderId,
+        text: m.text,
+        timestamp: m.timestamp,
+        imageUrl: m.imageUrl,
+        attachmentUrl: m.attachmentUrl,
+        attachmentType: m.attachmentType,
+        attachmentName: m.attachmentName
+      })),
+      hasMore: res.data.hasMore ?? false
+    }
   };
 };
 
@@ -276,6 +288,9 @@ export const sendTribeMessage = async (id: string, messageData: any) => {
       text: res.data.text,
       timestamp: res.data.timestamp,
       imageUrl: res.data.imageUrl,
+      attachmentUrl: res.data.attachmentUrl,
+      attachmentType: res.data.attachmentType,
+      attachmentName: res.data.attachmentName
     },
   };
 };

@@ -16,9 +16,21 @@ const tribeMessageSchema = mongoose.Schema(
     },
     text: {
       type: String,
-      required: true
+      default: ''
     },
     imageUrl: {
+      type: String,
+      default: null
+    },
+    attachmentUrl: {
+      type: String,
+      default: null
+    },
+    attachmentType: {
+      type: String,
+      default: null
+    },
+    attachmentName: {
       type: String,
       default: null
     }

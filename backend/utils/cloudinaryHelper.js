@@ -22,3 +22,20 @@ export const uploadBase64ToCloudinary = async (base64String, folder = 'tribe_upl
         throw new Error('Image upload failed');
     }
 };
+
+export const uploadBase64ToCloudinaryAuto = async (base64String, folder = 'tribe_uploads') => {
+    if (!base64String || !base64String.startsWith('data:')) {
+        return base64String;
+    }
+
+    try {
+        const uploadResponse = await cloudinary.uploader.upload(base64String, {
+            folder: folder,
+            resource_type: 'auto',
+        });
+        return uploadResponse.secure_url;
+    } catch (error) {
+        console.error(`❌ Cloudinary Upload Error (Folder: ${folder}):`, error);
+        throw new Error('Upload failed');
+    }
+};

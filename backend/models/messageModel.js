@@ -3,8 +3,11 @@ import mongoose from 'mongoose';
 const messageSchema = mongoose.Schema({
   sender: { type: mongoose.Schema.Types.ObjectId, ref: 'User', index: true },
   receiver: { type: mongoose.Schema.Types.ObjectId, ref: 'User', index: true },
-  message: { type: String, required: true },
+  message: { type: String, default: '' },
   imageUrl: { type: String, default: null },
+  attachmentUrl: { type: String, default: null },
+  attachmentType: { type: String, default: null },
+  attachmentName: { type: String, default: null },
 }, {
   timestamps: true,
 });

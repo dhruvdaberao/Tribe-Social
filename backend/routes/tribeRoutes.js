@@ -205,6 +205,8 @@ router.put('/:id/join', protect, async (req, res) => {
 // GET /api/tribes/:id/messages
 router.get('/:id/messages', protect, async (req, res) => {
     try {
+        const limit = Math.min(parseInt(req.query.limit, 10) || 50, 100);
+        const before = req.query.before ? new Date(req.query.before) : null;
         const tribe = await Tribe.findById(req.params.id);
         if (!tribe) return res.status(404).json({ message: 'Tribe not found' });
 
@@ -213,11 +215,23 @@ router.get('/:id/messages', protect, async (req, res) => {
             return res.status(403).json({ message: 'Must be a member' });
         }
 
-        const messages = await TribeMessage.find({ tribe: tribe._id })
-            .populate('sender', 'name username avatarUrl')
-            .sort({ createdAt: 1 });
+        const query = { tribe: tribe._id };
+        if (before && !Number.isNaN(before.getTime())) {
+            query.createdAt = { $lt: before };
+        }
 
-        res.status(200).json(messages);
+        const messages = await TribeMessage.find(query)
+            .populate('sender', 'name username avatarUrl')
+            .sort({ createdAt: -1 })
+            .limit(limit + 1);
+
+        const hasMore = messages.length > limit;
+        if (hasMore) messages.pop();
+
+        res.status(200).json({
+            messages: messages.reverse(),
+            hasMore
+        });
     } catch (error) {
         console.error('❌ GET /api/tribes/:id/messages ERROR:', error);
         res.status(500).json({ message: 'Server Error fetching messages' });
@@ -227,9 +241,9 @@ router.get('/:id/messages', protect, async (req, res) => {
 // POST /api/tribes/:id/messages
 router.post('/:id/messages', protect, async (req, res) => {
     try {
-        const { text, imageUrl } = req.body;
+        const { text, imageUrl, attachment } = req.body;
 
-        if (!text && !imageUrl) {
+        if (!text && !imageUrl && !attachment?.data) {
             return res.status(400).json({ message: 'Message cannot be empty' });
         }
 
@@ -241,11 +255,30 @@ router.post('/:id/messages', protect, async (req, res) => {
             return res.status(403).json({ message: 'Must be a member' });
         }
 
+        let finalImageUrl = imageUrl || null;
+        let attachmentUrl = null;
+        let attachmentType = null;
+        let attachmentName = null;
+
+        if (attachment?.data && attachment?.type) {
+            const { uploadBase64ToCloudinary, uploadBase64ToCloudinaryAuto } = await import('../utils/cloudinaryHelper.js');
+            if (attachment.type.startsWith('image/')) {
+                finalImageUrl = await uploadBase64ToCloudinary(attachment.data, 'tribe_messages');
+            } else {
+                attachmentUrl = await uploadBase64ToCloudinaryAuto(attachment.data, 'tribe_message_files');
+            }
+            attachmentType = attachment.type;
+            attachmentName = attachment.name || null;
+        }
+
         const message = await TribeMessage.create({
             tribe: tribe._id,
             sender: req.user.id,
-            text,
-            imageUrl: imageUrl || null
+            text: text || '',
+            imageUrl: finalImageUrl,
+            attachmentUrl,
+            attachmentType,
+            attachmentName
         });
 
         const populated = await message.populate(
@@ -261,6 +294,9 @@ router.post('/:id/messages', protect, async (req, res) => {
             senderId: req.user.id,
             text: populated.text,
             imageUrl: populated.imageUrl,
+            attachmentUrl: populated.attachmentUrl,
+            attachmentType: populated.attachmentType,
+            attachmentName: populated.attachmentName,
             timestamp: populated.createdAt
         };
 
@@ -268,7 +304,6 @@ router.post('/:id/messages', protect, async (req, res) => {
         if (req.io) {
             // Broadcast to the SPECIFIC tribe room
             const roomName = tribe._id.toString();
-            console.log(`📡 Emitting 'newTribeMessage' to room: ${roomName}`);
             req.io.to(roomName).emit('newTribeMessage', responseMessage);
 
             /* 🔥 OPTION B — UNREAD COUNTS (USER-SCOPED) */
