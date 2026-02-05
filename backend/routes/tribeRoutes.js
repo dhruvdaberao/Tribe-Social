@@ -13,7 +13,11 @@ const router = express.Router();
 // GET /api/tribes
 router.get('/', protect, async (req, res) => {
     try {
-        const tribes = await Tribe.find({})
+        const query = { isDeleted: { $ne: true } };
+        if (!req.user?.isAdmin) {
+            query.isHidden = { $ne: true };
+        }
+        const tribes = await Tribe.find(query)
             .sort({ createdAt: -1 })
             .select('name description avatarUrl owner members createdAt')
             .lean();
@@ -29,10 +33,13 @@ router.get('/', protect, async (req, res) => {
 router.get('/:id', protect, async (req, res) => {
     try {
         const tribe = await Tribe.findById(req.params.id)
-            .select('name description avatarUrl owner members createdAt')
+            .select('name description avatarUrl owner members createdAt isHidden isDeleted')
             .lean();
 
         if (!tribe) {
+            return res.status(404).json({ message: 'Tribe not found' });
+        }
+        if ((tribe.isHidden || tribe.isDeleted) && !req.user?.isAdmin) {
             return res.status(404).json({ message: 'Tribe not found' });
         }
 
