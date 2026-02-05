@@ -204,11 +204,16 @@ interface MessageAreaProps {
   userMap: Map<string, User>;
   isSending: boolean;
   onSendMessage: (text: string) => void;
+  onSendAttachment: (file: File) => void;
+  isUploadingAttachment: boolean;
+  hasMoreMessages: boolean;
+  onLoadOlder: () => void;
+  isLoadingOlder: boolean;
   onBack: () => void;
   onViewProfile: (user: User) => void;
 }
 
-export const MessageArea: React.FC<MessageAreaProps> = ({ conversation, messages, isLoading, currentUser, userMap, isSending, onSendMessage, onBack, onViewProfile }) => {
+export const MessageArea: React.FC<MessageAreaProps> = ({ conversation, messages, isLoading, currentUser, userMap, isSending, onSendMessage, onSendAttachment, isUploadingAttachment, hasMoreMessages, onLoadOlder, isLoadingOlder, onBack, onViewProfile }) => {
   const [inputText, setInputText] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const otherParticipantId = conversation.participants.find(p => p.id !== currentUser.id)?.id;
@@ -267,6 +272,38 @@ export const MessageArea: React.FC<MessageAreaProps> = ({ conversation, messages
     }
   };
 
+  const renderAttachment = (message: Message) => {
+    if (!message.attachmentUrl || !message.attachmentType) return null;
+    if (message.attachmentType.startsWith('video/')) {
+      return <video controls src={message.attachmentUrl} className="w-full rounded-lg mb-2" />;
+    }
+    if (message.attachmentType.startsWith('audio/')) {
+      return <audio controls src={message.attachmentUrl} className="w-full mb-2" />;
+    }
+    if (message.attachmentType === 'application/pdf') {
+      return (
+        <a
+          href={message.attachmentUrl}
+          target="_blank"
+          rel="noreferrer"
+          className="flex items-center gap-2 text-sm font-semibold text-primary underline mb-2"
+        >
+          {message.attachmentName || 'Open PDF'}
+        </a>
+      );
+    }
+    return (
+      <a
+        href={message.attachmentUrl}
+        target="_blank"
+        rel="noreferrer"
+        className="text-sm font-semibold text-primary underline mb-2 block"
+      >
+        {message.attachmentName || 'View attachment'}
+      </a>
+    );
+  };
+
   if (!otherParticipant) {
     return (
       <div className="flex flex-col h-full bg-surface">
@@ -285,7 +322,7 @@ export const MessageArea: React.FC<MessageAreaProps> = ({ conversation, messages
 
   return (
     // Removed rounded corners from the outer container
-    <div className="flex flex-col h-full bg-background">
+    <div className="flex flex-col h-full bg-background min-h-0">
       <div className="sticky top-0 flex items-center p-3 border-b border-border bg-surface flex-shrink-0 z-50">
         <button onClick={onBack} className="md:hidden p-2 mr-2 text-primary">
           <BackIcon />
@@ -310,13 +347,23 @@ export const MessageArea: React.FC<MessageAreaProps> = ({ conversation, messages
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-4">
+      <div className="flex-1 overflow-y-auto p-4 min-h-0">
         {isLoading ? (
           <div className="w-full h-full flex items-center justify-center">
-            <img src="/duckload.gif" alt="Loading messages..." className="w-16 h-16" />
+            <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" aria-label="Loading messages" />
           </div>
         ) : (
           <div className="flex flex-col space-y-2">
+            {hasMoreMessages && (
+              <button
+                type="button"
+                onClick={onLoadOlder}
+                disabled={isLoadingOlder}
+                className="self-center text-xs font-semibold text-secondary hover:text-primary mb-2 disabled:opacity-60"
+              >
+                {isLoadingOlder ? 'Loading earlier...' : 'Load earlier messages'}
+              </button>
+            )}
             {messages.map(message => {
               const isCurrentUser = message.senderId === currentUser.id;
               const sender = isCurrentUser ? currentUser : userMap.get(message.senderId);
@@ -417,6 +464,7 @@ export const MessageArea: React.FC<MessageAreaProps> = ({ conversation, messages
                         /* NORMAL MESSAGE */
                         <>
                           {message.imageUrl && <img src={message.imageUrl} alt="Shared content" className="mb-2 rounded-lg w-full" />}
+                          {renderAttachment(message)}
                           <div className="text-sm leading-relaxed">
                             {sender?.id === 'chuk-ai' ? (
                               <MarkdownRenderer text={message.text} />
@@ -427,7 +475,10 @@ export const MessageArea: React.FC<MessageAreaProps> = ({ conversation, messages
                         </>
                       )}
                     </div>
-                    <p className="text-xs text-secondary mt-1.5 px-1">{sentAt}</p>
+                    <p className="text-xs text-secondary mt-1.5 px-1">
+                      {sentAt}
+                      {message.id.startsWith('temp-') && <span className="ml-2 italic">Sending...</span>}
+                    </p>
                   </div>
                 </div>
               );
@@ -445,7 +496,7 @@ export const MessageArea: React.FC<MessageAreaProps> = ({ conversation, messages
         )}
       </div>
 
-      <div className="p-4 bg-background border-t border-border flex-shrink-0 z-20 w-full">
+      <div className="p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] bg-background border-t border-border flex-shrink-0 z-20 w-full sticky bottom-0">
         <ChatInput
           value={inputText}
           onChange={handleInputChange}
@@ -453,6 +504,8 @@ export const MessageArea: React.FC<MessageAreaProps> = ({ conversation, messages
           placeholder="Type a message..."
           disabled={!inputText.trim()}
           isSending={isSending}
+          onAttach={onSendAttachment}
+          isUploading={isUploadingAttachment}
         />
       </div>
     </div>

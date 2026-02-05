@@ -9,8 +9,9 @@ import { useGlobalContent } from '../../contexts/GlobalContentContext';
 import TribeMessageArea from '../chat/TribeMessageArea';
 import TribeMembersModal from './TribeMembersModal';
 import EditTribeModal from './EditTribeModal';
-import { Users, ArrowLeft, Edit2, LogIn, LogOut } from 'lucide-react';
+import { Users, ArrowLeft, Edit2, LogIn, LogOut, Flame } from 'lucide-react';
 import { toast } from '../common/Toast';
+import ConfirmationModal from '../common/ConfirmationModal';
 
 /* ───────────── STYLES ───────────── */
 const PageContainer = styled.div`
@@ -124,6 +125,12 @@ const TribeDetailPage: React.FC<Props> = ({ currentUser, tribeId: propTribeId })
   const [messages, setMessages] = useState<TribeMessage[]>([]);
   const [areMessagesLoading, setAreMessagesLoading] = useState(false);
   const [isSending, setIsSending] = useState(false);
+  const [isUploadingAttachment, setIsUploadingAttachment] = useState(false);
+  const [hasMoreMessages, setHasMoreMessages] = useState(false);
+  const [isLoadingOlder, setIsLoadingOlder] = useState(false);
+  const [leaveModal, setLeaveModal] = useState({ isOpen: false, message: '', confirmText: 'Leave' });
+  const leaveActionRef = useRef<() => void>(() => {});
+  const messageCache = useRef<Map<string, { messages: TribeMessage[]; hasMore: boolean }>>(new Map());
   const [error, setError] = useState<string | null>(null);
 
   const [isEditOpen, setIsEditOpen] = useState(false);
@@ -214,9 +221,20 @@ const TribeDetailPage: React.FC<Props> = ({ currentUser, tribeId: propTribeId })
 
     const loadMessages = async () => {
       try {
+        const cached = messageCache.current.get(id);
+        if (cached && cached.messages.length > 0) {
+          setMessages(cached.messages);
+          setHasMoreMessages(cached.hasMore);
+          setAreMessagesLoading(false);
+          clearUnreadTribe(id);
+          return;
+        }
+
         setAreMessagesLoading(true);
-        const res = await api.fetchTribeMessages(id);
-        setMessages(res.data);
+        const res = await api.fetchTribeMessages(id, { limit: 50 });
+        setMessages(res.data.messages);
+        setHasMoreMessages(res.data.hasMore);
+        messageCache.current.set(id, { messages: res.data.messages, hasMore: res.data.hasMore });
         clearUnreadTribe(id);
       } finally {
         setAreMessagesLoading(false);
@@ -230,24 +248,20 @@ const TribeDetailPage: React.FC<Props> = ({ currentUser, tribeId: propTribeId })
   useEffect(() => {
     // Only join if we have a valid ID, are a member, AND socket is connected
     if (!id || !isMember || !socket || !socket.connected) {
-      // console.log('Skipping tribe room join (Waiting for connection/auth)...');
       return;
     }
 
     const room = id;
-    console.log(`🔌 joining tribe socket room: ${room}`);
     joinRoom(room);
 
     // Re-join on reconnect (SocketContext mostly handles this, but explicit is safe)
     const handleReconnect = () => {
-      console.log(`🔄 Re-joining tribe room after reconnect: ${room}`);
       joinRoom(room);
     };
 
     socket.on('connect', handleReconnect);
 
     return () => {
-      console.log(`🔌 leaving tribe socket room: ${room}`);
       leaveRoom(room);
       socket.off('connect', handleReconnect);
     };
@@ -284,16 +298,17 @@ const TribeDetailPage: React.FC<Props> = ({ currentUser, tribeId: propTribeId })
         const tempMatchIndex = prev.findIndex(m => (m as any).id === `temp-${(fullMessage as any).tempId}`);
 
         if (tempMatchIndex !== -1) {
-          // Replace the temp message with the real one
           const newMessages = [...prev];
           newMessages[tempMatchIndex] = fullMessage;
+          messageCache.current.set(id, { messages: newMessages, hasMore: hasMoreMessages });
           return newMessages;
         }
 
-        // 5. Append new message
-        return [...prev, fullMessage].sort((a, b) =>
+        const nextMessages = [...prev, fullMessage].sort((a, b) =>
           new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
         );
+        messageCache.current.set(id, { messages: nextMessages, hasMore: hasMoreMessages });
+        return nextMessages;
       });
 
       // Clear unread count immediately since we are viewing it
@@ -307,13 +322,48 @@ const TribeDetailPage: React.FC<Props> = ({ currentUser, tribeId: propTribeId })
     return () => {
       socket.off('newTribeMessage', handleIncoming);
     };
-  }, [socket, id, isMember, userMap, clearUnreadTribe]);
+  }, [socket, id, isMember, userMap, clearUnreadTribe, hasMoreMessages]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
+  useEffect(() => {
+    if (id) {
+      messageCache.current.set(id, { messages, hasMore: hasMoreMessages });
+    }
+  }, [id, messages, hasMoreMessages]);
+
   /* ───────────── SEND MESSAGE ───────────── */
+  const readFileAsDataUrl = (file: File) =>
+    new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = () => reject(reader.error);
+      reader.readAsDataURL(file);
+    });
+
+  const loadOlderMessages = async () => {
+    if (!id || isLoadingOlder || messages.length === 0) return;
+    setIsLoadingOlder(true);
+    try {
+      const earliest = messages[0]?.timestamp;
+      const res = await api.fetchTribeMessages(id, { limit: 50, before: earliest });
+      if (res.data.messages.length > 0) {
+        const merged = [...res.data.messages, ...messages];
+        setMessages(merged);
+        setHasMoreMessages(res.data.hasMore);
+        messageCache.current.set(id, { messages: merged, hasMore: res.data.hasMore });
+      } else {
+        setHasMoreMessages(res.data.hasMore);
+      }
+    } catch (error) {
+      toast.error('Failed to load earlier messages.');
+    } finally {
+      setIsLoadingOlder(false);
+    }
+  };
+
   const handleSend = async (text: string) => {
     if (!text.trim() || !id || !currentUser) return;
 
@@ -333,20 +383,22 @@ const TribeDetailPage: React.FC<Props> = ({ currentUser, tribeId: propTribeId })
     setIsSending(true);
 
     try {
-      // 3. Send to Server
-      const { data } = await api.sendTribeMessage(id, { text, tempId: optimistic.id } as any); // Pass tempId to server
-
-      // 4. Replace Optimistic Message with Real One
-      setMessages(prev => {
-        // If socket event already replaced it, do nothing
-        const alreadyReplaced = prev.some(m => m.id === data.id);
-        if (alreadyReplaced) return prev.filter(m => m.id !== tempId);
-
-        return prev.map(m => (m.id === tempId ? data : m));
-      });
+      const payload = { tribeId: id, text, tempId: optimistic.id.replace('temp-', '') };
+      if (socket && socket.connected) {
+        socket.emit('sendTribeMessage', payload, (ack: { ok: boolean; message?: TribeMessage; error?: string }) => {
+          if (ack?.ok && ack.message) {
+            setMessages(prev => prev.map(m => (m.id === tempId ? ack.message! : m)));
+          } else {
+            setMessages(prev => prev.filter(m => m.id !== tempId));
+            toast.error(ack?.error || 'Failed to send message');
+          }
+        });
+      } else {
+        const { data } = await api.sendTribeMessage(id, { text, tempId: optimistic.id } as any); // Pass tempId to server
+        setMessages(prev => prev.map(m => (m.id === tempId ? data : m)));
+      }
 
     } catch (error) {
-      console.error('Failed to send message:', error);
       // Remove optimistic message on failure
       setMessages(prev => prev.filter(m => m.id !== tempId));
       toast.error('Failed to send message');
@@ -355,36 +407,116 @@ const TribeDetailPage: React.FC<Props> = ({ currentUser, tribeId: propTribeId })
     }
   };
 
+  const handleSendAttachment = async (file: File) => {
+    if (!id || !currentUser || isUploadingAttachment) return;
+    const maxSizeMb = 15;
+    if (file.size > maxSizeMb * 1024 * 1024) {
+      toast.error(`File too large. Max ${maxSizeMb}MB.`);
+      return;
+    }
+
+    setIsUploadingAttachment(true);
+    const tempId = `temp-${Date.now()}`;
+    const previewUrl = URL.createObjectURL(file);
+    const optimistic: TribeMessage = {
+      id: tempId,
+      tribeId: id,
+      sender: currentUser,
+      senderId: currentUser.id,
+      text: '',
+      timestamp: new Date().toISOString(),
+      imageUrl: file.type.startsWith('image/') ? previewUrl : undefined,
+      attachmentUrl: !file.type.startsWith('image/') ? previewUrl : undefined,
+      attachmentType: file.type,
+      attachmentName: file.name,
+      status: 'sending'
+    };
+
+    setMessages(prev => [...prev, optimistic]);
+
+    try {
+      const dataUrl = await readFileAsDataUrl(file);
+      const payload = {
+        tribeId: id,
+        text: '',
+        tempId: tempId.replace('temp-', ''),
+        attachment: { data: dataUrl, type: file.type, name: file.name }
+      };
+
+      if (socket && socket.connected) {
+        socket.emit('sendTribeMessage', payload, (ack: { ok: boolean; message?: TribeMessage; error?: string }) => {
+          if (ack?.ok && ack.message) {
+            setMessages(prev => prev.map(m => (m.id === tempId ? ack.message! : m)));
+          } else {
+            setMessages(prev => prev.filter(m => m.id !== tempId));
+            toast.error(ack?.error || 'Failed to send message');
+          }
+          URL.revokeObjectURL(previewUrl);
+        });
+      } else {
+        const { data } = await api.sendTribeMessage(id, { text: '', tempId, attachment: payload.attachment } as any);
+        setMessages(prev => prev.map(m => (m.id === tempId ? data : m)));
+        URL.revokeObjectURL(previewUrl);
+      }
+    } catch (error) {
+      setMessages(prev => prev.filter(m => m.id !== tempId));
+      URL.revokeObjectURL(previewUrl);
+      toast.error('Failed to send attachment');
+    } finally {
+      setIsUploadingAttachment(false);
+    }
+  };
+
   /* ───────────── JOIN / LEAVE ───────────── */
   const handleJoinToggle = async () => {
     if (!id || !tribe || !currentUser) return;
 
-    // Check if Chief trying to leave
-    if (tribe.owner === currentUser.id && tribe.members.includes(currentUser.id)) {
-      if (tribe.members.length > 1) {
-        toast.error('You must transfer the Chief role before leaving.');
-        setIsEditOpen(true);
-        return;
-      }
-      // If last member, confirm delete/leave
-      if (!confirm(`You are the last member. Leaving will leave the tribe empty. Continue?`)) return;
-    }
+    const isLeaving = tribe.members.includes(currentUser.id);
 
-    const optimistic = {
-      ...tribe,
-      members: tribe.members.includes(currentUser.id)
-        ? tribe.members.filter(m => m !== currentUser.id)
-        : [...tribe.members, currentUser.id]
+    const performToggle = async () => {
+      const optimistic = {
+        ...tribe,
+        members: isLeaving
+          ? tribe.members.filter(m => m !== currentUser.id)
+          : [...tribe.members, currentUser.id]
+      };
+
+      setTribe(optimistic);
+
+      try {
+        const { data } = await api.joinTribe(id);
+        setTribe(data);
+      } catch {
+        setTribe(tribe);
+      }
     };
 
-    setTribe(optimistic);
+    if (isLeaving) {
+      if (tribe.owner === currentUser.id) {
+        if (tribe.members.length > 1) {
+          toast.error('You must transfer the Chief role before leaving.');
+          setIsEditOpen(true);
+          return;
+        }
+        setLeaveModal({
+          isOpen: true,
+          message: `Are you sure you want to leave @${tribe.name}? Leaving will leave the tribe empty.`,
+          confirmText: 'Leave'
+        });
+        leaveActionRef.current = performToggle;
+        return;
+      }
 
-    try {
-      const { data } = await api.joinTribe(id);
-      setTribe(data);
-    } catch {
-      setTribe(tribe);
+      setLeaveModal({
+        isOpen: true,
+        message: `Are you sure you want to leave @${tribe.name}?`,
+        confirmText: 'Leave'
+      });
+      leaveActionRef.current = performToggle;
+      return;
     }
+
+    await performToggle();
   };
 
   /* ───────────── SHOW ERROR IF EXISTS ───────────── */
@@ -423,8 +555,8 @@ const TribeDetailPage: React.FC<Props> = ({ currentUser, tribeId: propTribeId })
         </HeaderInfo>
 
         <HeaderActions>
-          <ActionButton onClick={() => setIsMembersOpen(true)}>
-            <Users size={18} />
+          <ActionButton onClick={() => setIsMembersOpen(true)} aria-label="Tribe details">
+            <Flame size={18} />
           </ActionButton>
 
           {currentUser && tribe?.owner === currentUser.id && (
@@ -457,6 +589,11 @@ const TribeDetailPage: React.FC<Props> = ({ currentUser, tribeId: propTribeId })
           currentUser={currentUser!}
           isSending={isSending}
           onSendMessage={handleSend}
+          onSendAttachment={handleSendAttachment}
+          isUploadingAttachment={isUploadingAttachment}
+          hasMoreMessages={hasMoreMessages}
+          onLoadOlder={loadOlderMessages}
+          isLoadingOlder={isLoadingOlder}
         />
       ) : (
         <div className="flex-1 flex flex-col items-center justify-center gap-4">
@@ -489,6 +626,19 @@ const TribeDetailPage: React.FC<Props> = ({ currentUser, tribeId: propTribeId })
           ownerId={tribe.owner}
         />
       )}
+
+      <ConfirmationModal
+        isOpen={leaveModal.isOpen}
+        onClose={() => setLeaveModal({ ...leaveModal, isOpen: false })}
+        onConfirm={() => {
+          leaveActionRef.current();
+          setLeaveModal({ ...leaveModal, isOpen: false });
+        }}
+        title="Leave Tribe?"
+        message={leaveModal.message}
+        confirmText={leaveModal.confirmText}
+        variant="danger"
+      />
     </PageContainer>
   );
 };

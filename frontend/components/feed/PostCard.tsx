@@ -683,6 +683,7 @@ import UserAvatar from '../common/UserAvatar';
 import ShareModal from '../common/ShareModal';
 import ShareButton from '../common/ShareButton';
 import VideoPlayer from '../common/VideoPlayer';
+import ConfirmationModal from '../common/ConfirmationModal';
 
 const timeAgo = (dateString: string) => {
   if (!dateString) return '';
@@ -768,18 +769,16 @@ const PostCard: React.FC<PostCardProps> = (props) => {
     }
   };
 
+  const [confirmAction, setConfirmAction] = useState<{ type: 'post' | 'comment'; commentId?: string } | null>(null);
+
   const handleDeletePostClick = (e: React.MouseEvent) => {
     e.stopPropagation(); // Prevent bubbling
-    if (window.confirm('Are you sure you want to delete this post?')) {
-      onDeletePost(post.id);
-    }
+    setConfirmAction({ type: 'post' });
     setOptionsOpen(false);
   };
 
   const handleDeleteCommentClick = (commentId: string) => {
-    if (window.confirm('Are you sure you want to delete this comment?')) {
-      onDeleteComment(post.id, commentId);
-    }
+    setConfirmAction({ type: 'comment', commentId });
   };
 
   const visibleComments = useMemo(() => {
@@ -1022,6 +1021,26 @@ const PostCard: React.FC<PostCardProps> = (props) => {
           onSharePost={onSharePost}
         />
       )}
+      <ConfirmationModal
+        isOpen={!!confirmAction}
+        onClose={() => setConfirmAction(null)}
+        onConfirm={() => {
+          if (!confirmAction) return;
+          if (confirmAction.type === 'post') {
+            onDeletePost(post.id);
+          } else if (confirmAction.type === 'comment' && confirmAction.commentId) {
+            onDeleteComment(post.id, confirmAction.commentId);
+          }
+          setConfirmAction(null);
+        }}
+        title={confirmAction?.type === 'comment' ? 'Delete Comment?' : 'Delete Post?'}
+        message={confirmAction?.type === 'comment'
+          ? 'Are you sure you want to delete this comment? This cannot be undone.'
+          : 'Are you sure you want to delete this post? This cannot be undone.'
+        }
+        confirmText="Delete"
+        variant="danger"
+      />
     </>
   );
 };

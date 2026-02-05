@@ -1,4 +1,3 @@
-import adminUsers from '../config/adminUsers.js';
 import superAdmins from '../config/superAdmins.js';
 
 const normalizeUsername = (username = '') => username.toLowerCase();
@@ -7,10 +6,9 @@ export const isAdminUser = (user) => {
   if (!user) return false;
   if (user.isSuperAdmin) return true;
   if (user.isAdmin) return true;
-  const adminSet = adminUsers.map(normalizeUsername);
   const superAdminSet = superAdmins.map(normalizeUsername);
   if (superAdminSet.includes(normalizeUsername(user.username))) return true;
-  return adminSet.includes(normalizeUsername(user.username));
+  return false;
 };
 
 export const isSuperAdminUser = (user) => {

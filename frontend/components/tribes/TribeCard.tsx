@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef, useState } from 'react';
 import styled, { useTheme } from 'styled-components';
 import { Tribe, User } from '../../types';
 import { useNavigate } from 'react-router-dom';
@@ -6,6 +6,7 @@ import { Edit2, Users } from 'lucide-react';
 import * as api from '../../api';
 import { toast } from '../common/Toast';
 import TribeMembersModal from './TribeMembersModal';
+import ConfirmationModal from '../common/ConfirmationModal';
 
 const Card = styled.div`
   background: ${({ theme }) => theme.cardBackground};
@@ -146,8 +147,10 @@ const TribeCard: React.FC<TribeCardProps> = ({ tribe, currentUser, allUsers, onE
   const navigate = useNavigate();
   const isMember = currentUser && tribe.members.includes(currentUser.id);
   const isOwner = currentUser && tribe.owner === currentUser.id;
-  const [isMembersModalOpen, setIsMembersModalOpen] = React.useState(false);
-  const [isJoining, setIsJoining] = React.useState(false);
+  const [isMembersModalOpen, setIsMembersModalOpen] = useState(false);
+  const [isJoining, setIsJoining] = useState(false);
+  const [leaveModal, setLeaveModal] = useState({ isOpen: false, message: '', confirmText: 'Leave' });
+  const leaveActionRef = useRef<() => void>(() => {});
 
   const userMap = React.useMemo(() => {
     return new Map(allUsers.map(u => [u.id, u]));
@@ -169,12 +172,10 @@ const TribeCard: React.FC<TribeCardProps> = ({ tribe, currentUser, allUsers, onE
       return;
     }
 
-    console.log('Attempting to join tribe:', tribe.name, tribe.id);
     setIsJoining(true);
 
     try {
       await onJoinToggle(tribe.id);
-      console.log('Successfully joined tribe:', tribe.name);
       toast.success(`Joined ${tribe.name}!`);
     } catch (error) {
       console.error('Join error:', error);
@@ -188,10 +189,21 @@ const TribeCard: React.FC<TribeCardProps> = ({ tribe, currentUser, allUsers, onE
   const handleLeave = async (e: React.MouseEvent) => {
     e.stopPropagation();
     if (!tribe.id || !onJoinToggle) {
-      console.error('Cannot leave tribe: Missing required data');
       toast.error('Unable to leave tribe. Please try again.');
       return;
     }
+
+    const performLeave = async () => {
+      setIsJoining(true);
+      try {
+        await onJoinToggle(tribe.id);
+        toast.success(`Left ${tribe.name}`);
+      } catch (error) {
+        toast.error('Failed to leave tribe. Please try again.');
+      } finally {
+        setIsJoining(false);
+      }
+    };
 
     if (isOwner) {
       if (tribe.members.length > 1) {
@@ -199,25 +211,21 @@ const TribeCard: React.FC<TribeCardProps> = ({ tribe, currentUser, allUsers, onE
         if (onEdit) onEdit(tribe);
         return;
       }
-      // If they are the only member, allow leaving (which effectively deletes/empties tribe or backend handles it)
-      if (!confirm(`You are the last member. Leaving will leave the tribe empty. Continue?`)) return;
-    } else {
-      if (!confirm(`Leave ${tribe.name}?`)) return;
+      setLeaveModal({
+        isOpen: true,
+        message: `Are you sure you want to leave @${tribe.name}? Leaving will leave the tribe empty.`,
+        confirmText: 'Leave'
+      });
+      leaveActionRef.current = performLeave;
+      return;
     }
 
-    console.log('Attempting to leave tribe:', tribe.name, tribe.id);
-    setIsJoining(true);
-
-    try {
-      await onJoinToggle(tribe.id);
-      console.log('Successfully left tribe:', tribe.name);
-      toast.success(`Left ${tribe.name}`);
-    } catch (error) {
-      console.error('Leave error:', error);
-      toast.error('Failed to leave tribe. Please try again.');
-    } finally {
-      setIsJoining(false);
-    }
+    setLeaveModal({
+      isOpen: true,
+      message: `Are you sure you want to leave @${tribe.name}?`,
+      confirmText: 'Leave'
+    });
+    leaveActionRef.current = performLeave;
   };
 
 
@@ -317,6 +325,19 @@ const TribeCard: React.FC<TribeCardProps> = ({ tribe, currentUser, allUsers, onE
           setIsMembersModalOpen(false);
           if (onViewProfile) onViewProfile(user);
         }}
+      />
+
+      <ConfirmationModal
+        isOpen={leaveModal.isOpen}
+        onClose={() => setLeaveModal({ ...leaveModal, isOpen: false })}
+        onConfirm={() => {
+          leaveActionRef.current();
+          setLeaveModal({ ...leaveModal, isOpen: false });
+        }}
+        title="Leave Tribe?"
+        message={leaveModal.message}
+        confirmText={leaveModal.confirmText}
+        variant="danger"
       />
     </>
   );

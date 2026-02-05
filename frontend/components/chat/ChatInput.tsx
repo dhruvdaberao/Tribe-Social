@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef } from 'react';
 
 interface ChatInputProps {
     value: string;
@@ -8,6 +8,9 @@ interface ChatInputProps {
     disabled?: boolean;
     isSending?: boolean;
     inputRef?: React.RefObject<HTMLInputElement>;
+    onAttach?: (file: File) => void;
+    isUploading?: boolean;
+    accept?: string;
 }
 
 const ChatInput: React.FC<ChatInputProps> = ({
@@ -17,10 +20,41 @@ const ChatInput: React.FC<ChatInputProps> = ({
     placeholder,
     disabled = false,
     isSending = false,
-    inputRef
+    inputRef,
+    onAttach,
+    isUploading = false,
+    accept = 'image/*,video/*,audio/*,application/pdf'
 }) => {
+    const fileInputRef = useRef<HTMLInputElement>(null);
+
     return (
         <form onSubmit={onSend} className="flex items-center space-x-3 w-full">
+            <input
+                ref={fileInputRef}
+                type="file"
+                accept={accept}
+                className="hidden"
+                onChange={(event) => {
+                    const file = event.target.files?.[0];
+                    if (file && onAttach) {
+                        onAttach(file);
+                    }
+                    event.target.value = '';
+                }}
+            />
+            <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="w-10 h-10 rounded-lg border border-border bg-surface text-primary flex items-center justify-center hover:bg-background transition-colors disabled:opacity-50"
+                disabled={!onAttach || isUploading}
+                aria-label="Attach media"
+            >
+                {isUploading ? (
+                    <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
+                ) : (
+                    <PlusIcon />
+                )}
+            </button>
             <input
                 ref={inputRef}
                 type="text"
@@ -33,7 +67,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
             <button
                 type="submit"
                 className="bg-accent text-accent-text rounded-lg w-12 h-11 flex-shrink-0 flex items-center justify-center hover:bg-accent-hover transition-colors disabled:opacity-50"
-                disabled={disabled || isSending}
+                disabled={disabled || isSending || isUploading}
             >
                 {isSending ? (
                     <div className="w-5 h-5 border-2 border-accent-text border-t-transparent rounded-full animate-spin"></div>
@@ -48,6 +82,12 @@ const ChatInput: React.FC<ChatInputProps> = ({
 const SendIcon = () => (
     <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="currentColor" viewBox="0 0 20 20">
         <path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z" />
+    </svg>
+);
+
+const PlusIcon = () => (
+    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v14m7-7H5" />
     </svg>
 );
 

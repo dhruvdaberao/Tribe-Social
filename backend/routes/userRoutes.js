@@ -4,6 +4,7 @@ import User from '../models/userModel.js';
 import Post from '../models/postModel.js';
 import Notification from '../models/notificationModel.js';
 import Follow from '../models/followModel.js';
+import { isValidUsername, normalizeUsername, usernameValidationMessage } from '../utils/usernameValidation.js';
 import protect from '../middleware/authMiddleware.js';
 
 const router = express.Router();
@@ -110,7 +111,17 @@ router.put('/profile', protect, async (req, res) => {
         const user = await User.findById(req.user.id);
         if (user) {
             user.name = req.body.name || user.name;
-            user.username = req.body.username || user.username;
+            if (typeof req.body.username === 'string') {
+                const normalizedUsername = normalizeUsername(req.body.username);
+                if (!isValidUsername(normalizedUsername)) {
+                    return res.status(400).json({ message: usernameValidationMessage });
+                }
+                const usernameExists = await User.findOne({ username: normalizedUsername, _id: { $ne: user._id } });
+                if (usernameExists) {
+                    return res.status(400).json({ message: 'This username is already taken.' });
+                }
+                user.username = normalizedUsername;
+            }
             user.bio = req.body.bio ?? user.bio;
 
             // Cloudinary Uploads for Base64 Images
@@ -255,7 +266,7 @@ router.put('/:id/follow', protect, async (req, res) => {
         res.json({ message: 'Follow status updated' });
 
     } catch (error) {
-        console.log(error);
+        console.error(error);
         res.status(500).json({ message: 'Server Error' });
     }
 });

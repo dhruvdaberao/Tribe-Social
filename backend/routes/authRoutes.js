@@ -75,8 +75,8 @@ import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 import { Resend } from 'resend';
 import User from '../models/userModel.js';
-import adminUsers from '../config/adminUsers.js';
 import superAdmins from '../config/superAdmins.js';
+import { isValidUsername, normalizeUsername, usernameValidationMessage } from '../utils/usernameValidation.js';
 
 const DISABLED_MESSAGE = 'Your account has been disabled by the Admin.';
 import OTP from '../models/otpModel.js';
@@ -100,13 +100,16 @@ router.post('/register', async (req, res) => {
   try {
     const userExists = await User.findOne({ email });
     if (userExists) return res.status(400).json({ message: 'An account with this email already exists.' });
-    const usernameExists = await User.findOne({ username });
+    const normalizedUsername = normalizeUsername(username || '');
+    if (!isValidUsername(normalizedUsername)) {
+      return res.status(400).json({ message: usernameValidationMessage });
+    }
+    const usernameExists = await User.findOne({ username: normalizedUsername });
     if (usernameExists) return res.status(400).json({ message: 'This username is already taken.' });
-    const adminSet = adminUsers.map((admin) => admin.toLowerCase());
     const superAdminSet = superAdmins.map((admin) => admin.toLowerCase());
-    const isSuperAdmin = superAdminSet.includes(username.toLowerCase());
-    const isAdmin = isSuperAdmin || adminSet.includes(username.toLowerCase());
-    const user = await User.create({ name, username, email, password, isAdmin, isSuperAdmin });
+    const isSuperAdmin = superAdminSet.includes(normalizedUsername);
+    const isAdmin = isSuperAdmin;
+    const user = await User.create({ name, username: normalizedUsername, email, password, isAdmin, isSuperAdmin });
 
     // Auto-follow 'Tribe' official account
     if (user) {
@@ -142,12 +145,10 @@ router.post('/login', async (req, res) => {
       return res.status(403).json({ message: DISABLED_MESSAGE });
     }
     if (user && (await user.matchPassword(password))) {
-      const adminSet = adminUsers.map((admin) => admin.toLowerCase());
       const superAdminSet = superAdmins.map((admin) => admin.toLowerCase());
       const isSuperAdmin = superAdminSet.includes(user.username.toLowerCase());
-      const isAdmin = isSuperAdmin || adminSet.includes(user.username.toLowerCase());
-      if ((isAdmin && !user.isAdmin) || (isSuperAdmin && !user.isSuperAdmin)) {
-        user.isAdmin = isAdmin;
+      if (isSuperAdmin && !user.isSuperAdmin) {
+        user.isAdmin = true;
         user.isSuperAdmin = isSuperAdmin;
         await user.save();
       }
@@ -250,13 +251,11 @@ router.post('/verify-otp', async (req, res) => {
     }
 
     if (user) {
-      const adminSet = adminUsers.map((admin) => admin.toLowerCase());
       const superAdminSet = superAdmins.map((admin) => admin.toLowerCase());
       const isSuperAdmin = superAdminSet.includes(user.username.toLowerCase());
-      const isAdmin = isSuperAdmin || adminSet.includes(user.username.toLowerCase());
-      if ((isAdmin && !user.isAdmin) || (isSuperAdmin && !user.isSuperAdmin)) {
-        user.isAdmin = isAdmin;
-        user.isSuperAdmin = isSuperAdmin;
+      if (isSuperAdmin && !user.isSuperAdmin) {
+        user.isAdmin = true;
+        user.isSuperAdmin = true;
         await user.save();
       }
     }

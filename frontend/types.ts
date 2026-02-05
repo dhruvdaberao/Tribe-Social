@@ -62,6 +62,10 @@ export interface Message {
   text: string;
   timestamp: string;
   imageUrl?: string;
+  attachmentUrl?: string;
+  attachmentType?: string;
+  attachmentName?: string | null;
+  status?: 'sending' | 'sent' | 'failed';
 }
 
 export interface Conversation {
@@ -107,6 +111,10 @@ export interface TribeMessage {
   text: string;
   timestamp: string;
   imageUrl?: string;
+  attachmentUrl?: string;
+  attachmentType?: string;
+  attachmentName?: string | null;
+  status?: 'sending' | 'sent' | 'failed';
 }
 
 /* ===================== NOTIFICATIONS ===================== */
