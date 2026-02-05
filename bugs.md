@@ -30,16 +30,9 @@
 ## 🔴 PRIORITY 2: MAJOR BUGS (Functionality Breaking)
 
 ### ⚠️ 1. **Duplicate Clan/Tribe Code**
-- **Status**: LEGACY CODE PRESENT
+- **Status**: RESOLVED ✅
 - **Impact**: HIGH - Code confusion, maintenance burden, potential bugs
-- **Files to Delete**:
-  - `backend/routes/clanRoutes.js` (166 lines) - Duplicate of `tribeRoutes.js`
-  - `backend/models/clanModel.js` (701 bytes) - Duplicate of `tribeModel.js`
-  - `backend/models/clanMessageModel.js` (544 bytes) - Duplicate of `tribeMessageModel.js`
-  - `frontend/components/clans/` directory (3 files: ClanDetailPage, ClanCard, EditClanModal)
-- **Risk**: `clanRoutes.js` is NOT registered in `server.js` (verified), so these are dead code
-- **Fix**: Delete all clan-related files, ensure no imports reference them
-- **Estimated Effort**: 1 hour
+- **Fix**: Deleted all clan-related files and verified no imports reference them.
 
 ### ⚠️ 2. **Story Auto-Deletion Not Implemented**
 - **Status**: PARTIAL - Model has `expiresAt` field but no cleanup
@@ -234,7 +227,7 @@
 ### Backend
 - **Total Routes**: 11 files
 - **Total Models**: 14 files (2 duplicates)
-- **Dead Code**: ~3 files (clan routes/models)
+- **Dead Code**: ✅ cleaned (clan routes/models removed)
 - **Console Logs**: ~10 instances
 - **Security Issues**: No rate limiting, partial sanitization
 

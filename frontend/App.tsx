@@ -33,6 +33,10 @@ import { ErrorBoundary } from './components/common/ErrorBoundary';
 import PostViewModal from './components/profile/PostViewModal';
 import ReportModal from './components/moderation/ReportModal';
 import AdminSettingsPage from './pages/admin/AdminSettingsPage';
+import AdminPostsPage from './pages/admin/AdminPostsPage';
+import AdminUsersPage from './pages/admin/AdminUsersPage';
+import AdminTribesPage from './pages/admin/AdminTribesPage';
+import SuperAdminPage from './pages/admin/SuperAdminPage';
 
 export type NavItem = 'Home' | 'Discover' | 'Messages' | 'Tribes' | 'Notifications' | 'Profile' | 'Psyduck' | 'TribeDetail' | 'Settings';
 
@@ -425,6 +429,46 @@ const MainLayout: React.FC = () => {
                                         <AdminSettingsPage currentUser={currentUser} />
                                     ) : (
                                         <Navigate to="/settings" replace />
+                                    )
+                                }
+                            />
+                            <Route
+                                path="/admin/posts"
+                                element={
+                                    currentUser?.isAdmin ? (
+                                        <AdminPostsPage currentUser={currentUser} />
+                                    ) : (
+                                        <Navigate to="/settings" replace />
+                                    )
+                                }
+                            />
+                            <Route
+                                path="/admin/users"
+                                element={
+                                    currentUser?.isAdmin ? (
+                                        <AdminUsersPage />
+                                    ) : (
+                                        <Navigate to="/settings" replace />
+                                    )
+                                }
+                            />
+                            <Route
+                                path="/admin/tribes"
+                                element={
+                                    currentUser?.isAdmin ? (
+                                        <AdminTribesPage />
+                                    ) : (
+                                        <Navigate to="/settings" replace />
+                                    )
+                                }
+                            />
+                            <Route
+                                path="/admin/super"
+                                element={
+                                    currentUser?.isSuperAdmin ? (
+                                        <SuperAdminPage />
+                                    ) : (
+                                        <Navigate to="/admin" replace />
                                     )
                                 }
                             />

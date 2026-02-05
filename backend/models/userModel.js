@@ -19,13 +19,22 @@ const userSchema = mongoose.Schema(
     blockedUsers: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
     // Moderation
     isAdmin: { type: Boolean, default: false },
+    isSuperAdmin: { type: Boolean, default: false },
     reports: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }], // Users who reported this account
     isBanned: { type: Boolean, default: false },
     bannedAt: { type: Date },
     bannedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    isHidden: { type: Boolean, default: false },
+    hiddenAt: { type: Date },
+    hiddenBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    isDisabled: { type: Boolean, default: false },
+    disabledAt: { type: Date },
+    disabledBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    disabledReason: { type: String, default: '' },
     isDeleted: { type: Boolean, default: false },
     deletedAt: { type: Date },
     deletedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    lastModerationAt: { type: Date },
   },
   {
     timestamps: true,

@@ -448,6 +448,13 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ currentUser, onBack }) => {
               onClick={() => navigate('/admin')}
             />
           )}
+          {currentUser?.isSuperAdmin && (
+            <SettingsNavItem
+              icon={<Shield size={24} />}
+              text="Super Admin Settings"
+              onClick={() => navigate('/admin/super')}
+            />
+          )}
         </div>
       </div>
 
