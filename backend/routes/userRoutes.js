@@ -15,6 +15,7 @@ router.get('/', protect, async (req, res) => {
         const query = { isDeleted: { $ne: true } };
         if (!req.user?.isAdmin) {
             query.isHidden = { $ne: true };
+            query.isDisabled = { $ne: true };
         }
         const users = await User.find(query)
             .select('name username avatarUrl bio')

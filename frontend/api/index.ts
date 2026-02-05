@@ -297,7 +297,13 @@ export const markNotificationsRead = () =>
   API.put('/notifications/read');
 
 /* ───────────── MODERATION ───────────── */
-export const createReport = (payload: { targetType: 'post' | 'user' | 'tribe'; targetId: string; reason: string; details?: string }) =>
+export const createReport = (payload: {
+  targetType: 'post' | 'user' | 'tribe';
+  targetId: string;
+  reason: string;
+  details?: string;
+  escalatedToSuperAdmin?: boolean;
+}) =>
   API.post('/reports', payload);
 
 export const fetchReports = (params: Record<string, any>) =>
@@ -319,6 +325,9 @@ export const fetchModerationPosts = (params: Record<string, any>) =>
 
 export const fetchModerationUsers = (params: Record<string, any>) =>
   API.get('/moderation/users', { params });
+
+export const updateUserRole = (userId: string, payload: { isAdmin?: boolean; isSuperAdmin?: boolean }) =>
+  API.patch(`/moderation/users/${userId}/role`, payload);
 
 export const fetchModerationTribes = (params: Record<string, any>) =>
   API.get('/moderation/tribes', { params });

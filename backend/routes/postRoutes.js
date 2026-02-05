@@ -31,7 +31,13 @@ router.get('/feed', protect, async (req, res) => {
         const { default: Follow } = await import('../models/followModel.js');
         const followingDocs = await Follow.find({ follower: currentUser._id }).select('following');
         const followingIds = followingDocs.map(f => f.following);
-        const userIdsForFeed = [currentUser._id, ...followingIds];
+        let userIdsForFeed = [currentUser._id, ...followingIds];
+        const isAdmin = req.user?.isAdmin;
+        if (!isAdmin) {
+            const disabledUsers = await User.find({ _id: { $in: userIdsForFeed }, isDisabled: true }).select('_id');
+            const disabledIds = new Set(disabledUsers.map((user) => user._id.toString()));
+            userIdsForFeed = userIdsForFeed.filter((id) => !disabledIds.has(id.toString()));
+        }
 
         console.log(`📋 Feed for users: ${userIdsForFeed.length}`);
 
@@ -48,7 +54,15 @@ router.get('/feed', protect, async (req, res) => {
 
         if (posts.length === 0) {
             console.log("⚠️ Feed empty. Fetching global posts...");
-            posts = await Post.find({ isHidden: { $ne: true }, isDeleted: { $ne: true } })
+            let globalQuery = { isHidden: { $ne: true }, isDeleted: { $ne: true } };
+            if (!isAdmin) {
+                const disabledUsers = await User.find({ isDisabled: true }).select('_id');
+                const disabledIds = disabledUsers.map((user) => user._id);
+                if (disabledIds.length > 0) {
+                    globalQuery = { ...globalQuery, user: { $nin: disabledIds } };
+                }
+            }
+            posts = await Post.find(globalQuery)
                 .select('-likes -comments')
                 .sort({ createdAt: -1 })
                 .skip(((parseInt(req.query.page) || 1) - 1) * (parseInt(req.query.limit) || 20))
@@ -105,7 +119,15 @@ router.get('/', protect, async (req, res) => {
         console.log("----------------------------------");
         console.log("🔍 GET /api/posts - Fetching Discover feed");
 
-        let posts = await Post.find({ isHidden: { $ne: true }, isDeleted: { $ne: true } })
+        let query = { isHidden: { $ne: true }, isDeleted: { $ne: true } };
+        if (!req.user?.isAdmin) {
+            const disabledUsers = await User.find({ isDisabled: true }).select('_id');
+            const disabledIds = disabledUsers.map((user) => user._id);
+            if (disabledIds.length > 0) {
+                query = { ...query, user: { $nin: disabledIds } };
+            }
+        }
+        let posts = await Post.find(query)
             .select('-likes -comments')
             .sort({ createdAt: -1 })
             .skip(((parseInt(req.query.page) || 1) - 1) * (parseInt(req.query.limit) || 50))
@@ -148,6 +170,13 @@ router.get('/', protect, async (req, res) => {
 // @desc    Get posts by a specific user - Scalable
 router.get('/user/:id', protect, async (req, res) => {
     try {
+        if (!req.user?.isAdmin) {
+            const user = await User.findById(req.params.id).select('isDisabled isHidden');
+            if (!user || user.isDisabled || user.isHidden) {
+                return res.status(404).json({ message: 'User not found' });
+            }
+        }
+
         let posts = await Post.find({ user: req.params.id, isHidden: { $ne: true }, isDeleted: { $ne: true } })
             .select('-likes -comments')
             .sort({ createdAt: -1 })
@@ -186,13 +215,16 @@ router.get('/user/:id', protect, async (req, res) => {
 // @desc    Get a single post by ID - Scalable
 router.get('/:id', protect, async (req, res) => {
     try {
-        let post = await Post.findById(req.params.id).select('-likes -comments').populate('user', 'name username avatarUrl');
+        let post = await Post.findById(req.params.id).select('-likes -comments').populate('user', 'name username avatarUrl isDisabled isHidden');
         if (!post) {
             return res.status(404).json({ message: 'Post not found' });
         }
         const isOwner = post.user?.id?.toString() === req.user.id;
         const isAdmin = req.user?.isAdmin;
         if ((post.isHidden || post.isDeleted) && !isOwner && !isAdmin) {
+            return res.status(404).json({ message: 'Post not found' });
+        }
+        if ((post.user?.isDisabled || post.user?.isHidden) && !isOwner && !isAdmin) {
             return res.status(404).json({ message: 'Post not found' });
         }
 
