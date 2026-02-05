@@ -51,11 +51,19 @@ const applyUserAction = async ({ user, actionType, adminId, reason }) => {
       user.isHidden = true;
       user.hiddenAt = now;
       user.hiddenBy = adminId;
+      user.isDisabled = true;
+      user.disabledAt = now;
+      user.disabledBy = adminId;
+      user.disabledReason = reason || user.disabledReason || '';
       break;
     case 'unhide':
       user.isHidden = false;
       user.hiddenAt = null;
       user.hiddenBy = null;
+      user.isDisabled = false;
+      user.disabledAt = null;
+      user.disabledBy = null;
+      user.disabledReason = '';
       break;
     case 'ban':
       user.isBanned = true;
@@ -275,6 +283,7 @@ router.get('/users', protect, requireAdmin, async (req, res) => {
       keyword,
       username,
       id,
+      role,
       page = 1,
       limit = 20,
     } = req.query;
@@ -301,13 +310,17 @@ router.get('/users', protect, requireAdmin, async (req, res) => {
       query._id = id;
     }
 
+    if (role === 'admin') {
+      query.isAdmin = true;
+    }
+
     const skip = (parseInt(page, 10) - 1) * parseInt(limit, 10);
     const [users, total] = await Promise.all([
       User.find(query)
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(parseInt(limit, 10))
-        .select('name username avatarUrl bio isHidden hiddenAt isDeleted createdAt lastModerationAt'),
+        .select('name username avatarUrl bio isHidden hiddenAt isDeleted createdAt lastModerationAt isAdmin isSuperAdmin isDisabled disabledAt'),
       User.countDocuments(query),
     ]);
 
@@ -319,6 +332,44 @@ router.get('/users', protect, requireAdmin, async (req, res) => {
     });
   } catch (error) {
     console.error('Moderation users error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+router.patch('/users/:id/role', protect, requireSuperAdmin, async (req, res) => {
+  try {
+    const { isAdmin, isSuperAdmin } = req.body;
+    if (typeof isAdmin === 'undefined' && typeof isSuperAdmin === 'undefined') {
+      return res.status(400).json({ message: 'Role update requires isAdmin and/or isSuperAdmin.' });
+    }
+
+    if (req.params.id.toString() === req.user.id.toString() && isSuperAdmin === false) {
+      return res.status(400).json({ message: 'You cannot remove your own super admin access.' });
+    }
+
+    const user = await User.findById(req.params.id);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found.' });
+    }
+
+    if (typeof isSuperAdmin === 'boolean') {
+      user.isSuperAdmin = isSuperAdmin;
+      if (isSuperAdmin) {
+        user.isAdmin = true;
+      }
+    }
+
+    if (typeof isAdmin === 'boolean') {
+      user.isAdmin = isAdmin;
+      if (!isAdmin) {
+        user.isSuperAdmin = false;
+      }
+    }
+
+    await user.save();
+    res.json(user);
+  } catch (error) {
+    console.error('Update user role error:', error);
     res.status(500).json({ message: 'Server error' });
   }
 });

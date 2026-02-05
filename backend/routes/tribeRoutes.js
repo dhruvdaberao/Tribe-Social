@@ -7,6 +7,18 @@ import Notification from '../models/notificationModel.js';
 
 const router = express.Router();
 
+const filterDisabledMembers = async (tribes = []) => {
+    const memberIds = [...new Set(tribes.flatMap((tribe) => tribe.members || []))];
+    if (memberIds.length === 0) return tribes;
+    const disabledUsers = await User.find({ _id: { $in: memberIds }, isDisabled: true }).select('_id');
+    if (disabledUsers.length === 0) return tribes;
+    const disabledIds = new Set(disabledUsers.map((user) => user._id.toString()));
+    return tribes.map((tribe) => ({
+        ...tribe,
+        members: (tribe.members || []).filter((memberId) => !disabledIds.has(memberId.toString())),
+    }));
+};
+
 /* ======================================================
    TRIBE MANAGEMENT
 ====================================================== */
@@ -23,7 +35,8 @@ router.get('/', protect, async (req, res) => {
             .select('name description avatarUrl owner members createdAt')
             .lean();
 
-        res.status(200).json(tribes);
+        const response = !req.user?.isAdmin ? await filterDisabledMembers(tribes) : tribes;
+        res.status(200).json(response);
     } catch (error) {
         console.error('❌ GET /api/tribes ERROR:', error);
         res.status(500).json({ message: 'Server Error fetching tribes' });
@@ -42,6 +55,11 @@ router.get('/:id', protect, async (req, res) => {
         }
         if ((tribe.isHidden || tribe.isDeleted) && !req.user?.isAdmin) {
             return res.status(404).json({ message: 'Tribe not found' });
+        }
+
+        if (!req.user?.isAdmin) {
+            const [filtered] = await filterDisabledMembers([tribe]);
+            return res.status(200).json(filtered);
         }
 
         res.status(200).json(tribe);

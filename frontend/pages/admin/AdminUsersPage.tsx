@@ -13,7 +13,8 @@ import {
 } from 'lucide-react';
 import { toast } from '../../components/common/Toast';
 import * as api from '../../api';
-import { Report } from '../../types';
+import { Report, User } from '../../types';
+import { useAuth } from '../../contexts/AuthContext';
 
 const timeAgo = (dateString?: string) => {
   if (!dateString) return '';
@@ -31,6 +32,16 @@ const timeAgo = (dateString?: string) => {
 };
 
 type ActionType = 'hide' | 'unhide' | 'delete';
+
+const reportReasons = [
+  'Spam',
+  'Harassment',
+  'Hate Speech',
+  'Violence',
+  'Misinformation',
+  'Scam or Fraud',
+  'Other',
+];
 
 const getSearchParams = (search: string) => {
   const params = new URLSearchParams(search);
@@ -82,9 +93,9 @@ const AdminUsersPage: React.FC = () => {
       </div>
 
       <div className="mt-6 space-y-6">
-        {!isReportedView && !isHiddenView && <ManageUsersPanel />}
-        {isReportedView && <ReportedUsersPanel />}
-        {isHiddenView && <HiddenUsersPanel />}
+        {!isReportedView && !isHiddenView && <ManageUsersPanel currentUser={currentUser} />}
+        {isReportedView && <ReportedUsersPanel currentUser={currentUser} />}
+        {isHiddenView && <HiddenUsersPanel currentUser={currentUser} />}
       </div>
     </div>
   );
@@ -113,7 +124,7 @@ const TopActionCard: React.FC<{ title: string; description: string; icon: React.
   </button>
 );
 
-const ManageUsersPanel: React.FC = () => {
+const ManageUsersPanel: React.FC<{ currentUser: User | null }> = ({ currentUser }) => {
   const [users, setUsers] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [page, setPage] = useState(1);
@@ -121,7 +132,9 @@ const ManageUsersPanel: React.FC = () => {
   const [search, setSearch] = useState('');
   const [reportsModalTarget, setReportsModalTarget] = useState<string | null>(null);
   const [profileModalTarget, setProfileModalTarget] = useState<any | null>(null);
+  const [reportToSuperAdminTarget, setReportToSuperAdminTarget] = useState<any | null>(null);
   const loaderRef = useRef<HTMLDivElement | null>(null);
+  const isSuperAdmin = !!currentUser?.isSuperAdmin;
 
   const loadUsers = useCallback(
     async (pageToLoad: number, replace = false) => {
@@ -182,6 +195,23 @@ const ManageUsersPanel: React.FC = () => {
     }
   };
 
+  const handleReportToSuperAdmin = async (payload: { reason: string; details: string }) => {
+    if (!reportToSuperAdminTarget) return;
+    try {
+      await api.createReport({
+        targetType: 'user',
+        targetId: reportToSuperAdminTarget._id || reportToSuperAdminTarget.id,
+        reason: payload.reason,
+        details: payload.details,
+        escalatedToSuperAdmin: true,
+      });
+      toast.success('Report sent to Super Admin.');
+      setReportToSuperAdminTarget(null);
+    } catch (error) {
+      toast.error('Failed to send report.');
+    }
+  };
+
   return (
     <div className="space-y-4">
       <SearchInput value={search} onChange={setSearch} />
@@ -193,6 +223,8 @@ const ManageUsersPanel: React.FC = () => {
             onView={() => setProfileModalTarget(user)}
             onAction={(action) => handleAction(user._id || user.id, action)}
             onViewReports={() => setReportsModalTarget(user._id || user.id)}
+            onReportToSuperAdmin={() => setReportToSuperAdminTarget(user)}
+            currentUserIsSuperAdmin={isSuperAdmin}
           />
         ))}
       </div>
@@ -205,15 +237,24 @@ const ManageUsersPanel: React.FC = () => {
       {reportsModalTarget && (
         <ReportsListModal targetId={reportsModalTarget} targetType="user" onClose={() => setReportsModalTarget(null)} />
       )}
+      {reportToSuperAdminTarget && (
+        <ReportToSuperAdminModal
+          user={reportToSuperAdminTarget}
+          onClose={() => setReportToSuperAdminTarget(null)}
+          onSubmit={handleReportToSuperAdmin}
+        />
+      )}
     </div>
   );
 };
 
-const ReportedUsersPanel: React.FC = () => {
+const ReportedUsersPanel: React.FC<{ currentUser: User | null }> = ({ currentUser }) => {
   const [reports, setReports] = useState<Report[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [actionTarget, setActionTarget] = useState<{ targetId: string; reasons: string[] } | null>(null);
   const [profileModalTarget, setProfileModalTarget] = useState<any | null>(null);
+  const [reportToSuperAdminTarget, setReportToSuperAdminTarget] = useState<any | null>(null);
+  const isSuperAdmin = !!currentUser?.isSuperAdmin;
 
   const loadReports = useCallback(async () => {
     setIsLoading(true);
@@ -265,6 +306,8 @@ const ReportedUsersPanel: React.FC = () => {
           return acc;
         }, {});
         const reasons = Object.keys(reasonCounts);
+        const isAdminTarget = user?.isAdmin || user?.isSuperAdmin;
+        const canTakeAction = isSuperAdmin || !isAdminTarget;
         return (
           <div key={user?.id || user?._id} className="rounded-2xl border border-border bg-surface p-6 shadow-sm">
             <div className="flex items-start justify-between gap-4">
@@ -278,6 +321,15 @@ const ReportedUsersPanel: React.FC = () => {
                 <p className="mt-2 text-primary text-sm line-clamp-2">
                   {user?.bio || 'No bio provided.'}
                 </p>
+                {isAdminTarget && (
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {user?.isSuperAdmin ? (
+                      <Badge label="Super Admin" tone="warning" />
+                    ) : (
+                      <Badge label="Admin" />
+                    )}
+                  </div>
+                )}
                 <div className="mt-3 flex flex-wrap gap-2">
                   {reasons.map((reason) => (
                     <span key={reason} className="rounded-full bg-accent/10 px-3 py-1 text-xs font-semibold text-accent">
@@ -289,12 +341,21 @@ const ReportedUsersPanel: React.FC = () => {
               <div className="text-right">
                 <p className="text-sm font-semibold text-primary">{totalReports} reports</p>
                 <div className="mt-3 flex flex-col gap-2">
-                  <button
-                    onClick={() => setActionTarget({ targetId: user?.id || user?._id, reasons })}
-                    className="rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-accent-text hover:bg-accent/90"
-                  >
-                    Take Action
-                  </button>
+                  {canTakeAction ? (
+                    <button
+                      onClick={() => setActionTarget({ targetId: user?.id || user?._id, reasons })}
+                      className="rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-accent-text hover:bg-accent/90"
+                    >
+                      Take Action
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => setReportToSuperAdminTarget(user)}
+                      className="rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-accent-text hover:bg-accent/90"
+                    >
+                      Report to Super Admin
+                    </button>
+                  )}
                   <button
                     onClick={() => setProfileModalTarget(user)}
                     className="rounded-lg border border-border px-4 py-2 text-sm font-semibold text-primary hover:bg-background"
@@ -336,6 +397,28 @@ const ReportedUsersPanel: React.FC = () => {
           }}
         />
       )}
+      {reportToSuperAdminTarget && (
+        <ReportToSuperAdminModal
+          user={reportToSuperAdminTarget}
+          onClose={() => setReportToSuperAdminTarget(null)}
+          onSubmit={async (payload) => {
+            try {
+              await api.createReport({
+                targetType: 'user',
+                targetId: reportToSuperAdminTarget._id || reportToSuperAdminTarget.id,
+                reason: payload.reason,
+                details: payload.details,
+                escalatedToSuperAdmin: true,
+              });
+              toast.success('Report sent to Super Admin.');
+              setReportToSuperAdminTarget(null);
+              loadReports();
+            } catch (error) {
+              toast.error('Failed to send report.');
+            }
+          }}
+        />
+      )}
       {profileModalTarget && (
         <UserProfileModal user={profileModalTarget} onClose={() => setProfileModalTarget(null)} />
       )}
@@ -343,11 +426,13 @@ const ReportedUsersPanel: React.FC = () => {
   );
 };
 
-const HiddenUsersPanel: React.FC = () => {
+const HiddenUsersPanel: React.FC<{ currentUser: User | null }> = ({ currentUser }) => {
   const [users, setUsers] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [reportsModalTarget, setReportsModalTarget] = useState<string | null>(null);
   const [profileModalTarget, setProfileModalTarget] = useState<any | null>(null);
+  const [reportToSuperAdminTarget, setReportToSuperAdminTarget] = useState<any | null>(null);
+  const isSuperAdmin = !!currentUser?.isSuperAdmin;
 
   const loadUsers = useCallback(async () => {
     setIsLoading(true);
@@ -396,6 +481,8 @@ const HiddenUsersPanel: React.FC = () => {
           onView={() => setProfileModalTarget(user)}
           onAction={(action) => handleAction(user._id || user.id, action)}
           onViewReports={() => setReportsModalTarget(user._id || user.id)}
+          onReportToSuperAdmin={() => setReportToSuperAdminTarget(user)}
+          currentUserIsSuperAdmin={isSuperAdmin}
         />
       ))}
 
@@ -404,6 +491,27 @@ const HiddenUsersPanel: React.FC = () => {
       )}
       {reportsModalTarget && (
         <ReportsListModal targetId={reportsModalTarget} targetType="user" onClose={() => setReportsModalTarget(null)} />
+      )}
+      {reportToSuperAdminTarget && (
+        <ReportToSuperAdminModal
+          user={reportToSuperAdminTarget}
+          onClose={() => setReportToSuperAdminTarget(null)}
+          onSubmit={async (payload) => {
+            try {
+              await api.createReport({
+                targetType: 'user',
+                targetId: reportToSuperAdminTarget._id || reportToSuperAdminTarget.id,
+                reason: payload.reason,
+                details: payload.details,
+                escalatedToSuperAdmin: true,
+              });
+              toast.success('Report sent to Super Admin.');
+              setReportToSuperAdminTarget(null);
+            } catch (error) {
+              toast.error('Failed to send report.');
+            }
+          }}
+        />
       )}
     </div>
   );
@@ -438,15 +546,33 @@ const UserAvatar: React.FC<{ user: any; size?: 'sm' | 'md' }> = ({ user, size = 
   );
 };
 
+const Badge: React.FC<{ label: string; tone?: 'default' | 'warning' | 'danger' }> = ({ label, tone = 'default' }) => {
+  const toneClasses =
+    tone === 'warning'
+      ? 'bg-yellow-500/10 text-yellow-400'
+      : tone === 'danger'
+        ? 'bg-red-500/10 text-red-400'
+        : 'bg-accent/10 text-accent';
+  return (
+    <span className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold ${toneClasses}`}>
+      {label}
+    </span>
+  );
+};
+
 const UserAdminRow: React.FC<{
   user: any;
   subtitle?: string;
   onView: () => void;
   onAction: (action: ActionType) => void;
   onViewReports: () => void;
-}> = ({ user, subtitle, onView, onAction, onViewReports }) => {
+  onReportToSuperAdmin?: () => void;
+  currentUserIsSuperAdmin?: boolean;
+}> = ({ user, subtitle, onView, onAction, onViewReports, onReportToSuperAdmin, currentUserIsSuperAdmin }) => {
   const [menuOpen, setMenuOpen] = useState(false);
   const isHidden = !!user.isHidden;
+  const isAdminAccount = !!user.isAdmin || !!user.isSuperAdmin;
+  const canModerateAdmin = !!currentUserIsSuperAdmin || !isAdminAccount;
 
   return (
     <div className="rounded-2xl border border-border bg-surface p-6 shadow-sm">
@@ -457,6 +583,9 @@ const UserAdminRow: React.FC<{
             <p className="text-sm font-semibold text-primary flex items-center gap-2">
               {user.name || 'Unknown'}
               <span className="text-xs text-secondary">@{user.username || 'unknown'}</span>
+              {user.isSuperAdmin && <Badge label="Super Admin" tone="warning" />}
+              {!user.isSuperAdmin && user.isAdmin && <Badge label="Admin" />}
+              {user.isDisabled && <Badge label="Disabled" tone="danger" />}
             </p>
             <p className="text-xs text-secondary mt-1 line-clamp-1">{user.bio || 'No bio provided.'}</p>
             <div className="mt-2 flex flex-wrap gap-2 text-xs text-secondary">
@@ -488,9 +617,12 @@ const UserAdminRow: React.FC<{
               <button
                 onClick={() => {
                   setMenuOpen(false);
-                  onAction(isHidden ? 'unhide' : 'hide');
+                  if (canModerateAdmin) {
+                    onAction(isHidden ? 'unhide' : 'hide');
+                  }
                 }}
-                className="flex w-full items-center gap-2 px-4 py-2 text-sm text-primary hover:bg-background"
+                className={`flex w-full items-center gap-2 px-4 py-2 text-sm ${canModerateAdmin ? 'text-primary hover:bg-background' : 'cursor-not-allowed text-secondary'}`}
+                disabled={!canModerateAdmin}
               >
                 {isHidden ? <Eye size={16} /> : <EyeOff size={16} />}
                 {isHidden ? 'Unhide' : 'Hide'}
@@ -498,13 +630,28 @@ const UserAdminRow: React.FC<{
               <button
                 onClick={() => {
                   setMenuOpen(false);
-                  onAction('delete');
+                  if (canModerateAdmin) {
+                    onAction('delete');
+                  }
                 }}
-                className="flex w-full items-center gap-2 px-4 py-2 text-sm text-red-500 hover:bg-red-500/10"
+                className={`flex w-full items-center gap-2 px-4 py-2 text-sm ${canModerateAdmin ? 'text-red-500 hover:bg-red-500/10' : 'cursor-not-allowed text-red-300'}`}
+                disabled={!canModerateAdmin}
               >
                 <Trash2 size={16} />
                 Delete
               </button>
+              {isAdminAccount && !currentUserIsSuperAdmin && onReportToSuperAdmin && (
+                <button
+                  onClick={() => {
+                    setMenuOpen(false);
+                    onReportToSuperAdmin();
+                  }}
+                  className="flex w-full items-center gap-2 px-4 py-2 text-sm text-primary hover:bg-background"
+                >
+                  <AlertTriangle size={16} />
+                  Report to Super Admin
+                </button>
+              )}
               <button
                 onClick={() => {
                   setMenuOpen(false);
@@ -624,6 +771,73 @@ const ReportsListModal: React.FC<{ targetId: string; targetType: 'user' | 'tribe
               </div>
             </div>
           ))}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const ReportToSuperAdminModal: React.FC<{
+  user: any;
+  onClose: () => void;
+  onSubmit: (payload: { reason: string; details: string }) => void;
+}> = ({ user, onClose, onSubmit }) => {
+  const [reason, setReason] = useState(reportReasons[0]);
+  const [details, setDetails] = useState('');
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+      <div className="w-full max-w-lg rounded-2xl border border-border bg-surface p-6 shadow-xl">
+        <div className="flex items-start justify-between">
+          <div>
+            <h3 className="text-lg font-bold text-primary">Report to Super Admin</h3>
+            <p className="text-sm text-secondary mt-1">
+              Escalate @{user?.username || 'this admin'} to the Super Admin team.
+            </p>
+          </div>
+          <button onClick={onClose} className="text-secondary hover:text-primary">
+            <X size={18} />
+          </button>
+        </div>
+
+        <div className="mt-6 space-y-4">
+          <div>
+            <label className="block text-sm font-semibold text-primary mb-2">Reason</label>
+            <select
+              value={reason}
+              onChange={(event) => setReason(event.target.value)}
+              className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm text-primary focus:outline-none focus:ring-2 focus:ring-accent"
+            >
+              {reportReasons.map((option) => (
+                <option key={option} value={option}>
+                  {option}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-semibold text-primary mb-2">Optional message</label>
+            <textarea
+              value={details}
+              onChange={(event) => setDetails(event.target.value)}
+              rows={4}
+              className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm text-primary focus:outline-none focus:ring-2 focus:ring-accent"
+              placeholder="Add any extra context for the Super Admin team."
+            />
+          </div>
+        </div>
+
+        <div className="mt-6 flex justify-end gap-3">
+          <button onClick={onClose} className="rounded-lg px-4 py-2 text-sm font-semibold text-secondary hover:text-primary">
+            Cancel
+          </button>
+          <button
+            onClick={() => onSubmit({ reason, details })}
+            className="rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-accent-text hover:bg-accent/90"
+          >
+            Send Report
+          </button>
         </div>
       </div>
     </div>
