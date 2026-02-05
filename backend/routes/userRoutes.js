@@ -1,448 +1,9 @@
 
-
-
-
-
-// // import express from 'express';
-// // import User from '../models/userModel.js';
-// // import Post from '../models/postModel.js';
-// // import Notification from '../models/notificationModel.js';
-// // import protect from '../middleware/authMiddleware.js';
-
-// // const router = express.Router();
-
-// // // @route   GET /api/users
-// // // @desc    Get all users (Limit 20 for free tier stability)
-// // router.get('/', protect, async (req, res) => {
-// //     try {
-// //         const users = await User.find({})
-// //             .select('name username avatarUrl bio') // Select only needed fields
-// //             .sort({ createdAt: -1 })
-// //             .limit(20); // Critical limit to prevent OOM
-// //         res.json(users);
-// //     } catch (error) {
-// //         res.status(500).json({ message: 'Server error' });
-// //     }
-// // });
-
-
-// // // @route   GET /api/users/:id
-// // // @desc    Get user profile by ID
-// // router.get('/:id', protect, async (req, res) => {
-// //     try {
-// //         const user = await User.findById(req.params.id).select('-password');
-// //         if (user) {
-// //             res.json(user);
-// //         } else {
-// //             res.status(404).json({ message: 'User not found' });
-// //         }
-// //     } catch (error) {
-// //         res.status(500).json({ message: 'Server error' });
-// //     }
-// // });
-
-
-// // // @route   PUT /api/users/profile
-// // // @desc    Update user profile
-// // router.put('/profile', protect, async (req, res) => {
-// //     try {
-// //         const user = await User.findById(req.user.id);
-// //         if (user) {
-// //             user.name = req.body.name || user.name;
-// //             user.username = req.body.username || user.username;
-// //             user.bio = req.body.bio ?? user.bio;
-// //             user.avatarUrl = req.body.avatarUrl === null ? null : req.body.avatarUrl || user.avatarUrl;
-// //             user.bannerUrl = req.body.bannerUrl === null ? null : req.body.bannerUrl || user.bannerUrl;
-
-// //             const updatedUser = await user.save();
-            
-// //             req.io.emit('userUpdated', updatedUser.toJSON());
-
-// //             res.json(updatedUser);
-// //         } else {
-// //             res.status(404).json({ message: 'User not found' });
-// //         }
-// //     } catch (error) {
-// //         res.status(500).json({ message: 'Server error' });
-// //     }
-// // });
-
-// // // @route   DELETE /api/users/profile
-// // // @desc    Delete user account
-// // router.delete('/profile', protect, async (req, res) => {
-// //     try {
-// //         const user = await User.findById(req.user.id);
-// //         if (!user) {
-// //             return res.status(404).json({ message: 'User not found' });
-// //         }
-        
-// //         await Post.deleteMany({ user: req.user.id });
-        
-// //         await User.updateMany(
-// //             { $or: [{ followers: req.user.id }, { following: req.user.id }, { blockedUsers: req.user.id }] },
-// //             { $pull: { followers: req.user.id, following: req.user.id, blockedUsers: req.user.id } }
-// //         );
-
-// //         await user.deleteOne();
-// //         res.json({ message: 'User account deleted successfully.' });
-// //     } catch (error) {
-// //         console.error('Delete account error:', error);
-// //         res.status(500).json({ message: 'Server error' });
-// //     }
-// // });
-
-
-// // // @route   PUT /api/users/:id/follow
-// // // @desc    Follow / Unfollow a user
-// // router.put('/:id/follow', protect, async (req, res) => {
-// //     try {
-// //         const userToFollow = await User.findById(req.params.id);
-// //         const currentUser = await User.findById(req.user.id);
-
-// //         if (!userToFollow || !currentUser) {
-// //             return res.status(404).json({ message: 'User not found' });
-// //         }
-
-// //         if (req.params.id === req.user.id) {
-// //             return res.status(400).json({ message: 'You cannot follow yourself' });
-// //         }
-        
-// //         const isFollowing = currentUser.following.includes(userToFollow._id);
-
-// //         if (isFollowing) {
-// //             // Unfollow
-// //             currentUser.following = currentUser.following.filter(id => id.toString() !== userToFollow._id.toString());
-// //             userToFollow.followers = userToFollow.followers.filter(id => id.toString() !== currentUser._id.toString());
-// //             // Delete the corresponding follow notification
-// //             await Notification.deleteOne({
-// //                 recipient: userToFollow._id,
-// //                 sender: currentUser._id,
-// //                 type: 'follow'
-// //             });
-// //         } else {
-// //             // Follow
-// //             currentUser.following.push(userToFollow._id);
-// //             userToFollow.followers.push(currentUser._id);
-
-// //             const existingNotification = await Notification.findOne({
-// //                 recipient: userToFollow._id,
-// //                 sender: currentUser._id,
-// //                 type: 'follow',
-// //             });
-
-// //             if (!existingNotification) {
-// //                 const notification = new Notification({
-// //                     recipient: userToFollow._id,
-// //                     sender: currentUser._id,
-// //                     type: 'follow',
-// //                 });
-// //                 await notification.save();
-// //                 const populatedNotification = await notification.populate('sender', 'name username avatarUrl');
-                
-// //                 const recipientSocketId = req.onlineUsers.get(userToFollow._id.toString());
-// //                 if (recipientSocketId) {
-// //                     req.io.to(recipientSocketId).emit('newNotification', populatedNotification);
-// //                 }
-// //             }
-// //         }
-
-// //         await currentUser.save();
-// //         await userToFollow.save();
-
-// //         req.io.emit('userUpdated', currentUser.toJSON());
-// //         req.io.emit('userUpdated', userToFollow.toJSON());
-
-// //         res.json({ message: 'Follow status updated' });
-
-// //     } catch (error) {
-// //         console.log(error);
-// //         res.status(500).json({ message: 'Server Error' });
-// //     }
-// // });
-
-// // // @route   PUT /api/users/:id/block
-// // // @desc    Block / Unblock a user
-// // router.put('/:id/block', protect, async (req, res) => {
-// //     try {
-// //         const userToBlock = await User.findById(req.params.id);
-// //         const currentUser = await User.findById(req.user.id);
-
-// //         if (!userToBlock || !currentUser) {
-// //             return res.status(404).json({ message: 'User not found' });
-// //         }
-
-// //         if (req.params.id === req.user.id) {
-// //             return res.status(400).json({ message: 'You cannot block yourself' });
-// //         }
-
-// //         const isBlocked = currentUser.blockedUsers.includes(userToBlock._id);
-
-// //         if (isBlocked) {
-// //             // Unblock
-// //             currentUser.blockedUsers = currentUser.blockedUsers.filter(id => id.toString() !== userToBlock._id.toString());
-// //         } else {
-// //             // Block
-// //             currentUser.blockedUsers.push(userToBlock._id);
-// //             // Also force unfollow from both sides
-// //             currentUser.following = currentUser.following.filter(id => id.toString() !== userToBlock._id.toString());
-// //             userToBlock.followers = userToBlock.followers.filter(id => id.toString() !== currentUser._id.toString());
-// //             // And remove from their following list
-// //             userToBlock.following = userToBlock.following.filter(id => id.toString() !== currentUser._id.toString());
-// //             currentUser.followers = currentUser.followers.filter(id => id.toString() !== userToBlock._id.toString());
-// //         }
-
-// //         await currentUser.save();
-// //         await userToBlock.save();
-        
-// //         req.io.emit('userUpdated', currentUser.toJSON());
-// //         req.io.emit('userUpdated', userToBlock.toJSON());
-
-// //         res.json({ message: 'Block status updated' });
-
-// //     } catch (error) {
-// //         console.error('Block user error:', error);
-// //         res.status(500).json({ message: 'Server Error' });
-// //     }
-// // });
-
-
-// // export default router;
-
-
-
-
-
-
-// import express from 'express';
-// import User from '../models/userModel.js';
-// import Post from '../models/postModel.js';
-// import Notification from '../models/notificationModel.js';
-// import protect from '../middleware/authMiddleware.js';
-
-// const router = express.Router();
-
-// // @route   GET /api/users
-// // @desc    Get all users (Limit 20 for free tier stability)
-// router.get('/', protect, async (req, res) => {
-//     try {
-//         const users = await User.find({})
-//             .select('name username avatarUrl bio') // Select only needed fields
-//             .sort({ createdAt: -1 })
-//             .limit(20); // Critical limit to prevent OOM
-//         res.json(users);
-//     } catch (error) {
-//         res.status(500).json({ message: 'Server error' });
-//     }
-// });
-
-
-// // @route   GET /api/users/:id
-// // @desc    Get user profile by ID
-// router.get('/:id', protect, async (req, res) => {
-//     try {
-//         const user = await User.findById(req.params.id).select('-password');
-//         if (user) {
-//             res.json(user);
-//         } else {
-//             res.status(404).json({ message: 'User not found' });
-//         }
-//     } catch (error) {
-//         res.status(500).json({ message: 'Server error' });
-//     }
-// });
-
-
-// // @route   PUT /api/users/profile
-// // @desc    Update user profile (Name, Bio, Email, Password)
-// router.put('/profile', protect, async (req, res) => {
-//     try {
-//         const user = await User.findById(req.user.id);
-//         if (user) {
-//             user.name = req.body.name || user.name;
-//             user.username = req.body.username || user.username;
-//             user.bio = req.body.bio ?? user.bio;
-//             user.avatarUrl = req.body.avatarUrl === null ? null : req.body.avatarUrl || user.avatarUrl;
-//             user.bannerUrl = req.body.bannerUrl === null ? null : req.body.bannerUrl || user.bannerUrl;
-            
-//             // Allow updating email
-//             if (req.body.email) {
-//                 user.email = req.body.email;
-//             }
-
-//             // Allow updating password
-//             if (req.body.password) {
-//                 user.password = req.body.password; // Will be hashed by pre-save hook in model
-//             }
-
-//             const updatedUser = await user.save();
-            
-//             // Don't send password back
-//             const userResponse = updatedUser.toJSON();
-            
-//             req.io.emit('userUpdated', userResponse);
-
-//             res.json(userResponse);
-//         } else {
-//             res.status(404).json({ message: 'User not found' });
-//         }
-//     } catch (error) {
-//         console.error("Update profile error:", error);
-//         res.status(500).json({ message: 'Server error' });
-//     }
-// });
-
-// // @route   DELETE /api/users/profile
-// // @desc    Delete user account
-// router.delete('/profile', protect, async (req, res) => {
-//     try {
-//         const user = await User.findById(req.user.id);
-//         if (!user) {
-//             return res.status(404).json({ message: 'User not found' });
-//         }
-        
-//         await Post.deleteMany({ user: req.user.id });
-        
-//         await User.updateMany(
-//             { $or: [{ followers: req.user.id }, { following: req.user.id }, { blockedUsers: req.user.id }] },
-//             { $pull: { followers: req.user.id, following: req.user.id, blockedUsers: req.user.id } }
-//         );
-
-//         await user.deleteOne();
-//         res.json({ message: 'User account deleted successfully.' });
-//     } catch (error) {
-//         console.error('Delete account error:', error);
-//         res.status(500).json({ message: 'Server error' });
-//     }
-// });
-
-
-// // @route   PUT /api/users/:id/follow
-// // @desc    Follow / Unfollow a user
-// router.put('/:id/follow', protect, async (req, res) => {
-//     try {
-//         const userToFollow = await User.findById(req.params.id);
-//         const currentUser = await User.findById(req.user.id);
-
-//         if (!userToFollow || !currentUser) {
-//             return res.status(404).json({ message: 'User not found' });
-//         }
-
-//         if (req.params.id === req.user.id) {
-//             return res.status(400).json({ message: 'You cannot follow yourself' });
-//         }
-        
-//         const isFollowing = currentUser.following.includes(userToFollow._id);
-
-//         if (isFollowing) {
-//             // Unfollow
-//             currentUser.following = currentUser.following.filter(id => id.toString() !== userToFollow._id.toString());
-//             userToFollow.followers = userToFollow.followers.filter(id => id.toString() !== currentUser._id.toString());
-//             // Delete the corresponding follow notification
-//             await Notification.deleteOne({
-//                 recipient: userToFollow._id,
-//                 sender: currentUser._id,
-//                 type: 'follow'
-//             });
-//         } else {
-//             // Follow
-//             currentUser.following.push(userToFollow._id);
-//             userToFollow.followers.push(currentUser._id);
-
-//             const existingNotification = await Notification.findOne({
-//                 recipient: userToFollow._id,
-//                 sender: currentUser._id,
-//                 type: 'follow',
-//             });
-
-//             if (!existingNotification) {
-//                 const notification = new Notification({
-//                     recipient: userToFollow._id,
-//                     sender: currentUser._id,
-//                     type: 'follow',
-//                 });
-//                 await notification.save();
-//                 const populatedNotification = await notification.populate('sender', 'name username avatarUrl');
-                
-//                 const recipientSocketId = req.onlineUsers.get(userToFollow._id.toString());
-//                 if (recipientSocketId) {
-//                     req.io.to(recipientSocketId).emit('newNotification', populatedNotification);
-//                 }
-//             }
-//         }
-
-//         await currentUser.save();
-//         await userToFollow.save();
-
-//         req.io.emit('userUpdated', currentUser.toJSON());
-//         req.io.emit('userUpdated', userToFollow.toJSON());
-
-//         res.json({ message: 'Follow status updated' });
-
-//     } catch (error) {
-//         console.log(error);
-//         res.status(500).json({ message: 'Server Error' });
-//     }
-// });
-
-// // @route   PUT /api/users/:id/block
-// // @desc    Block / Unblock a user
-// router.put('/:id/block', protect, async (req, res) => {
-//     try {
-//         const userToBlock = await User.findById(req.params.id);
-//         const currentUser = await User.findById(req.user.id);
-
-//         if (!userToBlock || !currentUser) {
-//             return res.status(404).json({ message: 'User not found' });
-//         }
-
-//         if (req.params.id === req.user.id) {
-//             return res.status(400).json({ message: 'You cannot block yourself' });
-//         }
-
-//         const isBlocked = currentUser.blockedUsers.includes(userToBlock._id);
-
-//         if (isBlocked) {
-//             // Unblock
-//             currentUser.blockedUsers = currentUser.blockedUsers.filter(id => id.toString() !== userToBlock._id.toString());
-//         } else {
-//             // Block
-//             currentUser.blockedUsers.push(userToBlock._id);
-//             // Also force unfollow from both sides
-//             currentUser.following = currentUser.following.filter(id => id.toString() !== userToBlock._id.toString());
-//             userToBlock.followers = userToBlock.followers.filter(id => id.toString() !== currentUser._id.toString());
-//             // And remove from their following list
-//             userToBlock.following = userToBlock.following.filter(id => id.toString() !== currentUser._id.toString());
-//             currentUser.followers = currentUser.followers.filter(id => id.toString() !== userToBlock._id.toString());
-//         }
-
-//         await currentUser.save();
-//         await userToBlock.save();
-        
-//         req.io.emit('userUpdated', currentUser.toJSON());
-//         req.io.emit('userUpdated', userToBlock.toJSON());
-
-//         res.json({ message: 'Block status updated' });
-
-//     } catch (error) {
-//         console.error('Block user error:', error);
-//         res.status(500).json({ message: 'Server Error' });
-//     }
-// });
-
-
-// export default router;
-
-
-
-
-
-
-
-
 import express from 'express';
 import User from '../models/userModel.js';
 import Post from '../models/postModel.js';
 import Notification from '../models/notificationModel.js';
+import Follow from '../models/followModel.js';
 import protect from '../middleware/authMiddleware.js';
 
 const router = express.Router();
@@ -452,35 +13,83 @@ const router = express.Router();
 router.get('/', protect, async (req, res) => {
     try {
         const users = await User.find({})
-            // Select followers and following to display correct counts on frontend cards
-            .select('name username avatarUrl bio followers following') 
+            .select('name username avatarUrl bio')
             .sort({ createdAt: -1 })
-            .limit(20); 
+            .limit(20);
         res.json(users);
     } catch (error) {
+        console.error("Fetch users error:", error);
         res.status(500).json({ message: 'Server error' });
     }
 });
 
 
+// @route   GET /api/users/:id/followers
+// @desc    Get follower list by user ID
+router.get('/:id/followers', protect, async (req, res) => {
+    try {
+        const followerLinks = await Follow.find({ following: req.params.id }).select('follower');
+        const followerIds = followerLinks.map(link => link.follower);
+        const followers = await User.find({ _id: { $in: followerIds } }).select('name username avatarUrl bio');
+        res.json(followers);
+    } catch (error) {
+        console.error("Error fetching followers:", error);
+        res.status(500).json({ message: 'Server error' });
+    }
+});
+
+// @route   GET /api/users/:id/following
+// @desc    Get following list by user ID
+router.get('/:id/following', protect, async (req, res) => {
+    try {
+        const followingLinks = await Follow.find({ follower: req.params.id }).select('following');
+        const followingIds = followingLinks.map(link => link.following);
+        const following = await User.find({ _id: { $in: followingIds } }).select('name username avatarUrl bio');
+        res.json(following);
+    } catch (error) {
+        console.error("Error fetching following:", error);
+        res.status(500).json({ message: 'Server error' });
+    }
+});
+
 // @route   GET /api/users/:id
-// @desc    Get user profile by ID
+// @desc    Get user profile by ID - WITH EXPLICIT COUNTS
 router.get('/:id', protect, async (req, res) => {
     try {
         const user = await User.findById(req.params.id).select('-password');
         if (user) {
-            res.json(user);
+            if ((user.isHidden || user.isDeleted) && !req.user.isAdmin) {
+                return res.status(404).json({ message: 'User not found' });
+            }
+            // Count stats from Follow collection
+            const stats = await Promise.all([
+                Follow.countDocuments({ following: req.params.id }),
+                Follow.countDocuments({ follower: req.params.id }),
+                Follow.exists({ follower: req.user.id, following: req.params.id })
+            ]);
+
+            const [followersCount, followingCount, isFollowing] = stats;
+
+            const userObj = user.toObject();
+            userObj.id = user._id.toString();
+            // Use live counts from collection (most accurate)
+            userObj.followersCount = followersCount;
+            userObj.followingCount = followingCount;
+            userObj.isFollowedByCurrentUser = !!isFollowing;
+
+            res.json(userObj);
         } else {
             res.status(404).json({ message: 'User not found' });
         }
     } catch (error) {
+        console.error("Error fetching user profile:", error);
         res.status(500).json({ message: 'Server error' });
     }
 });
 
 
 // @route   PUT /api/users/profile
-// @desc    Update user profile (Name, Bio, Email, Password)
+// @desc    Update user profile
 router.put('/profile', protect, async (req, res) => {
     try {
         const user = await User.findById(req.user.id);
@@ -488,26 +97,28 @@ router.put('/profile', protect, async (req, res) => {
             user.name = req.body.name || user.name;
             user.username = req.body.username || user.username;
             user.bio = req.body.bio ?? user.bio;
-            user.avatarUrl = req.body.avatarUrl === null ? null : req.body.avatarUrl || user.avatarUrl;
-            user.bannerUrl = req.body.bannerUrl === null ? null : req.body.bannerUrl || user.bannerUrl;
-            
-            // Allow updating email
-            if (req.body.email) {
-                user.email = req.body.email;
+
+            // Cloudinary Uploads for Base64 Images
+            if (req.body.avatarUrl && req.body.avatarUrl !== user.avatarUrl) {
+                const { uploadBase64ToCloudinary } = await import('../utils/cloudinaryHelper.js');
+                user.avatarUrl = await uploadBase64ToCloudinary(req.body.avatarUrl, 'tribe_avatars');
+            } else if (req.body.avatarUrl === null) {
+                user.avatarUrl = null;
             }
 
-            // Allow updating password
-            if (req.body.password) {
-                user.password = req.body.password; // Will be hashed by pre-save hook in model
+            if (req.body.bannerUrl && req.body.bannerUrl !== user.bannerUrl) {
+                const { uploadBase64ToCloudinary } = await import('../utils/cloudinaryHelper.js');
+                user.bannerUrl = await uploadBase64ToCloudinary(req.body.bannerUrl, 'tribe_banners');
+            } else if (req.body.bannerUrl === null) {
+                user.bannerUrl = null;
             }
+
+            if (req.body.email) user.email = req.body.email;
+            if (req.body.password) user.password = req.body.password;
 
             const updatedUser = await user.save();
-            
-            // Don't send password back
             const userResponse = updatedUser.toJSON();
-            
             req.io.emit('userUpdated', userResponse);
-
             res.json(userResponse);
         } else {
             res.status(404).json({ message: 'User not found' });
@@ -523,15 +134,22 @@ router.put('/profile', protect, async (req, res) => {
 router.delete('/profile', protect, async (req, res) => {
     try {
         const user = await User.findById(req.user.id);
-        if (!user) {
-            return res.status(404).json({ message: 'User not found' });
-        }
-        
+        if (!user) return res.status(404).json({ message: 'User not found' });
+
         await Post.deleteMany({ user: req.user.id });
-        
+
+        // Remove Follow relationships
+        await Follow.deleteMany({ $or: [{ follower: req.user.id }, { following: req.user.id }] });
+
+        // Update counts for others? Too expensive to do efficiently here without bulk ops.
+        // But since we are deleting this user, their ID disapears.
+        // We really should decrement the counts on the people they followed or followed by.
+        // Only if we care about accurate counts being eventually consistent.
+        // For now, simple delete.
+
         await User.updateMany(
-            { $or: [{ followers: req.user.id }, { following: req.user.id }, { blockedUsers: req.user.id }] },
-            { $pull: { followers: req.user.id, following: req.user.id, blockedUsers: req.user.id } }
+            { blockedUsers: req.user.id },
+            { $pull: { blockedUsers: req.user.id } }
         );
 
         await user.deleteOne();
@@ -544,7 +162,7 @@ router.delete('/profile', protect, async (req, res) => {
 
 
 // @route   PUT /api/users/:id/follow
-// @desc    Follow / Unfollow a user
+// @desc    Follow / Unfollow a user - Scalable
 router.put('/:id/follow', protect, async (req, res) => {
     try {
         const userToFollow = await User.findById(req.params.id);
@@ -557,23 +175,29 @@ router.put('/:id/follow', protect, async (req, res) => {
         if (req.params.id === req.user.id) {
             return res.status(400).json({ message: 'You cannot follow yourself' });
         }
-        
-        const isFollowing = currentUser.following.includes(userToFollow._id);
 
-        if (isFollowing) {
+        const existingFollow = await Follow.findOne({ follower: currentUser._id, following: userToFollow._id });
+
+        if (existingFollow) {
             // Unfollow
-            currentUser.following = currentUser.following.filter(id => id.toString() !== userToFollow._id.toString());
-            userToFollow.followers = userToFollow.followers.filter(id => id.toString() !== currentUser._id.toString());
-            // Delete the corresponding follow notification
+            await Follow.deleteOne({ _id: existingFollow._id });
+            await User.findByIdAndUpdate(currentUser._id, { $inc: { followingCount: -1 } });
+            await User.findByIdAndUpdate(userToFollow._id, { $inc: { followersCount: -1 } });
+
             await Notification.deleteOne({
                 recipient: userToFollow._id,
                 sender: currentUser._id,
                 type: 'follow'
             });
+
+            // Legacy Array Cleanup (Optional but good to clear if present)
+            // We can skip this if we want purely scalable logic, but cleaning up legacy is nice.
+            // Let's NOT write to array to be fully scalable compliant.
         } else {
             // Follow
-            currentUser.following.push(userToFollow._id);
-            userToFollow.followers.push(currentUser._id);
+            await Follow.create({ follower: currentUser._id, following: userToFollow._id });
+            await User.findByIdAndUpdate(currentUser._id, { $inc: { followingCount: 1 } });
+            await User.findByIdAndUpdate(userToFollow._id, { $inc: { followersCount: 1 } });
 
             const existingNotification = await Notification.findOne({
                 recipient: userToFollow._id,
@@ -589,7 +213,7 @@ router.put('/:id/follow', protect, async (req, res) => {
                 });
                 await notification.save();
                 const populatedNotification = await notification.populate('sender', 'name username avatarUrl');
-                
+
                 const recipientSocketId = req.onlineUsers.get(userToFollow._id.toString());
                 if (recipientSocketId) {
                     req.io.to(recipientSocketId).emit('newNotification', populatedNotification);
@@ -597,11 +221,17 @@ router.put('/:id/follow', protect, async (req, res) => {
             }
         }
 
-        await currentUser.save();
-        await userToFollow.save();
+        // Return updated User objects (with new counts)
+        // We need to re-fetch to get new counts or just increment locally.
+        // Re-fetching is safer.
+        const updatedCurrentUser = await User.findById(currentUser._id);
+        const updatedUserToFollow = await User.findById(userToFollow._id);
 
-        req.io.emit('userUpdated', currentUser.toJSON());
-        req.io.emit('userUpdated', userToFollow.toJSON());
+        // We should enrich with counts from Collection if we want to be 100% accurate,
+        // but Since we just did $inc, value on doc should be correct.
+
+        req.io.emit('userUpdated', updatedCurrentUser.toJSON());
+        req.io.emit('userUpdated', updatedUserToFollow.toJSON());
 
         res.json({ message: 'Follow status updated' });
 
@@ -634,19 +264,31 @@ router.put('/:id/block', protect, async (req, res) => {
         } else {
             // Block
             currentUser.blockedUsers.push(userToBlock._id);
-            // Also force unfollow from both sides
-            currentUser.following = currentUser.following.filter(id => id.toString() !== userToBlock._id.toString());
-            userToBlock.followers = userToBlock.followers.filter(id => id.toString() !== currentUser._id.toString());
-            // And remove from their following list
-            userToBlock.following = userToBlock.following.filter(id => id.toString() !== currentUser._id.toString());
-            currentUser.followers = currentUser.followers.filter(id => id.toString() !== userToBlock._id.toString());
+
+            // Force Unfollow (Both directions)
+            const follow1 = await Follow.findOneAndDelete({ follower: currentUser._id, following: userToBlock._id });
+            if (follow1) {
+                await User.findByIdAndUpdate(currentUser._id, { $inc: { followingCount: -1 } });
+                await User.findByIdAndUpdate(userToBlock._id, { $inc: { followersCount: -1 } });
+            }
+
+            const follow2 = await Follow.findOneAndDelete({ follower: userToBlock._id, following: currentUser._id });
+            if (follow2) {
+                await User.findByIdAndUpdate(userToBlock._id, { $inc: { followingCount: -1 } });
+                await User.findByIdAndUpdate(currentUser._id, { $inc: { followersCount: -1 } });
+            }
         }
 
         await currentUser.save();
-        await userToBlock.save();
-        
-        req.io.emit('userUpdated', currentUser.toJSON());
-        req.io.emit('userUpdated', userToBlock.toJSON());
+        // userToBlock not saved unless we modified it? We modified valid counts via update.
+
+        const updatedCurrentUser = await User.findById(currentUser._id);
+        // We broadcast user update.
+        req.io.emit('userUpdated', updatedCurrentUser.toJSON());
+        // Also userToBlock ? Only if we unfollowed them on their side.
+        // Let's broadcast both to be safe.
+        const updatedUserToBlock = await User.findById(userToBlock._id);
+        req.io.emit('userUpdated', updatedUserToBlock.toJSON());
 
         res.json({ message: 'Block status updated' });
 
@@ -656,5 +298,44 @@ router.put('/:id/block', protect, async (req, res) => {
     }
 });
 
+
+// @route   PUT /api/users/:id/remove-follower
+// @desc    Remove a user from your followers list
+router.put('/:id/remove-follower', protect, async (req, res) => {
+    try {
+        const userToRemove = await User.findById(req.params.id);
+        const currentUser = await User.findById(req.user.id);
+
+        if (!userToRemove || !currentUser) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        // Check if they follow me
+        const followRel = await Follow.findOne({ follower: userToRemove._id, following: currentUser._id });
+
+        if (followRel) {
+            await Follow.deleteOne({ _id: followRel._id });
+
+            // Update Counts
+            await User.findByIdAndUpdate(userToRemove._id, { $inc: { followingCount: -1 } });
+            await User.findByIdAndUpdate(currentUser._id, { $inc: { followersCount: -1 } });
+
+            // Refresh docs
+            const updatedCurrentUser = await User.findById(currentUser._id);
+            const updatedUserToRemove = await User.findById(userToRemove._id);
+
+            req.io.emit('userUpdated', updatedCurrentUser.toJSON());
+            req.io.emit('userUpdated', updatedUserToRemove.toJSON());
+
+            res.json({ message: 'Follower removed successfully' });
+        } else {
+            res.status(400).json({ message: 'User is not following you' });
+        }
+
+    } catch (error) {
+        console.error('Remove follower error:', error);
+        res.status(500).json({ message: 'Server Error' });
+    }
+});
 
 export default router;

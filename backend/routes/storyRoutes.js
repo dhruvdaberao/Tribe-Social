@@ -67,7 +67,7 @@
 //             acc[userId].stories.push(story);
 //             return acc;
 //         }, {});
-        
+
 //         res.json(Object.values(groupedStories));
 //     } catch (error) {
 //         console.error("Error fetching story feed:", error);
@@ -155,6 +155,7 @@ import protect from '../middleware/authMiddleware.js';
 import Story from '../models/storyModel.js';
 import User from '../models/userModel.js';
 import Notification from '../models/notificationModel.js';
+import cloudinary from '../config/cloudinary.js';
 
 const router = express.Router();
 
@@ -162,27 +163,41 @@ const router = express.Router();
 // @desc    Create a new story
 router.post('/', protect, async (req, res) => {
     // Destructure all the new style properties
-    const { 
-        imageUrl, 
-        text, 
-        textPosition, 
+    const {
+        imageUrl,
+        text,
+        textPosition,
         imagePosition,
         textRotation,
         imageRotation,
         textScale,
         imageScale,
         textColor,
-        backgroundColor
+        backgroundColor,
+        mediaType = 'image',
+        duration
     } = req.body;
 
     if (!imageUrl && !text) {
         return res.status(400).json({ message: 'Story must have an image or text.' });
     }
 
+    let finalImageUrl = imageUrl;
+
+    // Upload if Base64
     try {
+        if (imageUrl && imageUrl.startsWith('data:')) {
+            const uploadOptions = {
+                folder: 'tribe_social_stories',
+                resource_type: mediaType === 'video' ? 'video' : 'image'
+            };
+            const uploadResponse = await cloudinary.uploader.upload(imageUrl, uploadOptions);
+            finalImageUrl = uploadResponse.secure_url;
+        }
+
         const story = new Story({
             user: req.user.id,
-            imageUrl,
+            imageUrl: finalImageUrl,
             text,
             textPosition,
             imagePosition,
@@ -191,7 +206,9 @@ router.post('/', protect, async (req, res) => {
             textScale,
             imageScale,
             textColor,
-            backgroundColor
+            backgroundColor,
+            mediaType,
+            duration
         });
 
         const createdStory = await story.save();
@@ -235,10 +252,24 @@ router.get('/feed', protect, async (req, res) => {
             acc[userId].stories.push(story);
             return acc;
         }, {});
-        
+
         res.json(Object.values(groupedStories));
     } catch (error) {
         console.error("Error fetching story feed:", error);
+        res.status(500).json({ message: 'Server error' });
+    }
+});
+
+// @route   GET /api/stories/user/:userId
+// @desc    Get active stories for a specific user
+router.get('/user/:userId', protect, async (req, res) => {
+    try {
+        const stories = await Story.find({ user: req.params.userId })
+            .populate('user', 'name username avatarUrl')
+            .sort({ createdAt: 'asc' });
+        res.json(stories);
+    } catch (error) {
+        console.error("Error fetching user stories:", error);
         res.status(500).json({ message: 'Server error' });
     }
 });
@@ -281,10 +312,10 @@ router.put('/:id/like', protect, async (req, res) => {
             story.likes.push(req.user.id);
             if (story.user.toString() !== req.user.id) {
                 const existingNotification = await Notification.findOne({
-                   recipient: story.user,
-                   sender: req.user.id,
-                   type: 'story_like',
-                   storyId: story._id,
+                    recipient: story.user,
+                    sender: req.user.id,
+                    type: 'story_like',
+                    storyId: story._id,
                 });
                 if (!existingNotification) {
                     const notification = new Notification({

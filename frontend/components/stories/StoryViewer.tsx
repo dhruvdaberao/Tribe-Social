@@ -1,0 +1,362 @@
+
+
+
+
+
+// import React, { useState, useEffect, useRef } from 'react';
+// import type { Story, User, Tribe } from '../../types';
+// import UserAvatar from '../common/UserAvatar';
+// import ShareModal from '../common/ShareModal';
+
+// interface StoryViewerProps {
+//   userStories: { user: User, stories: Story[] };
+//   currentUser: User;
+//   allUsers: User[];
+//   allTribes: Tribe[];
+//   onClose: () => void;
+//   onDelete: (storyId: string) => void;
+//   onLike: (storyId: string) => void;
+//   onSharePost: (post: any, destination: { type: 'tribe' | 'user', id: string }) => void; // Re-using for stories
+// }
+
+// const StoryViewer: React.FC<StoryViewerProps> = ({ userStories, currentUser, allUsers, allTribes, onClose, onDelete, onLike, onSharePost }) => {
+//   const [currentIndex, setCurrentIndex] = useState(0);
+//   const [isPaused, setIsPaused] = useState(false);
+//   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+//   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+//   const progressRef = useRef<HTMLDivElement>(null);
+
+//   const { user, stories } = userStories;
+//   const currentStory = stories[currentIndex];
+
+//   const goToNext = () => {
+//     setCurrentIndex(prev => {
+//       if (prev < stories.length - 1) {
+//         return prev + 1;
+//       }
+//       onClose(); // Close after the last story
+//       return prev;
+//     });
+//   };
+
+//   const goToPrev = () => {
+//     setCurrentIndex(prev => Math.max(0, prev - 1));
+//   };
+
+//   useEffect(() => {
+//     if (progressRef.current) {
+//       // Restart animation
+//       progressRef.current.style.animation = 'none';
+//       void progressRef.current.offsetWidth; // Trigger reflow
+//       progressRef.current.style.animation = '';
+//     }
+
+//     if (timerRef.current) clearTimeout(timerRef.current);
+//     if (!isPaused) {
+//       timerRef.current = setTimeout(goToNext, 3000);
+//     }
+
+//     return () => {
+//       if (timerRef.current) clearTimeout(timerRef.current);
+//     };
+//   }, [currentIndex, isPaused, stories.length]);
+
+//   if (!currentStory) return null;
+
+//   const isOwnStory = user.id === currentUser.id;
+//   const isLiked = currentStory.likes.includes(currentUser.id);
+
+//   const handleShare = (destination: { type: 'tribe' | 'user', id: string }) => {
+//       const storyAsPost = {
+//           author: user,
+//           content: currentStory.text || `Check out this story from @${user.username}!`,
+//           imageUrl: currentStory.imageUrl,
+//       };
+//       onSharePost(storyAsPost, destination);
+//   };
+
+
+//   return (
+//     <>
+//       <div className="fixed inset-0 bg-background/90 backdrop-blur-sm z-50 flex items-center justify-center" onMouseDown={() => setIsPaused(true)} onMouseUp={() => setIsPaused(false)} onMouseLeave={() => setIsPaused(false)}>
+//         <div className="relative w-full max-w-md h-full max-h-[95vh] bg-surface rounded-2xl shadow-lg overflow-hidden flex flex-col">
+//           {/* Progress Bars */}
+//           <div className="absolute top-2 left-2 right-2 flex space-x-1 z-20">
+//             {stories.map((_, index) => (
+//               <div key={index} className="flex-1 h-1 bg-white/30 rounded-full overflow-hidden">
+//                 {index < currentIndex && <div className="h-full w-full bg-white" />}
+//                 {index === currentIndex && (
+//                   <div 
+//                     ref={progressRef}
+//                     className={`h-full bg-white ${isPaused ? '' : 'animate-progress'}`}
+//                   />
+//                 )}
+//               </div>
+//             ))}
+//           </div>
+
+//           {/* Header */}
+//           <div className="absolute top-4 left-4 right-4 z-20 flex items-center justify-between text-white">
+//             <div className="flex items-center space-x-2">
+//               <UserAvatar user={user} className="w-10 h-10" />
+//               <span className="font-bold text-sm" style={{textShadow: '1px 1px 2px black'}}>{user.name}</span>
+//             </div>
+//             <button onClick={onClose} className="p-2 rounded-full hover:bg-white/10"><BackIcon /></button>
+//           </div>
+
+//           {/* Navigation */}
+//           <div onClick={goToPrev} className="absolute left-0 top-0 bottom-16 w-1/3 z-10" />
+//           <div onClick={goToNext} className="absolute right-0 top-0 bottom-16 w-1/3 z-10" />
+
+//           {/* Story Content */}
+//           <div className="flex-1 bg-gradient-to-br from-gray-700 via-gray-900 to-black relative flex items-center justify-center">
+//             {currentStory.imageUrl && (
+//               <img src={currentStory.imageUrl} alt="Story content" className="max-w-full max-h-full object-contain pointer-events-none" />
+//             )}
+//             {currentStory.text && (
+//               <div className="absolute text-white text-3xl font-bold p-4 text-center" style={{ textShadow: '2px 2px 4px rgba(0,0,0,0.8)' }}>
+//                 <span>{currentStory.text}</span>
+//               </div>
+//             )}
+//           </div>
+
+//           {/* Footer */}
+//           <div className="p-4 z-20 flex items-center justify-end space-x-2 text-white">
+//               {!isOwnStory && (
+//                   <button onClick={() => onLike(currentStory.id)} className={`p-2 rounded-full hover:bg-white/20 transition-colors ${isLiked ? 'text-red-500' : ''}`}>
+//                       <HeartIcon filled={isLiked} />
+//                   </button>
+//               )}
+//               <button onClick={() => setIsShareModalOpen(true)} className="p-2 rounded-full hover:bg-white/20 transition-colors"><ShareIcon /></button>
+//               {isOwnStory && (
+//                   <button onClick={() => onDelete(currentStory.id)} className="p-2 rounded-full hover:bg-white/20 transition-colors"><TrashIcon /></button>
+//               )}
+//           </div>
+
+//         </div>
+//         <style>{`.animate-progress { animation: progress 3s linear forwards; } @keyframes progress { from { width: 0%; } to { width: 100%; } }`}</style>
+//       </div>
+//       {isShareModalOpen && (
+//           <ShareModal
+//               post={{ author: user, content: currentStory.text || '', imageUrl: currentStory.imageUrl } as any}
+//               currentUser={currentUser}
+//               users={allUsers}
+//               tribes={allTribes}
+//               onClose={() => setIsShareModalOpen(false)}
+//               onSharePost={(post, dest) => handleShare(dest)}
+//           />
+//       )}
+//     </>
+//   );
+// };
+
+// // --- ICONS ---
+// const BackIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>;
+// const TrashIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>;
+// const HeartIcon = ({ filled }: { filled: boolean }) => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill={filled ? "currentColor" : "none"} viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" /></svg>;
+// const ShareIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>;
+
+// export default StoryViewer;
+
+
+
+
+
+import React, { useState, useEffect, useRef } from 'react';
+import type { Story, User, Tribe } from '../../types';
+import UserAvatar from '../common/UserAvatar';
+import ShareModal from '../common/ShareModal';
+import { toast } from '../common/Toast';
+
+interface StoryViewerProps {
+  userStories: { user: User, stories: Story[] };
+  currentUser: User;
+  allUsers: User[];
+  allTribes: Tribe[];
+  onClose: () => void;
+  onDelete: (storyId: string) => void;
+  onLike: (storyId: string) => void;
+  onSharePost: (post: any, destination: { type: 'tribe' | 'user', id: string }) => void;
+  initialStoryId?: string;
+}
+
+const StoryViewer: React.FC<StoryViewerProps> = ({ userStories, currentUser, allUsers, allTribes, onClose, onDelete, onLike, onSharePost, initialStoryId }) => {
+  const { user, stories } = userStories;
+  const [currentIndex, setCurrentIndex] = useState(() => {
+    if (initialStoryId) {
+      const idx = stories.findIndex(s => s.id === initialStoryId);
+      return idx !== -1 ? idx : 0;
+    }
+    return 0;
+  });
+  const [isPaused, setIsPaused] = useState(false);
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const progressRef = useRef<HTMLDivElement>(null);
+
+  // const { user, stories } = userStories; // Removed duplicate
+  const currentStory = stories[currentIndex];
+
+  const goToNext = () => {
+    setCurrentIndex(prev => {
+      if (prev < stories.length - 1) return prev + 1;
+      onClose();
+      return prev;
+    });
+  };
+
+  const goToPrev = () => {
+    setCurrentIndex(prev => Math.max(0, prev - 1));
+  };
+
+  useEffect(() => {
+    if (progressRef.current) {
+      progressRef.current.style.animation = 'none';
+      void progressRef.current.offsetWidth;
+      progressRef.current.style.animation = '';
+    }
+    if (timerRef.current) clearTimeout(timerRef.current);
+
+    // Video handles its own timing via onEnded, unless it fails to load or something
+    // But for simplicity/safety, we set timeout backup or use CSS animation for bar
+    // Actually, we should sync bar with video.
+    // For now, simpler approach:
+    // If video, disable JS timer (let onEnded handle), but we need animation duration.
+
+    if (!isPaused && !isShareModalOpen) {
+      if (currentStory.mediaType === 'video' && currentStory.duration) {
+        // Let video onEnded handle transition.
+        // We just set animation duration for the bar.
+      } else {
+        timerRef.current = setTimeout(goToNext, 5000);
+      }
+    }
+    return () => { if (timerRef.current) clearTimeout(timerRef.current); };
+  }, [currentIndex, isPaused, isShareModalOpen, stories.length, currentStory.mediaType]); // Added mediaType dep
+
+  if (!currentStory) return null;
+
+  const isOwnStory = user.id === currentUser.id;
+  const isLiked = currentStory.likes.includes(currentUser.id);
+
+  const handleShare = (destination: { type: 'tribe' | 'user', id: string }) => {
+    // FIX: Added expiry and owner metadata to the URL for better chat handling
+    // Story expires 24h after creation. We'll use the story's actual createdAt + 24h.
+    const createdAtTime = new Date(currentStory.createdAt).getTime();
+    const expiryTime = createdAtTime + (24 * 60 * 60 * 1000);
+
+    onSharePost({
+      author: user,
+      content: `Shared Story\n/story/${user.id}:${currentStory.id}?expiry=${expiryTime}&owner=${user.username}`,
+      imageUrl: currentStory.imageUrl,
+    }, destination);
+  };
+
+  const videoDuration = currentStory.duration || 5; // Default helper
+
+  return (
+    <>
+      <div className="fixed inset-0 bg-black/95 z-50 flex items-center justify-center p-4" onMouseDown={() => setIsPaused(true)} onMouseUp={() => setIsPaused(false)}>
+        <div
+          className="relative w-full max-w-[360px] aspect-[9/16] rounded-3xl overflow-hidden flex flex-col border-4 border-white/10 shadow-2xl transition-colors duration-300"
+          style={{ backgroundColor: currentStory.backgroundColor || '#2A2320' }}
+        >
+          {/* Progress */}
+          <div className="absolute top-3 left-3 right-3 flex space-x-1 z-20">
+            {stories.map((s, index) => (
+              <div key={index} className="flex-1 h-1 bg-white/30 rounded-full overflow-hidden">
+                {index < currentIndex && <div className="h-full w-full bg-white" />}
+                {index === currentIndex && (
+                  <div
+                    ref={progressRef}
+                    className={`h-full bg-white ${isPaused || isShareModalOpen ? '' : 'animate-progress'}`}
+                    style={{ animationDuration: `${s.mediaType === 'video' ? (s.duration || 10) : 5}s` }}
+                  />
+                )}
+              </div>
+            ))}
+          </div>
+
+          {/* Header */}
+          <div className="absolute top-6 left-4 right-4 z-20 flex justify-between items-center text-white">
+            <div className="flex items-center space-x-2 drop-shadow-md">
+              <UserAvatar user={user} className="w-9 h-9 border border-white/20" />
+              <span className="font-bold text-sm">{user.name}</span>
+            </div>
+            <button onClick={(e) => { e.stopPropagation(); onClose(); }} className="p-2 rounded-full hover:bg-white/20"><CloseIcon /></button>
+          </div>
+
+          {/* Touch Zones */}
+          <div onClick={(e) => { e.stopPropagation(); goToPrev(); }} className="absolute left-0 top-0 bottom-20 w-1/3 z-10" />
+          <div onClick={(e) => { e.stopPropagation(); goToNext(); }} className="absolute right-0 top-0 bottom-20 w-1/3 z-10" />
+
+          {/* Canvas Content */}
+          <div className="flex-1 relative overflow-hidden w-full h-full pointer-events-none">
+            {currentStory.imageUrl && (
+              <div
+                className="absolute"
+                style={{
+                  left: `${currentStory.imagePosition?.x || 0}%`,
+                  top: `${currentStory.imagePosition?.y || 0}%`,
+                  transform: `translate(-50%, -50%) rotate(${currentStory.imageRotation || 0}deg) scale(${currentStory.imageScale || 1})`
+                }}
+              >
+                {currentStory.mediaType === 'video' ? (
+                  <video
+                    src={currentStory.imageUrl}
+                    className="w-48 rounded-lg shadow-xl"
+                    autoPlay
+                    muted={false} // Should be sound? usually stories have sound.
+                    playsInline
+                    onEnded={goToNext}
+                    onPause={() => setIsPaused(true)}
+                    onPlay={() => setIsPaused(false)}
+                  />
+                ) : (
+                  <img src={currentStory.imageUrl} alt="Story" className="w-48 rounded-lg shadow-xl" />
+                )}
+              </div>
+            )}
+            {currentStory.text && (
+              <div
+                className="absolute text-2xl font-bold font-display text-center whitespace-pre-wrap"
+                style={{
+                  left: `${currentStory.textPosition?.x || 50}%`,
+                  top: `${currentStory.textPosition?.y || 50}%`,
+                  transform: `translate(-50%, -50%) rotate(${currentStory.textRotation || 0}deg) scale(${currentStory.textScale || 1})`,
+                  color: currentStory.textColor || '#ffffff',
+                  textShadow: '1px 1px 2px rgba(0,0,0,0.5)',
+                  minWidth: '150px'
+                }}
+              >
+                {currentStory.text}
+              </div>
+            )}
+          </div>
+
+          {/* Footer */}
+          <div className="absolute bottom-0 left-0 right-0 p-4 z-20 flex items-center justify-end space-x-3 bg-gradient-to-t from-black/50 to-transparent">
+            {!isOwnStory && (
+              <button onClick={(e) => { e.stopPropagation(); onLike(currentStory.id); }} className={`p-3 rounded-full bg-white/10 backdrop-blur-md hover:bg-white/20 transition-colors ${isLiked ? 'text-red-500' : 'text-white'}`}>
+                <HeartIcon filled={isLiked} />
+              </button>
+            )}
+            <button onClick={(e) => { e.stopPropagation(); setIsShareModalOpen(true); }} className="p-3 rounded-full bg-white/10 backdrop-blur-md hover:bg-white/20 text-white transition-colors"><ShareIcon /></button>
+            {isOwnStory && (
+              <button onClick={(e) => { e.stopPropagation(); onDelete(currentStory.id); toast.success("Story deleted successfully"); }} className="p-3 rounded-full bg-white/10 backdrop-blur-md hover:bg-white/20 text-white transition-colors"><TrashIcon /></button>
+            )}
+          </div>
+        </div>
+        <style>{`.animate-progress { animation-name: progress; animation-timing-function: linear; animation-fill-mode: forwards; } @keyframes progress { from { width: 0%; } to { width: 100%; } }`}</style>
+      </div>
+      {isShareModalOpen && <ShareModal post={{ author: user, content: currentStory.text || '', imageUrl: currentStory.imageUrl } as any} currentUser={currentUser} users={allUsers} tribes={allTribes} onClose={() => setIsShareModalOpen(false)} onSharePost={(post, dest) => handleShare(dest)} />}
+    </>
+  );
+};
+
+const CloseIcon = () => <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>;
+const TrashIcon = () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>;
+const HeartIcon = ({ filled }: { filled: boolean }) => <svg className="w-6 h-6" fill={filled ? "currentColor" : "none"} stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" /></svg>;
+const ShareIcon = () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>;
+
+export default StoryViewer;

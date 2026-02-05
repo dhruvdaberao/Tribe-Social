@@ -75,13 +75,16 @@ import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 import { Resend } from 'resend';
 import User from '../models/userModel.js';
+import adminUsers from '../config/adminUsers.js';
 import OTP from '../models/otpModel.js';
+import Follow from '../models/followModel.js';
 
 const router = express.Router();
 
 // Initialize Resend with API Key from .env
 const resend = new Resend(process.env.RESEND_API_KEY);
 
+// 🔐 SECURITY: Use ONLY the Environment Variable. No fallbacks.
 const generateToken = (id) => {
   return jwt.sign({ id }, process.env.JWT_SECRET, {
     expiresIn: '30d',
@@ -96,7 +99,25 @@ router.post('/register', async (req, res) => {
     if (userExists) return res.status(400).json({ message: 'An account with this email already exists.' });
     const usernameExists = await User.findOne({ username });
     if (usernameExists) return res.status(400).json({ message: 'This username is already taken.' });
-    const user = await User.create({ name, username, email, password });
+    const adminSet = adminUsers.map((admin) => admin.toLowerCase());
+    const isAdmin = adminSet.includes(username.toLowerCase());
+    const user = await User.create({ name, username, email, password, isAdmin });
+
+    // Auto-follow 'Tribe' official account
+    if (user) {
+      try {
+        const tribeAccount = await User.findOne({ username: { $regex: /^tribe$/i } });
+        if (tribeAccount && tribeAccount._id.toString() !== user._id.toString()) {
+          await Follow.create({ follower: user._id, following: tribeAccount._id });
+          await User.findByIdAndUpdate(tribeAccount._id, { $inc: { followersCount: 1 } });
+          await User.findByIdAndUpdate(user._id, { $inc: { followingCount: 1 } });
+          user.followingCount = 1; // Update in-memory object
+        }
+      } catch (followError) {
+        console.error("Auto-follow error:", followError);
+      }
+    }
+
     if (user) {
       res.status(201).json({ token: generateToken(user._id), user: user });
     } else {
@@ -113,6 +134,12 @@ router.post('/login', async (req, res) => {
   try {
     const user = await User.findOne({ email });
     if (user && (await user.matchPassword(password))) {
+      const adminSet = adminUsers.map((admin) => admin.toLowerCase());
+      const isAdmin = adminSet.includes(user.username.toLowerCase());
+      if (isAdmin && !user.isAdmin) {
+        user.isAdmin = true;
+        await user.save();
+      }
       res.json({ token: generateToken(user._id), user: user });
     } else {
       res.status(401).json({ message: 'Invalid email or password' });
@@ -134,7 +161,7 @@ router.post('/forgot-password', async (req, res) => {
     const hashedOtp = await bcrypt.hash(otpValue, 10);
 
     // Save to DB (expires in 5 mins)
-    await OTP.deleteMany({ email }); 
+    await OTP.deleteMany({ email });
     await OTP.create({
       email,
       otp: hashedOtp,

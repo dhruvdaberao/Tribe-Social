@@ -10,9 +10,22 @@ const userSchema = mongoose.Schema(
     avatarUrl: { type: String, default: null },
     bannerUrl: { type: String, default: null },
     bio: { type: String, default: '' },
+    // Deprecated Arrays (Kept for migration safety, will not be used in new logic)
     followers: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
     following: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+    // New Scalable Count Fields
+    followersCount: { type: Number, default: 0 },
+    followingCount: { type: Number, default: 0 },
     blockedUsers: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+    // Moderation
+    isAdmin: { type: Boolean, default: false },
+    reports: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }], // Users who reported this account
+    isBanned: { type: Boolean, default: false },
+    bannedAt: { type: Date },
+    bannedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    isDeleted: { type: Boolean, default: false },
+    deletedAt: { type: Date },
+    deletedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   },
   {
     timestamps: true,
@@ -21,8 +34,10 @@ const userSchema = mongoose.Schema(
 
 userSchema.set('toJSON', {
   transform: (document, returnedObject) => {
-    returnedObject.id = returnedObject._id.toString();
-    delete returnedObject._id;
+    if (returnedObject._id) {
+      returnedObject.id = returnedObject._id.toString();
+      delete returnedObject._id;
+    }
     delete returnedObject.__v;
     delete returnedObject.password;
   }

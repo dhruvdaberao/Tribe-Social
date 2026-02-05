@@ -38,7 +38,7 @@
 //   transform: (document, returnedObject) => {
 //     returnedObject.id = returnedObject._id.toString();
 //     returnedObject.createdAt = returnedObject.createdAt.toISOString();
-    
+
 //     // Manually add populated author if it exists
 //     if (returnedObject.user && returnedObject.user._id) {
 //       returnedObject.author = {
@@ -65,41 +65,43 @@
 import mongoose from 'mongoose';
 
 const storySchema = mongoose.Schema({
-    user: { 
-        type: mongoose.Schema.Types.ObjectId, 
-        ref: 'User', 
-        required: true, 
-        index: true 
-    },
-    imageUrl: { type: String },
-    text: { type: String },
-    
-    // Positioning
-    textPosition: { 
-        x: { type: Number, default: 50 }, 
-        y: { type: Number, default: 50 } 
-    },
-    imagePosition: {
-        x: { type: Number, default: 0 },
-        y: { type: Number, default: 0 }
-    },
+  user: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true,
+    index: true
+  },
+  imageUrl: { type: String },
+  mediaType: { type: String, enum: ['image', 'video'], default: 'image' },
+  duration: { type: Number },
+  text: { type: String },
 
-    // Transforms & Styles
-    textRotation: { type: Number, default: 0 },
-    imageRotation: { type: Number, default: 0 },
-    textScale: { type: Number, default: 1 },
-    imageScale: { type: Number, default: 1 },
-    textColor: { type: String, default: '#ffffff' },
-    backgroundColor: { type: String, default: '#2A2320' },
+  // Positioning
+  textPosition: {
+    x: { type: Number, default: 50 },
+    y: { type: Number, default: 50 }
+  },
+  imagePosition: {
+    x: { type: Number, default: 0 },
+    y: { type: Number, default: 0 }
+  },
 
-    likes: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
-    createdAt: { 
-        type: Date, 
-        default: Date.now, 
-        expires: '24h' 
-    }
-}, { 
-    timestamps: false 
+  // Transforms & Styles
+  textRotation: { type: Number, default: 0 },
+  imageRotation: { type: Number, default: 0 },
+  textScale: { type: Number, default: 1 },
+  imageScale: { type: Number, default: 1 },
+  textColor: { type: String, default: '#ffffff' },
+  backgroundColor: { type: String, default: '#2A2320' },
+
+  likes: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+  createdAt: {
+    type: Date,
+    default: Date.now,
+    expires: '24h'
+  }
+}, {
+  timestamps: false
 });
 
 storySchema.set('toJSON', {

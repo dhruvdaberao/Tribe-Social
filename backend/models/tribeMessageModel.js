@@ -2,25 +2,25 @@ import mongoose from 'mongoose';
 
 const tribeMessageSchema = mongoose.Schema(
   {
-    tribe: { 
-        type: mongoose.Schema.Types.ObjectId, 
-        ref: 'Tribe', 
-        required: true,
-        index: true
+    tribe: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Tribe',
+      required: true,
+      index: true
     },
-    sender: { 
-        type: mongoose.Schema.Types.ObjectId, 
-        ref: 'User', 
-        required: true,
-        index: true
+    sender: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      required: true,
+      index: true
     },
-    text: { 
-        type: String, 
-        required: true 
+    text: {
+      type: String,
+      required: true
     },
     imageUrl: {
-        type: String,
-        default: null
+      type: String,
+      default: null
     }
   },
   {
@@ -28,16 +28,28 @@ const tribeMessageSchema = mongoose.Schema(
   }
 );
 
+// Index for fast retrieval of tribe messages
+tribeMessageSchema.index({ tribe: 1, createdAt: -1 });
+
 tribeMessageSchema.set('toJSON', {
   transform: (document, returnedObject) => {
     returnedObject.id = returnedObject._id.toString();
     returnedObject.tribeId = returnedObject.tribe.toString();
-    returnedObject.senderId = returnedObject.sender.toString();
+
+    // 🔥 FIX: Ensure sender info isn't stripped!
+    if (returnedObject.sender && typeof returnedObject.sender === 'object') {
+      returnedObject.sender = returnedObject.sender; // Keep the populated object
+      returnedObject.senderId = returnedObject.sender._id ? returnedObject.sender._id.toString() : returnedObject.sender.toString();
+    } else {
+      returnedObject.senderId = returnedObject.sender.toString();
+      delete returnedObject.sender; // Only delete if it's just an ID
+    }
+
     returnedObject.timestamp = returnedObject.createdAt;
     delete returnedObject._id;
     delete returnedObject.__v;
     delete returnedObject.tribe;
-    delete returnedObject.sender;
+    // delete returnedObject.sender; // REMOVED CAUSE OF BUG
     delete returnedObject.createdAt;
     delete returnedObject.updatedAt;
   }

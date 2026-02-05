@@ -1,0 +1,1257 @@
+TRIBE SOCIAL - TRIBE FEATURE DOCUMENTATION
+==========================================
+
+FEATURE OVERVIEW
+----------------
+The Tribe feature allows users to create, join, and participate in community groups (Tribes). It includes real-time group chat functionality, member management, and role-based permissions (Owner vs Member).
+
+KEY CAPABILITIES:
+1.  **Tribe Discovery**: Users can see "Explore Tribes" (not joined) and "Your Tribes" (joined).
+2.  **Membership Logic**: Chat is only accessible to members. Non-members see a "Join" prompt.
+3.  **Real-Time Chat**: Powered by Socket.IO, offering instant messaging in group contexts.
+4.  **Optimistic UI**: Join, Leave, and Send Message actions update the UI immediately for a responsive feel.
+5.  **Role Management**: Owners can edit/delete tribes. Admin actions are hidden from regular members.
+6.  **Robust Error Handling**: Handles network failures, null states, and race conditions gracefully.
+
+ARCHITECTURE & IMPLEMENTATION DETAILS
+-------------------------------------
+
+### 1. Data Structure (`types.ts`)
+-   **Tribe**: Contains `_id`, `name`, `description`, `avatarUrl`, `owner` (ID), `members` (Array of IDs).
+-   **TribeMessage**: Contains `_id`, `tribeId`, `sender` (User object), `text`, `timestamp`.
+-   **Note**: Standardized on MongoDB `_id` to prevent "undefined" ID errors in frontend routing.
+
+### 2. Permissions System
+-   **Frontend Gating**: 
+    -   `TribeCard`: Only shows "Chat" button if the user is a member.
+    -   `TribeDetailPage`: Checks membership before fetching messages. If not a member, renders a "Join" splash screen instead of the chat interface.
+-   **Backend Gating**: API routes enable joining/leaving and prevent unauthorized message posting (backend logic implemented in `tribeRoutes.js` - not included here but assumed).
+
+### 3. State Management
+-   **Split Fetching**: `TribeDetailPage` fetches Tribe Metadata *first*. Only if membership is confirmed does it attempt to fetch Messages. This prevents 403 errors and improves perceived performance.
+-   **Optimistic Updates**: 
+    -   *Joining*: UI updates `tribe.members` array locally immediately upon click.
+    -   *Messaging*: Messages are appended to the list with a temporary ID before the API confirms success.
+
+### 4. Mobile Responsiveness
+-   **Sticky Input**: The chat input bar uses `sticky bottom-0` with correct z-indexing to remain visible on mobile keyboards.
+-   **Flex Layout**: `TribeMessageArea` uses a robust flex-col layout to ensure scrolling works correctly inside the message container, not the whole page.
+
+================================================================================
+SOURCE CODE
+================================================================================
+
+FILE: components/tribes/TribesPage.tsx
+---------------------------------------
+import React, { useState, useEffect } from 'react';
+import styled from 'styled-components';
+import { Tribe, User } from '../../types';
+import * as api from '../../api';
+import TribeCard from './TribeCard';
+import CreateTribeModal from './CreateTribeModal';
+import EditTribeModal from './EditTribeModal';
+import { Plus } from 'lucide-react';
+import { useAuth } from '../../contexts/AuthContext';
+
+// Styled Components (Clean, Modern, Robust)
+const Container = styled.div`
+  padding: 24px;
+  max-width: 1200px;
+  margin: 0 auto;
+`;
+
+const Header = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 32px;
+`;
+
+const Title = styled.h1`
+  font-size: 28px;
+  font-weight: 700;
+  color: ${({ theme }) => theme.text};
+`;
+
+const CreateButton = styled.button`
+  background-color: ${({ theme }) => theme.primary}; // Use theme color (Brown/Beige)
+  color: ${({ theme }) => theme.cardBackground}; // Contrast text
+  border: none;
+  border-radius: 8px;
+  padding: 10px 20px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: opacity 0.2s;
+  
+  &:hover {
+    opacity: 0.9;
+  }
+`;
+
+const Grid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 24px;
+`;
+
+const LoadingMessage = styled.div`
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 60px;
+  gap: 16px;
+  
+  img {
+      width: 100px;
+      height: 100px;
+      object-fit: contain;
+  }
+
+  p {
+    color: ${({ theme }) => theme.textSecondary};
+    font-size: 1.1rem;
+  }
+`;
+
+const EmptyState = styled.div`
+  text-align: center;
+  padding: 60px;
+  background: ${({ theme }) => theme.cardBackground};
+  border-radius: 12px;
+  color: ${({ theme }) => theme.textSecondary};
+  
+  h3 {
+    margin-bottom: 12px;
+    font-size: 1.5rem;
+    color: ${({ theme }) => theme.text};
+  }
+`;
+
+// Interface for Props
+interface TribesPageProps {
+    currentUser: User | null;
+    isLoadingProp?: boolean; // Optional override from App.tsx
+}
+
+const TribesPage: React.FC<TribesPageProps> = ({ currentUser, isLoadingProp }) => {
+    // Local state for reliability - don't depend solely on App.tsx state
+    const [tribes, setTribes] = useState<Tribe[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+    const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+    const [editingTribe, setEditingTribe] = useState<Tribe | null>(null);
+    const [allUsers, setAllUsers] = useState<User[]>([]);
+
+    // FETCH TRIBES & USERS ON MOUNT
+    useEffect(() => {
+        let isMounted = true;
+
+        const loadData = async () => {
+            try {
+                // Check cache first for instant render
+                const cachedTribes = localStorage.getItem('tribe_storage_tribes');
+
+                // Show cached immediately if available
+                if (cachedTribes) {
+                    const parsed = JSON.parse(cachedTribes);
+                    if (Array.isArray(parsed) && parsed.length > 0) {
+                        setTribes(parsed);
+                        // Delay loading false just a bit so we don't flash if re-fetching
+                    }
+                }
+
+                console.log("🔍 TribesPage: Fetching data from API...");
+                const [tribesRes, usersRes] = await Promise.all([
+                    api.fetchTribes(),
+                    api.fetchUsers()
+                ]);
+
+                if (isMounted) {
+                    setTribes(tribesRes.data);
+                    // We need to store users in a map or context, but for now passing them down 
+                    // via props or a local efficient lookup would be best. 
+                    // However, TribesPage doesn't have a userMap prop. 
+                    // We will just store the users locally in state to pass to TribeCard (via modal).
+                    // Actually, wait, `TribeCard` just needs to show the modal with `userMap`.
+                    // We'll add `allUsers` to state.
+                    setAllUsers(usersRes.data);
+
+                    setIsLoading(false);
+                    // Update cache
+                    localStorage.setItem('tribe_storage_tribes', JSON.stringify(tribesRes.data));
+                }
+            } catch (err) {
+                console.error("❌ TribesPage: Failed to load data", err);
+                if (isMounted) {
+                    setError("Failed to load community data.");
+                    setIsLoading(false);
+                }
+            }
+        };
+
+        // Minimum 2 second loading timer as requested by user for "feature"
+        const timer = setTimeout(() => {
+            loadData();
+        }, 2000);
+
+        return () => {
+            isMounted = false;
+            clearTimeout(timer);
+        };
+    }, []);
+
+    const handleTribeCreated = (newTribe: Tribe) => {
+        setTribes(prev => [newTribe, ...prev]);
+        setIsCreateModalOpen(false);
+    };
+
+    const handleTribeUpdated = (updatedTribe: Tribe) => {
+        setTribes(prev => prev.map(t => t._id === updatedTribe._id ? updatedTribe : t));
+        setEditingTribe(null);
+    };
+
+    const handleTribeDeleted = async (tribeId: string) => {
+        try {
+            await api.deleteTribe(tribeId);
+            setTribes(prev => prev.filter(t => t._id !== tribeId));
+            setEditingTribe(null);
+        } catch (error) {
+            console.error("Failed to delete tribe", error);
+        }
+    };
+
+    // Filter Tribes
+    const myTribes = tribes.filter(t =>
+        currentUser && (t.owner === currentUser.id || t.members.includes(currentUser.id))
+    );
+    const discoverTribes = tribes.filter(t =>
+        !currentUser || (t.owner !== currentUser.id && !t.members.includes(currentUser.id))
+    );
+
+    // RENDER LOGIC
+    return (
+        <Container>
+            <Header>
+                <Title>Tribes</Title>
+                <CreateButton onClick={() => setIsCreateModalOpen(true)}>
+                    <Plus size={20} />
+                    Create Tribe
+                </CreateButton>
+            </Header>
+
+            {/* ERROR STATE */}
+            {error && (
+                <LoadingMessage style={{ color: 'red' }}>
+                    {error} <br />
+                    <button onClick={() => window.location.reload()} style={{ marginTop: 10, padding: '5px 10px' }}>Retry</button>
+                </LoadingMessage>
+            )}
+
+            {/* LOADING STATE - Only show if NO tribes are visible (i.e. empty cache) */}
+            {isLoading && tribes.length === 0 && (
+                <LoadingMessage>
+                    <img src="/busstop.gif" alt="Loading..." style={{ borderRadius: '0.5%', width: 100, height: 100, objectFit: 'cover' }} />
+                    <p>Summoning the Tribes...</p>
+                </LoadingMessage>
+            )}
+
+            {/* CONTENT */}
+            {!isLoading && !error && (
+                <>
+                    {/* CASE 1: NO TRIBES AT ALL */}
+                    {tribes.length === 0 && (
+                        <EmptyState>
+                            <h3>No Tribes Found</h3>
+                            <p>Be the first to start a community!</p>
+                        </EmptyState>
+                    )}
+
+                    {/* CASE 2: HAS TRIBES */}
+                    {tribes.length > 0 && (
+                        <>
+                            {/* SECTION: YOUR TRIBES */}
+                            {myTribes.length > 0 && (
+                                <div style={{ marginBottom: 40 }}>
+                                    <h2 style={{ fontSize: '1.25rem', fontWeight: 600, marginBottom: 16 }}>Your Tribes</h2>
+                                    <Grid>
+                                        {myTribes.map(tribe => (
+                                            <TribeCard
+                                                key={tribe._id}
+                                                tribe={tribe}
+                                                currentUser={currentUser}
+                                                allUsers={allUsers}
+                                                onEdit={(t) => setEditingTribe(t)}
+                                            />
+                                        ))}
+                                    </Grid>
+                                </div>
+                            )}
+
+                            {/* SECTION: EXPLORE TRIBES */}
+                            {discoverTribes.length > 0 && (
+                                <div>
+                                    <h2 style={{ fontSize: '1.25rem', fontWeight: 600, marginBottom: 16 }}>Explore Tribes</h2>
+                                    <Grid>
+                                        {discoverTribes.map(tribe => (
+                                            <TribeCard
+                                                key={tribe._id}
+                                                tribe={tribe}
+                                                currentUser={currentUser}
+                                                allUsers={allUsers}
+                                            />
+                                        ))}
+                                    </Grid>
+                                </div>
+                            )}
+
+                            {/* CASE: HAS TRIBES BUT NONE TO EXPLORE */}
+                            {discoverTribes.length === 0 && myTribes.length > 0 && (
+                                <div style={{ marginTop: 40, textAlign: 'center', color: '#888' }}>
+                                    <p>You've joined all available tribes! Create a new one?</p>
+                                </div>
+                            )}
+                        </>
+                    )}
+                </>
+            )}
+
+            {/* MODALS */}
+            {isCreateModalOpen && (
+                <CreateTribeModal
+                    onClose={() => setIsCreateModalOpen(false)}
+                    onSuccess={handleTribeCreated}
+                />
+            )}
+
+            {editingTribe && (
+                <EditTribeModal
+                    tribe={editingTribe}
+                    onClose={() => setEditingTribe(null)}
+                    onSuccess={handleTribeUpdated}
+                    onDelete={handleTribeDeleted}
+                />
+            )}
+        </Container>
+    );
+};
+
+export default TribesPage;
+
+
+FILE: components/tribes/TribeCard.tsx
+-------------------------------------
+import React from 'react';
+import styled from 'styled-components';
+import { Tribe, User } from '../../types';
+import { useNavigate } from 'react-router-dom';
+import { Edit2, Users } from 'lucide-react';
+import TribeMembersModal from './TribeMembersModal';
+
+const Card = styled.div`
+  background: ${({ theme }) => theme.cardBackground};
+  border-radius: 1rem; // 16px (Spec)
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2); // Consider updating to spec shadow later if provided
+  transition: transform 0.2s;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 1.5rem; // 24px (Spec Global Padding)
+  text-align: center;
+  border: 1px solid ${({ theme }) => theme.border};
+  position: relative; // For absolute positioning of Edit icon
+
+  &:hover {
+    transform: translateY(-4px);
+    border-color: ${({ theme }) => theme.primary};
+  }
+`;
+
+const EditIconWrapper = styled.div`
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  color: ${({ theme }) => theme.primary}; // Brown
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 50%;
+  z-index: 10;
+  
+  &:hover {
+    background: ${({ theme }) => theme.hoverBackground}; // Light hover
+  }
+`;
+
+const AvatarCircle = styled.div`
+  width: 5rem; // 80px (Spec)
+  height: 5rem; // 80px (Spec)
+  border-radius: 50%;
+  background-color: ${({ theme }) => theme.secondary};
+  margin-bottom: 1rem;
+  border: 4px solid ${({ theme }) => theme.background};
+  box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  position: relative;
+`;
+
+const AvatarImage = styled.img`
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+`;
+
+const TribeName = styled.h3`
+  margin: 0 0 0.5rem;
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: ${({ theme }) => theme.text};
+`;
+
+const MemberCount = styled.p`
+  margin: 0 0 1rem;
+  font-size: 0.9rem;
+  color: ${({ theme }) => theme.textSecondary};
+`;
+
+const Quote = styled.p`
+  color: ${({ theme }) => theme.text};
+  font-style: italic;
+  font-size: 0.95rem;
+  margin-bottom: 1.5rem;
+  opacity: 0.9;
+  line-height: 1.4;
+  padding: 0 0.5rem; // Horizontal padding 8px (Spec)
+  
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+`;
+
+const ButtonGroup = styled.div`
+  display: flex;
+  gap: 12px;
+  width: 100%;
+  margin-top: auto;
+`;
+
+const Button = styled.button<{ $variant?: 'primary' | 'secondary' }>`
+  flex: 1;
+  height: 2.5rem; // 40px (Spec)
+  padding: 0 1rem; // Vertical center, horizontal 1rem
+  border-radius: 0.75rem; // 12px (Spec Inner Component)
+  font-weight: 600;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: opacity 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  ${({ $variant, theme }) => $variant === 'primary' ? `
+    background: ${theme.primary};
+    color: #FFFFFF; // Accent Text (Spec)
+    border: none;
+  ` : `
+    background: transparent;
+    border: 1px solid ${theme.textSecondary};
+    color: ${theme.text};
+  `}
+
+  &:hover {
+    opacity: 0.9;
+    background: ${({ $variant, theme }) => $variant === 'primary' ? theme.hover : 'transparent'};
+  }
+`;
+
+interface TribeCardProps {
+  tribe: Tribe;
+  currentUser: User | null;
+  allUsers: User[];
+  onEdit?: (tribe: Tribe) => void;
+  onViewProfile?: (user: User) => void;
+}
+
+const TribeCard: React.FC<TribeCardProps> = ({ tribe, currentUser, allUsers, onEdit, onViewProfile }) => {
+  const navigate = useNavigate();
+  const isMember = currentUser && tribe.members.includes(currentUser.id);
+  const isOwner = currentUser && tribe.owner === currentUser.id;
+  const [isMembersModalOpen, setIsMembersModalOpen] = React.useState(false);
+
+  const userMap = React.useMemo(() => {
+    return new Map(allUsers.map(u => [u.id, u]));
+  }, [allUsers]);
+
+  const handleJoin = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    navigate(`/tribes/${tribe._id}`);
+  };
+
+  const handleEditClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (onEdit) onEdit(tribe);
+  };
+
+  const handleMembersClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setIsMembersModalOpen(true);
+  }
+
+  return (
+    <>
+      <Card onClick={() => navigate(`/tribes/${tribe._id}`)}>
+        {isOwner && onEdit && (
+          <EditIconWrapper onClick={handleEditClick} title="Edit Tribe">
+            <Edit2 size={18} strokeWidth={2} />
+          </EditIconWrapper>
+        )}
+
+        <AvatarCircle>
+          {tribe.avatarUrl ? (
+            <AvatarImage src={tribe.avatarUrl} alt={tribe.name} />
+          ) : (
+            <Users size={32} color="#D6B9A0" /> // Minimalistic group icon, light brown
+          )}
+        </AvatarCircle>
+
+        <TribeName>{tribe.name}</TribeName>
+        <MemberCount onClick={handleMembersClick} style={{ cursor: 'pointer', textDecoration: 'underline' }}>
+          {tribe.members.length} members
+        </MemberCount>
+
+        <Quote>"{tribe.description}"</Quote>
+
+        <ButtonGroup>
+          {(isMember || isOwner) && (
+            <Button $variant="secondary" onClick={(e) => { e.stopPropagation(); navigate(`/tribes/${tribe._id}`); }}>
+              Chat
+            </Button>
+          )}
+
+          {!isMember && (
+            <Button $variant="primary" onClick={handleJoin}>
+              Join
+            </Button>
+          )}
+
+          {isMember && !isOwner && (
+            <Button $variant="primary" style={{ opacity: 0.7, cursor: 'default' }}>
+              Joined
+            </Button>
+          )}
+        </ButtonGroup>
+      </Card>
+
+      <TribeMembersModal
+        isOpen={isMembersModalOpen}
+        onClose={() => setIsMembersModalOpen(false)}
+        memberIds={tribe.members}
+        userMap={userMap}
+        onViewProfile={(user) => {
+          setIsMembersModalOpen(false);
+          if (onViewProfile) onViewProfile(user);
+        }}
+      />
+    </>
+  );
+};
+
+export default TribeCard;
+
+
+FILE: components/tribes/TribeDetailPage.tsx
+-------------------------------------------
+import React, { useState, useEffect, useRef } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import styled from 'styled-components';
+import { Tribe, TribeMessage, User } from '../../types';
+import * as api from '../../api';
+import { useSocket } from '../../contexts/SocketContext';
+import TribeMessageArea from '../chat/TribeMessageArea';
+import TribeMembersModal from './TribeMembersModal';
+import EditTribeModal from './EditTribeModal';
+import { Users, ArrowLeft, Edit2, Trash2, LogOut } from 'lucide-react';
+
+// --- STYLED COMPONENTS ---
+const PageContainer = styled.div`
+  height: calc(100vh - 60px); 
+  display: flex;
+  flex-direction: column;
+  background: ${({ theme }) => theme.background};
+`;
+
+const Header = styled.header`
+  padding: 16px 24px;
+  background: ${({ theme }) => theme.cardBackground};
+  border-bottom: 1px solid ${({ theme }) => theme.borderColor};
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+`;
+
+const BackButton = styled.button`
+  background: none;
+  border: none;
+  color: ${({ theme }) => theme.text};
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 50%;
+  &:hover { background: ${({ theme }) => theme.hoverBackground}; }
+`;
+
+const Avatar = styled.div<{ $src?: string | null }>`
+  width: 40px; 
+  height: 40px;
+  border-radius: 50%;
+  background: ${({ theme }) => theme.secondary} url(${({ $src }) => $src || '/default-tribe.png'}) center/cover;
+`;
+
+const HeaderInfo = styled.div`
+  flex: 1;
+  h2 { margin: 0; font-size: 1.1rem; color: ${({ theme }) => theme.text}; font-weight: 700; }
+  p { margin: 2px 0 0; font-size: 0.8rem; color: ${({ theme }) => theme.textSecondary}; }
+`;
+
+const HeaderActions = styled.div`
+  display: flex;
+  gap: 8px;
+`;
+
+const ActionButton = styled.button`
+  background: transparent;
+  color: ${({ theme }) => theme.textSecondary};
+  border: none;
+  padding: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  
+  &:hover { color: ${({ theme }) => theme.primary}; }
+`;
+
+interface TribeDetailPageProps {
+  currentUser: User | null;
+  tribeId?: string; // Optional prop override
+}
+
+const TribeDetailPage: React.FC<TribeDetailPageProps> = ({ currentUser, tribeId: propTribeId }) => {
+  const { id: paramId } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  const { socket } = useSocket();
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Use prop if available, otherwise param
+  const id = propTribeId || paramId;
+  const [tribe, setTribe] = useState<Tribe | null>(null);
+  const [messages, setMessages] = useState<TribeMessage[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSending, setIsSending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isMembersModalOpen, setIsMembersModalOpen] = useState(false);
+  const [allUsers, setAllUsers] = useState<User[]>([]);
+
+  // Initial Fetch
+  useEffect(() => {
+    if (!id || id === 'undefined') return;
+
+    const fetchDetails = async () => {
+      try {
+        setIsLoading(true);
+
+        // 1. Fetch Tribe Details & Users FIRST (Public info)
+        const [tribeRes, usersRes] = await Promise.all([
+          api.fetchTribe(id),
+          api.fetchUsers()
+        ]);
+
+        if (tribeRes.data) {
+          const fetchedTribe = tribeRes.data;
+          setTribe(fetchedTribe);
+          setAllUsers(usersRes.data);
+
+          // 2. Check Membership
+          const isMember = currentUser && fetchedTribe.members.includes(currentUser.id);
+          const isOwner = currentUser && fetchedTribe.owner === currentUser.id;
+
+          // 3. Fetch Messages ONLY if member/owner
+          if (isMember || isOwner) {
+            try {
+              const messagesRes = await api.fetchTribeMessages(id);
+              setMessages(messagesRes.data);
+            } catch (msgErr) {
+              console.warn("Could not fetch messages (likely not a member yet)", msgErr);
+              // Do not fail the whole page, just empty messages
+              setMessages([]);
+            }
+          }
+        } else {
+          setError("Tribe not found.");
+        }
+      } catch (err: any) {
+        console.error("Failed to load tribe details", err);
+        if (err.response && err.response.status === 404) {
+          setError("Tribe not found.");
+        } else {
+          setError("Failed to load tribe data.");
+        }
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchDetails();
+  }, [id, currentUser?.id]); 
+
+  // Socket Listener
+  useEffect(() => {
+    if (!socket || !id || id === 'undefined') return;
+
+    const handleNewMessage = (msg: TribeMessage) => {
+      if (msg.tribeId === id) {
+        setMessages(prev => [...prev, msg]);
+        scrollToBottom();
+      }
+    };
+
+    socket.on('newTribeMessage', handleNewMessage);
+    return () => {
+      socket.off('newTribeMessage', handleNewMessage);
+    };
+  }, [socket, id]);
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
+
+  const userMap = React.useMemo(() => {
+    return new Map(allUsers.map(u => [u.id, u]));
+  }, [allUsers]);
+
+  const handleSendMessage = async (text: string) => {
+    if (!text.trim() || !id || !currentUser) return;
+
+    // OPTIMISTIC UPDATE
+    const tempId = Date.now().toString();
+    const optimisticMsg: TribeMessage = {
+      _id: tempId,
+      tribeId: id,
+      sender: currentUser,
+      senderId: currentUser.id,
+      text: text,
+      timestamp: new Date().toISOString()
+    };
+
+    setMessages(prev => [...prev, optimisticMsg]);
+    setIsSending(true);
+
+    try {
+      const { data: sentMsg } = await api.sendTribeMessage(id, { text });
+      setMessages(prev => prev.map(m => m._id === tempId ? sentMsg : m));
+    } catch (err) {
+      console.error("Failed to send", err);
+      setMessages(prev => prev.filter(m => m._id !== tempId));
+      alert("Failed to send message");
+    } finally {
+      setIsSending(false);
+    }
+  };
+
+  const handleJoinTribe = async () => {
+    if (!tribe || !id || !currentUser) return;
+
+    // OPTIMISTIC UPDATE
+    const alreadyMember = tribe.members.includes(currentUser.id);
+    const newMembers = alreadyMember
+      ? tribe.members.filter(m => m !== currentUser.id)
+      : [...tribe.members, currentUser.id];
+    
+    // Create optimistic tribe object
+    const optimisticTribe = { ...tribe, members: newMembers };
+    setTribe(optimisticTribe);
+
+    try {
+      const { data: updatedTribe } = await api.joinTribe(id);
+      if (updatedTribe) {
+         setTribe(updatedTribe);
+         if (!alreadyMember) {
+             const msgRes = await api.fetchTribeMessages(id);
+             setMessages(msgRes.data);
+         }
+      }
+    } catch (err) {
+      console.error("Join failed", err);
+      // Revert on failure
+      setTribe(tribe); 
+      alert("Failed to join tribe");
+    }
+  };
+
+  const handleLeaveTribe = async () => {
+       await handleJoinTribe(); 
+  };
+
+  const handleDeleteFromModal = async (tribeId: string) => {
+    try {
+      if (!tribe || !id) return;
+      await api.deleteTribe(tribeId);
+      navigate('/tribes');
+    } catch (err) {
+      console.error("Failed to delete tribe via modal", err);
+      alert("Failed to delete tribe. Please try again.");
+    }
+  };
+
+  if (isLoading) return (
+    <PageContainer>
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
+        <img src="/busstop.gif" alt="Loading..." style={{ width: 120, height: 120, borderRadius: '50%', objectFit: 'cover' }} />
+        <p style={{ marginTop: 16, color: '#888' }}>Entering tribe territory...</p>
+      </div>
+    </PageContainer>
+  );
+
+  if (error || !tribe) return (
+    <PageContainer>
+      <Header>
+        <BackButton onClick={() => navigate('/tribes')}><ArrowLeft size={20} /></BackButton>
+        <h2 style={{ marginLeft: 10 }}>Error</h2>
+      </Header>
+      <div style={{ padding: 40, textAlign: 'center', color: '#b19786ff' }}>
+        <h3>{error || "Tribe not found"}</h3>
+        <button onClick={() => navigate('/tribes')} style={{ marginTop: 20, padding: '10px 20px', borderRadius: 8, border: 'none', background: '#333', color: 'white', cursor: 'pointer' }}>Back to Tribes</button>
+      </div>
+    </PageContainer>
+  );
+
+  const isMember = currentUser && tribe.members.includes(currentUser.id);
+
+  return (
+    <PageContainer>
+      <Header>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <BackButton onClick={() => navigate('/tribes')}><ArrowLeft size={20} /></BackButton>
+          <Avatar $src={tribe?.avatarUrl} />
+          <HeaderInfo>
+            <h2>{tribe?.name}</h2>
+            <p style={{ cursor: 'pointer', textDecoration: 'underline' }} onClick={() => setIsMembersModalOpen(true)}>{tribe?.members?.length || 0} members</p>
+          </HeaderInfo>
+        </div>
+        <HeaderActions>
+          <ActionButton onClick={() => setIsMembersModalOpen(true)} title="View Members">
+            <Users size={18} />
+          </ActionButton>
+
+          {currentUser && tribe.owner === currentUser.id && (
+            <ActionButton onClick={() => setIsEditModalOpen(true)} title="Edit Tribe"><Edit2 size={18} /></ActionButton>
+          )}
+
+          {currentUser && tribe.owner !== currentUser.id && (
+            tribe.members.includes(currentUser.id) ? (
+              <ActionButton onClick={handleJoinTribe} title="Leave Tribe"><LogOut size={18} /></ActionButton>
+            ) : (
+              <button
+                onClick={handleJoinTribe}
+                style={{ background: '#d4a373', border: 'none', padding: '6px 16px', borderRadius: 20, fontWeight: 'bold', color: '#2A2320', cursor: 'pointer' }}
+              >
+                Join
+              </button>
+            )
+          )}
+        </HeaderActions>
+      </Header>
+
+      {currentUser && tribe.members.includes(currentUser.id) ? (
+        <TribeMessageArea
+          tribe={tribe}
+          messages={messages}
+          isLoading={isLoading}
+          currentUser={currentUser}
+          isSending={isSending}
+          onSendMessage={handleSendMessage}
+        />
+      ) : (
+        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', color: '#888', gap: 16 }}>
+          <p>Join this tribe to start chatting!</p>
+          <button
+            onClick={handleJoinTribe}
+            style={{ background: '#d4a373', border: 'none', padding: '10px 24px', borderRadius: 20, fontWeight: 'bold', fontSize: '1.1rem', cursor: 'pointer' }}
+          >
+            Join Tribe
+          </button>
+        </div>
+      )}
+
+      {isEditModalOpen && (
+        <EditTribeModal
+          tribe={tribe}
+          onClose={() => setIsEditModalOpen(false)}
+          onSuccess={(updated) => { setTribe(updated); setIsEditModalOpen(false); }}
+          onDelete={handleDeleteFromModal}
+        />
+      )}
+
+      <TribeMembersModal
+        isOpen={isMembersModalOpen}
+        onClose={() => setIsMembersModalOpen(false)}
+        memberIds={tribe.members}
+        userMap={userMap}
+        onViewProfile={(user) => {
+          setIsMembersModalOpen(false);
+          // navigate(`/profile/${user.id}`); 
+        }}
+      />
+    </PageContainer>
+  );
+};
+
+export default TribeDetailPage;
+
+
+FILE: components/chat/TribeMessageArea.tsx
+------------------------------------------
+import React, { useState, useRef, useEffect } from 'react';
+import { Tribe, User, TribeMessage } from '../../types';
+import UserAvatar from '../common/UserAvatar';
+import { useSocket } from '../../contexts/SocketContext';
+import { Send, Image as ImageIcon } from 'lucide-react';
+import styled from 'styled-components';
+
+interface TribeMessageAreaProps {
+    tribe: Tribe;
+    messages: TribeMessage[];
+    isLoading: boolean;
+    currentUser: User;
+    isSending: boolean;
+    onSendMessage: (text: string) => void;
+    onViewProfile?: (user: User) => void;
+}
+
+const SendIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="currentColor" viewBox="0 0 20 20"><path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z" /></svg>;
+
+export const TribeMessageArea: React.FC<TribeMessageAreaProps> = ({ tribe, messages, isLoading, currentUser, isSending, onSendMessage, onViewProfile }) => {
+    const [inputText, setInputText] = useState('');
+    const messagesEndRef = useRef<HTMLDivElement>(null);
+    const { socket } = useSocket();
+
+    useEffect(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }, [messages, isLoading]);
+
+    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        setInputText(e.target.value);
+    };
+
+    const handleSendMessage = (e: React.FormEvent) => {
+        e.preventDefault();
+        if (inputText.trim()) {
+            onSendMessage(inputText);
+            setInputText('');
+        }
+    };
+
+    const getSender = (msg: TribeMessage) => {
+        return msg.sender;
+    };
+
+    return (
+        <div className="flex flex-col h-full bg-background relative">
+            {/* Messages List */}
+            <div className="flex-1 overflow-y-auto p-4 custom-scrollbar">
+                {isLoading && messages.length === 0 ? (
+                    <div className="w-full h-full flex flex-col items-center justify-center opacity-70">
+                        <img src="/busstop.gif" alt="Loading messages..." className="w-24 h-auto mb-2" />
+                        <p className="text-secondary text-sm">Loading legacy...</p>
+                    </div>
+                ) : (
+                    <div className="flex flex-col space-y-4 pb-4">
+                        {messages.map((message, index) => {
+                            const sender = getSender(message);
+                            const senderId = message.senderId || (sender as any)?.id; 
+                            const isCurrentUser = senderId === currentUser.id;
+
+                            const showAvatar = !isCurrentUser && (index === 0 || (messages[index - 1].senderId || (messages[index - 1].sender as any)?.id) !== senderId);
+                            const sentAt = new Date(message.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
+
+                            return (
+                                <div key={message._id || index} className={`flex items-end gap-2.5 ${isCurrentUser ? 'justify-end' : 'justify-start'}`} style={{ marginTop: showAvatar ? 12 : 2 }}>
+                                    {!isCurrentUser && (
+                                        <div className="w-8 h-8 rounded-full flex-shrink-0 self-start">
+                                            {showAvatar ? (
+                                                <div className="cursor-pointer transition-transform hover:scale-110" onClick={() => onViewProfile && onViewProfile(sender)}>
+                                                    <UserAvatar user={sender || null} />
+                                                </div>
+                                            ) : <div className="w-8" />}
+                                        </div>
+                                    )}
+                                    <div className={`flex flex-col w-full max-w-[75%] lg:max-w-md ${isCurrentUser ? 'items-end' : 'items-start'}`}>
+                                        {!isCurrentUser && showAvatar && (
+                                            <span className="text-xs text-secondary ml-3 mb-1 font-medium">{sender.name}</span>
+                                        )}
+
+                                        <div className={`px-4 py-2.5 shadow-sm ${isCurrentUser ? 'bg-accent text-accent-text rounded-2xl rounded-tr-none' : 'bg-surface text-primary rounded-2xl rounded-tl-none'}`}>
+                                            {message.imageUrl && <img src={message.imageUrl} alt="Shared content" className="mb-2 rounded-lg w-full" />}
+                                            <div className="text-sm leading-relaxed">
+                                                <p className="whitespace-pre-wrap break-words">{message.text}</p>
+                                            </div>
+                                        </div>
+                                        <p className="text-[10px] text-secondary mt-1 px-1 opacity-70">{sentAt}</p>
+                                    </div>
+                                </div>
+                            );
+                        })}
+
+                        {messages.length === 0 && !isLoading && (
+                            <div className="text-center text-secondary p-8 flex flex-col items-center h-full justify-center opacity-80">
+                                <div className="bg-surface p-4 rounded-full mb-4">
+                                    <ImageIcon size={32} className="text-primary opacity-50" />
+                                </div>
+                                <p className="font-semibold text-lg text-primary">No messages yet</p>
+                                <p className="text-sm">Be the first one to start the conversation!</p>
+                            </div>
+                        )}
+
+                        <div ref={messagesEndRef} />
+                    </div>
+                )}
+            </div>
+
+            {/* Sticky Input Area */}
+            <div className="p-3 bg-surface border-t border-border flex-shrink-0 sticky bottom-0 z-20 safe-area-bottom">
+                <form onSubmit={handleSendMessage} className="flex items-center space-x-2">
+                    <input
+                        type="text"
+                        value={inputText}
+                        onChange={handleInputChange}
+                        placeholder={`Message ${tribe.name}...`}
+                        className="flex-1 bg-background border border-border rounded-full px-4 py-3 focus:outline-none focus:ring-2 focus:ring-accent text-primary min-w-0 shadow-inner text-sm"
+                    />
+                    <button type="submit" className="bg-accent text-accent-text rounded-full w-11 h-11 flex-shrink-0 flex items-center justify-center hover:bg-accent-hover transition-all active:scale-95 shadow-md disabled:opacity-50 disabled:cursor-not-allowed" disabled={!inputText.trim() || isSending}>
+                        {isSending ? <div className="w-5 h-5 border-2 border-accent-text border-t-transparent rounded-full animate-spin"></div> : <Send size={20} />}
+                    </button>
+                </form>
+            </div>
+        </div>
+    );
+};
+
+export default TribeMessageArea;
+
+
+FILE: components/tribes/EditTribeModal.tsx
+------------------------------------------
+import React, { useState } from 'react';
+import styled from 'styled-components';
+import { X, Trash2 } from 'lucide-react'; 
+import * as api from '../../api';
+import { Tribe } from '../../types';
+
+const Overlay = styled.div`
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 1rem;
+`;
+
+const Modal = styled.div`
+  background: ${({ theme }) => theme.cardBackground};
+  width: 100%;
+  max-width: 500px;
+  border-radius: 12px;
+  padding: 2rem;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+`;
+
+const Header = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+  h2 { margin: 0; font-size: 1.5rem; color: ${({ theme }) => theme.text}; }
+`;
+
+const Form = styled.form`
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+`;
+
+const Input = styled.input`
+  width: 100%;
+  padding: 12px 16px;
+  border-radius: 8px;
+  border: 1px solid ${({ theme }) => theme.borderColor}; 
+  background: ${({ theme }) => theme.background}; 
+  color: ${({ theme }) => theme.text};
+  font-size: 1rem;
+  
+  &:focus { outline: 2px solid ${({ theme }) => theme.primary}; border-color: transparent; }
+`;
+
+const TextArea = styled.textarea`
+  width: 100%;
+  padding: 12px 16px;
+  border-radius: 8px;
+  border: 1px solid ${({ theme }) => theme.borderColor};
+  background: ${({ theme }) => theme.background};
+  color: ${({ theme }) => theme.text};
+  min-height: 100px;
+  font-size: 1rem;
+  resize: vertical;
+  
+  &:focus { outline: 2px solid ${({ theme }) => theme.primary}; border-color: transparent; }
+`;
+
+const Button = styled.button`
+  background: ${({ theme }) => theme.primary};
+  color: white; 
+  padding: 14px;
+  border-radius: 8px;
+  border: none;
+  font-weight: 600;
+  cursor: pointer;
+  margin-top: 8px;
+  
+  &:disabled { opacity: 0.7; }
+`;
+
+const DeleteButton = styled.button`
+  background: transparent;
+  color: #ff6b6b; // Red/Pinkish for error/danger
+  border: 1px solid #ff6b6b;
+  padding: 10px;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  margin-top: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%; // Full width
+  
+  &:hover { background: rgba(255, 107, 107, 0.1); }
+`;
+
+interface EditTribeModalProps {
+  tribe: Tribe;
+  onClose: () => void;
+  onSuccess: (updatedTribe: Tribe) => void;
+  onDelete?: (tribeId: string) => void; 
+}
+
+const EditTribeModal: React.FC<EditTribeModalProps> = ({ tribe, onClose, onSuccess, onDelete }) => {
+  const [name, setName] = useState(tribe.name);
+  const [description, setDescription] = useState(tribe.description);
+  const [avatarUrl, setAvatarUrl] = useState(tribe.avatarUrl || '');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    try {
+      const { data } = await api.updateTribe(tribe._id, { name, description, avatarUrl });
+      onSuccess(data);
+    } catch (err) {
+      console.error("Update failed", err);
+      alert("Failed to update tribe");
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleDelete = () => {
+    if (window.confirm("Are you sure you want to delete this tribe? This cannot be undone.")) {
+      if (onDelete) {
+        onDelete(tribe._id);
+      } else {
+        console.error("Delete handler not provided to modal");
+        alert("Delete functionality unavailable.");
+      }
+    }
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setAvatarUrl(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  return (
+    <Overlay onClick={onClose}>
+      <Modal onClick={e => e.stopPropagation()}>
+        <Header>
+          <h2>Edit Tribe</h2>
+          <button style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'inherit' }} onClick={onClose}><X size={24} /></button>
+        </Header>
+        <Form onSubmit={handleSubmit}>
+          {/* Avatar Uploader */}
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 16 }}>
+            <div
+              style={{ position: 'relative', width: 100, height: 100, borderRadius: '50%', cursor: 'pointer' }}
+              onClick={() => fileInputRef.current?.click()}
+            >
+              <img
+                src={avatarUrl || '/default-tribe.png'}
+                alt="Tribe Avatar"
+                style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover', border: '3px solid #333' }}
+              />
+              <div style={{
+                position: 'absolute', bottom: 0, right: 0,
+                background: '#d4a373', borderRadius: '50%',
+                width: 32, height: 32, display: 'flex',
+                alignItems: 'center', justifyContent: 'center',
+                border: '2px solid #2A2320'
+              }}>
+                <span style={{ fontSize: 20, color: 'white', fontWeight: 'bold' }}>+</span>
+              </div>
+              <input
+                type="file"
+                ref={fileInputRef}
+                onChange={handleFileChange}
+                accept="image/*"
+                style={{ display: 'none' }}
+              />
+            </div>
+          </div>
+
+          <Input value={name} onChange={e => setName(e.target.value)} placeholder="Tribe Name" required />
+          <TextArea value={description} onChange={e => setDescription(e.target.value)} placeholder="Description" required />
+
+          <Button type="submit" disabled={isSubmitting}>{isSubmitting ? 'Saving...' : 'Save Changes'}</Button>
+        </Form>
+
+        {onDelete && (
+          <DeleteButton type="button" onClick={handleDelete}>
+            <Trash2 size={18} /> Delete Tribe
+          </DeleteButton>
+        )}
+      </Modal>
+    </Overlay>
+  );
+};
+
+export default EditTribeModal;
