@@ -26,6 +26,7 @@ interface ChatPageProps {
 }
 
 const ChatPage: React.FC<ChatPageProps> = ({ currentUser, allUsers, chukUser, initialTargetUser, onViewProfile, onSharePost, onConversationStateChange }) => {
+  const MAX_ATTACHMENT_BYTES = 20 * 1024 * 1024;
   const [conversations, setConversations] = useState<Conversation[]>(() => {
     try {
       const cached = localStorage.getItem('tribe_storage_conversations');
@@ -38,6 +39,10 @@ const ChatPage: React.FC<ChatPageProps> = ({ currentUser, allUsers, chukUser, in
   const [activeConversation, setActiveConversation] = useState<Conversation | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoadingMessages, setIsLoadingMessages] = useState(false);
+  const [hasMoreMessages, setHasMoreMessages] = useState(false);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<number | null>(null);
 
   // Only show loading if we have NO cached conversations
   const [isLoadingConversations, setIsLoadingConversations] = useState(() => {
@@ -48,7 +53,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ currentUser, allUsers, chukUser, in
   const [isSending, setIsSending] = useState(false);
   const [isInitializing, setIsInitializing] = useState(!!initialTargetUser);
   // Cache for messages: key is conversationId (or otherUserId), value is Message[]
-  const messageCache = React.useRef<Map<string, Message[]>>(new Map());
+  const messageCache = React.useRef<Map<string, { messages: Message[]; hasMore: boolean; oldestTimestamp?: string }>>(new Map());
   const { socket, onlineUsers, clearUnreadMessages, unreadCounts, setActiveChatPartnerId } = useSocket();
 
   useEffect(() => {
@@ -112,10 +117,14 @@ const ChatPage: React.FC<ChatPageProps> = ({ currentUser, allUsers, chukUser, in
       const receiverId = message.receiverId;
       const otherUserId = senderId === currentUser.id ? receiverId : senderId;
 
-      const cached = messageCache.current.get(otherUserId) || [];
-      // Avoid duplicates in cache
-      if (!cached.some(m => m.id === message.id)) {
-        messageCache.current.set(otherUserId, [...cached, message]);
+      const cachedEntry = messageCache.current.get(otherUserId);
+      const cachedMessages = cachedEntry?.messages || [];
+      if (!cachedMessages.some(m => m.id === message.id)) {
+        messageCache.current.set(otherUserId, {
+          messages: [...cachedMessages, message],
+          hasMore: cachedEntry?.hasMore ?? false,
+          oldestTimestamp: cachedEntry?.oldestTimestamp,
+        });
       }
 
       if (isActiveConversation) {
@@ -187,9 +196,10 @@ const ChatPage: React.FC<ChatPageProps> = ({ currentUser, allUsers, chukUser, in
     }
 
     // CHECK CACHE FIRST
-    const cachedMessages = messageCache.current.get(otherUserId);
-    if (cachedMessages && cachedMessages.length > 0) {
-      setMessages(cachedMessages);
+    const cachedEntry = messageCache.current.get(otherUserId);
+    if (cachedEntry?.messages && cachedEntry.messages.length > 0) {
+      setMessages(cachedEntry.messages);
+      setHasMoreMessages(cachedEntry.hasMore);
       setMessageAreaVisible(true);
       // Optional: Background refresh if needed, but for now trust cache + socket
       setIsLoadingMessages(false);
@@ -197,13 +207,16 @@ const ChatPage: React.FC<ChatPageProps> = ({ currentUser, allUsers, chukUser, in
       setIsLoadingMessages(true);
       setMessageAreaVisible(true); // Show area immediately even if loading
       try {
-        const { data } = await api.fetchMessages(otherUserId);
-        // Update Cache
-        messageCache.current.set(otherUserId, data);
+        const { data } = await api.fetchMessages(otherUserId, { limit: 50 });
+        const hasMore = data.length === 50;
+        const oldestTimestamp = data[0]?.timestamp;
+        messageCache.current.set(otherUserId, { messages: data, hasMore, oldestTimestamp });
         setMessages(data);
+        setHasMoreMessages(hasMore);
       } catch (error) {
         console.error("Failed to fetch messages", error);
         setMessages([]);
+        setHasMoreMessages(false);
       } finally {
         setIsLoadingMessages(false);
       }
@@ -248,16 +261,81 @@ const ChatPage: React.FC<ChatPageProps> = ({ currentUser, allUsers, chukUser, in
     setMessageAreaVisible(false);
   };
 
-  const handleSendMessage = async (text: string) => {
-    if (!activeConversation || isSending) return;
+  const handleLoadMoreMessages = useCallback(async () => {
+    if (!activeConversation || isLoadingMore || !hasMoreMessages) return;
+    const otherUserId = activeConversation.participants.find(p => p.id !== currentUser.id)?.id;
+    if (!otherUserId) return;
+
+    const cachedEntry = messageCache.current.get(otherUserId);
+    const before = cachedEntry?.oldestTimestamp;
+    if (!before) return;
+
+    setIsLoadingMore(true);
+    try {
+      const { data } = await api.fetchMessages(otherUserId, { limit: 50, before });
+      const nextMessages = [...data, ...(cachedEntry?.messages || [])];
+      const nextHasMore = data.length === 50;
+      const oldestTimestamp = data[0]?.timestamp || cachedEntry?.oldestTimestamp;
+      messageCache.current.set(otherUserId, { messages: nextMessages, hasMore: nextHasMore, oldestTimestamp });
+      setMessages(nextMessages);
+      setHasMoreMessages(nextHasMore);
+    } catch (error) {
+      console.error("Failed to load older messages", error);
+    } finally {
+      setIsLoadingMore(false);
+    }
+  }, [activeConversation, hasMoreMessages, isLoadingMore]);
+
+  const readFileAsDataUrl = (file: File) =>
+    new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+
+  const handleSendMessage = async (payload: { text?: string; attachment?: File }) => {
+    if (!activeConversation || isSending || isUploading) return;
+    const text = payload.text?.trim() || '';
+    const attachmentFile = payload.attachment;
+    if (!text && !attachmentFile) return;
+    if (attachmentFile && attachmentFile.size > MAX_ATTACHMENT_BYTES) {
+      toast.error('Attachment must be 20MB or less.');
+      return;
+    }
+
     setIsSending(true);
     const otherUserId = activeConversation.participants.find(p => p.id !== currentUser.id)?.id;
     if (!otherUserId) {
       setIsSending(false);
       return;
     }
-    const tempMessage: Message = { id: `temp-${Date.now()}`, senderId: currentUser.id, receiverId: otherUserId, text, timestamp: new Date().toISOString() };
+    if (otherUserId === chukUser.id && attachmentFile) {
+      toast.error('Attachments are not supported in Psyduck chat.');
+      setIsSending(false);
+      return;
+    }
+    const tempId = `${Date.now()}`;
+    const tempMessage: Message = {
+      id: `temp-${tempId}`,
+      senderId: currentUser.id,
+      receiverId: otherUserId,
+      text,
+      timestamp: new Date().toISOString(),
+      status: 'sending',
+      clientTempId: tempId,
+      attachmentUrl: attachmentFile ? URL.createObjectURL(attachmentFile) : undefined,
+      attachmentType: attachmentFile?.type,
+      attachmentName: attachmentFile?.name,
+      attachmentSize: attachmentFile?.size,
+    };
     setMessages(prev => [...prev, tempMessage]);
+    const cachedEntry = messageCache.current.get(otherUserId);
+    messageCache.current.set(otherUserId, {
+      messages: [...(cachedEntry?.messages || []), tempMessage],
+      hasMore: cachedEntry?.hasMore ?? false,
+      oldestTimestamp: cachedEntry?.oldestTimestamp,
+    });
 
     if (otherUserId === chukUser.id) {
       try {
@@ -275,8 +353,46 @@ const ChatPage: React.FC<ChatPageProps> = ({ currentUser, allUsers, chukUser, in
     }
 
     try {
-      // 🔥 Send Temp ID to backend so it can be returned
-      await api.sendMessage(otherUserId, { message: text, tempId: tempMessage.id.replace('temp-', '') } as any);
+      let attachmentPayload = null;
+      if (attachmentFile) {
+        setIsUploading(true);
+        setUploadProgress(0);
+        const dataUrl = await readFileAsDataUrl(attachmentFile);
+        attachmentPayload = {
+          data: dataUrl,
+          type: attachmentFile.type,
+          name: attachmentFile.name,
+          size: attachmentFile.size,
+        };
+      }
+
+      const { data } = await api.sendMessage(
+        otherUserId,
+        {
+          message: text,
+          tempId,
+          attachment: attachmentPayload,
+        } as any,
+        attachmentPayload
+          ? {
+            onUploadProgress: (event) => {
+              if (!event.total) return;
+              setUploadProgress(Math.round((event.loaded / event.total) * 100));
+            },
+          }
+          : undefined
+      );
+
+      setMessages(prev =>
+        prev.map((msg) => (msg.id === tempMessage.id ? { ...data, status: undefined } : msg))
+      );
+      messageCache.current.set(otherUserId, {
+        messages: (messageCache.current.get(otherUserId)?.messages || []).map((msg) =>
+          msg.id === tempMessage.id ? { ...data, status: undefined } : msg
+        ),
+        hasMore: messageCache.current.get(otherUserId)?.hasMore ?? false,
+        oldestTimestamp: messageCache.current.get(otherUserId)?.oldestTimestamp,
+      });
 
       if (activeConversation.id.startsWith('temp-')) {
         const newConversations = await fetchConversations();
@@ -292,9 +408,18 @@ const ChatPage: React.FC<ChatPageProps> = ({ currentUser, allUsers, chukUser, in
       console.error("Failed to send message", error);
       const serverMsg = error.response?.data?.message || "Connection failed";
       toast.error(`Send Failed: ${serverMsg}`);
-      setMessages(prev => prev.filter(m => m.id !== tempMessage.id));
+      setMessages(prev => prev.map(m => (m.id === tempMessage.id ? { ...m, status: 'failed' } : m)));
+      const cachedEntry = messageCache.current.get(otherUserId);
+      if (cachedEntry) {
+        messageCache.current.set(otherUserId, {
+          ...cachedEntry,
+          messages: cachedEntry.messages.map(m => (m.id === tempMessage.id ? { ...m, status: 'failed' } : m)),
+        });
+      }
     } finally {
       setIsSending(false);
+      setIsUploading(false);
+      setUploadProgress(null);
     }
 
     // We rely on socket for the update to replace the temporary message, 
@@ -305,7 +430,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ currentUser, allUsers, chukUser, in
 
   return (
     // Removed rounded corners here (md:rounded-2xl)
-    <div className="h-full bg-surface md:border md:border-border md:shadow-lg flex overflow-hidden relative">
+    <div className="h-full min-h-0 bg-surface md:border md:border-border md:shadow-lg flex overflow-hidden relative">
 
       <div
         className={`w-full md:w-[320px] lg:w-[380px] flex-shrink-0 flex flex-col transition-transform duration-300 ease-in-out md:static absolute inset-0 z-10 md:border-r md:border-border bg-surface ${isMessageAreaVisible ? '-translate-x-full' : 'translate-x-0'
@@ -319,10 +444,26 @@ const ChatPage: React.FC<ChatPageProps> = ({ currentUser, allUsers, chukUser, in
           } md:translate-x-0`}
       >
         {activeConversation ? (
-          <MessageArea key={activeConversation.id} conversation={activeConversation} messages={messages} isLoading={isLoadingMessages} currentUser={currentUser} userMap={userMap} isSending={isSending} onSendMessage={handleSendMessage} onBack={handleBackToList} onViewProfile={onViewProfile} />
+          <MessageArea
+            key={activeConversation.id}
+            conversation={activeConversation}
+            messages={messages}
+            isLoading={isLoadingMessages}
+            currentUser={currentUser}
+            userMap={userMap}
+            isSending={isSending}
+            isUploading={isUploading}
+            uploadProgress={uploadProgress}
+            hasMore={hasMoreMessages}
+            isLoadingMore={isLoadingMore}
+            onLoadMore={handleLoadMoreMessages}
+            onSendMessage={handleSendMessage}
+            onBack={handleBackToList}
+            onViewProfile={onViewProfile}
+          />
         ) : isInitializing ? (
           <div className="flex w-full h-full flex-col items-center justify-center text-center p-8">
-            <img src="/duckload.gif" alt="Loading..." className="w-20 h-20 mb-4" />
+            <div className="w-10 h-10 border-2 border-accent border-t-transparent rounded-full animate-spin mb-4" />
             <p className="text-secondary text-lg">Loading Psyduck chat...</p>
           </div>
         ) : (

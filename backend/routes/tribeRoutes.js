@@ -4,8 +4,21 @@ import Tribe from '../models/tribeModel.js';
 import User from '../models/userModel.js';
 import TribeMessage from '../models/tribeMessageModel.js';
 import Notification from '../models/notificationModel.js';
+import cloudinary from '../config/cloudinary.js';
 
 const router = express.Router();
+
+const filterDisabledMembers = async (tribes = []) => {
+    const memberIds = [...new Set(tribes.flatMap((tribe) => tribe.members || []))];
+    if (memberIds.length === 0) return tribes;
+    const disabledUsers = await User.find({ _id: { $in: memberIds }, isDisabled: true }).select('_id');
+    if (disabledUsers.length === 0) return tribes;
+    const disabledIds = new Set(disabledUsers.map((user) => user._id.toString()));
+    return tribes.map((tribe) => ({
+        ...tribe,
+        members: (tribe.members || []).filter((memberId) => !disabledIds.has(memberId.toString())),
+    }));
+};
 
 /* ======================================================
    TRIBE MANAGEMENT
@@ -23,7 +36,8 @@ router.get('/', protect, async (req, res) => {
             .select('name description avatarUrl owner members createdAt')
             .lean();
 
-        res.status(200).json(tribes);
+        const response = !req.user?.isAdmin ? await filterDisabledMembers(tribes) : tribes;
+        res.status(200).json(response);
     } catch (error) {
         console.error('❌ GET /api/tribes ERROR:', error);
         res.status(500).json({ message: 'Server Error fetching tribes' });
@@ -42,6 +56,11 @@ router.get('/:id', protect, async (req, res) => {
         }
         if ((tribe.isHidden || tribe.isDeleted) && !req.user?.isAdmin) {
             return res.status(404).json({ message: 'Tribe not found' });
+        }
+
+        if (!req.user?.isAdmin) {
+            const [filtered] = await filterDisabledMembers([tribe]);
+            return res.status(200).json(filtered);
         }
 
         res.status(200).json(tribe);
@@ -195,11 +214,19 @@ router.get('/:id/messages', protect, async (req, res) => {
             return res.status(403).json({ message: 'Must be a member' });
         }
 
-        const messages = await TribeMessage.find({ tribe: tribe._id })
-            .populate('sender', 'name username avatarUrl')
-            .sort({ createdAt: 1 });
+        const limit = Math.min(parseInt(req.query.limit, 10) || 50, 100);
+        const before = req.query.before ? new Date(req.query.before) : null;
+        const query = { tribe: tribe._id };
+        if (before) {
+            query.createdAt = { $lt: before };
+        }
 
-        res.status(200).json(messages);
+        const messages = await TribeMessage.find(query)
+            .populate('sender', 'name username avatarUrl')
+            .sort({ createdAt: -1 })
+            .limit(limit);
+
+        res.status(200).json(messages.reverse());
     } catch (error) {
         console.error('❌ GET /api/tribes/:id/messages ERROR:', error);
         res.status(500).json({ message: 'Server Error fetching messages' });
@@ -209,9 +236,9 @@ router.get('/:id/messages', protect, async (req, res) => {
 // POST /api/tribes/:id/messages
 router.post('/:id/messages', protect, async (req, res) => {
     try {
-        const { text, imageUrl } = req.body;
+        const { text, imageUrl, attachment } = req.body;
 
-        if (!text && !imageUrl) {
+        if (!text && !imageUrl && !attachment?.data) {
             return res.status(400).json({ message: 'Message cannot be empty' });
         }
 
@@ -223,11 +250,31 @@ router.post('/:id/messages', protect, async (req, res) => {
             return res.status(403).json({ message: 'Must be a member' });
         }
 
+        let attachmentUrl = null;
+        let attachmentType = null;
+        let attachmentName = null;
+        let attachmentSize = null;
+
+        if (attachment?.data && attachment?.type) {
+            const uploadResponse = await cloudinary.uploader.upload(attachment.data, {
+                folder: 'tribe_messages',
+                resource_type: 'auto',
+            });
+            attachmentUrl = uploadResponse.secure_url;
+            attachmentType = attachment.type;
+            attachmentName = attachment.name || null;
+            attachmentSize = attachment.size || null;
+        }
+
         const message = await TribeMessage.create({
             tribe: tribe._id,
             sender: req.user.id,
             text,
-            imageUrl: imageUrl || null
+            imageUrl: imageUrl || (attachmentType?.startsWith('image/') ? attachmentUrl : null),
+            attachmentUrl,
+            attachmentType,
+            attachmentName,
+            attachmentSize
         });
 
         const populated = await message.populate(
@@ -243,6 +290,10 @@ router.post('/:id/messages', protect, async (req, res) => {
             senderId: req.user.id,
             text: populated.text,
             imageUrl: populated.imageUrl,
+            attachmentUrl: populated.attachmentUrl,
+            attachmentType: populated.attachmentType,
+            attachmentName: populated.attachmentName,
+            attachmentSize: populated.attachmentSize,
             timestamp: populated.createdAt
         };
 

@@ -6,6 +6,7 @@ import { Edit2, Users } from 'lucide-react';
 import * as api from '../../api';
 import { toast } from '../common/Toast';
 import TribeMembersModal from './TribeMembersModal';
+import ConfirmationModal from '../common/ConfirmationModal';
 
 const Card = styled.div`
   background: ${({ theme }) => theme.cardBackground};
@@ -148,6 +149,8 @@ const TribeCard: React.FC<TribeCardProps> = ({ tribe, currentUser, allUsers, onE
   const isOwner = currentUser && tribe.owner === currentUser.id;
   const [isMembersModalOpen, setIsMembersModalOpen] = React.useState(false);
   const [isJoining, setIsJoining] = React.useState(false);
+  const [isLeaveConfirmOpen, setIsLeaveConfirmOpen] = React.useState(false);
+  const [leavePrompt, setLeavePrompt] = React.useState('');
 
   const userMap = React.useMemo(() => {
     return new Map(allUsers.map(u => [u.id, u]));
@@ -169,12 +172,10 @@ const TribeCard: React.FC<TribeCardProps> = ({ tribe, currentUser, allUsers, onE
       return;
     }
 
-    console.log('Attempting to join tribe:', tribe.name, tribe.id);
     setIsJoining(true);
 
     try {
       await onJoinToggle(tribe.id);
-      console.log('Successfully joined tribe:', tribe.name);
       toast.success(`Joined ${tribe.name}!`);
     } catch (error) {
       console.error('Join error:', error);
@@ -184,6 +185,25 @@ const TribeCard: React.FC<TribeCardProps> = ({ tribe, currentUser, allUsers, onE
     }
   };
 
+
+  const performLeave = async () => {
+    if (!tribe.id || !onJoinToggle) {
+      toast.error('Unable to leave tribe. Please try again.');
+      return;
+    }
+
+    setIsJoining(true);
+
+    try {
+      await onJoinToggle(tribe.id);
+      toast.success(`Left ${tribe.name}`);
+    } catch (error) {
+      console.error('Leave error:', error);
+      toast.error('Failed to leave tribe. Please try again.');
+    } finally {
+      setIsJoining(false);
+    }
+  };
 
   const handleLeave = async (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -200,23 +220,13 @@ const TribeCard: React.FC<TribeCardProps> = ({ tribe, currentUser, allUsers, onE
         return;
       }
       // If they are the only member, allow leaving (which effectively deletes/empties tribe or backend handles it)
-      if (!confirm(`You are the last member. Leaving will leave the tribe empty. Continue?`)) return;
+      setLeavePrompt('You are the last member. Leaving will close this tribe. Continue?');
+      setIsLeaveConfirmOpen(true);
+      return;
     } else {
-      if (!confirm(`Leave ${tribe.name}?`)) return;
-    }
-
-    console.log('Attempting to leave tribe:', tribe.name, tribe.id);
-    setIsJoining(true);
-
-    try {
-      await onJoinToggle(tribe.id);
-      console.log('Successfully left tribe:', tribe.name);
-      toast.success(`Left ${tribe.name}`);
-    } catch (error) {
-      console.error('Leave error:', error);
-      toast.error('Failed to leave tribe. Please try again.');
-    } finally {
-      setIsJoining(false);
+      setLeavePrompt(`Are you sure you want to leave @${tribe.name}?`);
+      setIsLeaveConfirmOpen(true);
+      return;
     }
   };
 
@@ -317,6 +327,16 @@ const TribeCard: React.FC<TribeCardProps> = ({ tribe, currentUser, allUsers, onE
           setIsMembersModalOpen(false);
           if (onViewProfile) onViewProfile(user);
         }}
+      />
+      <ConfirmationModal
+        isOpen={isLeaveConfirmOpen}
+        title="Leave Tribe"
+        message={leavePrompt}
+        confirmText="Leave"
+        cancelText="Cancel"
+        variant="danger"
+        onClose={() => setIsLeaveConfirmOpen(false)}
+        onConfirm={performLeave}
       />
     </>
   );

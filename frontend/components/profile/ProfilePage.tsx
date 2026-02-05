@@ -292,7 +292,16 @@ export const ProfilePage: React.FC<ProfilePageProps> = (props) => {
         onStartConversation, onNavigate, onSharePost, onOpenStoryCreator,
         myStories, onViewUserStories, onReportPost, onReportUser
     } = props;
-    const [isEditModalOpen, setEditModalOpen] = useState(false);
+    const [isEditingProfile, setIsEditingProfile] = useState(false);
+    const [editForm, setEditForm] = useState({ name: '', username: '', bio: '' });
+    const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+    const [bannerPreview, setBannerPreview] = useState<string | null>(null);
+    const [mediaTarget, setMediaTarget] = useState<'avatar' | 'banner' | null>(null);
+    const [isMediaModalOpen, setIsMediaModalOpen] = useState(false);
+    const avatarInputRef = useRef<HTMLInputElement>(null);
+    const bannerInputRef = useRef<HTMLInputElement>(null);
+    const avatarCameraRef = useRef<HTMLInputElement>(null);
+    const bannerCameraRef = useRef<HTMLInputElement>(null);
     const [followModal, setFollowModal] = useState<{
         isOpen: boolean;
         type: 'followers' | 'following';
@@ -460,28 +469,101 @@ export const ProfilePage: React.FC<ProfilePageProps> = (props) => {
         return <div className="p-8 text-center">Loading profile...</div>;
     }
 
+    const displayedAvatar = isEditingProfile ? avatarPreview : safeUser.avatarUrl;
+    const displayedBanner = isEditingProfile ? bannerPreview : safeUser.bannerUrl;
+
+    const startEditing = () => {
+        if (!currentUser) return;
+        setEditForm({ name: currentUser.name || '', username: currentUser.username || '', bio: currentUser.bio || '' });
+        setAvatarPreview(currentUser.avatarUrl || null);
+        setBannerPreview(currentUser.bannerUrl || null);
+        setIsEditingProfile(true);
+    };
+
+    const cancelEditing = () => {
+        setIsEditingProfile(false);
+        setEditForm({ name: currentUser.name || '', username: currentUser.username || '', bio: currentUser.bio || '' });
+        setAvatarPreview(currentUser.avatarUrl || null);
+        setBannerPreview(currentUser.bannerUrl || null);
+    };
+
+    const handleSaveProfile = () => {
+        onUpdateUser({ ...editForm, avatarUrl: avatarPreview, bannerUrl: bannerPreview });
+        setIsEditingProfile(false);
+    };
+
+    const handleEditInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
+        setEditForm(prev => ({ ...prev, [e.target.name]: e.target.value }));
+
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, type: 'avatar' | 'banner') => {
+        const file = e.target.files?.[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                if (type === 'avatar') setAvatarPreview(reader.result as string);
+                if (type === 'banner') setBannerPreview(reader.result as string);
+            };
+            reader.readAsDataURL(file);
+            if (e.target.value) e.target.value = '';
+        }
+    };
+
+    const openMediaModal = (target: 'avatar' | 'banner') => {
+        setMediaTarget(target);
+        setIsMediaModalOpen(true);
+    };
+
     return (
         <div>
             <div className="bg-surface rounded-2xl shadow-sm border border-border mb-6">
-                <div className="h-48 md:h-64 bg-background rounded-t-2xl overflow-hidden">
+                <div className="h-48 md:h-64 bg-background rounded-t-2xl overflow-hidden relative">
                     {safeUser.id === 'chuk-ai' ? (
                         <img src="/psy-banner.gif" alt="Psyduck Banner" className="w-full h-full object-cover" />
-                    ) : safeUser.bannerUrl ? (
-                        <img src={safeUser.bannerUrl} alt={`${safeUser.name || "User"}'s banner`} className="w-full h-full object-cover" />
+                    ) : displayedBanner ? (
+                        <img src={displayedBanner} alt={`${safeUser.name || "User"}'s banner`} className="w-full h-full object-cover" />
                     ) : (
                         <div className="w-full h-full bg-gradient-to-br from-background via-surface to-background" />
+                    )}
+                    {isOwnProfile && isEditingProfile && (
+                        <div className="absolute inset-0 flex items-center justify-center bg-black/30">
+                            <button
+                                type="button"
+                                onClick={() => openMediaModal('banner')}
+                                className="rounded-full bg-black/50 p-3 text-white hover:bg-black/70"
+                                aria-label="Update banner"
+                            >
+                                <CameraIcon />
+                            </button>
+                            <input type="file" ref={bannerInputRef} onChange={(e) => handleFileChange(e, 'banner')} accept="image/*" className="hidden" />
+                            <input type="file" ref={bannerCameraRef} onChange={(e) => handleFileChange(e, 'banner')} accept="image/*" capture="environment" className="hidden" />
+                        </div>
                     )}
                 </div>
 
                 <div className="p-4 md:p-6 relative">
                     <div className="flex flex-col sm:flex-row justify-between items-start">
                         <div
-                            className="sm:-mt-20 -mt-16 flex-shrink-0 cursor-pointer"
+                            className="sm:-mt-20 -mt-16 flex-shrink-0 cursor-pointer relative"
                             onClick={hasStory ? () => onViewUserStories(safeUser.id) : undefined}
                         >
                             <div className={`w-28 h-28 md:w-36 md:h-36 rounded-full p-1 ${hasStory ? 'bg-accent' : 'bg-transparent'}`}>
-                                <UserAvatar user={safeUser} className="w-full h-full border-4 border-surface" />
+                                <UserAvatar user={{ ...safeUser, avatarUrl: displayedAvatar }} className="w-full h-full border-4 border-surface" />
                             </div>
+                            {isOwnProfile && isEditingProfile && (
+                                <button
+                                    type="button"
+                                    onClick={(event) => {
+                                        event.stopPropagation();
+                                        openMediaModal('avatar');
+                                    }}
+                                    className="absolute bottom-1 right-1 rounded-full bg-black/60 p-2 text-white hover:bg-black/80"
+                                    aria-label="Update avatar"
+                                >
+                                    <CameraIcon />
+                                </button>
+                            )}
+                            <input type="file" ref={avatarInputRef} onChange={(e) => handleFileChange(e, 'avatar')} accept="image/*" className="hidden" />
+                            <input type="file" ref={avatarCameraRef} onChange={(e) => handleFileChange(e, 'avatar')} accept="image/*" capture="environment" className="hidden" />
                         </div>
 
                         <div className="w-full sm:w-auto pt-2 sm:pt-4 flex items-center space-x-2">
@@ -491,9 +573,32 @@ export const ProfilePage: React.FC<ProfilePageProps> = (props) => {
                                         <span>Settings</span>
                                         <SettingsIcon />
                                     </button>
-                                    <button type="button" onClick={() => setEditModalOpen(true)} className="w-full sm:w-auto bg-accent text-accent-text font-semibold px-6 py-2 rounded-lg hover:bg-accent-hover transition-colors">
-                                        Edit Profile
-                                    </button>
+                                    {isEditingProfile ? (
+                                        <>
+                                            <button
+                                                type="button"
+                                                onClick={cancelEditing}
+                                                className="w-full sm:w-auto font-semibold px-4 py-2 rounded-lg transition-colors bg-surface text-primary border border-border hover:bg-background"
+                                            >
+                                                Cancel
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={handleSaveProfile}
+                                                className="w-full sm:w-auto bg-accent text-accent-text font-semibold px-6 py-2 rounded-lg hover:bg-accent-hover transition-colors"
+                                            >
+                                                Save
+                                            </button>
+                                        </>
+                                    ) : (
+                                        <button
+                                            type="button"
+                                            onClick={startEditing}
+                                            className="w-full sm:w-auto bg-accent text-accent-text font-semibold px-6 py-2 rounded-lg hover:bg-accent-hover transition-colors"
+                                        >
+                                            Edit Profile
+                                        </button>
+                                    )}
                                 </>
                             ) : (
                                 <>
@@ -551,8 +656,33 @@ export const ProfilePage: React.FC<ProfilePageProps> = (props) => {
                     </div>
 
                     <div className="mt-2">
-                        <h1 className="text-3xl font-bold text-primary font-display">{safeUser.name || "User"}</h1>
-                        <p className="text-md text-secondary">@{safeUser.username || "user"}</p>
+                        {isEditingProfile ? (
+                            <div className="grid gap-3 max-w-2xl">
+                                <div>
+                                    <label className="text-xs font-semibold text-secondary">Name</label>
+                                    <input
+                                        name="name"
+                                        value={editForm.name}
+                                        onChange={handleEditInputChange}
+                                        className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-primary focus:outline-none focus:ring-2 focus:ring-accent"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="text-xs font-semibold text-secondary">Username</label>
+                                    <input
+                                        name="username"
+                                        value={editForm.username}
+                                        onChange={handleEditInputChange}
+                                        className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-primary focus:outline-none focus:ring-2 focus:ring-accent"
+                                    />
+                                </div>
+                            </div>
+                        ) : (
+                            <>
+                                <h1 className="text-3xl font-bold text-primary font-display">{safeUser.name || "User"}</h1>
+                                <p className="text-md text-secondary">@{safeUser.username || "user"}</p>
+                            </>
+                        )}
                         {safeUser.id === 'chuk-ai' ? (
                             <div className="mt-2 p-3 bg-accent/10 rounded-lg border border-accent/20">
                                 <p className="text-sm text-primary italic">
@@ -587,7 +717,20 @@ export const ProfilePage: React.FC<ProfilePageProps> = (props) => {
                                 </button>
                             </div>
                         )}
-                        <p className="text-primary mt-4 max-w-2xl whitespace-pre-wrap">{safeUser.bio}</p>
+                        {isEditingProfile ? (
+                            <div className="mt-4 max-w-2xl">
+                                <label className="text-xs font-semibold text-secondary">Bio</label>
+                                <textarea
+                                    name="bio"
+                                    value={editForm.bio}
+                                    onChange={handleEditInputChange}
+                                    rows={3}
+                                    className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-primary focus:outline-none focus:ring-2 focus:ring-accent"
+                                />
+                            </div>
+                        ) : (
+                            <p className="text-primary mt-4 max-w-2xl whitespace-pre-wrap">{safeUser.bio}</p>
+                        )}
                     </div>
                 </div>
             </div>
@@ -634,8 +777,6 @@ export const ProfilePage: React.FC<ProfilePageProps> = (props) => {
                 />
             )}
 
-            {isOwnProfile && isEditModalOpen && <EditProfileModal user={currentUser} onClose={() => setEditModalOpen(false)} onSave={onUpdateUser} />}
-
             {followModal.isOpen && (
                 <FollowListModal
                     title={followModal.type === 'followers' ? 'Followers' : 'Following'}
@@ -649,81 +790,6 @@ export const ProfilePage: React.FC<ProfilePageProps> = (props) => {
                     isLoading={followModal.isLoading}
                 />
             )}
-        </div>
-    );
-};
-
-// Edit Profile Modal
-interface EditProfileModalProps { user: User; onClose: () => void; onSave: (updatedUser: Partial<User>) => void; }
-const EditProfileModal: React.FC<EditProfileModalProps> = ({ user, onClose, onSave }) => {
-    const [formData, setFormData] = useState({ name: user.name, username: user.username, bio: user.bio });
-    const [avatarPreview, setAvatarPreview] = useState<string | null>(user.avatarUrl);
-    const [bannerPreview, setBannerPreview] = useState<string | null>(user.bannerUrl);
-    const avatarInputRef = useRef<HTMLInputElement>(null);
-    const bannerInputRef = useRef<HTMLInputElement>(null);
-    const avatarCameraRef = useRef<HTMLInputElement>(null);
-    const bannerCameraRef = useRef<HTMLInputElement>(null);
-
-    const [mediaTarget, setMediaTarget] = useState<'avatar' | 'banner' | null>(null);
-    const [isMediaModalOpen, setIsMediaModalOpen] = useState(false);
-
-    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
-    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, type: 'avatar' | 'banner') => {
-        const file = e.target.files?.[0];
-        if (file) {
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                if (type === 'avatar') setAvatarPreview(reader.result as string);
-                if (type === 'banner') setBannerPreview(reader.result as string);
-            };
-            reader.readAsDataURL(file);
-            // Clear inputs to allow re-selection of same file
-            if (e.target.value) e.target.value = '';
-        }
-    };
-    const handleSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
-        onSave({ ...formData, avatarUrl: avatarPreview, bannerUrl: bannerPreview });
-        onClose();
-    };
-
-    const openMediaModal = (target: 'avatar' | 'banner') => {
-        setMediaTarget(target);
-        setIsMediaModalOpen(true);
-    };
-
-    return (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-surface rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] flex flex-col border border-border">
-                <div className="p-4 flex justify-between items-center border-b border-border"><h2 className="text-xl font-bold text-primary">Edit Profile</h2><button onClick={onClose} className="text-secondary hover:text-primary">&times;</button></div>
-                <div className="overflow-y-auto">
-                    <div className="relative">
-                        <div className="h-40 bg-background">{bannerPreview ? <img src={bannerPreview} alt="Banner preview" className="w-full h-full object-cover" /> : <div className="w-full h-full bg-gradient-to-br from-background via-surface to-background" />}</div>
-                        <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
-                            <button onClick={() => openMediaModal('banner')} className="bg-black/50 text-white rounded-full p-2 hover:bg-black/70"><CameraIcon /></button>
-                            <input type="file" ref={bannerInputRef} onChange={(e) => handleFileChange(e, 'banner')} accept="image/*" className="hidden" />
-                            <input type="file" ref={bannerCameraRef} onChange={(e) => handleFileChange(e, 'banner')} accept="image/*" capture="environment" className="hidden" />
-                        </div>
-                        <div className="absolute bottom-0 left-4 translate-y-1/2">
-                            <div className="w-24 h-24 rounded-full border-4 border-surface bg-surface relative">
-                                <UserAvatar user={{ ...user, avatarUrl: avatarPreview }} className="w-full h-full" />
-                                <div className="absolute inset-0 bg-black/30 rounded-full flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
-                                    <button onClick={() => openMediaModal('avatar')} className="bg-black/50 text-white rounded-full p-2"><CameraIcon /></button>
-                                    <input type="file" ref={avatarInputRef} onChange={(e) => handleFileChange(e, 'avatar')} accept="image/*" className="hidden" />
-                                    <input type="file" ref={avatarCameraRef} onChange={(e) => handleFileChange(e, 'avatar')} accept="image/*" capture="environment" className="hidden" />
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <form onSubmit={handleSubmit} className="p-4 pt-16"><div className="space-y-4">
-                        <div><label className="text-sm font-semibold text-secondary">Name</label><input type="text" name="name" value={formData.name} onChange={handleInputChange} className="w-full mt-1 p-2 bg-background border border-border rounded-lg" /></div>
-                        <div><label className="text-sm font-semibold text-secondary">Username</label><input type="text" name="username" value={formData.username} onChange={handleInputChange} className="w-full mt-1 p-2 bg-background border border-border rounded-lg" /></div>
-                        <div><label className="text-sm font-semibold text-secondary">Bio</label><textarea name="bio" value={formData.bio} onChange={handleInputChange} rows={3} className="w-full mt-1 p-2 bg-background border border-border rounded-lg resize-none" /></div>
-                    </div></form>
-                </div>
-                <div className="p-4 flex justify-end items-center border-t border-border mt-auto"><button onClick={onClose} className="text-secondary font-semibold px-4 py-2 rounded-lg hover:bg-background">Cancel</button><button onClick={handleSubmit} className="bg-accent text-accent-text font-semibold px-6 py-2 rounded-lg hover:bg-accent-hover">Save</button></div>
-            </div>
-
             <MediaSelectionModal
                 isOpen={isMediaModalOpen}
                 onClose={() => setIsMediaModalOpen(false)}

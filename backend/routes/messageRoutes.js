@@ -142,6 +142,7 @@ import protect from '../middleware/authMiddleware.js';
 import mongoose from 'mongoose';
 import Notification from '../models/notificationModel.js';
 import { sendPushNotification, buildNotificationPayload } from '../services/pushNotificationService.js';
+import cloudinary from '../config/cloudinary.js';
 
 const router = express.Router();
 
@@ -214,7 +215,7 @@ router.get('/conversations', protect, async (req, res) => {
 // @desc    Send a message to a user
 router.post('/send/:receiverId', protect, async (req, res) => {
     try {
-        const { message, imageUrl } = req.body;
+        const { message, imageUrl, attachment } = req.body;
         const { receiverId } = req.params;
         const senderId = req.user._id;
 
@@ -226,11 +227,35 @@ router.post('/send/:receiverId', protect, async (req, res) => {
             return res.status(403).json({ message: 'User is disabled.' });
         }
 
+        let attachmentUrl = null;
+        let attachmentType = null;
+        let attachmentName = null;
+        let attachmentSize = null;
+
+        if (attachment?.data && attachment?.type) {
+            const uploadResponse = await cloudinary.uploader.upload(attachment.data, {
+                folder: 'tribe_messages',
+                resource_type: 'auto',
+            });
+            attachmentUrl = uploadResponse.secure_url;
+            attachmentType = attachment.type;
+            attachmentName = attachment.name || null;
+            attachmentSize = attachment.size || null;
+        }
+
+        if (!message && !imageUrl && !attachment?.data) {
+            return res.status(400).json({ message: 'Message cannot be empty.' });
+        }
+
         const newMessage = new Message({
             sender: senderId,
             receiver: receiverId,
-            message,
-            imageUrl: imageUrl || null
+            message: message || '',
+            imageUrl: imageUrl || (attachmentType?.startsWith('image/') ? attachmentUrl : null),
+            attachmentUrl,
+            attachmentType,
+            attachmentName,
+            attachmentSize
         });
 
         await newMessage.save();
@@ -257,12 +282,12 @@ router.post('/send/:receiverId', protect, async (req, res) => {
         const isReceiverOnline = req.onlineUsers?.get(receiverId.toString());
         if (!isReceiverOnline) {
             const sender = await User.findById(senderId).select('name');
-            const payload = buildNotificationPayload('message', {
-                senderName: sender?.name || 'Someone',
-                senderId: senderId.toString(),
-                messagePreview: message.slice(0, 50) + (message.length > 50 ? '...' : ''),
-                conversationId: `${senderId}-${receiverId}`
-            });
+        const payload = buildNotificationPayload('message', {
+            senderName: sender?.name || 'Someone',
+            senderId: senderId.toString(),
+            messagePreview: message?.slice(0, 50) + (message?.length > 50 ? '...' : '') || 'Sent an attachment',
+            conversationId: `${senderId}-${receiverId}`
+        });
 
             if (payload) {
                 await sendPushNotification(receiverId.toString(), payload, 'message');
@@ -283,6 +308,8 @@ router.get('/:userToChatId', protect, async (req, res) => {
     try {
         const { userToChatId } = req.params;
         const senderId = req.user._id;
+        const limit = Math.min(parseInt(req.query.limit, 10) || 50, 100);
+        const before = req.query.before ? new Date(req.query.before) : null;
 
         const otherUser = await User.findById(userToChatId).select('isDisabled');
         if (!otherUser) {
@@ -292,14 +319,21 @@ router.get('/:userToChatId', protect, async (req, res) => {
             return res.status(403).json({ message: 'User is disabled.' });
         }
 
-        const messages = await Message.find({
+        const query = {
             $or: [
                 { sender: senderId, receiver: userToChatId },
                 { sender: userToChatId, receiver: senderId },
             ],
-        }).sort({ createdAt: 1 });
+        };
+        if (before) {
+            query.createdAt = { $lt: before };
+        }
 
-        res.status(200).json(messages.map(m => m.toJSON()));
+        const messages = await Message.find(query)
+            .sort({ createdAt: -1 })
+            .limit(limit);
+
+        res.status(200).json(messages.reverse().map(m => m.toJSON()));
 
     } catch (error) {
         console.error("Error in getMessages controller: ", error.message);

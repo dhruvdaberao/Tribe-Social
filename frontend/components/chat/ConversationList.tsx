@@ -172,7 +172,7 @@ const ConversationList: React.FC<ConversationListProps> = ({ conversations, isLo
 
         {isLoading ? (
           <div className="text-center p-8 text-secondary flex flex-col items-center">
-            <img src="/busstop.gif" alt="Loading..." className="w-24 h-auto mb-2" />
+            <div className="w-10 h-10 border-2 border-accent border-t-transparent rounded-full animate-spin mb-3" />
             <p>Loading your chats...</p>
           </div>
         ) : conversations.length === 0 ? (
@@ -232,7 +232,7 @@ const ConversationItem: React.FC<ConversationItemProps> = ({ conversation, other
     </div>
     <div className="flex-1 overflow-hidden">
       <p className={`font-semibold text-primary`}>{otherParticipant.name}</p>
-      <p className="text-sm text-secondary truncate">{conversation.lastMessage}</p>
+      <p className="text-sm text-secondary truncate">{conversation.lastMessage || 'Sent an attachment'}</p>
     </div>
     {unreadCount > 0 && (
       <div className="ml-4 flex-shrink-0 w-6 h-6 bg-accent text-accent-text rounded-full flex items-center justify-center text-xs font-bold">

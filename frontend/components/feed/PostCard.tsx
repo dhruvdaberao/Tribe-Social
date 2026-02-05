@@ -681,6 +681,7 @@ import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { Post, User, Tribe, Comment } from '../../types';
 import UserAvatar from '../common/UserAvatar';
 import ShareModal from '../common/ShareModal';
+import ConfirmationModal from '../common/ConfirmationModal';
 import ShareButton from '../common/ShareButton';
 import VideoPlayer from '../common/VideoPlayer';
 
@@ -733,6 +734,7 @@ const PostCard: React.FC<PostCardProps> = (props) => {
   const [isTruncated, setIsTruncated] = useState(false);
   const [isImageLoading, setIsImageLoading] = useState(true);
   const [imageError, setImageError] = useState(false);
+  const [confirmState, setConfirmState] = useState<{ type: 'post' | 'comment'; commentId?: string } | null>(null);
   const contentRef = useRef<HTMLParagraphElement>(null);
 
   useEffect(() => {
@@ -770,16 +772,12 @@ const PostCard: React.FC<PostCardProps> = (props) => {
 
   const handleDeletePostClick = (e: React.MouseEvent) => {
     e.stopPropagation(); // Prevent bubbling
-    if (window.confirm('Are you sure you want to delete this post?')) {
-      onDeletePost(post.id);
-    }
+    setConfirmState({ type: 'post' });
     setOptionsOpen(false);
   };
 
   const handleDeleteCommentClick = (commentId: string) => {
-    if (window.confirm('Are you sure you want to delete this comment?')) {
-      onDeleteComment(post.id, commentId);
-    }
+    setConfirmState({ type: 'comment', commentId });
   };
 
   const visibleComments = useMemo(() => {
@@ -1022,6 +1020,26 @@ const PostCard: React.FC<PostCardProps> = (props) => {
           onSharePost={onSharePost}
         />
       )}
+      <ConfirmationModal
+        isOpen={!!confirmState}
+        title={confirmState?.type === 'comment' ? 'Delete Comment' : 'Delete Post'}
+        message={confirmState?.type === 'comment'
+          ? 'Are you sure you want to delete this comment?'
+          : 'Are you sure you want to delete this post?'}
+        confirmText="Delete"
+        cancelText="Cancel"
+        variant="danger"
+        onClose={() => setConfirmState(null)}
+        onConfirm={() => {
+          if (confirmState?.type === 'comment' && confirmState.commentId) {
+            onDeleteComment(post.id, confirmState.commentId);
+          }
+          if (confirmState?.type === 'post') {
+            onDeletePost(post.id);
+          }
+          setConfirmState(null);
+        }}
+      />
     </>
   );
 };

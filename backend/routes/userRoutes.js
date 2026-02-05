@@ -15,6 +15,7 @@ router.get('/', protect, async (req, res) => {
         const query = { isDeleted: { $ne: true } };
         if (!req.user?.isAdmin) {
             query.isHidden = { $ne: true };
+            query.isDisabled = { $ne: true };
         }
         const users = await User.find(query)
             .select('name username avatarUrl bio')
@@ -108,8 +109,14 @@ router.put('/profile', protect, async (req, res) => {
     try {
         const user = await User.findById(req.user.id);
         if (user) {
+            const normalizedUsername = req.body.username ? req.body.username.trim().toLowerCase() : '';
+            if (req.body.username && !/^[a-z0-9]+(?:\.[a-z0-9]+)*$/.test(normalizedUsername)) {
+                return res.status(400).json({
+                    message: 'Username must be lowercase and can only include letters, numbers, and single dots.',
+                });
+            }
             user.name = req.body.name || user.name;
-            user.username = req.body.username || user.username;
+            user.username = req.body.username ? normalizedUsername : user.username;
             user.bio = req.body.bio ?? user.bio;
 
             // Cloudinary Uploads for Base64 Images

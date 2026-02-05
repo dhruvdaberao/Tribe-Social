@@ -41,17 +41,25 @@ const ReportModal: React.FC<ReportModalProps> = ({ targetType, onClose, onSubmit
         <div className="mt-6 space-y-4">
           <div>
             <label className="block text-sm font-semibold text-primary mb-2">Reason</label>
-            <select
-              value={reason}
-              onChange={(event) => setReason(event.target.value)}
-              className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm text-primary focus:outline-none focus:ring-2 focus:ring-accent"
-            >
+            <div className="space-y-2">
               {reasons.map((option) => (
-                <option key={option} value={option}>
-                  {option}
-                </option>
+                <button
+                  key={option}
+                  type="button"
+                  onClick={() => setReason(option)}
+                  className={`w-full rounded-xl border px-3 py-2 text-left text-sm transition-colors ${
+                    reason === option
+                      ? 'border-accent bg-accent/10 text-primary'
+                      : 'border-border bg-background text-secondary hover:bg-surface'
+                  }`}
+                >
+                  <span className="flex items-center gap-2">
+                    <span className={`h-3 w-3 rounded-full border ${reason === option ? 'border-accent bg-accent' : 'border-border'}`} />
+                    {option}
+                  </span>
+                </button>
               ))}
-            </select>
+            </div>
           </div>
 
           <div>
