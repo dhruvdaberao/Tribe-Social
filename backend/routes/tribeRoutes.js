@@ -44,15 +44,6 @@ router.get('/:id', protect, async (req, res) => {
             return res.status(404).json({ message: 'Tribe not found' });
         }
 
-        if (!req.user?.isAdmin && Array.isArray(tribe.members) && tribe.members.length > 0) {
-            const disabledMembers = await User.find({
-                _id: { $in: tribe.members },
-                isDisabled: true
-            }).select('_id');
-            const disabledIds = new Set(disabledMembers.map(member => member._id.toString()));
-            tribe.members = tribe.members.filter(memberId => !disabledIds.has(memberId.toString()));
-        }
-
         res.status(200).json(tribe);
     } catch (error) {
         console.error('❌ GET /api/tribes/:id ERROR:', error);
