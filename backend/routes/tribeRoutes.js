@@ -1,6 +1,7 @@
 import express from 'express';
 import protect from '../middleware/authMiddleware.js';
 import Tribe from '../models/tribeModel.js';
+import User from '../models/userModel.js';
 import TribeMessage from '../models/tribeMessageModel.js';
 import Notification from '../models/notificationModel.js';
 
@@ -13,7 +14,11 @@ const router = express.Router();
 // GET /api/tribes
 router.get('/', protect, async (req, res) => {
     try {
-        const tribes = await Tribe.find({})
+        const query = { isDeleted: { $ne: true } };
+        if (!req.user?.isAdmin) {
+            query.isHidden = { $ne: true };
+        }
+        const tribes = await Tribe.find(query)
             .sort({ createdAt: -1 })
             .select('name description avatarUrl owner members createdAt')
             .lean();
@@ -29,11 +34,23 @@ router.get('/', protect, async (req, res) => {
 router.get('/:id', protect, async (req, res) => {
     try {
         const tribe = await Tribe.findById(req.params.id)
-            .select('name description avatarUrl owner members createdAt')
+            .select('name description avatarUrl owner members createdAt isHidden isDeleted')
             .lean();
 
         if (!tribe) {
             return res.status(404).json({ message: 'Tribe not found' });
+        }
+        if ((tribe.isHidden || tribe.isDeleted) && !req.user?.isAdmin) {
+            return res.status(404).json({ message: 'Tribe not found' });
+        }
+
+        if (!req.user?.isAdmin && Array.isArray(tribe.members) && tribe.members.length > 0) {
+            const disabledMembers = await User.find({
+                _id: { $in: tribe.members },
+                isDisabled: true
+            }).select('_id');
+            const disabledIds = new Set(disabledMembers.map(member => member._id.toString()));
+            tribe.members = tribe.members.filter(memberId => !disabledIds.has(memberId.toString()));
         }
 
         res.status(200).json(tribe);

@@ -5,6 +5,7 @@ import requireAdmin from '../middleware/adminMiddleware.js';
 import Report from '../models/reportModel.js';
 import Post from '../models/postModel.js';
 import User from '../models/userModel.js';
+import Tribe from '../models/tribeModel.js';
 
 const router = express.Router();
 
@@ -18,12 +19,12 @@ const reportLimiter = rateLimit({
 
 router.post('/', protect, reportLimiter, async (req, res) => {
   try {
-    const { targetType, targetId, reason, details = '' } = req.body;
+    const { targetType, targetId, reason, details = '', escalatedToSuperAdmin = false } = req.body;
     if (!targetType || !targetId || !reason) {
       return res.status(400).json({ message: 'targetType, targetId, and reason are required.' });
     }
 
-    if (!['post', 'user'].includes(targetType)) {
+    if (!['post', 'user', 'tribe'].includes(targetType)) {
       return res.status(400).json({ message: 'Invalid targetType.' });
     }
 
@@ -38,6 +39,11 @@ router.post('/', protect, reportLimiter, async (req, res) => {
       }
       const user = await User.findById(targetId);
       if (!user) return res.status(404).json({ message: 'User not found.' });
+    }
+
+    if (targetType === 'tribe') {
+      const tribe = await Tribe.findById(targetId);
+      if (!tribe) return res.status(404).json({ message: 'Tribe not found.' });
     }
 
     const since = new Date(Date.now() - 24 * 60 * 60 * 1000);
@@ -58,6 +64,7 @@ router.post('/', protect, reportLimiter, async (req, res) => {
       targetId,
       reason,
       details,
+      escalatedToSuperAdmin: Boolean(escalatedToSuperAdmin) && Boolean(req.user?.isAdmin),
     });
 
     res.status(201).json(report);
@@ -101,7 +108,8 @@ router.get('/', protect, requireAdmin, async (req, res) => {
         .populate('reporterId', 'name username avatarUrl')
         .populate({
           path: 'targetId',
-          populate: { path: 'user', select: 'name username avatarUrl' },
+          select: 'name username avatarUrl isAdmin isSuperAdmin isDisabled description owner',
+          populate: { path: 'user owner', select: 'name username avatarUrl isAdmin isSuperAdmin' },
         }),
       Report.countDocuments(query),
     ]);

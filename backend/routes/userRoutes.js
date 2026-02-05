@@ -12,7 +12,12 @@ const router = express.Router();
 // @desc    Get all users (Limit 20 for free tier stability)
 router.get('/', protect, async (req, res) => {
     try {
-        const users = await User.find({})
+        const query = { isDeleted: { $ne: true } };
+        if (!req.user?.isAdmin) {
+            query.isDisabled = { $ne: true };
+            query.isHidden = { $ne: true };
+        }
+        const users = await User.find(query)
             .select('name username avatarUrl bio')
             .sort({ createdAt: -1 })
             .limit(20);
@@ -30,7 +35,12 @@ router.get('/:id/followers', protect, async (req, res) => {
     try {
         const followerLinks = await Follow.find({ following: req.params.id }).select('follower');
         const followerIds = followerLinks.map(link => link.follower);
-        const followers = await User.find({ _id: { $in: followerIds } }).select('name username avatarUrl bio');
+        const followersQuery = { _id: { $in: followerIds } };
+        if (!req.user?.isAdmin) {
+            followersQuery.isDisabled = { $ne: true };
+            followersQuery.isHidden = { $ne: true };
+        }
+        const followers = await User.find(followersQuery).select('name username avatarUrl bio');
         res.json(followers);
     } catch (error) {
         console.error("Error fetching followers:", error);
@@ -44,7 +54,12 @@ router.get('/:id/following', protect, async (req, res) => {
     try {
         const followingLinks = await Follow.find({ follower: req.params.id }).select('following');
         const followingIds = followingLinks.map(link => link.following);
-        const following = await User.find({ _id: { $in: followingIds } }).select('name username avatarUrl bio');
+        const followingQuery = { _id: { $in: followingIds } };
+        if (!req.user?.isAdmin) {
+            followingQuery.isDisabled = { $ne: true };
+            followingQuery.isHidden = { $ne: true };
+        }
+        const following = await User.find(followingQuery).select('name username avatarUrl bio');
         res.json(following);
     } catch (error) {
         console.error("Error fetching following:", error);
@@ -58,7 +73,7 @@ router.get('/:id', protect, async (req, res) => {
     try {
         const user = await User.findById(req.params.id).select('-password');
         if (user) {
-            if ((user.isHidden || user.isDeleted) && !req.user.isAdmin) {
+            if ((user.isDisabled || user.isHidden || user.isDeleted) && !req.user.isAdmin) {
                 return res.status(404).json({ message: 'User not found' });
             }
             // Count stats from Follow collection
@@ -169,6 +184,10 @@ router.put('/:id/follow', protect, async (req, res) => {
         const currentUser = await User.findById(req.user.id);
 
         if (!userToFollow || !currentUser) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        if ((userToFollow.isDisabled || userToFollow.isHidden) && !req.user?.isAdmin) {
             return res.status(404).json({ message: 'User not found' });
         }
 

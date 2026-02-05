@@ -188,11 +188,23 @@ router.get('/conversations', protect, async (req, res) => {
                 timestamp: msg.timestamp
             };
         });
+        if (!req.user?.isAdmin && conversations.length > 0) {
+            const otherUserIds = conversations
+                .map(conversation => conversation.participants.find(participant => participant.id !== req.user.id)?.id)
+                .filter(Boolean);
+            const disabledUsers = await User.find({ _id: { $in: otherUserIds }, isDisabled: true }).select('_id');
+            const disabledIds = new Set(disabledUsers.map(user => user._id.toString()));
+            const filtered = conversations.filter(conversation => {
+                const otherId = conversation.participants.find(participant => participant.id !== req.user.id)?.id;
+                return otherId ? !disabledIds.has(otherId) : true;
+            });
+            return res.status(200).json(filtered);
+        }
 
         res.status(200).json(conversations);
 
     } catch (error) {
-        console.log("Error in getConversations controller: ", error.message);
+        console.error("Error in getConversations controller: ", error.message);
         res.status(500).json({ error: "Internal server error" });
     }
 });
@@ -205,6 +217,14 @@ router.post('/send/:receiverId', protect, async (req, res) => {
         const { message, imageUrl } = req.body;
         const { receiverId } = req.params;
         const senderId = req.user._id;
+
+        const receiver = await User.findById(receiverId).select('isDisabled');
+        if (!receiver) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+        if (receiver.isDisabled && !req.user?.isAdmin) {
+            return res.status(403).json({ message: 'User is disabled.' });
+        }
 
         const newMessage = new Message({
             sender: senderId,
@@ -225,7 +245,6 @@ router.post('/send/:receiverId', protect, async (req, res) => {
         const roomName = `dm-${[senderId.toString(), receiverId].sort().join('-')}`;
 
         if (req.io) {
-            console.log(`📡 Emitting 'newMessage' to room: ${roomName}`);
             req.io.to(roomName).emit('newMessage', responseMessage);
 
             // Also emit to receiver's personal room for Notifications/Unread counts
@@ -253,7 +272,7 @@ router.post('/send/:receiverId', protect, async (req, res) => {
         res.status(201).json(responseMessage);
 
     } catch (error) {
-        console.log("Error in sendMessage controller: ", error.message);
+        console.error("Error in sendMessage controller: ", error.message);
         res.status(500).json({ error: "Internal server error" });
     }
 });
@@ -265,6 +284,14 @@ router.get('/:userToChatId', protect, async (req, res) => {
         const { userToChatId } = req.params;
         const senderId = req.user._id;
 
+        const otherUser = await User.findById(userToChatId).select('isDisabled');
+        if (!otherUser) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+        if (otherUser.isDisabled && !req.user?.isAdmin) {
+            return res.status(403).json({ message: 'User is disabled.' });
+        }
+
         const messages = await Message.find({
             $or: [
                 { sender: senderId, receiver: userToChatId },
@@ -275,7 +302,7 @@ router.get('/:userToChatId', protect, async (req, res) => {
         res.status(200).json(messages.map(m => m.toJSON()));
 
     } catch (error) {
-        console.log("Error in getMessages controller: ", error.message);
+        console.error("Error in getMessages controller: ", error.message);
         res.status(500).json({ error: "Internal server error" });
     }
 });

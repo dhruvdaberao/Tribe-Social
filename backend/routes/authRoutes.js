@@ -76,6 +76,9 @@ import bcrypt from 'bcryptjs';
 import { Resend } from 'resend';
 import User from '../models/userModel.js';
 import adminUsers from '../config/adminUsers.js';
+import superAdmins from '../config/superAdmins.js';
+
+const DISABLED_MESSAGE = 'Your account has been disabled by the Admin.';
 import OTP from '../models/otpModel.js';
 import Follow from '../models/followModel.js';
 
@@ -100,8 +103,10 @@ router.post('/register', async (req, res) => {
     const usernameExists = await User.findOne({ username });
     if (usernameExists) return res.status(400).json({ message: 'This username is already taken.' });
     const adminSet = adminUsers.map((admin) => admin.toLowerCase());
-    const isAdmin = adminSet.includes(username.toLowerCase());
-    const user = await User.create({ name, username, email, password, isAdmin });
+    const superAdminSet = superAdmins.map((admin) => admin.toLowerCase());
+    const isSuperAdmin = superAdminSet.includes(username.toLowerCase());
+    const isAdmin = isSuperAdmin || adminSet.includes(username.toLowerCase());
+    const user = await User.create({ name, username, email, password, isAdmin, isSuperAdmin });
 
     // Auto-follow 'Tribe' official account
     if (user) {
@@ -133,11 +138,17 @@ router.post('/login', async (req, res) => {
   const { email, password } = req.body;
   try {
     const user = await User.findOne({ email });
+    if (user?.isDisabled || user?.isHidden || user?.isDeleted) {
+      return res.status(403).json({ message: DISABLED_MESSAGE });
+    }
     if (user && (await user.matchPassword(password))) {
       const adminSet = adminUsers.map((admin) => admin.toLowerCase());
-      const isAdmin = adminSet.includes(user.username.toLowerCase());
-      if (isAdmin && !user.isAdmin) {
-        user.isAdmin = true;
+      const superAdminSet = superAdmins.map((admin) => admin.toLowerCase());
+      const isSuperAdmin = superAdminSet.includes(user.username.toLowerCase());
+      const isAdmin = isSuperAdmin || adminSet.includes(user.username.toLowerCase());
+      if ((isAdmin && !user.isAdmin) || (isSuperAdmin && !user.isSuperAdmin)) {
+        user.isAdmin = isAdmin;
+        user.isSuperAdmin = isSuperAdmin;
         await user.save();
       }
       res.json({ token: generateToken(user._id), user: user });
@@ -155,6 +166,7 @@ router.post('/forgot-password', async (req, res) => {
   try {
     const user = await User.findOne({ email });
     if (!user) return res.status(404).json({ message: 'User not found with this email.' });
+    if (user.isDisabled || user.isHidden || user.isDeleted) return res.status(403).json({ message: DISABLED_MESSAGE });
 
     // Generate 6-digit OTP
     const otpValue = Math.floor(100000 + Math.random() * 900000).toString();
@@ -201,10 +213,10 @@ router.post('/forgot-password', async (req, res) => {
       }
     } else {
       // DEBUG MODE: If no API Key is set, log it to console so dev can see it in Render Logs
-      console.log("------------------------------------------");
-      console.log(`⚠️ NO RESEND_API_KEY FOUND IN ENV`);
-      console.log(`🔑 OTP FOR ${email}: ${otpValue}`);
-      console.log("------------------------------------------");
+      console.warn("------------------------------------------");
+      console.warn(`⚠️ NO RESEND_API_KEY FOUND IN ENV`);
+      console.warn(`🔑 OTP FOR ${email}: ${otpValue}`);
+      console.warn("------------------------------------------");
       res.json({ message: 'OTP generated (Check server logs in dev).' });
     }
   } catch (error) {
@@ -232,6 +244,22 @@ router.post('/verify-otp', async (req, res) => {
     }
 
     const user = await User.findOne({ email });
+    if (user?.isDisabled || user?.isHidden || user?.isDeleted) {
+      await OTP.deleteOne({ email });
+      return res.status(403).json({ message: DISABLED_MESSAGE });
+    }
+
+    if (user) {
+      const adminSet = adminUsers.map((admin) => admin.toLowerCase());
+      const superAdminSet = superAdmins.map((admin) => admin.toLowerCase());
+      const isSuperAdmin = superAdminSet.includes(user.username.toLowerCase());
+      const isAdmin = isSuperAdmin || adminSet.includes(user.username.toLowerCase());
+      if ((isAdmin && !user.isAdmin) || (isSuperAdmin && !user.isSuperAdmin)) {
+        user.isAdmin = isAdmin;
+        user.isSuperAdmin = isSuperAdmin;
+        await user.save();
+      }
+    }
     await OTP.deleteOne({ email });
 
     res.json({

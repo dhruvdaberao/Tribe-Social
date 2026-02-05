@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { AlertTriangle, Eye, EyeOff, FileText, MoreVertical, Search, Trash2, MessageSquare, X } from 'lucide-react';
+import { AlertTriangle, Eye, EyeOff, FileText, MoreVertical, Search, Trash2, MessageSquare, X, Image as ImageIcon } from 'lucide-react';
 import { toast } from '../../components/common/Toast';
 import PostCard from '../../components/feed/PostCard';
 import * as api from '../../api';
@@ -135,7 +135,12 @@ const ManagePostsPanel: React.FC<{ currentUser: User | null }> = ({ currentUser 
           tags: search.includes('#') ? search.replace(/#/g, '') : undefined,
         });
         const newPosts = data.posts || [];
-        setPosts((prev) => (replace ? newPosts : [...prev, ...newPosts]));
+        setPosts((prev) => {
+          const combined = replace ? newPosts : [...prev, ...newPosts];
+          return combined.sort(
+            (a, b) => new Date(b.createdAt || b.timestamp).getTime() - new Date(a.createdAt || a.timestamp).getTime()
+          );
+        });
         setHasMore(pageToLoad < data.pages);
       } catch (error) {
         toast.error('Failed to load posts.');
@@ -278,7 +283,7 @@ const ReportedPostsPanel: React.FC<{ currentUser: User | null }> = ({ currentUse
                   <FileText size={16} className="text-accent" />
                   <span>@{post?.user?.username || 'Unknown'} · {timeAgo(post?.createdAt)}</span>
                 </div>
-                <PostPreview content={post?.content} hasMedia={!!post?.imageUrl} />
+                <PostPreview content={post?.content} hasMedia={!!post?.imageUrl || !!post?.mediaType} />
                 <div className="mt-3 flex flex-wrap gap-2">
                   {reasons.map((reason) => (
                     <span key={reason} className="rounded-full bg-accent/10 px-3 py-1 text-xs font-semibold text-accent">
@@ -358,7 +363,9 @@ const HiddenPostsPanel: React.FC<{ currentUser: User | null }> = ({ currentUser 
     try {
       const { data } = await api.fetchModerationPosts({ status: 'hidden', limit: 50 });
       const sorted = (data.posts || []).sort(
-        (a: any, b: any) => new Date(b.hiddenAt || b.updatedAt).getTime() - new Date(a.hiddenAt || a.updatedAt).getTime()
+        (a: any, b: any) =>
+          new Date(b.hiddenAt || b.lastModerationAt || b.updatedAt).getTime() -
+          new Date(a.hiddenAt || a.lastModerationAt || a.updatedAt).getTime()
       );
       setPosts(sorted);
     } catch (error) {
@@ -443,7 +450,7 @@ const PostPreview: React.FC<{ content?: string; hasMedia: boolean }> = ({ conten
   if (!content && hasMedia) {
     return (
       <div className="mt-2 flex items-center gap-2 text-sm text-secondary">
-        <FileText size={16} className="text-accent" />
+        <ImageIcon size={16} className="text-accent" />
         <span>Media post</span>
       </div>
     );
@@ -469,7 +476,7 @@ const PostAdminRow: React.FC<{
       <div className="flex items-start justify-between gap-4">
         <div>
           <p className="text-sm text-secondary">@{post.user?.username || 'Unknown'} · {timeAgo(post.createdAt)}</p>
-          <PostPreview content={post.content} hasMedia={!!post.imageUrl} />
+          <PostPreview content={post.content} hasMedia={!!post.imageUrl || !!post.mediaType} />
         </div>
         <div className="relative">
           <button

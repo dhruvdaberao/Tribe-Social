@@ -1,6 +1,9 @@
 import jwt from 'jsonwebtoken';
 import User from '../models/userModel.js';
 import adminUsers from '../config/adminUsers.js';
+import superAdmins from '../config/superAdmins.js';
+
+const DISABLED_MESSAGE = 'Your account has been disabled by the Admin.';
 
 const protect = async (req, res, next) => {
   let token;
@@ -22,10 +25,20 @@ const protect = async (req, res, next) => {
         return res.status(401).json({ message: 'User belonging to this token no longer exists.' });
       }
 
-      const adminSet = adminUsers.map((username) => username.toLowerCase());
-      const isSuperAdmin = req.user?.username && adminSet.includes(req.user.username.toLowerCase());
+      if (req.user.isDisabled || req.user.isHidden || req.user.isDeleted) {
+        return res.status(403).json({ message: DISABLED_MESSAGE });
+      }
 
-      if (isSuperAdmin && !req.user.isAdmin) {
+      const adminSet = adminUsers.map((username) => username.toLowerCase());
+      const superAdminSet = superAdmins.map((username) => username.toLowerCase());
+      const isSuperAdmin = req.user?.username && superAdminSet.includes(req.user.username.toLowerCase());
+      const isAdmin = req.user?.username && adminSet.includes(req.user.username.toLowerCase());
+
+      if (isSuperAdmin && !req.user.isSuperAdmin) {
+        req.user.isSuperAdmin = true;
+        req.user.isAdmin = true;
+        await User.updateOne({ _id: req.user._id }, { $set: { isSuperAdmin: true, isAdmin: true } });
+      } else if (isAdmin && !req.user.isAdmin) {
         req.user.isAdmin = true;
         await User.updateOne({ _id: req.user._id }, { $set: { isAdmin: true } });
       }

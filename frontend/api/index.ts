@@ -1,8 +1,8 @@
 
 
 import axios from 'axios';
-
 import axiosRetry from 'axios-retry';
+import { toast } from '../components/common/Toast';
 
 const API_URL = (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'))
   ? 'http://localhost:5001'
@@ -30,10 +30,12 @@ API.interceptors.request.use(req => {
   if (rawToken) {
     const token = rawToken.replace(/"/g, '').trim(); // Sanitized
     req.headers.Authorization = `Bearer ${token}`;
-    console.log("🔐 Attaching Auth Token:", `${token.substring(0, 10)}... (Length: ${token.length})`);
   }
   return req;
 });
+
+const DISABLED_MESSAGE = 'Your account has been disabled by the Admin.';
+let disabledLogoutTriggered = false;
 
 API.interceptors.response.use(
   (response) => response,
@@ -41,8 +43,19 @@ API.interceptors.response.use(
     // Prevent infinite loop: Don't redirect if 401 happens on login page or during login request
     const isLoginRequest = error.config?.url?.includes('/auth/login');
 
+    if (error.response?.status === 403 && error.response?.data?.message?.includes('disabled by the Admin')) {
+      if (!disabledLogoutTriggered) {
+        disabledLogoutTriggered = true;
+        localStorage.removeItem('token');
+        localStorage.removeItem('currentUser');
+        toast.error(DISABLED_MESSAGE);
+        if (typeof window !== 'undefined') {
+          window.location.href = '/';
+        }
+      }
+    }
+
     if (error.response && error.response.status === 401 && !isLoginRequest) {
-      console.warn("Session expired or unauthorized. Logging out...");
       localStorage.removeItem('token');
       localStorage.removeItem('currentUser');
       // Prevent aggressive redirects. Let the UI handle the "logged out" state naturally (e.g., via App.tsx)
@@ -284,7 +297,13 @@ export const markNotificationsRead = () =>
   API.put('/notifications/read');
 
 /* ───────────── MODERATION ───────────── */
-export const createReport = (payload: { targetType: 'post' | 'user'; targetId: string; reason: string; details?: string }) =>
+export const createReport = (payload: {
+  targetType: 'post' | 'user' | 'tribe';
+  targetId: string;
+  reason: string;
+  details?: string;
+  escalatedToSuperAdmin?: boolean;
+}) =>
   API.post('/reports', payload);
 
 export const fetchReports = (params: Record<string, any>) =>
@@ -294,7 +313,7 @@ export const updateReportStatus = (id: string, status: string) =>
   API.patch(`/reports/${id}`, { status });
 
 export const applyModerationAction = (payload: {
-  targetType: 'post' | 'user';
+  targetType: 'post' | 'user' | 'tribe';
   targetId: string;
   actionType: string;
   reason?: string;
@@ -304,8 +323,23 @@ export const applyModerationAction = (payload: {
 export const fetchModerationPosts = (params: Record<string, any>) =>
   API.get('/moderation/posts', { params });
 
+export const fetchModerationUsers = (params: Record<string, any>) =>
+  API.get('/moderation/users', { params });
+
+export const fetchModerationTribes = (params: Record<string, any>) =>
+  API.get('/moderation/tribes', { params });
+
+export const updateUserRole = (userId: string, payload: { isAdmin?: boolean; isSuperAdmin?: boolean }) =>
+  API.patch(`/moderation/users/${userId}/role`, payload);
+
 export const reportPost = (postId: string, reason = 'Other', details = '') =>
   createReport({ targetType: 'post', targetId: postId, reason, details });
 
 export const reportUser = (targetUserId: string, reason = 'Other', details = '') =>
   createReport({ targetType: 'user', targetId: targetUserId, reason, details });
+
+export const reportUserToSuperAdmin = (targetUserId: string, reason = 'Other', details = '') =>
+  createReport({ targetType: 'user', targetId: targetUserId, reason, details, escalatedToSuperAdmin: true });
+
+export const reportTribe = (tribeId: string, reason = 'Other', details = '') =>
+  createReport({ targetType: 'tribe', targetId: tribeId, reason, details });

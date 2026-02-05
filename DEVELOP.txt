@@ -228,8 +228,6 @@ Tribe Social follows a **Monolithic Client-Server Architecture** decoupled via A
 │   ├── middleware/
 │   │   └── authMiddleware.js
 │   ├── models/
-│   │   ├── clanMessageModel.js
-│   │   ├── clanModel.js
 │   │   ├── messageModel.js
 │   │   ├── notificationModel.js
 │   │   ├── postModel.js
@@ -240,7 +238,6 @@ Tribe Social follows a **Monolithic Client-Server Architecture** decoupled via A
 │   ├── routes/
 │   │   ├── aiRoutes.js
 │   │   ├── authRoutes.js
-│   │   ├── clanRoutes.js
 │   │   ├── messageRoutes.js
 │   │   ├── notificationRoutes.js
 │   │   ├── postRoutes.js
@@ -260,12 +257,6 @@ Tribe Social follows a **Monolithic Client-Server Architecture** decoupled via A
 │   │   ├── ConversationList.tsx
 │   │   ├── MessageArea.tsx
 │   │   └── NewMessageModal.tsx
-│   ├── clans/
-│   │   ├── ClanCard.tsx
-│   │   ├── ClanDetailPage.tsx
-│   │   ├── ClansPage.tsx
-│   │   ├── CreateClanModal.tsx
-│   │   └── EditTribeModal.tsx
 │   ├── common/
 │   │   ├── MarkdownRenderer.tsx
 │   │   ├── ShareButton.tsx
