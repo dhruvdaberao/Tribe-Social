@@ -297,13 +297,7 @@ export const markNotificationsRead = () =>
   API.put('/notifications/read');
 
 /* ───────────── MODERATION ───────────── */
-export const createReport = (payload: {
-  targetType: 'post' | 'user' | 'tribe';
-  targetId: string;
-  reason: string;
-  details?: string;
-  escalatedToSuperAdmin?: boolean;
-}) =>
+export const createReport = (payload: { targetType: 'post' | 'user' | 'tribe'; targetId: string; reason: string; details?: string }) =>
   API.post('/reports', payload);
 
 export const fetchReports = (params: Record<string, any>) =>
@@ -329,17 +323,11 @@ export const fetchModerationUsers = (params: Record<string, any>) =>
 export const fetchModerationTribes = (params: Record<string, any>) =>
   API.get('/moderation/tribes', { params });
 
-export const updateUserRole = (userId: string, payload: { isAdmin?: boolean; isSuperAdmin?: boolean }) =>
-  API.patch(`/moderation/users/${userId}/role`, payload);
-
 export const reportPost = (postId: string, reason = 'Other', details = '') =>
   createReport({ targetType: 'post', targetId: postId, reason, details });
 
 export const reportUser = (targetUserId: string, reason = 'Other', details = '') =>
   createReport({ targetType: 'user', targetId: targetUserId, reason, details });
-
-export const reportUserToSuperAdmin = (targetUserId: string, reason = 'Other', details = '') =>
-  createReport({ targetType: 'user', targetId: targetUserId, reason, details, escalatedToSuperAdmin: true });
 
 export const reportTribe = (tribeId: string, reason = 'Other', details = '') =>
   createReport({ targetType: 'tribe', targetId: tribeId, reason, details });

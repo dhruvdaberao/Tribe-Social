@@ -108,8 +108,7 @@ router.get('/', protect, requireAdmin, async (req, res) => {
         .populate('reporterId', 'name username avatarUrl')
         .populate({
           path: 'targetId',
-          select: 'name username avatarUrl isAdmin isSuperAdmin isDisabled description owner',
-          populate: { path: 'user owner', select: 'name username avatarUrl isAdmin isSuperAdmin' },
+          populate: { path: 'user owner', select: 'name username avatarUrl' },
         }),
       Report.countDocuments(query),
     ]);

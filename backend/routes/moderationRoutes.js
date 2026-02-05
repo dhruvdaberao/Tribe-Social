@@ -48,19 +48,11 @@ const applyUserAction = async ({ user, actionType, adminId, reason }) => {
   const now = new Date();
   switch (actionType) {
     case 'hide':
-      user.isDisabled = true;
-      user.disabledAt = now;
-      user.disabledBy = adminId;
-      user.disabledReason = reason || user.disabledReason;
       user.isHidden = true;
       user.hiddenAt = now;
       user.hiddenBy = adminId;
       break;
     case 'unhide':
-      user.isDisabled = false;
-      user.disabledAt = null;
-      user.disabledBy = null;
-      user.disabledReason = '';
       user.isHidden = false;
       user.hiddenAt = null;
       user.hiddenBy = null;
@@ -165,6 +157,12 @@ router.post('/action', protect, requireAdmin, async (req, res) => {
         return res.status(403).json({ message: 'Super admin access required to moderate admins.' });
       }
       await applyUserAction({ user: targetDoc, actionType, adminId: req.user.id, reason });
+    }
+
+    if (targetType === 'tribe') {
+      targetDoc = await Tribe.findById(targetId);
+      if (!targetDoc) return res.status(404).json({ message: 'Tribe not found.' });
+      await applyTribeAction({ tribe: targetDoc, actionType, adminId: req.user.id });
     }
 
     if (targetType === 'tribe') {
@@ -282,10 +280,7 @@ router.get('/users', protect, requireAdmin, async (req, res) => {
     } = req.query;
 
     const query = {};
-    const andFilters = [];
-    if (status === 'hidden' || status === 'disabled') {
-      andFilters.push({ $or: [{ isDisabled: true }, { isHidden: true }] });
-    }
+    if (status === 'hidden') query.isHidden = true;
     if (status === 'deleted') query.isDeleted = true;
     if (!status) {
       query.isDeleted = { $ne: true };
@@ -296,12 +291,10 @@ router.get('/users', protect, requireAdmin, async (req, res) => {
     }
 
     if (keyword) {
-      andFilters.push({
-        $or: [
-          { name: { $regex: keyword, $options: 'i' } },
-          { bio: { $regex: keyword, $options: 'i' } },
-        ],
-      });
+      query.$or = [
+        { name: { $regex: keyword, $options: 'i' } },
+        { bio: { $regex: keyword, $options: 'i' } },
+      ];
     }
 
     if (id) {
@@ -309,23 +302,12 @@ router.get('/users', protect, requireAdmin, async (req, res) => {
     }
 
     const skip = (parseInt(page, 10) - 1) * parseInt(limit, 10);
-    if (andFilters.length) {
-      query.$and = andFilters;
-    }
-
-    if (req.query.role === 'admin') {
-      query.isAdmin = true;
-    }
-    if (req.query.role === 'superAdmin') {
-      query.isSuperAdmin = true;
-    }
-
     const [users, total] = await Promise.all([
       User.find(query)
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(parseInt(limit, 10))
-        .select('name username avatarUrl bio isAdmin isSuperAdmin isDisabled disabledAt disabledReason isDeleted createdAt lastModerationAt'),
+        .select('name username avatarUrl bio isHidden hiddenAt isDeleted createdAt lastModerationAt'),
       User.countDocuments(query),
     ]);
 
@@ -394,41 +376,6 @@ router.get('/tribes', protect, requireAdmin, async (req, res) => {
     });
   } catch (error) {
     console.error('Moderation tribes error:', error);
-    res.status(500).json({ message: 'Server error' });
-  }
-});
-
-router.patch('/users/:id/role', protect, requireSuperAdmin, async (req, res) => {
-  try {
-    const { isAdmin, isSuperAdmin } = req.body;
-    const targetId = req.params.id;
-
-    if (req.user.id === targetId && isSuperAdmin === false) {
-      return res.status(400).json({ message: 'You cannot remove your own super admin role.' });
-    }
-
-    const updates = {};
-    if (typeof isSuperAdmin === 'boolean') {
-      updates.isSuperAdmin = isSuperAdmin;
-      if (isSuperAdmin) {
-        updates.isAdmin = true;
-      }
-    }
-    if (typeof isAdmin === 'boolean') {
-      updates.isAdmin = isAdmin;
-      if (!isAdmin) {
-        updates.isSuperAdmin = false;
-      }
-    }
-
-    const user = await User.findByIdAndUpdate(targetId, { $set: updates }, { new: true }).select(
-      'name username avatarUrl bio isAdmin isSuperAdmin isDisabled disabledAt disabledReason isDeleted createdAt'
-    );
-    if (!user) return res.status(404).json({ message: 'User not found.' });
-
-    res.json({ user });
-  } catch (error) {
-    console.error('Update user role error:', error);
     res.status(500).json({ message: 'Server error' });
   }
 });

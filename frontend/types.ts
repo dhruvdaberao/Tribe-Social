@@ -21,9 +21,6 @@ export interface User {
   bannedAt?: string | null;
   isHidden?: boolean;
   hiddenAt?: string | null;
-  isDisabled?: boolean;
-  disabledAt?: string | null;
-  disabledReason?: string | null;
   isDeleted?: boolean;
   deletedAt?: string | null;
   lastModerationAt?: string | null;
