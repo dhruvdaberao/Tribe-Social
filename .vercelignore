@@ -1,0 +1,26 @@
+# Backend files
+backend/
+*.log
+
+# Development files
+node_modules/
+.env
+.env.local
+
+# Build artifacts
+dist/
+
+# IDE
+.vscode/
+.idea/
+
+# Git
+.git/
+.gitignore
+
+# Documentation
+*.md
+!README.md
+
+# Tests
+tests/
