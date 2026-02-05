@@ -103,16 +103,6 @@ export const fetchUser = async (id: string) => {
   return { data: normalizeId(res.data) };
 };
 
-export const fetchUserFollowers = async (id: string) => {
-  const res = await API.get(`/users/${id}/followers`);
-  return { data: normalizeArray(res.data) };
-};
-
-export const fetchUserFollowing = async (id: string) => {
-  const res = await API.get(`/users/${id}/following`);
-  return { data: normalizeArray(res.data) };
-};
-
 export const updateProfile = (profileData: any) =>
   API.put('/users/profile', profileData);
 
@@ -154,12 +144,6 @@ export const createPost = (newPost: any) =>
 
 export const deletePost = (id: string) =>
   API.delete(`/posts/${id}`);
-
-export const hidePost = (id: string) =>
-  API.patch(`/posts/${id}/hide`);
-
-export const unhidePost = (id: string) =>
-  API.patch(`/posts/${id}/unhide`);
 
 export const likePost = (id: string) =>
   API.put(`/posts/${id}/like`);

@@ -63,7 +63,6 @@ interface GlobalContentContextType {
     handleLikePost: (postId: string) => Promise<void>;
     handleCommentPost: (postId: string, text: string) => Promise<void>;
     handleDeletePost: (postId: string) => Promise<void>;
-    handleHidePost: (postId: string) => Promise<void>;
     handleDeleteComment: (postId: string, commentId: string) => Promise<void>;
     handleSharePost: (post: any, destination: { type: 'tribe' | 'user', id: string, name?: string }) => Promise<void>;
 
@@ -454,23 +453,8 @@ export const GlobalContentProvider: React.FC<{ children: React.ReactNode }> = ({
             await api.deletePost(postId);
             toast.success("Post deleted.");
         } catch (error) {
-            const message = (error as any)?.response?.data?.message || 'Failed to delete post';
-            console.error("Failed to delete post:", message, error);
+            console.error("Failed to delete post:", error);
             toast.error("Could not delete post.");
-            setPosts(originalPosts);
-        }
-    };
-
-    const handleHidePost = async (postId: string) => {
-        const originalPosts = posts;
-        setPosts(prev => prev.filter(p => p.id !== postId));
-        try {
-            await api.hidePost(postId);
-            toast.success("Post hidden.");
-        } catch (error) {
-            const message = (error as any)?.response?.data?.message || 'Failed to hide post';
-            console.error("Failed to hide post:", message, error);
-            toast.error("Could not hide post.");
             setPosts(originalPosts);
         }
     };
@@ -766,7 +750,7 @@ export const GlobalContentProvider: React.FC<{ children: React.ReactNode }> = ({
         isCreatingStory, setIsCreatingStory,
         editingTribe, setEditingTribe,
         fetchGlobalEssential, fetchFeed, fetchTribes, handleLoadMoreFeed, handleLoadMoreDiscover,
-        handleAddPost, handleLikePost, handleCommentPost, handleDeletePost, handleHidePost, handleDeleteComment, handleSharePost,
+        handleAddPost, handleLikePost, handleCommentPost, handleDeletePost, handleDeleteComment, handleSharePost,
         handleToggleFollow, handleToggleBlock, handleUpdateUser, handleDeleteAccount,
         handleJoinToggle, handleCreateTribe, handleEditTribe, handleDeleteTribe,
         handleCreateStory, handleDeleteStory, handleLikeStory,

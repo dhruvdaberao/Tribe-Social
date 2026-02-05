@@ -3,7 +3,6 @@ import React, { useState } from 'react';
 import { User } from '../../types';
 import BlockedListModal from '../profile/BlockedListModal';
 import { toast } from '../common/Toast';
-import PasswordInput from '../common/PasswordInput';
 import * as api from '../../api';
 import { User as UserIconLucide, Ban, LogOut, Trash2, ArrowLeft, ChevronRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -124,12 +123,7 @@ const AccountInfoModal: React.FC<{ user: User; onClose: () => void }> = ({ user,
                     </div>
                     <div>
                         <label className="text-sm font-semibold text-secondary">New Password (Optional)</label>
-                        <PasswordInput
-                            placeholder="Enter new password"
-                            value={formData.password}
-                            onChange={e => setFormData({ ...formData, password: e.target.value })}
-                            className="w-full mt-1 p-2 bg-background border border-border rounded-lg text-primary focus:outline-none focus:ring-2 focus:ring-accent"
-                        />
+                        <input type="password" placeholder="Enter new password" value={formData.password} onChange={e => setFormData({ ...formData, password: e.target.value })} className="w-full mt-1 p-2 bg-background border border-border rounded-lg text-primary focus:outline-none focus:ring-2 focus:ring-accent" />
                     </div>
                     <div className="flex justify-end pt-4">
                         <button type="button" onClick={onClose} className="text-secondary font-semibold px-4 py-2 rounded-lg hover:bg-background mr-2">Cancel</button>

@@ -65,7 +65,7 @@ const MainLayout: React.FC = () => {
         isCreatingStory, setIsCreatingStory,
         editingTribe, setEditingTribe,
         fetchFeed, fetchTribes, handleLoadMoreFeed, handleLoadMoreDiscover,
-        handleAddPost, handleLikePost, handleCommentPost, handleDeletePost, handleHidePost, handleDeleteComment, handleSharePost,
+        handleAddPost, handleLikePost, handleCommentPost, handleDeletePost, handleDeleteComment, handleSharePost,
         handleToggleFollow, handleToggleBlock, handleUpdateUser, handleDeleteAccount,
         handleJoinToggle, handleCreateTribe, handleEditTribe, handleDeleteTribe,
         handleCreateStory, handleDeleteStory, handleLikeStory,
@@ -77,8 +77,6 @@ const MainLayout: React.FC = () => {
     const mainRef = useRef<HTMLDivElement>(null);
     const [viewedTribe, setViewedTribe] = useState<Tribe | null>(null); // Keep locally for syncing with TribeDetail if used as prop, but Router handles ID usually.
     const [reportTarget, setReportTarget] = useState<{ type: 'post' | 'user'; id: string } | null>(null);
-    const [swipeDirection, setSwipeDirection] = useState<'left' | 'right' | null>(null);
-    const swipeStartRef = useRef<{ x: number; y: number } | null>(null);
     // Actually TribeDetail fetches its own data or uses props. 
     // In monolithic App.tsx, viewedTribe was used to pass to TribeDetail.
     // Let's rely on TribeDetail logic, but we might need to pass partial tribe data if available.
@@ -122,15 +120,6 @@ const MainLayout: React.FC = () => {
 
     const handleNavigation = (item: NavItem) => {
         if (item === activeNavItem) {
-            // Exception: If clicking Profile while on another user's profile, navigate instead of refreshing
-            if (item === 'Profile') {
-                const currentPathId = window.location.pathname.split('/').pop();
-                if (currentPathId !== currentUser?.id) {
-                    navigate(`/profile/${currentUser?.id}`);
-                    return;
-                }
-            }
-
             // Refresh Logic
             if (item === 'Home') fetchFeed();
             if (item === 'Tribes') fetchTribes();
@@ -166,51 +155,6 @@ const MainLayout: React.FC = () => {
 
     const shouldHideHeader = activeNavItem === 'TribeDetail' ||
         ((activeNavItem === 'Messages' || activeNavItem === 'Psyduck') && isChatOpen);
-
-    const swipeTabs: NavItem[] = ['Home', 'Discover', 'Messages', 'Notifications', 'Profile'];
-
-    const shouldIgnoreSwipe = (target: EventTarget | null) => {
-        if (!(target instanceof HTMLElement)) return true;
-        if (target.closest('input, textarea, select, button, a, [data-swipe-ignore="true"]')) return true;
-        let element: HTMLElement | null = target;
-        while (element) {
-            const style = window.getComputedStyle(element);
-            const hasHorizontalScroll = element.scrollWidth > element.clientWidth && (style.overflowX === 'auto' || style.overflowX === 'scroll');
-            if (hasHorizontalScroll) return true;
-            element = element.parentElement;
-        }
-        return false;
-    };
-
-    const handleTouchStart = (event: React.TouchEvent) => {
-        if (shouldIgnoreSwipe(event.target)) {
-            swipeStartRef.current = null;
-            return;
-        }
-        const touch = event.touches[0];
-        swipeStartRef.current = { x: touch.clientX, y: touch.clientY };
-    };
-
-    const handleTouchEnd = (event: React.TouchEvent) => {
-        if (!swipeStartRef.current) return;
-        const touch = event.changedTouches[0];
-        const dx = touch.clientX - swipeStartRef.current.x;
-        const dy = touch.clientY - swipeStartRef.current.y;
-        swipeStartRef.current = null;
-
-        if (Math.abs(dx) < 60 || Math.abs(dx) < Math.abs(dy) * 1.2) return;
-        const direction = dx > 0 ? 'right' : 'left';
-        const currentIndex = swipeTabs.indexOf(activeNavItem);
-        if (currentIndex === -1) return;
-        const nextIndex = currentIndex + (direction === 'left' ? 1 : -1);
-        if (nextIndex < 0 || nextIndex >= swipeTabs.length) return;
-
-        setSwipeDirection(direction);
-        window.setTimeout(() => {
-            handleNavigation(swipeTabs[nextIndex]);
-            setSwipeDirection(null);
-        }, 120);
-    };
 
     // Legacy wrappers for components expecting props
     // We pass handlers that forward to GlobalContent
@@ -265,19 +209,8 @@ const MainLayout: React.FC = () => {
                 isChatOpen={isChatOpen}
             />
 
-            <main
-                className={`${shouldHideHeader ? 'pt-0 md:pt-16' : 'pt-16'} pb-16 md:pb-0 transition-all duration-300 ${isFullHeightPage ? 'h-screen' : 'min-h-screen'}`}
-                onTouchStart={handleTouchStart}
-                onTouchEnd={handleTouchEnd}
-            >
-                <div
-                    ref={mainRef}
-                    className={`${containerClass} transition-transform transition-opacity duration-200 ease-out`}
-                    style={{
-                        transform: swipeDirection === 'left' ? 'translateX(-12px)' : swipeDirection === 'right' ? 'translateX(12px)' : 'translateX(0)',
-                        opacity: swipeDirection ? 0.9 : 1,
-                    }}
-                >
+            <main className={`${shouldHideHeader ? 'pt-0 md:pt-16' : 'pt-16'} pb-16 md:pb-0 transition-all duration-300 ${isFullHeightPage ? 'h-screen' : 'min-h-screen'}`}>
+                <div ref={mainRef} className={containerClass}>
                     <ErrorBoundary onReset={() => window.location.reload()}>
                         <Routes>
                             <Route path="/" element={
@@ -292,7 +225,6 @@ const MainLayout: React.FC = () => {
                                         onLikePost={handleLikePost}
                                         onCommentPost={handleCommentPost}
                                         onDeletePost={handleDeletePost}
-                                        onHidePost={handleHidePost}
                                         onDeleteComment={handleDeleteComment}
                                         onViewProfile={handleViewProfile}
                                         onSharePost={handleSharePost}
@@ -313,7 +245,6 @@ const MainLayout: React.FC = () => {
                                     onLikePost={handleLikePost}
                                     onCommentPost={handleCommentPost}
                                     onDeletePost={handleDeletePost}
-                                    onHidePost={handleHidePost}
                                     onDeleteComment={handleDeleteComment}
                                     onToggleFollow={(id) => handleToggleFollow(id)}
                                     onViewProfile={handleViewProfile}
@@ -382,7 +313,6 @@ const MainLayout: React.FC = () => {
                                         onLikePost: handleLikePost,
                                         onCommentPost: handleCommentPost,
                                         onDeletePost: handleDeletePost,
-                                        onHidePost: handleHidePost,
                                         onDeleteComment: handleDeleteComment,
                                         onViewProfile: handleViewProfile,
                                         onUpdateUser: handleUpdateUser,
@@ -469,22 +399,8 @@ import { useParams } from 'react-router-dom';
 const ProfilePageContent = ({ userId, users, visibleUsers, tribes, posts, currentUser, myStories, followingUserStories, handlers, isPosting }: any) => {
     const params = useParams();
     const targetId = params.userId || userId;
-    const [fetchedUser, setFetchedUser] = useState<User | null>(null);
-    const [isLoading, setIsLoading] = useState(false);
 
-    const viewedUser = users.find((u: User) => u.id === targetId) || (targetId === currentUser?.id ? currentUser : null) || fetchedUser;
-
-    useEffect(() => {
-        if (!viewedUser && targetId) {
-            setIsLoading(true);
-            api.fetchUser(targetId)
-                .then(({ data }) => setFetchedUser(data))
-                .catch(() => { }) // handled by UI showing not found
-                .finally(() => setIsLoading(false));
-        }
-    }, [targetId, viewedUser]);
-
-    if (isLoading) return <div className="text-center p-8"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div></div>;
+    const viewedUser = users.find((u: User) => u.id === targetId) || (targetId === currentUser?.id ? currentUser : null);
 
     if (!viewedUser) return <div className="text-center p-8">User not found</div>;
 

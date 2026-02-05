@@ -10,7 +10,6 @@ interface FeedPageProps {
   onLikePost: (postId: string) => void;
   onCommentPost: (postId: string, text: string) => void;
   onDeletePost: (postId: string) => void;
-  onHidePost?: (postId: string) => void;
   onDeleteComment: (postId: string, commentId: string) => void;
   onViewProfile: (user: User) => void;
   onSharePost: (post: Post, destination: { type: 'tribe' | 'user', id: string }) => void;
@@ -21,7 +20,7 @@ interface FeedPageProps {
 }
 
 const FeedPage: React.FC<FeedPageProps> = (props) => {
-  const { posts, currentUser, allUsers, allTribes, onLikePost, onCommentPost, onDeletePost, onHidePost, onDeleteComment, onViewProfile, onSharePost, onReportPost, onVisitDiscover, onLoadMore, hasMore } = props;
+  const { posts, currentUser, allUsers, allTribes, onLikePost, onCommentPost, onDeletePost, onDeleteComment, onViewProfile, onSharePost, onReportPost, onVisitDiscover, onLoadMore, hasMore } = props;
   const observerTarget = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -59,7 +58,6 @@ const FeedPage: React.FC<FeedPageProps> = (props) => {
             onLike={onLikePost}
             onComment={onCommentPost}
             onDeletePost={onDeletePost}
-            onHidePost={onHidePost}
             onDeleteComment={onDeleteComment}
             onViewProfile={onViewProfile}
             onSharePost={onSharePost}

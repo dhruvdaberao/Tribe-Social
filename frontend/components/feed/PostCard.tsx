@@ -714,7 +714,6 @@ interface PostCardProps {
   onLike: (postId: string) => void;
   onComment: (postId: string, text: string) => void;
   onDeletePost: (postId: string) => void;
-  onHidePost?: (postId: string) => void;
   onDeleteComment: (postId: string, commentId: string) => void;
   onViewProfile: (user: User) => void;
   onSharePost: (post: Post, destination: { type: 'tribe' | 'user', id: string }) => void;
@@ -723,7 +722,7 @@ interface PostCardProps {
 }
 
 const PostCard: React.FC<PostCardProps> = (props) => {
-  const { post, currentUser, allUsers, allTribes, onLike, onComment, onDeletePost, onHidePost, onDeleteComment, onViewProfile, onSharePost, onReportPost, onModalClose } = props;
+  const { post, currentUser, allUsers, allTribes, onLike, onComment, onDeletePost, onDeleteComment, onViewProfile, onSharePost, onReportPost, onModalClose } = props;
   const [commentText, setCommentText] = useState('');
   const [showComments, setShowComments] = useState(false);
   const [optionsOpen, setOptionsOpen] = useState(false);
@@ -854,20 +853,6 @@ const PostCard: React.FC<PostCardProps> = (props) => {
                     >
                       <FlagIcon className="h-4 w-4" />
                       <span>Report Post</span>
-                    </button>
-                  )}
-
-                  {currentUser.isAdmin && onHidePost && (
-                    <button
-                      onClick={() => {
-                        onHidePost(post.id);
-                        setOptionsOpen(false);
-                      }}
-                      className="w-full text-left px-4 py-2 text-yellow-500 hover:bg-yellow-500/10 transition-colors flex items-center space-x-2"
-                      role="menuitem"
-                    >
-                      <EyeOffIcon className="h-4 w-4" />
-                      <span>Hide Post</span>
                     </button>
                   )}
 
@@ -1055,13 +1040,6 @@ const TrashIcon = ({ className = 'h-5 w-5' }: { className?: string }) => (
 const ExternalLinkIcon = ({ className = 'h-5 w-5' }: { className?: string }) => (
   <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-  </svg>
-);
-const EyeOffIcon = ({ className = 'h-5 w-5' }: { className?: string }) => (
-  <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3l18 18" />
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.58 10.58a2 2 0 002.83 2.83" />
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.88 5.09A9.953 9.953 0 0112 5c4.5 0 8.27 2.91 9.54 7-.36 1.18-1 2.5-1.8 3.6M6.12 6.12C4.1 7.4 2.7 9.24 2.46 12c.3 1.05.83 2.1 1.55 3.1C5.73 17.62 8.72 19 12 19c1.18 0 2.3-.17 3.35-.5" />
   </svg>
 );
 const BackIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>;

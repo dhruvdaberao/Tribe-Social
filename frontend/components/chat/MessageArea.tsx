@@ -99,7 +99,7 @@ import ChatInput from './ChatInput';
 
 //   return (
 //     <div className="flex flex-col h-full bg-background">
-//       <div className="sticky top-0 flex items-center p-3 border-b border-border bg-surface flex-shrink-0 z-50">
+//       <div className="flex items-center p-3 border-b border-border bg-surface flex-shrink-0 z-10">
 //         <button onClick={onBack} className="md:hidden p-2 mr-2 text-primary">
 //             <BackIcon />
 //         </button>

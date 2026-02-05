@@ -272,64 +272,22 @@ router.delete('/:id', protect, async (req, res) => {
         if (!post) {
             return res.status(404).json({ message: 'Post not found' });
         }
-        // Allow if user is owner OR admin
-        if (post.user.toString() !== req.user.id && !req.user.isAdmin) {
+        // Allow if user is owner OR admin (for future use)
+        if (post.user.toString() !== req.user.id) {
             return res.status(401).json({ message: 'User not authorized' });
         }
 
-        post.isDeleted = true;
-        post.deletedAt = new Date();
-        post.deletedBy = req.user.id;
-        await post.save();
+        if (post.imagePublicId) {
+            try {
+                await cloudinary.uploader.destroy(post.imagePublicId);
+            } catch (err) {
+                console.error("Failed to delete image from Cloudinary:", err);
+            }
+        }
 
+        await post.deleteOne();
         req.io.emit('postDeleted', req.params.id);
         res.json({ message: 'Post removed' });
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: 'Server Error' });
-    }
-});
-
-// @route   PATCH /api/posts/:id/hide
-router.patch('/:id/hide', protect, async (req, res) => {
-    try {
-        const post = await Post.findById(req.params.id);
-        if (!post) {
-            return res.status(404).json({ message: 'Post not found' });
-        }
-        if (post.user.toString() !== req.user.id && !req.user.isAdmin) {
-            return res.status(401).json({ message: 'User not authorized' });
-        }
-
-        post.isHidden = true;
-        post.hiddenAt = new Date();
-        post.hiddenBy = req.user.id;
-        await post.save();
-
-        res.json({ message: 'Post hidden', post });
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: 'Server Error' });
-    }
-});
-
-// @route   PATCH /api/posts/:id/unhide
-router.patch('/:id/unhide', protect, async (req, res) => {
-    try {
-        const post = await Post.findById(req.params.id);
-        if (!post) {
-            return res.status(404).json({ message: 'Post not found' });
-        }
-        if (post.user.toString() !== req.user.id && !req.user.isAdmin) {
-            return res.status(401).json({ message: 'User not authorized' });
-        }
-
-        post.isHidden = false;
-        post.hiddenAt = null;
-        post.hiddenBy = null;
-        await post.save();
-
-        res.json({ message: 'Post unhidden', post });
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: 'Server Error' });
