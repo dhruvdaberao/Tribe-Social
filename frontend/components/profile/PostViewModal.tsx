@@ -11,6 +11,7 @@ interface PostViewModalProps {
   onLike: (postId: string) => void;
   onComment: (postId: string, text: string) => void;
   onDeletePost: (postId: string) => void;
+  onHidePost?: (postId: string) => void;
   onDeleteComment: (postId: string, commentId: string) => void;
   onViewProfile: (user: User) => void;
   onSharePost: (post: Post, destination: { type: 'tribe' | 'user', id: string }) => void;
@@ -38,6 +39,7 @@ const PostViewModal: React.FC<PostViewModalProps> = (props) => {
           onLike={props.onLike}
           onComment={props.onComment}
           onDeletePost={(postId) => { props.onDeletePost(postId); onClose(); }}
+          onHidePost={props.onHidePost}
           onDeleteComment={props.onDeleteComment}
           onViewProfile={props.onViewProfile}
           onSharePost={props.onSharePost}

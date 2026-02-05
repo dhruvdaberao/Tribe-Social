@@ -5,6 +5,7 @@ import Report from '../models/reportModel.js';
 import ModerationAction from '../models/moderationActionModel.js';
 import Post from '../models/postModel.js';
 import User from '../models/userModel.js';
+import Tribe from '../models/tribeModel.js';
 import Notification from '../models/notificationModel.js';
 
 const router = express.Router();

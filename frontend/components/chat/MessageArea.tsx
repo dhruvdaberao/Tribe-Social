@@ -99,7 +99,7 @@ import ChatInput from './ChatInput';
 
 //   return (
 //     <div className="flex flex-col h-full bg-background">
-//       <div className="flex items-center p-3 border-b border-border bg-surface flex-shrink-0 z-10">
+//       <div className="sticky top-0 flex items-center p-3 border-b border-border bg-surface flex-shrink-0 z-50">
 //         <button onClick={onBack} className="md:hidden p-2 mr-2 text-primary">
 //             <BackIcon />
 //         </button>
@@ -286,7 +286,7 @@ export const MessageArea: React.FC<MessageAreaProps> = ({ conversation, messages
   return (
     // Removed rounded corners from the outer container
     <div className="flex flex-col h-full bg-background">
-      <div className="flex items-center p-3 border-b border-border bg-surface flex-shrink-0 z-10">
+      <div className="sticky top-0 flex items-center p-3 border-b border-border bg-surface flex-shrink-0 z-50">
         <button onClick={onBack} className="md:hidden p-2 mr-2 text-primary">
           <BackIcon />
         </button>

@@ -24,12 +24,43 @@ router.get('/', protect, async (req, res) => {
 });
 
 
+// @route   GET /api/users/:id/followers
+// @desc    Get follower list by user ID
+router.get('/:id/followers', protect, async (req, res) => {
+    try {
+        const followerLinks = await Follow.find({ following: req.params.id }).select('follower');
+        const followerIds = followerLinks.map(link => link.follower);
+        const followers = await User.find({ _id: { $in: followerIds } }).select('name username avatarUrl bio');
+        res.json(followers);
+    } catch (error) {
+        console.error("Error fetching followers:", error);
+        res.status(500).json({ message: 'Server error' });
+    }
+});
+
+// @route   GET /api/users/:id/following
+// @desc    Get following list by user ID
+router.get('/:id/following', protect, async (req, res) => {
+    try {
+        const followingLinks = await Follow.find({ follower: req.params.id }).select('following');
+        const followingIds = followingLinks.map(link => link.following);
+        const following = await User.find({ _id: { $in: followingIds } }).select('name username avatarUrl bio');
+        res.json(following);
+    } catch (error) {
+        console.error("Error fetching following:", error);
+        res.status(500).json({ message: 'Server error' });
+    }
+});
+
 // @route   GET /api/users/:id
 // @desc    Get user profile by ID - WITH EXPLICIT COUNTS
 router.get('/:id', protect, async (req, res) => {
     try {
         const user = await User.findById(req.params.id).select('-password');
         if (user) {
+            if ((user.isHidden || user.isDeleted) && !req.user.isAdmin) {
+                return res.status(404).json({ message: 'User not found' });
+            }
             // Count stats from Follow collection
             const stats = await Promise.all([
                 Follow.countDocuments({ following: req.params.id }),
