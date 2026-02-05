@@ -12,7 +12,11 @@ const router = express.Router();
 // @desc    Get all users (Limit 20 for free tier stability)
 router.get('/', protect, async (req, res) => {
     try {
-        const users = await User.find({})
+        const query = { isDeleted: { $ne: true } };
+        if (!req.user?.isAdmin) {
+            query.isHidden = { $ne: true };
+        }
+        const users = await User.find(query)
             .select('name username avatarUrl bio')
             .sort({ createdAt: -1 })
             .limit(20);
