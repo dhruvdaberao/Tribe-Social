@@ -129,8 +129,17 @@ export const fetchUserFollowing = async (id: string) => {
 export const updateProfile = (profileData: any) =>
   API.put('/users/profile', profileData);
 
-export const toggleFollow = (id: string) =>
-  API.put(`/users/${id}/follow`);
+export const toggleFollow = async (id: string, action?: 'follow' | 'unfollow') => {
+  const res = await API.put(`/users/${id}/follow`, action ? { action } : undefined);
+  const data = res.data || {};
+  return {
+    data: {
+      ...data,
+      currentUser: data.currentUser ? normalizeId(data.currentUser) : undefined,
+      targetUser: data.targetUser ? normalizeId(data.targetUser) : undefined,
+    }
+  };
+};
 
 export const removeFollower = (id: string) =>
   API.put(`/users/${id}/remove-follower`);

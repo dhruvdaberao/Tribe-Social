@@ -15,7 +15,11 @@ interface DiscoverPageProps {
     onDeletePost: (postId: string) => void;
     onHidePost?: (postId: string) => void;
     onDeleteComment: (postId: string, commentId: string) => void;
-    onToggleFollow: (targetUserId: string) => void;
+    onToggleFollow: (
+        targetUserId: string,
+        viewedUser?: User | null,
+        setViewedUser?: React.Dispatch<React.SetStateAction<User | null>>
+    ) => void;
     onViewProfile: (user: User) => void;
     onViewTribe: (tribe: Tribe) => void;
     onJoinToggle: (tribeId: string) => Promise<void>;

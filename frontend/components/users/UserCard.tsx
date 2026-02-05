@@ -1,11 +1,15 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { User } from '../../types';
 import UserAvatar from '../common/UserAvatar';
 
 interface UserCardProps {
     user: User;
     currentUser: User;
-    onToggleFollow: (targetUserId: string) => void;
+    onToggleFollow: (
+        targetUserId: string,
+        viewedUser?: User | null,
+        setViewedUser?: React.Dispatch<React.SetStateAction<User | null>>
+    ) => void;
     onViewProfile: (user: User) => void;
     layout?: 'card' | 'list';
     isOwnProfile?: boolean;
@@ -14,22 +18,10 @@ interface UserCardProps {
 }
 
 const UserCard: React.FC<UserCardProps> = ({ user, currentUser, onToggleFollow, onViewProfile, layout = 'card', isOwnProfile, listType, onRemove }) => {
-    // Use local state to persist follow status and prevent reversion from stale props
-    const [isFollowing, setIsFollowing] = useState(() =>
-        Array.isArray(currentUser.following) && currentUser.following.includes(user.id)
-    );
-
-    // Only update when the user ID changes or currentUser.following changes meaningfully
-    // This prevents reverting when props refresh with stale data
-    useEffect(() => {
-        const currentlyFollowing = Array.isArray(currentUser.following) && currentUser.following.includes(user.id);
-        setIsFollowing(currentlyFollowing);
-    }, [user.id]); // ✅ FIX: Only depend on user.id, NOT currentUser.following
+    const isFollowing = Array.isArray(currentUser.following) && currentUser.following.includes(user.id);
 
     const handleFollowClick = (e: React.MouseEvent) => {
         e.stopPropagation();
-        // Optimistically update local state immediately
-        setIsFollowing(!isFollowing);
         // Call parent handler
         onToggleFollow(user.id);
     };

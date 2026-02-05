@@ -9,7 +9,11 @@ interface FollowListModalProps {
     users: User[];
     currentUser: User;
     onClose: () => void;
-    onToggleFollow: (targetUserId: string) => void;
+    onToggleFollow: (
+        targetUserId: string,
+        viewedUser?: User | null,
+        setViewedUser?: React.Dispatch<React.SetStateAction<User | null>>
+    ) => void;
     onViewProfile: (user: User) => void;
     isOwnProfile?: boolean;
     listType?: 'followers' | 'following';

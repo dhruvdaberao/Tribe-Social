@@ -94,6 +94,27 @@ const generateToken = (id) => {
   });
 };
 
+const buildAuthUserResponse = async (userId) => {
+  const user = await User.findById(userId).select('-password');
+  if (!user) return null;
+  const [followersCount, followingCount, followerLinks, followingLinks] = await Promise.all([
+    Follow.countDocuments({ following: userId }),
+    Follow.countDocuments({ follower: userId }),
+    Follow.find({ following: userId }).select('follower'),
+    Follow.find({ follower: userId }).select('following'),
+  ]);
+  const followerIds = followerLinks.map(link => link.follower);
+  const followingIds = followingLinks.map(link => link.following);
+  await User.findByIdAndUpdate(userId, {
+    $set: { followers: followerIds, following: followingIds }
+  });
+  const refreshedUser = await User.findById(userId).select('-password');
+  const userObj = refreshedUser.toJSON();
+  userObj.followersCount = followersCount;
+  userObj.followingCount = followingCount;
+  return userObj;
+};
+
 // @route   POST /api/auth/register
 router.post('/register', async (req, res) => {
   const { name, username, email, password } = req.body;
@@ -117,9 +138,10 @@ router.post('/register', async (req, res) => {
         const tribeAccount = await User.findOne({ username: { $regex: /^tribe$/i } });
         if (tribeAccount && tribeAccount._id.toString() !== user._id.toString()) {
           await Follow.create({ follower: user._id, following: tribeAccount._id });
-          await User.findByIdAndUpdate(tribeAccount._id, { $inc: { followersCount: 1 } });
-          await User.findByIdAndUpdate(user._id, { $inc: { followingCount: 1 } });
-          user.followingCount = 1; // Update in-memory object
+          await Promise.all([
+            User.findByIdAndUpdate(tribeAccount._id, { $addToSet: { followers: user._id } }),
+            User.findByIdAndUpdate(user._id, { $addToSet: { following: tribeAccount._id } })
+          ]);
         }
       } catch (followError) {
         console.error("Auto-follow error:", followError);
@@ -127,7 +149,8 @@ router.post('/register', async (req, res) => {
     }
 
     if (user) {
-      res.status(201).json({ token: generateToken(user._id), user: user });
+      const hydratedUser = await buildAuthUserResponse(user._id);
+      res.status(201).json({ token: generateToken(user._id), user: hydratedUser });
     } else {
       res.status(400).json({ message: 'Invalid user data' });
     }
@@ -152,7 +175,8 @@ router.post('/login', async (req, res) => {
         user.isSuperAdmin = isSuperAdmin;
         await user.save();
       }
-      res.json({ token: generateToken(user._id), user: user });
+      const hydratedUser = await buildAuthUserResponse(user._id);
+      res.json({ token: generateToken(user._id), user: hydratedUser });
     } else {
       res.status(401).json({ message: 'Invalid email or password' });
     }

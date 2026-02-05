@@ -5,7 +5,11 @@ import UserCard from './UserCard';
 interface TribalsPageProps {
     users: User[];
     currentUser: User;
-    onToggleFollow: (targetUserId: string) => void;
+    onToggleFollow: (
+        targetUserId: string,
+        viewedUser?: User | null,
+        setViewedUser?: React.Dispatch<React.SetStateAction<User | null>>
+    ) => void;
     onViewProfile: (user: User) => void;
 }
 

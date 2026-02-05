@@ -9,6 +9,35 @@ import protect from '../middleware/authMiddleware.js';
 
 const router = express.Router();
 
+const buildUserResponse = async (userId, currentUserId) => {
+    const user = await User.findById(userId).select('-password');
+    if (!user) return null;
+    const [followersCount, followingCount, isFollowing] = await Promise.all([
+        Follow.countDocuments({ following: userId }),
+        Follow.countDocuments({ follower: userId }),
+        currentUserId ? Follow.exists({ follower: currentUserId, following: userId }) : false
+    ]);
+
+    const userObj = user.toObject();
+    userObj.id = user._id.toString();
+    userObj.followersCount = followersCount;
+    userObj.followingCount = followingCount;
+    userObj.isFollowedByCurrentUser = !!isFollowing;
+    return userObj;
+};
+
+const syncUserFollowArrays = async (userId) => {
+    const [followerLinks, followingLinks] = await Promise.all([
+        Follow.find({ following: userId }).select('follower'),
+        Follow.find({ follower: userId }).select('following')
+    ]);
+    const followerIds = followerLinks.map(link => link.follower);
+    const followingIds = followingLinks.map(link => link.following);
+    await User.findByIdAndUpdate(userId, {
+        $set: { followers: followerIds, following: followingIds }
+    });
+};
+
 // @route   GET /api/users
 // @desc    Get all users (Limit 20 for free tier stability)
 router.get('/', protect, async (req, res) => {
@@ -77,22 +106,7 @@ router.get('/:id', protect, async (req, res) => {
             if ((user.isDisabled || user.isHidden || user.isDeleted) && !req.user.isAdmin) {
                 return res.status(404).json({ message: 'User not found' });
             }
-            // Count stats from Follow collection
-            const stats = await Promise.all([
-                Follow.countDocuments({ following: req.params.id }),
-                Follow.countDocuments({ follower: req.params.id }),
-                Follow.exists({ follower: req.user.id, following: req.params.id })
-            ]);
-
-            const [followersCount, followingCount, isFollowing] = stats;
-
-            const userObj = user.toObject();
-            userObj.id = user._id.toString();
-            // Use live counts from collection (most accurate)
-            userObj.followersCount = followersCount;
-            userObj.followingCount = followingCount;
-            userObj.isFollowedByCurrentUser = !!isFollowing;
-
+            const userObj = await buildUserResponse(user._id, req.user.id);
             res.json(userObj);
         } else {
             res.status(404).json({ message: 'User not found' });
@@ -207,27 +221,22 @@ router.put('/:id/follow', protect, async (req, res) => {
         }
 
         const existingFollow = await Follow.findOne({ follower: currentUser._id, following: userToFollow._id });
+        const requestedAction = req.body?.action === 'follow' || req.body?.action === 'unfollow'
+            ? req.body.action
+            : null;
+        const isCurrentlyFollowing = !!existingFollow;
+        const shouldFollow = requestedAction === 'follow'
+            ? true
+            : requestedAction === 'unfollow'
+                ? false
+                : !isCurrentlyFollowing;
 
-        if (existingFollow) {
-            // Unfollow
-            await Follow.deleteOne({ _id: existingFollow._id });
-            await User.findByIdAndUpdate(currentUser._id, { $inc: { followingCount: -1 } });
-            await User.findByIdAndUpdate(userToFollow._id, { $inc: { followersCount: -1 } });
-
-            await Notification.deleteOne({
-                recipient: userToFollow._id,
-                sender: currentUser._id,
-                type: 'follow'
-            });
-
-            // Legacy Array Cleanup (Optional but good to clear if present)
-            // We can skip this if we want purely scalable logic, but cleaning up legacy is nice.
-            // Let's NOT write to array to be fully scalable compliant.
-        } else {
-            // Follow
+        if (shouldFollow && !isCurrentlyFollowing) {
             await Follow.create({ follower: currentUser._id, following: userToFollow._id });
-            await User.findByIdAndUpdate(currentUser._id, { $inc: { followingCount: 1 } });
-            await User.findByIdAndUpdate(userToFollow._id, { $inc: { followersCount: 1 } });
+            await Promise.all([
+                User.findByIdAndUpdate(currentUser._id, { $addToSet: { following: userToFollow._id } }),
+                User.findByIdAndUpdate(userToFollow._id, { $addToSet: { followers: currentUser._id } })
+            ]);
 
             const existingNotification = await Notification.findOne({
                 recipient: userToFollow._id,
@@ -251,19 +260,39 @@ router.put('/:id/follow', protect, async (req, res) => {
             }
         }
 
-        // Return updated User objects (with new counts)
-        // We need to re-fetch to get new counts or just increment locally.
-        // Re-fetching is safer.
-        const updatedCurrentUser = await User.findById(currentUser._id);
-        const updatedUserToFollow = await User.findById(userToFollow._id);
+        if (!shouldFollow && isCurrentlyFollowing) {
+            await Follow.deleteOne({ _id: existingFollow._id });
+            await Promise.all([
+                User.findByIdAndUpdate(currentUser._id, { $pull: { following: userToFollow._id } }),
+                User.findByIdAndUpdate(userToFollow._id, { $pull: { followers: currentUser._id } })
+            ]);
 
-        // We should enrich with counts from Collection if we want to be 100% accurate,
-        // but Since we just did $inc, value on doc should be correct.
+            await Notification.deleteOne({
+                recipient: userToFollow._id,
+                sender: currentUser._id,
+                type: 'follow'
+            });
+        }
 
-        req.io.emit('userUpdated', updatedCurrentUser.toJSON());
-        req.io.emit('userUpdated', updatedUserToFollow.toJSON());
+        await Promise.all([
+            syncUserFollowArrays(currentUser._id),
+            syncUserFollowArrays(userToFollow._id)
+        ]);
 
-        res.json({ message: 'Follow status updated' });
+        const [updatedCurrentUser, updatedUserToFollow] = await Promise.all([
+            buildUserResponse(currentUser._id, currentUser._id),
+            buildUserResponse(userToFollow._id, currentUser._id)
+        ]);
+
+        req.io.emit('userUpdated', updatedCurrentUser);
+        req.io.emit('userUpdated', updatedUserToFollow);
+
+        res.json({
+            message: 'Follow status updated',
+            currentUser: updatedCurrentUser,
+            targetUser: updatedUserToFollow,
+            isFollowing: shouldFollow
+        });
 
     } catch (error) {
         console.error(error);
@@ -298,27 +327,33 @@ router.put('/:id/block', protect, async (req, res) => {
             // Force Unfollow (Both directions)
             const follow1 = await Follow.findOneAndDelete({ follower: currentUser._id, following: userToBlock._id });
             if (follow1) {
-                await User.findByIdAndUpdate(currentUser._id, { $inc: { followingCount: -1 } });
-                await User.findByIdAndUpdate(userToBlock._id, { $inc: { followersCount: -1 } });
+                await Promise.all([
+                    User.findByIdAndUpdate(currentUser._id, { $pull: { following: userToBlock._id } }),
+                    User.findByIdAndUpdate(userToBlock._id, { $pull: { followers: currentUser._id } })
+                ]);
             }
 
             const follow2 = await Follow.findOneAndDelete({ follower: userToBlock._id, following: currentUser._id });
             if (follow2) {
-                await User.findByIdAndUpdate(userToBlock._id, { $inc: { followingCount: -1 } });
-                await User.findByIdAndUpdate(currentUser._id, { $inc: { followersCount: -1 } });
+                await Promise.all([
+                    User.findByIdAndUpdate(userToBlock._id, { $pull: { following: currentUser._id } }),
+                    User.findByIdAndUpdate(currentUser._id, { $pull: { followers: userToBlock._id } })
+                ]);
             }
         }
 
         await currentUser.save();
         // userToBlock not saved unless we modified it? We modified valid counts via update.
 
-        const updatedCurrentUser = await User.findById(currentUser._id);
-        // We broadcast user update.
-        req.io.emit('userUpdated', updatedCurrentUser.toJSON());
-        // Also userToBlock ? Only if we unfollowed them on their side.
-        // Let's broadcast both to be safe.
-        const updatedUserToBlock = await User.findById(userToBlock._id);
-        req.io.emit('userUpdated', updatedUserToBlock.toJSON());
+        await Promise.all([
+            syncUserFollowArrays(currentUser._id),
+            syncUserFollowArrays(userToBlock._id)
+        ]);
+
+        const updatedCurrentUser = await buildUserResponse(currentUser._id, currentUser._id);
+        const updatedUserToBlock = await buildUserResponse(userToBlock._id, currentUser._id);
+        req.io.emit('userUpdated', updatedCurrentUser);
+        req.io.emit('userUpdated', updatedUserToBlock);
 
         res.json({ message: 'Block status updated' });
 
@@ -346,20 +381,24 @@ router.put('/:id/remove-follower', protect, async (req, res) => {
         if (followRel) {
             await Follow.deleteOne({ _id: followRel._id });
 
-            // Update Counts
-            await User.findByIdAndUpdate(userToRemove._id, { $inc: { followingCount: -1 } });
-            await User.findByIdAndUpdate(currentUser._id, { $inc: { followersCount: -1 } });
+            await Promise.all([
+                User.findByIdAndUpdate(userToRemove._id, { $pull: { following: currentUser._id } }),
+                User.findByIdAndUpdate(currentUser._id, { $pull: { followers: userToRemove._id } })
+            ]);
 
-            // Refresh docs
-            const updatedCurrentUser = await User.findById(currentUser._id);
-            const updatedUserToRemove = await User.findById(userToRemove._id);
+            await Promise.all([
+                syncUserFollowArrays(currentUser._id),
+                syncUserFollowArrays(userToRemove._id)
+            ]);
 
-            req.io.emit('userUpdated', updatedCurrentUser.toJSON());
-            req.io.emit('userUpdated', updatedUserToRemove.toJSON());
+            const updatedCurrentUser = await buildUserResponse(currentUser._id, currentUser._id);
+            const updatedUserToRemove = await buildUserResponse(userToRemove._id, currentUser._id);
+            req.io.emit('userUpdated', updatedCurrentUser);
+            req.io.emit('userUpdated', updatedUserToRemove);
 
             res.json({ message: 'Follower removed successfully' });
         } else {
-            res.status(400).json({ message: 'User is not following you' });
+            res.status(200).json({ message: 'User is not following you' });
         }
 
     } catch (error) {

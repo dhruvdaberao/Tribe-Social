@@ -10,12 +10,9 @@ const userSchema = mongoose.Schema(
     avatarUrl: { type: String, default: null },
     bannerUrl: { type: String, default: null },
     bio: { type: String, default: '' },
-    // Deprecated Arrays (Kept for migration safety, will not be used in new logic)
+    // Follow relationship arrays (source of truth for follow state)
     followers: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
     following: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
-    // New Scalable Count Fields
-    followersCount: { type: Number, default: 0 },
-    followingCount: { type: Number, default: 0 },
     blockedUsers: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
     // Moderation
     isAdmin: { type: Boolean, default: false },

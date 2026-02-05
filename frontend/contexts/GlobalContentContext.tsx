@@ -517,16 +517,19 @@ export const GlobalContentProvider: React.FC<{ children: React.ReactNode }> = ({
     const handleToggleFollow = async (targetUserId: string, viewedUser?: User | null, setViewedUser?: React.Dispatch<React.SetStateAction<User | null>>) => {
         if (!currentUser || currentUser.id === targetUserId) return;
         const originalCurrentUser = { ...currentUser };
+        const currentFollowing = Array.isArray(currentUser.following) ? currentUser.following : [];
+        const isAlreadyFollowing = currentFollowing.includes(targetUserId);
+        const action = isAlreadyFollowing ? 'unfollow' : 'follow';
+
         // Helper to update following list safely
         setCurrentUser(prev => {
             if (!prev) return null;
-            const currentFollowing = Array.isArray(prev.following) ? prev.following : [];
-            const isAlreadyFollowing = currentFollowing.includes(targetUserId);
+            const safeFollowing = Array.isArray(prev.following) ? prev.following : [];
             // Optimistic Toggle
             return {
                 ...prev,
-                following: isAlreadyFollowing ? currentFollowing.filter(id => id !== targetUserId) : [...currentFollowing, targetUserId],
-                followingCount: (prev.followingCount || 0) + (isAlreadyFollowing ? -1 : 1)
+                following: isAlreadyFollowing ? safeFollowing.filter(id => id !== targetUserId) : [...safeFollowing, targetUserId],
+                followingCount: Math.max(0, (prev.followingCount || safeFollowing.length) + (isAlreadyFollowing ? -1 : 1))
             };
         });
 
@@ -539,14 +542,23 @@ export const GlobalContentProvider: React.FC<{ children: React.ReactNode }> = ({
                 return {
                     ...prev,
                     followers: isFollowedByMe ? currentFollowers.filter(id => id !== currentUser.id) : [...currentFollowers, currentUser.id],
-                    followersCount: (prev.followersCount || 0) + (isFollowedByMe ? -1 : 1),
+                    followersCount: Math.max(0, (prev.followersCount || currentFollowers.length) + (isFollowedByMe ? -1 : 1)),
                     isFollowedByCurrentUser: !isFollowedByMe
                 };
             });
         }
 
         try {
-            await api.toggleFollow(targetUserId);
+            const { data } = await api.toggleFollow(targetUserId, action);
+            if (data?.currentUser) {
+                setCurrentUser(data.currentUser);
+            }
+            if (data?.targetUser) {
+                setUsers(prev => prev.map(user => user.id === data.targetUser.id ? { ...user, ...data.targetUser } : user));
+                if (setViewedUser) {
+                    setViewedUser(prev => prev ? { ...prev, ...data.targetUser } : prev);
+                }
+            }
         } catch (error) {
             console.error('Failed to follow', error);
             toast.error("Action failed.");

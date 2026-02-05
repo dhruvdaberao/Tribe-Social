@@ -272,7 +272,11 @@ interface ProfilePageProps {
     onUpdateUser: (updatedUser: Partial<User>) => void;
     onAddPost: (content: string, imageUrl?: string) => void;
     isPosting: boolean;
-    onToggleFollow: (targetUserId: string) => void;
+    onToggleFollow: (
+        targetUserId: string,
+        viewedUser?: User | null,
+        setViewedUser?: React.Dispatch<React.SetStateAction<User | null>>
+    ) => void;
     onToggleBlock: (targetUserId: string) => Promise<boolean>;
     onStartConversation: (user: User) => void;
     onNavigate: (item: NavItem) => void;
@@ -522,7 +526,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = (props) => {
     // FIX: Optimistic update for follow/unfollow
     const handleToggleFollow = () => {
         // 1. Call API/Parent handler
-        onToggleFollow(profileUser.id);
+        onToggleFollow(profileUser.id, profileUser, setProfileUser);
 
         // 2. Optimistic Update Local State
         const safeFollowing = Array.isArray(currentUser.following) ? currentUser.following : [];

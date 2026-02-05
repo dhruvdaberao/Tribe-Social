@@ -29,22 +29,40 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // Check for user session on initial load
   useEffect(() => {
-    const initializeAuth = () => {
+    let isMounted = true;
+    const initializeAuth = async () => {
       const token = localStorage.getItem('token');
       const userJson = localStorage.getItem('currentUser');
       if (token && userJson) {
         try {
           const user = JSON.parse(userJson);
-          setCurrentUser(normalizeUser(user));
+          if (isMounted) {
+            setCurrentUser(normalizeUser(user));
+          }
+          if (user?.id) {
+            try {
+              const { data } = await api.fetchUser(user.id);
+              if (isMounted) {
+                setCurrentUser(normalizeUser(data));
+              }
+            } catch (error) {
+              console.error("Failed to refresh current user:", error);
+            }
+          }
         } catch (error) {
           console.error("Failed to parse stored user:", error);
           localStorage.removeItem('token');
           localStorage.removeItem('currentUser');
         }
       }
-      setIsLoading(false);
+      if (isMounted) {
+        setIsLoading(false);
+      }
     };
     initializeAuth();
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   // Persist currentUser to localStorage whenever it changes

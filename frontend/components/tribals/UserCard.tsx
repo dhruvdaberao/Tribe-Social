@@ -4,12 +4,16 @@ import { User } from '../../types';
 interface UserCardProps {
     user: User;
     currentUser: User;
-    onToggleFollow: (targetUserId: string) => void;
+    onToggleFollow: (
+        targetUserId: string,
+        viewedUser?: User | null,
+        setViewedUser?: React.Dispatch<React.SetStateAction<User | null>>
+    ) => void;
     onViewProfile: (user: User) => void;
 }
 
 const UserCard: React.FC<UserCardProps> = ({ user, currentUser, onToggleFollow, onViewProfile }) => {
-    const isFollowing = currentUser.following.includes(user.id);
+    const isFollowing = Array.isArray(currentUser.following) && currentUser.following.includes(user.id);
 
     return (
         <div className="bg-surface p-4 rounded-2xl shadow-sm border border-border flex items-center justify-between">
@@ -38,7 +42,7 @@ const UserCard: React.FC<UserCardProps> = ({ user, currentUser, onToggleFollow, 
                    : 'bg-accent text-accent-text hover:bg-accent-hover'
                 }`}
             >
-                {isFollowing ? 'Following' : 'Follow'}
+                {isFollowing ? 'Unfollow' : 'Follow'}
             </button>
         </div>
     );
