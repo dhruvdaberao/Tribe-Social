@@ -18,7 +18,11 @@ export interface User {
   isAdmin?: boolean;
   isBanned?: boolean;
   bannedAt?: string | null;
+  isHidden?: boolean;
+  hiddenAt?: string | null;
   isDeleted?: boolean;
+  deletedAt?: string | null;
+  lastModerationAt?: string | null;
 }
 
 /* ===================== COMMENTS & POSTS ===================== */
@@ -77,9 +81,14 @@ export interface Tribe {
   name: string;
   description?: string;
   avatarUrl?: string | null;
-  owner: string;
+  owner: string | User;
   members: string[];
   createdAt?: string;
+  isHidden?: boolean;
+  hiddenAt?: string | null;
+  isDeleted?: boolean;
+  deletedAt?: string | null;
+  lastModerationAt?: string | null;
   messages?: TribeMessage[];
 }
 
@@ -123,7 +132,7 @@ export interface Notification {
 export interface Report {
   id: string;
   reporterId: User;
-  targetType: 'post' | 'user';
+  targetType: 'post' | 'user' | 'tribe';
   targetId: any;
   reason: string;
   details?: string;
