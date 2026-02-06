@@ -347,7 +347,7 @@ const StoryCreator: React.FC<StoryCreatorProps> = ({ onClose, onCreate }) => {
 
     const handlePost = async () => {
         if (!image && (!text || !text.content.trim())) {
-            alert("Please add an image or text to your story.");
+            toast.error("Please add an image or text to your story.");
             return;
         }
         setIsPosting(true);
@@ -368,7 +368,7 @@ const StoryCreator: React.FC<StoryCreatorProps> = ({ onClose, onCreate }) => {
             });
             onClose();
         } catch (error) {
-            alert("Failed to post story. Please try again.");
+            toast.error("Failed to post story. Please try again.");
             setIsPosting(false);
         }
     };

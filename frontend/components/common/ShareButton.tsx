@@ -1,4 +1,5 @@
 import React from 'react';
+import { toast } from './Toast';
 
 // Fix: Extended ShareButtonProps with standard button attributes to allow props like 'role'.
 interface ShareButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
@@ -13,18 +14,19 @@ const ShareButton: React.FC<ShareButtonProps> = ({ shareData, className, childre
     if (navigator.share) {
       try {
         await navigator.share(shareData);
-        console.log('Content shared successfully');
+        toast.success('Shared successfully.');
       } catch (error) {
         console.error('Error sharing content:', error);
+        toast.error('Unable to share right now.');
       }
     } else {
       // Fallback for browsers that do not support the Web Share API
       if (shareData.url) {
         navigator.clipboard.writeText(shareData.url)
-          .then(() => alert('Link copied to clipboard!'))
+          .then(() => toast.success('Link copied to clipboard!'))
           .catch(err => console.error('Failed to copy link:', err));
       } else {
-        alert('Sharing is not supported on this browser.');
+        toast.info('Sharing is not supported on this browser.');
       }
     }
     if (onShare) {

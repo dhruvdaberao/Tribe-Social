@@ -108,6 +108,7 @@ const TribeMessageArea: React.FC<TribeMessageAreaProps> = ({
         flex flex-col flex-1
         bg-background
         min-h-0
+        overflow-hidden
       "
     >
       <div
