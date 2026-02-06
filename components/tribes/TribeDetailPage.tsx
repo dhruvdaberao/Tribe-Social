@@ -41,11 +41,11 @@
 //   const [inputText, setInputText] = useState('');
 //   const [typingUsers, setTypingUsers] = useState<string[]>([]);
 //   const [isMembersModalOpen, setMembersModalOpen] = useState(false);
-  
+
 //   // Local state to handle optimistic updates AND fetched messages
 //   const [localMessages, setLocalMessages] = useState<TribeMessage[]>([]);
 //   const [isLoading, setIsLoading] = useState(true);
-  
+
 //   const messagesEndRef = useRef<HTMLDivElement>(null);
 //   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 //   const { socket, clearUnreadTribe } = useSocket();
@@ -64,10 +64,10 @@
 //               setIsLoading(false);
 //           }
 //       };
-      
+
 //       // Load initially
 //       fetchHistory();
-      
+
 //       // If the parent passes new messages (via socket in App.tsx), sync them, 
 //       // but prioritize the fetch on mount to ensure we have history.
 //       if (tribe.messages && tribe.messages.length > localMessages.length) {
@@ -108,7 +108,7 @@
 //       socket.off('userStoppedTyping');
 //     };
 //   }, [socket, currentUser.id]);
-  
+
 //   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
 //     setInputText(e.target.value);
 //     if (socket && isMember) {
@@ -138,9 +138,9 @@
 //             text: textToSend,
 //             timestamp: new Date().toISOString(),
 //         };
-        
+
 //         setLocalMessages(prev => [...prev, tempMessage]);
-        
+
 //         onSendMessage(tribe.id, textToSend);
 
 //         if (socket) {
@@ -150,7 +150,7 @@
 //         }
 //     }
 //   };
-  
+
 //   const typingText = useMemo(() => {
 //     const otherTypingUsers = typingUsers.filter(name => name !== currentUser.name);
 //     if (otherTypingUsers.length === 0) return `${tribe.members.length} members`;
@@ -217,10 +217,10 @@
 //                 {localMessages.map(message => {
 //                 // Handle both direct ID and object with _id
 //                 const messageSenderId = typeof message.senderId === 'string' ? message.senderId : (message.senderId as any)._id || message.sender?.id;
-                
+
 //                 // Standardize ID comparison for alignment
 //                 const isCurrentUser = String(messageSenderId) === String(currentUser.id);
-                
+
 //                 // Resolve sender: Prioritize the 'sender' object on the message (which comes from backend/socket)
 //                 const sender = message.sender || userMap.get(messageSenderId) || { name: 'Unknown User', avatarUrl: null, id: 'unknown', username: 'unknown' };
 
@@ -319,7 +319,7 @@ import { Tribe, User, TribeMessage } from '../../types';
 import UserAvatar from '../common/UserAvatar';
 import { useSocket } from '../../contexts/SocketContext';
 import TribeMembersModal from './TribeMembersModal';
-import * as api from '../../api.ts'; // Assumed in root based on instruction
+import * as api from '../../api';
 
 interface TribeDetailPageProps {
   tribe: Tribe;
@@ -335,19 +335,19 @@ interface TribeDetailPageProps {
 }
 
 const TribePlaceholderIcon = () => (
-     <div className="w-10 h-10 rounded-full mr-3 bg-background border border-border flex items-center justify-center text-secondary p-2">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
-            <circle cx="9" cy="7" r="4"></circle>
-            <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
-            <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
-        </svg>
-    </div>
+  <div className="w-10 h-10 rounded-full mr-3 bg-background border border-border flex items-center justify-center text-secondary p-2">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+      <circle cx="9" cy="7" r="4"></circle>
+      <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+      <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+    </svg>
+  </div>
 );
 
 
 const TribeDetailPage: React.FC<TribeDetailPageProps> = (props) => {
-  const { tribe, currentUser, userMap, onSendMessage, onDeleteMessage, onDeleteTribe, onBack, onViewProfile, onEditTribe, onJoinToggle } = props;
+  const { tribe, currentUser, userMap, onSendMessage, onDeleteMessage, onDeleteTribe, onBack, onViewProfile, onEditTribe } = props;
   const [inputText, setInputText] = useState('');
   const [typingUsers, setTypingUsers] = useState<string[]>([]);
   const [isMembersModalOpen, setMembersModalOpen] = useState(false);
@@ -361,25 +361,25 @@ const TribeDetailPage: React.FC<TribeDetailPageProps> = (props) => {
   // Fetch messages immediately on mount
   useEffect(() => {
     const fetchHistory = async () => {
-        setIsLoading(true);
-        try {
-            const { data } = await api.fetchTribeMessages(tribe.id);
-            // Ensure data is array
-            if (Array.isArray(data)) {
-                setLocalMessages(data);
-            }
-        } catch (error) {
-            console.error("Failed to load tribe messages", error);
-        } finally {
-            setIsLoading(false);
+      setIsLoading(true);
+      try {
+        const { data } = await api.fetchTribeMessages(tribe.id);
+        // Ensure data is array
+        if (Array.isArray(data)) {
+          setLocalMessages(data);
         }
+      } catch (error) {
+        console.error("Failed to load tribe messages", error);
+      } finally {
+        setIsLoading(false);
+      }
     };
     fetchHistory();
   }, [tribe.id]);
 
   useEffect(() => {
     if (!isLoading) {
-        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
     }
   }, [localMessages, isLoading]);
 
@@ -390,20 +390,20 @@ const TribeDetailPage: React.FC<TribeDetailPageProps> = (props) => {
   // Listen for new messages specifically for this tribe
   useEffect(() => {
     if (!socket) return;
-    
+
     const handleNewTribeMessage = (message: TribeMessage) => {
-        if (message.tribeId === tribe.id) {
-             setLocalMessages(prev => {
-                if (prev.some(m => m.id === message.id)) return prev;
-                return [...prev, message];
-            });
-        }
+      if (message.tribeId === tribe.id) {
+        setLocalMessages(prev => {
+          if (prev.some(m => m.id === message.id)) return prev;
+          return [...prev, message];
+        });
+      }
     };
 
     const handleTribeMessageDeleted = ({ tribeId, messageId }: { tribeId: string, messageId: string }) => {
-        if (tribeId === tribe.id) {
-            setLocalMessages(prev => prev.filter(m => m.id !== messageId));
-        }
+      if (tribeId === tribe.id) {
+        setLocalMessages(prev => prev.filter(m => m.id !== messageId));
+      }
     };
 
     socket.on('newTribeMessage', handleNewTribeMessage);
@@ -411,10 +411,10 @@ const TribeDetailPage: React.FC<TribeDetailPageProps> = (props) => {
 
     // Also need typing listeners
     const handleTyping = ({ userName }: { userName: string }) => {
-        setTypingUsers(prev => [...new Set([...prev, userName])]);
+      setTypingUsers(prev => [...new Set([...prev, userName])]);
     };
     const handleStopTyping = ({ userName }: { userName: string }) => {
-        setTypingUsers(prev => prev.filter(name => name !== userName));
+      setTypingUsers(prev => prev.filter(name => name !== userName));
     };
     socket.on('userTyping', handleTyping);
     socket.on('userStoppedTyping', handleStopTyping);
@@ -426,7 +426,7 @@ const TribeDetailPage: React.FC<TribeDetailPageProps> = (props) => {
       socket.off('userStoppedTyping');
     };
   }, [socket, tribe.id]);
-  
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setInputText(e.target.value);
     if (socket && isMember) {
@@ -444,32 +444,32 @@ const TribeDetailPage: React.FC<TribeDetailPageProps> = (props) => {
   const handleSendMessage = (e: React.FormEvent) => {
     e.preventDefault();
     if (inputText.trim()) {
-        const textToSend = inputText;
-        setInputText(''); // Clear input immediately
+      const textToSend = inputText;
+      setInputText(''); // Clear input immediately
 
-        // Optimistic Update
-        const tempMessage: TribeMessage = {
-            id: `temp-${Date.now()}`,
-            tribeId: tribe.id,
-            sender: currentUser,
-            senderId: currentUser.id,
-            text: textToSend,
-            timestamp: new Date().toISOString(),
-        };
-        
-        setLocalMessages(prev => [...prev, tempMessage]);
+      // Optimistic Update
+      const tempMessage: TribeMessage = {
+        id: `temp-${Date.now()}`,
+        tribeId: tribe.id,
+        sender: currentUser,
+        senderId: currentUser.id,
+        text: textToSend,
+        timestamp: new Date().toISOString(),
+      };
 
-        // Send to backend
-        onSendMessage(tribe.id, textToSend);
+      setLocalMessages(prev => [...prev, tempMessage]);
 
-        if (socket) {
-            if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
-            socket.emit('stopTyping', { roomId: `tribe-${tribe.id}`, userName: currentUser.name, userId: currentUser.id });
-            typingTimeoutRef.current = null;
-        }
+      // Send to backend
+      onSendMessage(tribe.id, textToSend);
+
+      if (socket) {
+        if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+        socket.emit('stopTyping', { roomId: `tribe-${tribe.id}`, userName: currentUser.name, userId: currentUser.id });
+        typingTimeoutRef.current = null;
+      }
     }
   };
-  
+
   const typingText = useMemo(() => {
     const otherTypingUsers = typingUsers.filter(name => name !== currentUser.name);
     if (otherTypingUsers.length === 0) return `${tribe.members.length} members`;
@@ -479,8 +479,8 @@ const TribeDetailPage: React.FC<TribeDetailPageProps> = (props) => {
   }, [typingUsers, tribe.members.length, currentUser.name]);
 
   const handleViewProfileFromModal = (user: User) => {
-      onViewProfile(user);
-      setMembersModalOpen(false);
+    onViewProfile(user);
+    setMembersModalOpen(false);
   }
 
   return (
@@ -489,103 +489,103 @@ const TribeDetailPage: React.FC<TribeDetailPageProps> = (props) => {
         {/* Header */}
         <div className="flex items-center p-3 border-b border-border flex-shrink-0">
           <button onClick={onBack} className="p-2 mr-2 text-primary">
-              <BackIcon />
+            <BackIcon />
           </button>
           {tribe.avatarUrl ? (
-              <img src={tribe.avatarUrl} alt={tribe.name} className="w-10 h-10 rounded-full mr-3 object-cover"/>
+            <img src={tribe.avatarUrl} alt={tribe.name} className="w-10 h-10 rounded-full mr-3 object-cover" />
           ) : (
-              <TribePlaceholderIcon />
+            <TribePlaceholderIcon />
           )}
           <div className="flex-1 min-w-0">
-              <h2 className="text-lg font-bold text-primary truncate">{tribe.name}</h2>
-              <button onClick={() => setMembersModalOpen(true)} className={`text-sm truncate text-left hover:underline ${typingUsers.length > 0 && typingUsers.some(u => u !== currentUser.name) ? 'text-accent italic' : 'text-secondary'}`}>
-                {typingText}
-              </button>
+            <h2 className="text-lg font-bold text-primary truncate">{tribe.name}</h2>
+            <button onClick={() => setMembersModalOpen(true)} className={`text-sm truncate text-left hover:underline ${typingUsers.length > 0 && typingUsers.some(u => u !== currentUser.name) ? 'text-accent italic' : 'text-secondary'}`}>
+              {typingText}
+            </button>
           </div>
           <div className="ml-auto flex items-center space-x-1 sm:space-x-2 flex-shrink-0">
-              {currentUser.id === tribe.owner && (
-                  <>
-                      <button 
-                          onClick={() => onEditTribe(tribe)} 
-                          className="p-2 text-secondary hover:text-primary rounded-full hover:bg-background"
-                          aria-label="Edit Tribe"
-                      >
-                          <EditIcon />
-                      </button>
-                      <button 
-                          onClick={() => onDeleteTribe(tribe.id)} 
-                          className="p-2 text-red-500 hover:bg-red-500/10 rounded-full"
-                          aria-label="Delete Tribe"
-                      >
-                          <TrashIcon />
-                      </button>
-                  </>
-              )}
+            {currentUser.id === tribe.owner && (
+              <>
+                <button
+                  onClick={() => onEditTribe(tribe)}
+                  className="p-2 text-secondary hover:text-primary rounded-full hover:bg-background"
+                  aria-label="Edit Tribe"
+                >
+                  <EditIcon />
+                </button>
+                <button
+                  onClick={() => onDeleteTribe(tribe.id)}
+                  className="p-2 text-red-500 hover:bg-red-500/10 rounded-full"
+                  aria-label="Delete Tribe"
+                >
+                  <TrashIcon />
+                </button>
+              </>
+            )}
           </div>
         </div>
 
         {/* Messages */}
         <div className="flex-1 overflow-y-auto p-4 bg-background">
           {isLoading ? (
-              <div className="w-full h-full flex flex-col items-center justify-center">
-                  <img src="/busstop.gif" alt="Loading chats..." className="w-32 h-auto mb-4" />
-                  <p className="text-secondary text-sm">Loading conversations...</p>
-              </div>
+            <div className="w-full h-full flex flex-col items-center justify-center">
+              <img src="/busstop.gif" alt="Loading chats..." className="w-32 h-auto mb-4" />
+              <p className="text-secondary text-sm">Loading conversations...</p>
+            </div>
           ) : (
             <div className="flex flex-col space-y-2">
-                {localMessages.map(message => {
+              {localMessages.map(message => {
                 // Ensure we check ID robustly (handle object vs string)
                 const msgSenderId = typeof message.senderId === 'string' ? message.senderId : message.sender?.id;
                 // If sender object exists, use its ID, otherwise use senderId string
                 const actualSenderId = message.sender?.id || msgSenderId;
                 const isCurrentUser = String(actualSenderId) === String(currentUser.id);
-                
+
                 // Get sender details: Prioritize the 'sender' object (populated by backend)
                 // If not available, check userMap, otherwise fall back to a safe object.
                 const sender = message.sender && message.sender.name ? message.sender : (userMap.get(actualSenderId || '') || { name: 'Anonymous', avatarUrl: null, id: 'unknown', username: 'unknown' });
 
                 return (
-                    <div key={message.id} className={`flex items-end gap-2.5 group ${isCurrentUser ? 'justify-end' : 'justify-start'}`}>
+                  <div key={message.id} className={`flex items-end gap-2.5 group ${isCurrentUser ? 'justify-end' : 'justify-start'}`}>
                     {!isCurrentUser && (
-                        <div 
-                            className="w-8 h-8 rounded-full cursor-pointer self-start flex-shrink-0"
-                            onClick={() => sender.id !== 'unknown' && onViewProfile(sender as User)}
-                        >
-                            <UserAvatar user={sender as User} className="w-full h-full" />
-                        </div>
+                      <div
+                        className="w-8 h-8 rounded-full cursor-pointer self-start flex-shrink-0"
+                        onClick={() => sender.id !== 'unknown' && onViewProfile(sender as User)}
+                      >
+                        <UserAvatar user={sender as User} className="w-full h-full" />
+                      </div>
                     )}
                     {isCurrentUser && (
-                        <button onClick={() => onDeleteMessage(tribe.id, message.id)} className="text-secondary p-1 rounded-full hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <TrashIcon className="h-4 w-4" />
-                        </button>
+                      <button onClick={() => onDeleteMessage(tribe.id, message.id)} className="text-secondary p-1 rounded-full hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <TrashIcon className="h-4 w-4" />
+                      </button>
                     )}
                     <div className={`flex flex-col w-full max-w-xs lg:max-w-md ${isCurrentUser ? 'items-end' : 'items-start'}`}>
-                        {!isCurrentUser && (
-                            <p 
-                                className="text-xs text-secondary mb-1 ml-3 cursor-pointer hover:underline"
-                                onClick={() => sender.id !== 'unknown' && onViewProfile(sender as User)}
-                            >
-                                {sender.name}
-                            </p>
+                      {!isCurrentUser && (
+                        <p
+                          className="text-xs text-secondary mb-1 ml-3 cursor-pointer hover:underline"
+                          onClick={() => sender.id !== 'unknown' && onViewProfile(sender as User)}
+                        >
+                          {sender.name}
+                        </p>
+                      )}
+                      <div className={`px-4 py-2.5 text-sm break-words ${isCurrentUser ? 'bg-accent text-accent-text rounded-2xl rounded-tr-none' : 'bg-surface text-primary shadow-sm rounded-2xl rounded-tl-none'}`}>
+                        {message.imageUrl && (
+                          <img src={message.imageUrl} alt="Shared content" className="mb-2 rounded-lg w-full" />
                         )}
-                        <div className={`px-4 py-2.5 text-sm break-words ${isCurrentUser ? 'bg-accent text-accent-text rounded-2xl rounded-tr-none' : 'bg-surface text-primary shadow-sm rounded-2xl rounded-tl-none'}`}>
-                            {message.imageUrl && (
-                                <img src={message.imageUrl} alt="Shared content" className="mb-2 rounded-lg w-full" />
-                            )}
-                            <p className="leading-relaxed whitespace-pre-wrap">{message.text}</p>
-                        </div>
-                        <p className="text-xs text-secondary mt-1.5 px-1">{new Date(message.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
+                        <p className="leading-relaxed whitespace-pre-wrap">{message.text}</p>
+                      </div>
+                      <p className="text-xs text-secondary mt-1.5 px-1">{new Date(message.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
                     </div>
-                    </div>
+                  </div>
                 );
-                })}
-                {localMessages.length === 0 && (
-                    <div className="text-center text-secondary p-8">
-                        <p>Welcome to #{tribe.name}!</p>
-                        <p className="text-sm">Be the first one to send a message.</p>
-                    </div>
-                )}
-                <div ref={messagesEndRef} />
+              })}
+              {localMessages.length === 0 && (
+                <div className="text-center text-secondary p-8">
+                  <p>Welcome to #{tribe.name}!</p>
+                  <p className="text-sm">Be the first one to send a message.</p>
+                </div>
+              )}
+              <div ref={messagesEndRef} />
             </div>
           )}
         </div>
@@ -609,11 +609,11 @@ const TribeDetailPage: React.FC<TribeDetailPageProps> = (props) => {
       </div>
       {isMembersModalOpen && (
         <TribeMembersModal
-            isOpen={isMembersModalOpen}
-            onClose={() => setMembersModalOpen(false)}
-            memberIds={tribe.members}
-            userMap={userMap}
-            onViewProfile={handleViewProfileFromModal}
+          isOpen={isMembersModalOpen}
+          onClose={() => setMembersModalOpen(false)}
+          memberIds={tribe.members}
+          userMap={userMap}
+          onViewProfile={handleViewProfileFromModal}
         />
       )}
     </>
