@@ -1,11 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
-import { Tribe, User } from '../../types';
-import * as api from '../../api';
+import { User } from '../../types';
 import { useGlobalContent } from '../../contexts/GlobalContentContext';
 import TribeCard from './TribeCard';
 import CreateTribeModal from './CreateTribeModal';
-import EditTribeModal from './EditTribeModal';
 import { Plus } from 'lucide-react';
 
 // ───────────────────────── STYLES ─────────────────────────
@@ -75,18 +73,15 @@ interface TribesPageProps {
 const TribesPage: React.FC<TribesPageProps> = ({ currentUser, unreadTribeCount }) => {
   const {
     tribes,
-    userMap, // or visibleUsers if needed, but userMap is good for lookups? Actually TribeCard uses allUsers array 
     visibleUsers: allUsers,
     fetchTribes,
-    handleCreateTribe,
-    handleEditTribe,
     handleDeleteTribe,
     handleJoinToggle
   } = useGlobalContent();
 
   const [isLoading, setIsLoading] = useState(tribes.length === 0);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [editingTribe, setEditingTribe] = useState<Tribe | null>(null);
+  const [editingTribeId, setEditingTribeId] = useState<string | null>(null);
 
   // Lazy Fetch on Mount
   useEffect(() => {
@@ -137,7 +132,14 @@ const TribesPage: React.FC<TribesPageProps> = ({ currentUser, unreadTribeCount }
                 tribe={tribe}
                 currentUser={currentUser}
                 allUsers={allUsers}
-                onEdit={setEditingTribe}
+                onEdit={(selectedTribe) => setEditingTribeId(selectedTribe.id)}
+                isEditing={editingTribeId === tribe.id}
+                onCloseEdit={() => setEditingTribeId(null)}
+                onSaveEdit={(_updatedTribe) => {
+                  fetchTribes();
+                  setEditingTribeId(null);
+                }}
+                onDeleteEdit={() => handleDeleteTribe(tribe.id)}
                 onJoinToggle={(id) => handleJoinToggle(id)}
                 unreadCount={unreadTribeCount?.[tribe.id] || 0}
               />
@@ -156,6 +158,14 @@ const TribesPage: React.FC<TribesPageProps> = ({ currentUser, unreadTribeCount }
                 tribe={tribe}
                 currentUser={currentUser}
                 allUsers={allUsers}
+                onEdit={(selectedTribe) => setEditingTribeId(selectedTribe.id)}
+                isEditing={editingTribeId === tribe.id}
+                onCloseEdit={() => setEditingTribeId(null)}
+                onSaveEdit={(_updatedTribe) => {
+                  fetchTribes();
+                  setEditingTribeId(null);
+                }}
+                onDeleteEdit={() => handleDeleteTribe(tribe.id)}
                 onJoinToggle={(id) => handleJoinToggle(id)}
                 unreadCount={unreadTribeCount?.[tribe.id] || 0}
               />
@@ -174,18 +184,6 @@ const TribesPage: React.FC<TribesPageProps> = ({ currentUser, unreadTribeCount }
         />
       )}
 
-      {editingTribe && (
-        <EditTribeModal
-          tribe={editingTribe}
-          onClose={() => setEditingTribe(null)}
-          onSuccess={() => {
-            fetchTribes();
-            setEditingTribe(null);
-          }}
-          onDelete={() => handleDeleteTribe(editingTribe.id)}
-          allUsers={allUsers}
-        />
-      )}
     </Container>
   );
 };

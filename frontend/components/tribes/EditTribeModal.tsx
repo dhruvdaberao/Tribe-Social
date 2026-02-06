@@ -13,6 +13,7 @@ interface EditTribeModalProps {
   onSuccess: (updatedTribe: Tribe) => void;
   onDelete?: (tribeId: string) => void;
   allUsers: import('../../types').User[];
+  variant?: 'modal' | 'inline';
 }
 
 const Overlay = styled.div`
@@ -41,6 +42,18 @@ const Modal = styled.div`
   border: 1px solid ${props => props.theme.border};
   display: flex;
   flex-direction: column;
+`;
+
+const InlineWrapper = styled.div`
+  width: 100%;
+  margin-top: 1rem;
+`;
+
+const InlineModal = styled(Modal)`
+  width: 100%;
+  max-width: none;
+  max-height: none;
+  padding: 1.25rem;
 `;
 
 const Header = styled.div`
@@ -167,7 +180,7 @@ const Label = styled.label`
   margin-bottom: 2px;
 `;
 
-const EditTribeModal: React.FC<EditTribeModalProps> = ({ tribe, onClose, onSuccess, onDelete, allUsers }) => {
+const EditTribeModal: React.FC<EditTribeModalProps> = ({ tribe, onClose, onSuccess, onDelete, allUsers, variant = 'modal' }) => {
   const [name, setName] = useState(tribe.name);
   const [description, setDescription] = useState(tribe.description);
   const [avatarUrl, setAvatarUrl] = useState(tribe.avatarUrl || '');
@@ -238,10 +251,15 @@ const EditTribeModal: React.FC<EditTribeModalProps> = ({ tribe, onClose, onSucce
     if (onDelete) onDelete(tribe.id);
   };
 
+  const Wrapper = variant === 'inline' ? InlineWrapper : Overlay;
+  const Panel = variant === 'inline' ? InlineModal : Modal;
+  const wrapperProps = variant === 'inline' ? {} : { onClick: onClose };
+  const panelProps = variant === 'inline' ? {} : { onClick: (event: React.MouseEvent) => event.stopPropagation() };
+
   return (
     <>
-      <Overlay onClick={onClose}>
-        <Modal onClick={e => e.stopPropagation()}>
+      <Wrapper {...wrapperProps}>
+        <Panel {...panelProps}>
           <Header>
             <h2>Edit Tribe</h2>
             <CloseButton onClick={onClose}><X size={24} /></CloseButton>
@@ -309,7 +327,7 @@ const EditTribeModal: React.FC<EditTribeModalProps> = ({ tribe, onClose, onSucce
               <Trash2 size={16} /> Delete Tribe
             </DeleteButton>
           )}
-        </Modal>
+        </Panel>
 
         <MediaSelectionModal
           isOpen={isMediaModalOpen}
@@ -317,7 +335,7 @@ const EditTribeModal: React.FC<EditTribeModalProps> = ({ tribe, onClose, onSucce
           onSelectCamera={() => cameraInputRef.current?.click()}
           onSelectGallery={() => fileInputRef.current?.click()}
         />
-      </Overlay>
+      </Wrapper>
 
       <ConfirmationModal
         isOpen={confirmModal.isOpen}
