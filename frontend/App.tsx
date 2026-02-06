@@ -108,6 +108,7 @@ const MainLayout: React.FC = () => {
     const activeNavItem = getNavItemFromPath(location.pathname);
     const isFullHeightPage = ['Messages', 'TribeDetail', 'Settings', 'Psyduck'].includes(activeNavItem);
     const isChatPage = ['Messages', 'TribeDetail'].includes(activeNavItem);
+    const shouldHideBottomNav = activeNavItem === 'TribeDetail' || (activeNavItem === 'Messages' && isChatOpen);
     const isWidePage = ['Discover', 'Tribes', 'Profile'].includes(activeNavItem);
 
     // Lazy Data Loading Trigger
@@ -174,7 +175,12 @@ const MainLayout: React.FC = () => {
 
     // Render Helpers
     const containerClass = isFullHeightPage
-        ? `h-[calc(var(--dvh,1vh)*100-${(activeNavItem === 'Messages' && !isChatOpen ? '8rem' : '4rem')})] md:h-[calc(var(--dvh,1vh)*100-4rem)] ${isChatPage ? 'overflow-hidden' : 'overflow-y-auto no-scrollbar'}`
+        ? `${shouldHideHeader && shouldHideBottomNav
+            ? 'h-[calc(var(--dvh,1vh)*100)]'
+            : shouldHideHeader || shouldHideBottomNav
+              ? 'h-[calc(var(--dvh,1vh)*100-4rem)]'
+              : 'h-[calc(var(--dvh,1vh)*100-8rem)]'
+          } md:h-[calc(var(--dvh,1vh)*100-4rem)] ${isChatPage ? 'overflow-hidden' : 'overflow-y-auto no-scrollbar'}`
         : isWidePage ? 'max-w-5xl mx-auto px-4 md:px-6 pt-6 pb-24 md:pb-8'
             : 'max-w-2xl mx-auto px-4 md:px-6 pt-6 pb-24 md:pb-8';
 
@@ -299,7 +305,7 @@ const MainLayout: React.FC = () => {
             />
 
             <main
-                className={`${shouldHideHeader ? 'pt-0 md:pt-16' : 'pt-16'} pb-16 md:pb-0 transition-all duration-300 ${isFullHeightPage ? 'h-[calc(var(--dvh,1vh)*100)]' : 'min-h-screen'} ${isChatPage ? 'overflow-hidden' : ''}`}
+                className={`${shouldHideHeader ? 'pt-0 md:pt-16' : 'pt-16'} ${shouldHideBottomNav ? 'pb-0' : 'pb-16'} md:pb-0 transition-all duration-300 ${isFullHeightPage ? 'h-[calc(var(--dvh,1vh)*100)]' : 'min-h-screen'} ${isChatPage ? 'overflow-hidden' : ''}`}
                 onTouchStart={handleTouchStart}
                 onTouchEnd={handleTouchEnd}
             >

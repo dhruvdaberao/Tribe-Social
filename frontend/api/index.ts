@@ -249,6 +249,11 @@ export const joinTribe = async (id: string) => {
   return { data: normalizeId(res.data) };
 };
 
+export const kickTribeMember = async (tribeId: string, userId: string) => {
+  const res = await API.patch(`/tribes/${tribeId}/kick/${userId}`);
+  return { data: normalizeId(res.data) };
+};
+
 
 export const fetchTribeMessages = async (id: string, params?: { limit?: number; before?: string }) => {
   const res = await API.get(`/tribes/${id}/messages`, { params });

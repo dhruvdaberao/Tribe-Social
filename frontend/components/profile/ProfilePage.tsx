@@ -566,40 +566,45 @@ export const ProfilePage: React.FC<ProfilePageProps> = (props) => {
                             <input type="file" ref={avatarCameraRef} onChange={(e) => handleFileChange(e, 'avatar')} accept="image/*" capture="environment" className="hidden" />
                         </div>
 
-                        <div className="w-full sm:w-auto pt-2 sm:pt-4 flex flex-wrap items-center gap-2">
+                        <div className="w-full sm:w-auto pt-2 sm:pt-4 flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
                             {isOwnProfile ? (
                                 <>
                                     {!isEditingProfile && (
-                                        <button type="button" onClick={() => onNavigate('Settings')} className="w-full sm:w-auto font-semibold px-4 py-2 rounded-lg transition-colors bg-surface text-primary border border-border hover:bg-background flex items-center space-x-2">
-                                            <span>Settings</span>
-                                            <SettingsIcon />
-                                        </button>
+                                        <div className="flex w-full sm:w-auto gap-2">
+                                            <button
+                                                type="button"
+                                                onClick={() => onNavigate('Settings')}
+                                                className="flex-1 sm:flex-none font-semibold px-4 py-2 rounded-lg transition-colors bg-surface text-primary border border-border hover:bg-background flex items-center justify-center space-x-2"
+                                            >
+                                                <span>Settings</span>
+                                                <SettingsIcon />
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={startEditing}
+                                                className="flex-1 sm:flex-none bg-accent text-accent-text font-semibold px-6 py-2 rounded-lg hover:bg-accent-hover transition-colors"
+                                            >
+                                                Edit Profile
+                                            </button>
+                                        </div>
                                     )}
-                                    {isEditingProfile ? (
-                                        <>
+                                    {isEditingProfile && (
+                                        <div className="flex w-full sm:w-auto gap-2">
                                             <button
                                                 type="button"
                                                 onClick={cancelEditing}
-                                                className="w-full sm:w-auto flex-1 sm:flex-none font-semibold px-4 py-2 rounded-lg transition-colors bg-surface text-primary border border-border hover:bg-background"
+                                                className="flex-1 sm:flex-none font-semibold px-4 py-2 rounded-lg transition-colors bg-surface text-primary border border-border hover:bg-background"
                                             >
                                                 Cancel
                                             </button>
                                             <button
                                                 type="button"
                                                 onClick={handleSaveProfile}
-                                                className="w-full sm:w-auto flex-1 sm:flex-none bg-accent text-accent-text font-semibold px-6 py-2 rounded-lg hover:bg-accent-hover transition-colors"
+                                                className="flex-1 sm:flex-none bg-accent text-accent-text font-semibold px-6 py-2 rounded-lg hover:bg-accent-hover transition-colors"
                                             >
                                                 Save
                                             </button>
-                                        </>
-                                    ) : (
-                                        <button
-                                            type="button"
-                                            onClick={startEditing}
-                                            className="w-full sm:w-auto bg-accent text-accent-text font-semibold px-6 py-2 rounded-lg hover:bg-accent-hover transition-colors"
-                                        >
-                                            Edit Profile
-                                        </button>
+                                        </div>
                                     )}
                                 </>
                             ) : (

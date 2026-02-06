@@ -151,6 +151,7 @@ export interface Notification {
   | 'story_like'
   | 'tribe_join'
   | 'tribe_message'
+  | 'tribe_kick'
   | 'admin_action';
   text?: string;
   read: boolean;
