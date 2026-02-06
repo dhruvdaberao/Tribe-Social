@@ -173,7 +173,7 @@ const MainLayout: React.FC = () => {
 
     // Render Helpers
     const containerClass = isFullHeightPage
-        ? `h-[calc(100vh-${(activeNavItem === 'Messages' && !isChatOpen ? '8rem' : '4rem')})] md:h-[calc(100vh-4rem)] ${isChatPage ? 'overflow-hidden' : 'overflow-y-auto no-scrollbar'}`
+        ? `h-[calc(var(--vh,1vh)*100-${(activeNavItem === 'Messages' && !isChatOpen ? '8rem' : '4rem')})] md:h-[calc(var(--vh,1vh)*100-4rem)] ${isChatPage ? 'overflow-hidden' : 'overflow-y-auto no-scrollbar'}`
         : isWidePage ? 'max-w-5xl mx-auto px-4 md:px-6 pt-6 pb-24 md:pb-8'
             : 'max-w-2xl mx-auto px-4 md:px-6 pt-6 pb-24 md:pb-8';
 
@@ -265,8 +265,24 @@ const MainLayout: React.FC = () => {
         }
     };
 
+    useEffect(() => {
+        const setViewportHeight = () => {
+            const vh = window.innerHeight * 0.01;
+            document.documentElement.style.setProperty('--vh', `${vh}px`);
+        };
+        setViewportHeight();
+        window.addEventListener('resize', setViewportHeight);
+        window.addEventListener('orientationchange', setViewportHeight);
+        window.visualViewport?.addEventListener('resize', setViewportHeight);
+        return () => {
+            window.removeEventListener('resize', setViewportHeight);
+            window.removeEventListener('orientationchange', setViewportHeight);
+            window.visualViewport?.removeEventListener('resize', setViewportHeight);
+        };
+    }, []);
+
     return (
-        <div className={`bg-background min-h-screen text-primary touch-pan-y ${isFullHeightPage ? 'h-screen overflow-hidden' : ''}`}>
+        <div className={`bg-background min-h-screen text-primary touch-pan-y ${isFullHeightPage ? 'h-[calc(var(--vh,1vh)*100)] overflow-hidden' : ''}`}>
             <Toaster />
             <Sidebar
                 activeItem={activeNavItem}
@@ -279,7 +295,7 @@ const MainLayout: React.FC = () => {
             />
 
             <main
-                className={`${shouldHideHeader ? 'pt-0 md:pt-16' : 'pt-16'} pb-16 md:pb-0 transition-all duration-300 ${isFullHeightPage ? 'h-screen' : 'min-h-screen'}`}
+                className={`${shouldHideHeader ? 'pt-0 md:pt-16' : 'pt-16'} pb-16 md:pb-0 transition-all duration-300 ${isFullHeightPage ? 'h-[calc(var(--vh,1vh)*100)]' : 'min-h-screen'}`}
                 onTouchStart={handleTouchStart}
                 onTouchEnd={handleTouchEnd}
             >
