@@ -20,6 +20,23 @@ const normalizeUser = (user: any): User | null => {
     followers: user.followers || [],
     following: user.following || [],
     blockedUsers: user.blockedUsers || [],
+    notificationPrefs: user.notificationPrefs || {
+      pushEnabled: true,
+      emailEnabled: true,
+      pushTypes: {
+        dm: true,
+        tribe: true,
+        likes: true,
+        comments: true,
+        follows: true,
+        tribeJoins: true,
+      },
+      emailTypes: {
+        newDevice: true,
+        digest: false,
+        moderation: true,
+      },
+    },
   };
 };
 

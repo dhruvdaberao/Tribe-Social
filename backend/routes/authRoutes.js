@@ -73,11 +73,22 @@
 import express from 'express';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
+import crypto from 'crypto';
 import { Resend } from 'resend';
 import User from '../models/userModel.js';
 import superAdmins from '../config/superAdmins.js';
+import { sendEmail, renderTemplate } from '../services/emailService.js';
+import { isEmailEnabledFor } from '../utils/notificationPrefs.js';
 
 const DISABLED_MESSAGE = 'Your account has been disabled by the Admin.';
+
+const getClientIp = (req) => {
+  const forwarded = req.headers['x-forwarded-for'];
+  if (typeof forwarded === 'string' && forwarded.length > 0) {
+    return forwarded.split(',')[0].trim();
+  }
+  return req.ip || '';
+};
 import OTP from '../models/otpModel.js';
 import Follow from '../models/followModel.js';
 
@@ -155,8 +166,48 @@ router.post('/login', async (req, res) => {
       if ((isAdmin && !user.isAdmin) || (isSuperAdmin && !user.isSuperAdmin)) {
         user.isAdmin = isAdmin;
         user.isSuperAdmin = isSuperAdmin;
-        await user.save();
       }
+
+      const userAgent = req.headers['user-agent'] || 'Unknown device';
+      const ipAddress = getClientIp(req);
+      const deviceId = req.body?.deviceId || '';
+      const deviceHash = crypto
+        .createHash('sha256')
+        .update(`${userAgent}|${deviceId}`)
+        .digest('hex');
+
+      const lastDeviceHash = user.lastLoginMeta?.lastDeviceHash;
+      const isNewDevice = Boolean(lastDeviceHash && lastDeviceHash !== deviceHash);
+
+      user.lastLoginMeta = {
+        lastIp: ipAddress,
+        lastUserAgent: userAgent,
+        lastLoginAt: new Date(),
+        lastDeviceHash: deviceHash,
+      };
+
+      await user.save();
+
+      if (isNewDevice && isEmailEnabledFor(user, 'newDevice')) {
+        try {
+          const html = await renderTemplate('newDeviceLogin.html', {
+            userName: user.name || 'there',
+            time: new Date().toLocaleString(),
+            ip: ipAddress || 'Unknown',
+            userAgent,
+            resetUrl: `${process.env.FRONTEND_URL || 'https://tribe-social.vercel.app'}/forgot-password`,
+          });
+          await sendEmail({
+            to: user.email,
+            subject: 'New device login to your Tribe Social account',
+            html,
+            text: `New login detected at ${new Date().toLocaleString()} from ${userAgent} (${ipAddress}). If this wasn't you, reset your password.`,
+          });
+        } catch (emailError) {
+          console.error('Failed to send new device email:', emailError);
+        }
+      }
+
       res.json({ token: generateToken(user._id), user: user });
     } else {
       res.status(401).json({ message: 'Invalid email or password' });

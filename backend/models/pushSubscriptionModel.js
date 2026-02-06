@@ -1,38 +1,46 @@
 import mongoose from 'mongoose';
 
-const pushSubscriptionSchema = new mongoose.Schema({
-    userId: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'User',
-        required: true,
-        index: true
+const pushSubscriptionSchema = new mongoose.Schema(
+  {
+    user: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      required: true,
+      index: true,
     },
     endpoint: {
-        type: String,
-        required: true
+      type: String,
+      required: true,
+      unique: true,
     },
     keys: {
-        p256dh: {
-            type: String,
-            required: true
-        },
-        auth: {
-            type: String,
-            required: true
-        }
+      p256dh: {
+        type: String,
+        required: true,
+      },
+      auth: {
+        type: String,
+        required: true,
+      },
     },
-    createdAt: {
-        type: Date,
-        default: Date.now
+    userAgent: {
+      type: String,
+      default: '',
     },
-    lastUsed: {
-        type: Date,
-        default: Date.now
-    }
-});
+    deviceLabel: {
+      type: String,
+      default: '',
+    },
+    lastUsedAt: {
+      type: Date,
+    },
+  },
+  {
+    timestamps: true,
+  }
+);
 
-// Compound index to prevent duplicate subscriptions
-pushSubscriptionSchema.index({ userId: 1, endpoint: 1 }, { unique: true });
+pushSubscriptionSchema.index({ user: 1 });
 
 const PushSubscription = mongoose.model('PushSubscription', pushSubscriptionSchema);
 
