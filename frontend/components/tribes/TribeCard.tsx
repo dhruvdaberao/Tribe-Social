@@ -2,7 +2,7 @@ import React from 'react';
 import styled from 'styled-components';
 import { Tribe, User } from '../../types';
 import { useNavigate } from 'react-router-dom';
-import { Camera, Edit3, EyeOff, Flag, MoreVertical, Users } from 'lucide-react';
+import { Edit3, EyeOff, Flag, LogOut, MoreVertical, Trash2, Users } from 'lucide-react';
 import { toast } from '../common/Toast';
 import TribeMembersModal from './TribeMembersModal';
 import ConfirmationModal from '../common/ConfirmationModal';
@@ -112,22 +112,6 @@ const AvatarImage = styled.img`
   object-fit: cover;
   border-radius: 50%;
 `;
-
-const AvatarEditButton = styled.button`
-  position: absolute;
-  bottom: -2px;
-  right: -2px;
-  width: 28px;
-  height: 28px;
-  border-radius: 999px;
-  border: 2px solid ${({ theme }) => theme.cardBackground};
-  background: ${({ theme }) => theme.primary};
-  color: ${({ theme }) => theme.cardBackground};
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-`;
 // ... (skip lines)
 
 const Button = styled.button<{ $variant?: 'primary' | 'secondary' }>`
@@ -200,7 +184,7 @@ const InlineInput = styled.input`
   border: 1px solid ${({ theme }) => theme.border};
   background: ${({ theme }) => theme.background};
   color: ${({ theme }) => theme.text};
-  padding: 10px 36px 10px 12px;
+  padding: 10px 12px;
   font-size: 1rem;
   font-weight: 600;
   outline: none;
@@ -216,31 +200,16 @@ const InlineTextArea = styled.textarea`
   border: 1px solid ${({ theme }) => theme.border};
   background: ${({ theme }) => theme.background};
   color: ${({ theme }) => theme.text};
-  padding: 10px 36px 10px 12px;
+  padding: 10px 12px;
   font-size: 0.95rem;
   line-height: 1.4;
   min-height: 80px;
-  resize: none;
-  margin-bottom: 1rem;
+  resize: vertical;
   outline: none;
 
   &:focus {
     border-color: ${({ theme }) => theme.primary};
   }
-`;
-
-const InputWrapper = styled.div`
-  position: relative;
-  width: 100%;
-`;
-
-const InputIcon = styled.div`
-  position: absolute;
-  right: 10px;
-  top: 50%;
-  transform: translateY(-50%);
-  color: ${({ theme }) => theme.textSecondary};
-  pointer-events: none;
 `;
 
 
@@ -282,14 +251,9 @@ const TribeCard: React.FC<TribeCardProps> = ({
   const [leavePrompt, setLeavePrompt] = React.useState('');
   const [isMenuOpen, setIsMenuOpen] = React.useState(false);
   const [isReportOpen, setIsReportOpen] = React.useState(false);
-  const [moderationAction, setModerationAction] = React.useState<null | 'hide' | 'unhide'>(null);
+  const [moderationAction, setModerationAction] = React.useState<null | 'hide' | 'delete'>(null);
   const [isSaving, setIsSaving] = React.useState(false);
-  const [editDraft, setEditDraft] = React.useState({
-    name: tribe.name,
-    description: tribe.description,
-    avatarUrl: tribe.avatarUrl || ''
-  });
-  const avatarInputRef = React.useRef<HTMLInputElement>(null);
+  const [editDraft, setEditDraft] = React.useState({ name: tribe.name, description: tribe.description });
 
   const userMap = React.useMemo(() => {
     return new Map(allUsers.map(u => [u.id, u]));
@@ -301,11 +265,7 @@ const TribeCard: React.FC<TribeCardProps> = ({
 
   React.useEffect(() => {
     if (isEditing) {
-      setEditDraft({
-        name: localTribe.name,
-        description: localTribe.description,
-        avatarUrl: localTribe.avatarUrl || ''
-      });
+      setEditDraft({ name: localTribe.name, description: localTribe.description });
       setIsMenuOpen(false);
     }
   }, [isEditing, localTribe]);
@@ -397,11 +357,7 @@ const TribeCard: React.FC<TribeCardProps> = ({
 
   const handleCancelEdit = (e?: React.MouseEvent) => {
     e?.stopPropagation();
-    setEditDraft({
-      name: localTribe.name,
-      description: localTribe.description,
-      avatarUrl: localTribe.avatarUrl || ''
-    });
+    setEditDraft({ name: localTribe.name, description: localTribe.description });
     onCloseEdit?.();
   };
 
@@ -417,8 +373,7 @@ const TribeCard: React.FC<TribeCardProps> = ({
     try {
       const { data } = await api.updateTribe(localTribe.id, {
         name: trimmedName,
-        description: editDraft.description.trim(),
-        avatarUrl: editDraft.avatarUrl || null
+        description: editDraft.description.trim()
       });
       setLocalTribe(data);
       onSaveEdit?.(data);
@@ -430,21 +385,6 @@ const TribeCard: React.FC<TribeCardProps> = ({
     } finally {
       setIsSaving(false);
     }
-  };
-
-  const handleAvatarChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error('Image size must be less than 5MB');
-      return;
-    }
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      setEditDraft(prev => ({ ...prev, avatarUrl: reader.result as string }));
-    };
-    reader.readAsDataURL(file);
-    event.target.value = '';
   };
 
   const handleReportSubmit = async (payload: { reason: string; details: string }) => {
@@ -467,13 +407,8 @@ const TribeCard: React.FC<TribeCardProps> = ({
         targetId: localTribe.id,
         actionType: moderationAction
       });
-      const updated = {
-        ...localTribe,
-        isHidden: moderationAction === 'hide'
-      };
-      setLocalTribe(updated);
-      toast.success(moderationAction === 'hide' ? 'Tribe hidden.' : 'Tribe unhidden.');
-      onSaveEdit?.(updated);
+      toast.success(moderationAction === 'hide' ? 'Tribe hidden.' : 'Tribe deleted.');
+      onSaveEdit?.(localTribe);
     } catch (error) {
       console.error('Moderation action error:', error);
       toast.error('Failed to apply moderation action.');
@@ -530,6 +465,21 @@ const TribeCard: React.FC<TribeCardProps> = ({
                   Report Tribe
                 </MenuItem>
               )}
+              {isMember && (
+                <MenuItem
+                  type="button"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    setIsMenuOpen(false);
+                    handleLeave(event);
+                  }}
+                  $tone="warning"
+                  role="menuitem"
+                >
+                  <LogOut size={16} />
+                  Leave Tribe
+                </MenuItem>
+              )}
               {isAdmin && (
                 <>
                   <MenuDivider />
@@ -538,13 +488,26 @@ const TribeCard: React.FC<TribeCardProps> = ({
                     onClick={(event) => {
                       event.stopPropagation();
                       setIsMenuOpen(false);
-                      setModerationAction(localTribe.isHidden ? 'unhide' : 'hide');
+                      setModerationAction('hide');
                     }}
                     $tone="warning"
                     role="menuitem"
                   >
                     <EyeOff size={16} />
-                    {localTribe.isHidden ? 'Unhide Tribe' : 'Hide Tribe'}
+                    Hide Tribe
+                  </MenuItem>
+                  <MenuItem
+                    type="button"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      setIsMenuOpen(false);
+                      setModerationAction('delete');
+                    }}
+                    $tone="danger"
+                    role="menuitem"
+                  >
+                    <Trash2 size={16} />
+                    Delete Tribe
                   </MenuItem>
                 </>
               )}
@@ -553,27 +516,10 @@ const TribeCard: React.FC<TribeCardProps> = ({
         )}
 
         <AvatarCircle>
-          {((isEditing && editDraft.avatarUrl) || localTribe.avatarUrl) ? (
-            <AvatarImage src={(isEditing ? editDraft.avatarUrl : localTribe.avatarUrl) || ''} alt={localTribe.name} />
+          {localTribe.avatarUrl ? (
+            <AvatarImage src={localTribe.avatarUrl} alt={localTribe.name} />
           ) : (
             <Users size={32} color="#D6B9A0" /> // Minimalistic group icon, light brown
-          )}
-          {isEditing && (
-            <>
-              <AvatarEditButton type="button" onClick={(event) => {
-                event.stopPropagation();
-                avatarInputRef.current?.click();
-              }}>
-                <Camera size={16} />
-              </AvatarEditButton>
-              <input
-                ref={avatarInputRef}
-                type="file"
-                accept="image/*"
-                onChange={handleAvatarChange}
-                className="hidden"
-              />
-            </>
           )}
           {unreadCount !== undefined && unreadCount > 0 && (
             <div style={{
@@ -598,34 +544,26 @@ const TribeCard: React.FC<TribeCardProps> = ({
           )}
         </AvatarCircle>
 
-        {isEditing ? (
-          <InputWrapper style={{ marginBottom: '0.5rem' }}>
+        <TribeName>
+          {isEditing ? (
             <InlineInput
               value={editDraft.name}
               onChange={(event) => setEditDraft((prev) => ({ ...prev, name: event.target.value }))}
             />
-            <InputIcon>
-              <Edit3 size={16} />
-            </InputIcon>
-          </InputWrapper>
-        ) : (
-          <TribeName>{localTribe.name}</TribeName>
-        )}
+          ) : (
+            localTribe.name
+          )}
+        </TribeName>
         <MemberCount onClick={handleMembersClick} style={{ cursor: 'pointer', textDecoration: 'underline' }}>
           {localTribe.members.length} members
         </MemberCount>
 
         {isEditing ? (
-          <InputWrapper>
-            <InlineTextArea
-              value={editDraft.description}
-              onChange={(event) => setEditDraft((prev) => ({ ...prev, description: event.target.value }))}
-              placeholder="Describe your tribe"
-            />
-            <InputIcon>
-              <Edit3 size={16} />
-            </InputIcon>
-          </InputWrapper>
+          <InlineTextArea
+            value={editDraft.description}
+            onChange={(event) => setEditDraft((prev) => ({ ...prev, description: event.target.value }))}
+            placeholder="Describe your tribe"
+          />
         ) : (
           <Quote>"{localTribe.description}"</Quote>
         )}
@@ -674,15 +612,6 @@ const TribeCard: React.FC<TribeCardProps> = ({
         memberIds={localTribe.members}
         userMap={userMap}
         ownerId={localTribe.owner}
-        currentUserId={currentUser?.id}
-        tribeId={localTribe.id}
-        tribeName={localTribe.name}
-        onMemberKicked={(memberId) => {
-          setLocalTribe(prev => ({
-            ...prev,
-            members: prev.members.filter(id => id !== memberId),
-          }));
-        }}
         onViewProfile={(user) => {
           setIsMembersModalOpen(false);
           if (onViewProfile) onViewProfile(user);
@@ -707,11 +636,11 @@ const TribeCard: React.FC<TribeCardProps> = ({
       />
       <ConfirmationModal
         isOpen={!!moderationAction}
-        title={moderationAction === 'hide' ? 'Hide Tribe' : 'Unhide Tribe'}
+        title={moderationAction === 'hide' ? 'Hide Tribe' : 'Delete Tribe'}
         message={moderationAction === 'hide'
           ? 'This will hide the tribe from members until an admin restores it.'
-          : 'This will make the tribe visible to members again.'}
-        confirmText={moderationAction === 'hide' ? 'Hide' : 'Unhide'}
+          : 'This will delete the tribe for all members. This action can only be restored by admins.'}
+        confirmText={moderationAction === 'hide' ? 'Hide' : 'Delete'}
         cancelText="Cancel"
         variant="danger"
         onClose={() => setModerationAction(null)}

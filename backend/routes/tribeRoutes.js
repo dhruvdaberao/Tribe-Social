@@ -231,56 +231,6 @@ router.put('/:id/join', protect, async (req, res) => {
     }
 });
 
-// PATCH /api/tribes/:id/kick/:userId
-router.patch('/:id/kick/:userId', protect, async (req, res) => {
-    try {
-        const { id, userId } = req.params;
-        const tribe = await Tribe.findById(id);
-        if (!tribe) return res.status(404).json({ message: 'Tribe not found' });
-
-        if (tribe.owner.toString() !== req.user.id) {
-            return res.status(403).json({ message: 'Only the Chief can remove members.' });
-        }
-
-        if (tribe.owner.toString() === userId) {
-            return res.status(400).json({ message: 'Chief cannot be removed.' });
-        }
-
-        const isMember = tribe.members.some(memberId => memberId.toString() === userId);
-        if (!isMember) {
-            return res.status(404).json({ message: 'User is not a member.' });
-        }
-
-        tribe.members = tribe.members.filter(memberId => memberId.toString() !== userId);
-        const updated = await tribe.save();
-
-        const notification = new Notification({
-            recipient: userId,
-            sender: req.user.id,
-            type: 'tribe_kick',
-            text: `You were removed from @${tribe.name}.`,
-            tribeId: tribe._id,
-        });
-        await notification.save();
-        const populatedNotification = await notification.populate('sender', 'name username avatarUrl');
-
-        const recipientSocketId = req.onlineUsers?.get(userId.toString());
-        if (recipientSocketId && req.io) {
-            req.io.to(recipientSocketId).emit('newNotification', populatedNotification);
-            req.io.to(recipientSocketId).emit('tribeKicked', { tribeId: tribe._id.toString() });
-        }
-
-        if (req.io) {
-            req.io.to(tribe._id.toString()).emit('tribeMemberKicked', { tribeId: tribe._id.toString(), userId });
-        }
-
-        res.status(200).json(updated);
-    } catch (error) {
-        console.error('❌ PATCH /api/tribes/:id/kick/:userId ERROR:', error);
-        res.status(500).json({ message: 'Server Error kicking member' });
-    }
-});
-
 /* ======================================================
    CHAT
 ====================================================== */
