@@ -358,7 +358,8 @@ export const MessageArea: React.FC<MessageAreaProps> = ({
   };
 
   return (
-    <div className="flex flex-col h-full bg-background min-h-0 overflow-hidden">
+    // Root cause: the chat page was scrolling at the document level when the keyboard opened; confine scrolling to the message list.
+    <div className="flex flex-col h-full bg-background min-h-0 overflow-hidden overscroll-none">
       <div className="sticky top-0 flex items-center p-3 border-b border-border bg-surface flex-shrink-0 z-50">
         <button onClick={onBack} className="md:hidden p-2 mr-2 text-primary">
           <BackIcon />
@@ -386,7 +387,7 @@ export const MessageArea: React.FC<MessageAreaProps> = ({
         </div>
       </div>
 
-      <div ref={scrollContainerRef} onScroll={handleScroll} className="flex-1 overflow-y-auto p-4">
+      <div ref={scrollContainerRef} onScroll={handleScroll} className="flex-1 overflow-y-auto p-4 pb-6 overscroll-contain">
         {isLoading && messages.length === 0 ? (
           <div className="w-full h-full flex items-center justify-center">
             <div className="w-10 h-10 border-2 border-accent border-t-transparent rounded-full animate-spin" />

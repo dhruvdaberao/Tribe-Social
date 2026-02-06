@@ -173,7 +173,7 @@ const MainLayout: React.FC = () => {
 
     // Render Helpers
     const containerClass = isFullHeightPage
-        ? `h-[calc(var(--vh,1vh)*100-${(activeNavItem === 'Messages' && !isChatOpen ? '8rem' : '4rem')})] md:h-[calc(var(--vh,1vh)*100-4rem)] ${isChatPage ? 'overflow-hidden' : 'overflow-y-auto no-scrollbar'}`
+        ? `h-[calc(var(--dvh,1vh)*100-${(activeNavItem === 'Messages' && !isChatOpen ? '8rem' : '4rem')})] md:h-[calc(var(--dvh,1vh)*100-4rem)] ${isChatPage ? 'overflow-hidden' : 'overflow-y-auto no-scrollbar'}`
         : isWidePage ? 'max-w-5xl mx-auto px-4 md:px-6 pt-6 pb-24 md:pb-8'
             : 'max-w-2xl mx-auto px-4 md:px-6 pt-6 pb-24 md:pb-8';
 
@@ -267,7 +267,10 @@ const MainLayout: React.FC = () => {
 
     useEffect(() => {
         const setViewportHeight = () => {
-            const vh = window.innerHeight * 0.01;
+            // Root cause: 100vh + page scroll let the keyboard resize push the header; use visualViewport-driven height to lock chat to the visible viewport.
+            const viewportHeight = window.visualViewport?.height ?? window.innerHeight;
+            const vh = viewportHeight * 0.01;
+            document.documentElement.style.setProperty('--dvh', `${vh}px`);
             document.documentElement.style.setProperty('--vh', `${vh}px`);
         };
         setViewportHeight();
@@ -282,7 +285,7 @@ const MainLayout: React.FC = () => {
     }, []);
 
     return (
-        <div className={`bg-background min-h-screen text-primary touch-pan-y ${isFullHeightPage ? 'h-[calc(var(--vh,1vh)*100)] overflow-hidden' : ''}`}>
+        <div className={`bg-background min-h-screen text-primary touch-pan-y ${isFullHeightPage ? 'h-[calc(var(--dvh,1vh)*100)] overflow-hidden' : ''}`}>
             <Toaster />
             <Sidebar
                 activeItem={activeNavItem}
@@ -295,7 +298,7 @@ const MainLayout: React.FC = () => {
             />
 
             <main
-                className={`${shouldHideHeader ? 'pt-0 md:pt-16' : 'pt-16'} pb-16 md:pb-0 transition-all duration-300 ${isFullHeightPage ? 'h-[calc(var(--vh,1vh)*100)]' : 'min-h-screen'}`}
+                className={`${shouldHideHeader ? 'pt-0 md:pt-16' : 'pt-16'} pb-16 md:pb-0 transition-all duration-300 ${isFullHeightPage ? 'h-[calc(var(--dvh,1vh)*100)]' : 'min-h-screen'} ${isChatPage ? 'overflow-hidden' : ''}`}
                 onTouchStart={handleTouchStart}
                 onTouchEnd={handleTouchEnd}
             >

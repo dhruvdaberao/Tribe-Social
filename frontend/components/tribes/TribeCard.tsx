@@ -2,11 +2,12 @@ import React from 'react';
 import styled from 'styled-components';
 import { Tribe, User } from '../../types';
 import { useNavigate } from 'react-router-dom';
-import { Edit2, Users } from 'lucide-react';
+import { Edit3, EyeOff, Flag, LogOut, MoreVertical, Trash2, Users } from 'lucide-react';
 import { toast } from '../common/Toast';
 import TribeMembersModal from './TribeMembersModal';
-import EditTribeModal from './EditTribeModal';
 import ConfirmationModal from '../common/ConfirmationModal';
+import ReportModal from '../moderation/ReportModal';
+import * as api from '../../api';
 
 const Card = styled.div`
   background: ${({ theme }) => theme.cardBackground};
@@ -21,7 +22,7 @@ const Card = styled.div`
   padding: 1.5rem; // 24px (Spec Global Padding)
   text-align: center;
   border: 1px solid ${({ theme }) => theme.border};
-  position: relative; // For absolute positioning of Edit icon
+  position: relative; // For absolute positioning of menu
 
   &:hover {
     transform: translateY(-4px);
@@ -29,19 +30,66 @@ const Card = styled.div`
   }
 `;
 
-const EditIconWrapper = styled.div`
+const MenuButton = styled.button`
   position: absolute;
   top: 1rem;
   right: 1rem;
-  color: ${({ theme }) => theme.primary}; // Brown
+  background: ${({ theme }) => theme.background};
+  border: 1px solid ${({ theme }) => theme.border};
+  border-radius: 999px;
+  padding: 6px;
+  color: ${({ theme }) => theme.textSecondary};
   cursor: pointer;
-  padding: 4px;
-  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   z-index: 10;
-  
+
   &:hover {
-    background: ${({ theme }) => theme.hover}; // Light hover
+    color: ${({ theme }) => theme.text};
+    background: ${({ theme }) => theme.hover};
   }
+`;
+
+const MenuOverlay = styled.div`
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+`;
+
+const Menu = styled.div`
+  position: absolute;
+  top: 3rem;
+  right: 1rem;
+  width: 200px;
+  background: ${({ theme }) => theme.cardBackground};
+  border: 1px solid ${({ theme }) => theme.border};
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+  overflow: hidden;
+  z-index: 50;
+`;
+
+const MenuItem = styled.button<{ $tone?: 'default' | 'danger' | 'warning' }>`
+  width: 100%;
+  padding: 10px 12px;
+  border: none;
+  background: transparent;
+  color: ${({ theme, $tone }) => ($tone === 'danger' ? '#ef4444' : $tone === 'warning' ? '#f59e0b' : theme.text)};
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.9rem;
+  cursor: pointer;
+
+  &:hover {
+    background: ${({ theme }) => theme.hover};
+  }
+`;
+
+const MenuDivider = styled.div`
+  height: 1px;
+  background: ${({ theme }) => theme.border};
 `;
 
 const AvatarCircle = styled.div`
@@ -130,9 +178,38 @@ const ButtonGroup = styled.div`
   margin-top: auto;
 `;
 
-const InlineEditContainer = styled.div`
+const InlineInput = styled.input`
   width: 100%;
-  margin-top: 16px;
+  border-radius: 12px;
+  border: 1px solid ${({ theme }) => theme.border};
+  background: ${({ theme }) => theme.background};
+  color: ${({ theme }) => theme.text};
+  padding: 10px 12px;
+  font-size: 1rem;
+  font-weight: 600;
+  outline: none;
+
+  &:focus {
+    border-color: ${({ theme }) => theme.primary};
+  }
+`;
+
+const InlineTextArea = styled.textarea`
+  width: 100%;
+  border-radius: 12px;
+  border: 1px solid ${({ theme }) => theme.border};
+  background: ${({ theme }) => theme.background};
+  color: ${({ theme }) => theme.text};
+  padding: 10px 12px;
+  font-size: 0.95rem;
+  line-height: 1.4;
+  min-height: 80px;
+  resize: vertical;
+  outline: none;
+
+  &:focus {
+    border-color: ${({ theme }) => theme.primary};
+  }
 `;
 
 
@@ -159,22 +236,39 @@ const TribeCard: React.FC<TribeCardProps> = ({
   isEditing,
   onCloseEdit,
   onSaveEdit,
-  onDeleteEdit,
   onViewProfile,
   onJoinToggle,
   unreadCount
 }) => {
   const navigate = useNavigate();
-  const isMember = currentUser && tribe.members.includes(currentUser.id);
-  const isOwner = currentUser && tribe.owner === currentUser.id;
+  const [localTribe, setLocalTribe] = React.useState(tribe);
+  const isMember = !!currentUser && localTribe.members.includes(currentUser.id);
+  const isOwner = !!currentUser && localTribe.owner === currentUser.id;
+  const isAdmin = !!currentUser?.isAdmin || !!currentUser?.isSuperAdmin;
   const [isMembersModalOpen, setIsMembersModalOpen] = React.useState(false);
   const [isJoining, setIsJoining] = React.useState(false);
   const [isLeaveConfirmOpen, setIsLeaveConfirmOpen] = React.useState(false);
   const [leavePrompt, setLeavePrompt] = React.useState('');
+  const [isMenuOpen, setIsMenuOpen] = React.useState(false);
+  const [isReportOpen, setIsReportOpen] = React.useState(false);
+  const [moderationAction, setModerationAction] = React.useState<null | 'hide' | 'delete'>(null);
+  const [isSaving, setIsSaving] = React.useState(false);
+  const [editDraft, setEditDraft] = React.useState({ name: tribe.name, description: tribe.description });
 
   const userMap = React.useMemo(() => {
     return new Map(allUsers.map(u => [u.id, u]));
   }, [allUsers]);
+
+  React.useEffect(() => {
+    setLocalTribe(tribe);
+  }, [tribe]);
+
+  React.useEffect(() => {
+    if (isEditing) {
+      setEditDraft({ name: localTribe.name, description: localTribe.description });
+      setIsMenuOpen(false);
+    }
+  }, [isEditing, localTribe]);
 
   // We need a userMap for the modal. Since we don't have it passed down from TribesPage yet,
   // we will accept it as a prop.
@@ -182,9 +276,9 @@ const TribeCard: React.FC<TribeCardProps> = ({
 
   const handleJoin = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (!tribe.id || !onJoinToggle || !currentUser) {
+    if (!localTribe.id || !onJoinToggle || !currentUser) {
       console.error('Cannot join tribe: Missing required data', {
-        tribeId: tribe.id,
+        tribeId: localTribe.id,
         hasOnJoinToggle: !!onJoinToggle,
         hasCurrentUser: !!currentUser
       });
@@ -195,8 +289,8 @@ const TribeCard: React.FC<TribeCardProps> = ({
     setIsJoining(true);
 
     try {
-      await onJoinToggle(tribe.id);
-      toast.success(`Joined ${tribe.name}!`);
+      await onJoinToggle(localTribe.id);
+      toast.success(`Joined ${localTribe.name}!`);
     } catch (error) {
       console.error('Join error:', error);
       toast.error('Failed to join tribe. Please try again.');
@@ -207,7 +301,7 @@ const TribeCard: React.FC<TribeCardProps> = ({
 
 
   const performLeave = async () => {
-    if (!tribe.id || !onJoinToggle) {
+    if (!localTribe.id || !onJoinToggle) {
       toast.error('Unable to leave tribe. Please try again.');
       return;
     }
@@ -215,8 +309,8 @@ const TribeCard: React.FC<TribeCardProps> = ({
     setIsJoining(true);
 
     try {
-      await onJoinToggle(tribe.id);
-      toast.success(`Left ${tribe.name}`);
+      await onJoinToggle(localTribe.id);
+      toast.success(`Left ${localTribe.name}`);
     } catch (error) {
       console.error('Leave error:', error);
       toast.error('Failed to leave tribe. Please try again.');
@@ -227,16 +321,16 @@ const TribeCard: React.FC<TribeCardProps> = ({
 
   const handleLeave = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (!tribe.id || !onJoinToggle) {
+    if (!localTribe.id || !onJoinToggle) {
       console.error('Cannot leave tribe: Missing required data');
       toast.error('Unable to leave tribe. Please try again.');
       return;
     }
 
     if (isOwner) {
-      if (tribe.members.length > 1) {
+      if (localTribe.members.length > 1) {
         toast.error('You must transfer the Chief role before leaving.');
-        if (onEdit) onEdit(tribe);
+        if (onEdit) onEdit(localTribe);
         return;
       }
       // If they are the only member, allow leaving (which effectively deletes/empties tribe or backend handles it)
@@ -244,7 +338,7 @@ const TribeCard: React.FC<TribeCardProps> = ({
       setIsLeaveConfirmOpen(true);
       return;
     } else {
-      setLeavePrompt(`Are you sure you want to leave @${tribe.name}?`);
+      setLeavePrompt(`Are you sure you want to leave @${localTribe.name}?`);
       setIsLeaveConfirmOpen(true);
       return;
     }
@@ -253,7 +347,7 @@ const TribeCard: React.FC<TribeCardProps> = ({
 
   const handleEditClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (onEdit) onEdit(tribe);
+    if (onEdit) onEdit(localTribe);
   };
 
   const handleMembersClick = (e: React.MouseEvent) => {
@@ -261,18 +355,169 @@ const TribeCard: React.FC<TribeCardProps> = ({
     setIsMembersModalOpen(true);
   }
 
+  const handleCancelEdit = (e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    setEditDraft({ name: localTribe.name, description: localTribe.description });
+    onCloseEdit?.();
+  };
+
+  const handleSaveEdit = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!localTribe.id) return;
+    const trimmedName = editDraft.name.trim();
+    if (!trimmedName) {
+      toast.error('Tribe name is required.');
+      return;
+    }
+    setIsSaving(true);
+    try {
+      const { data } = await api.updateTribe(localTribe.id, {
+        name: trimmedName,
+        description: editDraft.description.trim()
+      });
+      setLocalTribe(data);
+      onSaveEdit?.(data);
+      onCloseEdit?.();
+      toast.success('Tribe updated.');
+    } catch (error) {
+      console.error('Update tribe error:', error);
+      toast.error('Failed to update tribe.');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleReportSubmit = async (payload: { reason: string; details: string }) => {
+    if (!localTribe.id) return;
+    try {
+      await api.reportTribe(localTribe.id, payload.reason, payload.details);
+      toast.success('Report submitted. Thank you for keeping Tribe safe.');
+      setIsReportOpen(false);
+    } catch (error) {
+      console.error('Report tribe error:', error);
+      toast.error('Failed to submit report.');
+    }
+  };
+
+  const handleModerationAction = async () => {
+    if (!moderationAction || !localTribe.id) return;
+    try {
+      await api.applyModerationAction({
+        targetType: 'tribe',
+        targetId: localTribe.id,
+        actionType: moderationAction
+      });
+      toast.success(moderationAction === 'hide' ? 'Tribe hidden.' : 'Tribe deleted.');
+      onSaveEdit?.(localTribe);
+    } catch (error) {
+      console.error('Moderation action error:', error);
+      toast.error('Failed to apply moderation action.');
+    }
+  };
+
   return (
     <>
       <Card>
-        {isOwner && onEdit && (
-          <EditIconWrapper onClick={handleEditClick} title="Edit Tribe">
-            <Edit2 size={18} strokeWidth={2} />
-          </EditIconWrapper>
+        <MenuButton
+          type="button"
+          aria-haspopup="true"
+          aria-expanded={isMenuOpen}
+          onClick={(event) => {
+            event.stopPropagation();
+            setIsMenuOpen((prev) => !prev);
+          }}
+        >
+          <MoreVertical size={18} />
+        </MenuButton>
+        {isMenuOpen && (
+          <>
+            <MenuOverlay onClick={() => setIsMenuOpen(false)} />
+            <Menu role="menu" aria-label="Tribe actions">
+              {isOwner && onEdit && (
+                <>
+                  <MenuItem
+                    type="button"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      setIsMenuOpen(false);
+                      handleEditClick(event);
+                    }}
+                    role="menuitem"
+                  >
+                    <Edit3 size={16} />
+                    Edit Tribe
+                  </MenuItem>
+                  <MenuDivider />
+                </>
+              )}
+              {currentUser && (
+                <MenuItem
+                  type="button"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    setIsMenuOpen(false);
+                    setIsReportOpen(true);
+                  }}
+                  $tone="warning"
+                  role="menuitem"
+                >
+                  <Flag size={16} />
+                  Report Tribe
+                </MenuItem>
+              )}
+              {isMember && (
+                <MenuItem
+                  type="button"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    setIsMenuOpen(false);
+                    handleLeave(event);
+                  }}
+                  $tone="warning"
+                  role="menuitem"
+                >
+                  <LogOut size={16} />
+                  Leave Tribe
+                </MenuItem>
+              )}
+              {isAdmin && (
+                <>
+                  <MenuDivider />
+                  <MenuItem
+                    type="button"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      setIsMenuOpen(false);
+                      setModerationAction('hide');
+                    }}
+                    $tone="warning"
+                    role="menuitem"
+                  >
+                    <EyeOff size={16} />
+                    Hide Tribe
+                  </MenuItem>
+                  <MenuItem
+                    type="button"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      setIsMenuOpen(false);
+                      setModerationAction('delete');
+                    }}
+                    $tone="danger"
+                    role="menuitem"
+                  >
+                    <Trash2 size={16} />
+                    Delete Tribe
+                  </MenuItem>
+                </>
+              )}
+            </Menu>
+          </>
         )}
 
         <AvatarCircle>
-          {tribe.avatarUrl ? (
-            <AvatarImage src={tribe.avatarUrl} alt={tribe.name} />
+          {localTribe.avatarUrl ? (
+            <AvatarImage src={localTribe.avatarUrl} alt={localTribe.name} />
           ) : (
             <Users size={32} color="#D6B9A0" /> // Minimalistic group icon, light brown
           )}
@@ -299,19 +544,45 @@ const TribeCard: React.FC<TribeCardProps> = ({
           )}
         </AvatarCircle>
 
-        <TribeName>{tribe.name}</TribeName>
+        <TribeName>
+          {isEditing ? (
+            <InlineInput
+              value={editDraft.name}
+              onChange={(event) => setEditDraft((prev) => ({ ...prev, name: event.target.value }))}
+            />
+          ) : (
+            localTribe.name
+          )}
+        </TribeName>
         <MemberCount onClick={handleMembersClick} style={{ cursor: 'pointer', textDecoration: 'underline' }}>
-          {tribe.members.length} members
+          {localTribe.members.length} members
         </MemberCount>
 
-        <Quote>"{tribe.description}"</Quote>
+        {isEditing ? (
+          <InlineTextArea
+            value={editDraft.description}
+            onChange={(event) => setEditDraft((prev) => ({ ...prev, description: event.target.value }))}
+            placeholder="Describe your tribe"
+          />
+        ) : (
+          <Quote>"{localTribe.description}"</Quote>
+        )}
 
         <ButtonGroup>
-          {isMember && (
+          {isEditing ? (
+            <>
+              <Button $variant="secondary" onClick={handleCancelEdit} disabled={isSaving}>
+                Cancel
+              </Button>
+              <Button $variant="primary" onClick={handleSaveEdit} disabled={isSaving}>
+                {isSaving ? 'Saving...' : 'Save'}
+              </Button>
+            </>
+          ) : isMember ? (
             <>
               <Button $variant="secondary" onClick={(e) => {
                 e.stopPropagation();
-                navigate(`/tribes/${tribe.id}`);
+                navigate(`/tribes/${localTribe.id}`);
               }}>
                 Chat
               </Button>
@@ -323,9 +594,7 @@ const TribeCard: React.FC<TribeCardProps> = ({
                 {isJoining ? 'Leaving...' : 'Leave'}
               </Button>
             </>
-          )}
-
-          {!isMember && (
+          ) : (
             <Button
               $variant="primary"
               onClick={handleJoin}
@@ -337,30 +606,24 @@ const TribeCard: React.FC<TribeCardProps> = ({
         </ButtonGroup>
       </Card>
 
-      {isEditing && onCloseEdit && onSaveEdit && (
-        <InlineEditContainer onClick={(event) => event.stopPropagation()}>
-          <EditTribeModal
-            tribe={tribe}
-            onClose={onCloseEdit}
-            onSuccess={onSaveEdit}
-            onDelete={onDeleteEdit ? () => onDeleteEdit() : undefined}
-            allUsers={allUsers}
-            variant="inline"
-          />
-        </InlineEditContainer>
-      )}
-
       <TribeMembersModal
         isOpen={isMembersModalOpen}
         onClose={() => setIsMembersModalOpen(false)}
-        memberIds={tribe.members}
+        memberIds={localTribe.members}
         userMap={userMap}
-        ownerId={tribe.owner}
+        ownerId={localTribe.owner}
         onViewProfile={(user) => {
           setIsMembersModalOpen(false);
           if (onViewProfile) onViewProfile(user);
         }}
       />
+      {isReportOpen && (
+        <ReportModal
+          targetType="tribe"
+          onClose={() => setIsReportOpen(false)}
+          onSubmit={handleReportSubmit}
+        />
+      )}
       <ConfirmationModal
         isOpen={isLeaveConfirmOpen}
         title="Leave Tribe"
@@ -370,6 +633,18 @@ const TribeCard: React.FC<TribeCardProps> = ({
         variant="danger"
         onClose={() => setIsLeaveConfirmOpen(false)}
         onConfirm={performLeave}
+      />
+      <ConfirmationModal
+        isOpen={!!moderationAction}
+        title={moderationAction === 'hide' ? 'Hide Tribe' : 'Delete Tribe'}
+        message={moderationAction === 'hide'
+          ? 'This will hide the tribe from members until an admin restores it.'
+          : 'This will delete the tribe for all members. This action can only be restored by admins.'}
+        confirmText={moderationAction === 'hide' ? 'Hide' : 'Delete'}
+        cancelText="Cancel"
+        variant="danger"
+        onClose={() => setModerationAction(null)}
+        onConfirm={handleModerationAction}
       />
     </>
   );
