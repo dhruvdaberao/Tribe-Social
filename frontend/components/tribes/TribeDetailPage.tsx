@@ -264,6 +264,19 @@ const TribeDetailPage: React.FC<Props> = ({ currentUser, tribeId: propTribeId })
     (tribe.owner === currentUser.id ||
       tribe.members.includes(currentUser.id));
 
+  const fallbackTribe: Tribe = {
+    id: id || 'loading',
+    name: 'Loading...',
+    description: '',
+    avatarUrl: '',
+    owner: '',
+    members: [],
+  };
+
+  const tribeForLayout = tribe ?? fallbackTribe;
+  const showChatShell = !!currentUser && (isMember || (isLoading && !tribe));
+  const isChatLoading = areMessagesLoading || (isLoading && !tribe);
+
   const userMap = useMemo(
     () => new Map(allUsers.map(u => [u.id, u])),
     [allUsers]
@@ -417,6 +430,20 @@ const TribeDetailPage: React.FC<Props> = ({ currentUser, tribeId: propTribeId })
       socket.off('newTribeMessage', handleIncoming);
     };
   }, [socket, id, isMember, userMap, clearUnreadTribe]);
+
+  useEffect(() => {
+    if (!socket || !id) return;
+    const handleKicked = (payload: { tribeId: string }) => {
+      if (payload.tribeId !== id) return;
+      toast.error(`You were removed from @${tribe?.name || 'this tribe'}.`);
+      leaveRoom(id);
+      navigate('/tribes');
+    };
+    socket.on('tribeKicked', handleKicked);
+    return () => {
+      socket.off('tribeKicked', handleKicked);
+    };
+  }, [socket, id, tribe?.name, navigate, leaveRoom]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -651,19 +678,11 @@ const TribeDetailPage: React.FC<Props> = ({ currentUser, tribeId: propTribeId })
         </HeaderActions>
       </Header>
 
-      {/* Show loading spinner while tribe loads */}
-      {isLoading && !tribe ? (
-        <div className="flex-1 flex items-center justify-center">
-          <div className="text-center">
-            <div className="w-16 h-16 border-4 border-accent border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-            <p className="text-secondary">Loading tribe...</p>
-          </div>
-        </div>
-      ) : isMember ? (
+      {showChatShell ? (
         <TribeMessageArea
-          tribe={tribe!}
+          tribe={tribeForLayout}
           messages={messages}
-          isLoading={areMessagesLoading}
+          isLoading={isChatLoading}
           currentUser={currentUser!}
           isSending={isSending}
           isUploading={isUploading}
@@ -672,6 +691,8 @@ const TribeDetailPage: React.FC<Props> = ({ currentUser, tribeId: propTribeId })
           isLoadingMore={isLoadingMore}
           onLoadMore={handleLoadMoreMessages}
           onSendMessage={handleSend}
+          isReadOnly={!isMember}
+          inputPlaceholder={isMember ? `Message ${tribeForLayout.name}…` : 'Join to chat'}
         />
       ) : (
         <div className="flex-1 flex flex-col items-center justify-center gap-4">
@@ -702,6 +723,16 @@ const TribeDetailPage: React.FC<Props> = ({ currentUser, tribeId: propTribeId })
           memberIds={tribe.members}
           userMap={userMap}
           ownerId={tribe.owner}
+          tribeId={tribe.id}
+          tribeName={tribe.name}
+          currentUserId={currentUser?.id}
+          onMemberKicked={(kickedId) => {
+            if (!tribe) return;
+            setTribe({
+              ...tribe,
+              members: tribe.members.filter(memberId => memberId !== kickedId),
+            });
+          }}
         />
       )}
 
