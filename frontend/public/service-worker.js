@@ -21,7 +21,7 @@ self.addEventListener('push', (event) => {
 
     try {
         const data = event.data.json();
-        const { title, body, icon, badge, data: notificationData } = data;
+        const { title, body, icon, badge, tag, data: notificationData, url } = data;
 
         // Validate required fields
         if (!title) {
@@ -31,11 +31,14 @@ self.addEventListener('push', (event) => {
 
         const options = {
             body: body || '',
-            icon: icon || '/logo-192.png', // Use existing PWA icon
-            badge: badge || '/logo-192.png', // Use existing PWA icon
-            data: notificationData || {},
+            icon: icon || '/logo-192.png',
+            badge: badge || '/logo-192.png',
+            data: {
+                ...(notificationData || {}),
+                url: notificationData?.url || url || '/',
+            },
             vibrate: [200, 100, 200],
-            tag: notificationData?.type || 'default',
+            tag: tag || notificationData?.tag || notificationData?.type || 'default',
             requireInteraction: false,
             silent: false
         };

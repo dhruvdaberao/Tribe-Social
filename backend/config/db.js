@@ -8,7 +8,7 @@ const connectDB = async () => {
     }
     const conn = await mongoose.connect(process.env.MONGO_URI);
     // This log confirms a successful connection. If you don't see this, the connection failed.
-    console.log(`MongoDB Connected: ${conn.connection.host}`);
+    console.info(`MongoDB Connected: ${conn.connection.host}`);
   } catch (error) {
     console.error("\n--- DATABASE CONNECTION FAILED ---");
     console.error(`Error: ${error.message}`);

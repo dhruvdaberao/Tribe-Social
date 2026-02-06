@@ -26,6 +26,23 @@ export interface User {
   isDeleted?: boolean;
   deletedAt?: string | null;
   lastModerationAt?: string | null;
+  notificationPrefs?: {
+    pushEnabled: boolean;
+    emailEnabled: boolean;
+    pushTypes: {
+      dm: boolean;
+      tribe: boolean;
+      likes: boolean;
+      comments: boolean;
+      follows: boolean;
+      tribeJoins: boolean;
+    };
+    emailTypes: {
+      newDevice: boolean;
+      digest: boolean;
+      moderation: boolean;
+    };
+  };
 }
 
 /* ===================== COMMENTS & POSTS ===================== */
@@ -133,6 +150,7 @@ export interface Notification {
   | 'message'
   | 'story_like'
   | 'tribe_join'
+  | 'tribe_message'
   | 'admin_action';
   text?: string;
   read: boolean;

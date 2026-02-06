@@ -12,9 +12,9 @@
  */
 
 // This is a stub implementation as requested.
-console.log("-----------------------------------------");
-console.log("   Tribe Social - Image Migration Tool   ");
-console.log("-----------------------------------------");
+console.info("-----------------------------------------");
+console.info("   Tribe Social - Image Migration Tool   ");
+console.info("-----------------------------------------");
 
 const args = process.argv.slice(2);
 const isDryRun = !args.includes('--apply');
@@ -24,24 +24,24 @@ if (!process.env.CLOUDINARY_URL && !isDryRun) {
     process.exit(1);
 }
 
-console.log(`Mode: ${isDryRun ? 'DRY RUN (No changes)' : 'LIVE (Will modify database)'}`);
-console.log("Connecting to DB...");
+console.info(`Mode: ${isDryRun ? 'DRY RUN (No changes)' : 'LIVE (Will modify database)'}`);
+console.info("Connecting to DB...");
 
 // Mock DB connection delay
 setTimeout(() => {
-    console.log("✅ DB Connected.");
-    console.log("Scanning for heavy Base64 images...");
+    console.info("✅ DB Connected.");
+    console.info("Scanning for heavy Base64 images...");
     
     // Logic would go here:
     // const users = await User.find({ avatarUrl: /^data:image/ });
     // const posts = await Post.find({ imageUrl: /^data:image/ });
     
-    console.log(`Found 0 candidate images for migration.`);
+    console.info(`Found 0 candidate images for migration.`);
     
     if (isDryRun) {
-        console.log("Dry run complete. Use --apply to execute.");
+        console.info("Dry run complete. Use --apply to execute.");
     } else {
-        console.log("Migration complete.");
+        console.info("Migration complete.");
     }
     process.exit(0);
 }, 1000);

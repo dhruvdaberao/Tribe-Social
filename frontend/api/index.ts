@@ -304,6 +304,11 @@ export const fetchNotifications = async () => {
 export const markNotificationsRead = () =>
   API.put('/notifications/read');
 
+export const updateNotificationPrefs = async (notificationPrefs: any) => {
+  const res = await API.post('/notifications/preferences', { notificationPrefs });
+  return { data: res.data };
+};
+
 /* ───────────── MODERATION ───────────── */
 export const createReport = (payload: {
   targetType: 'post' | 'user' | 'tribe';
