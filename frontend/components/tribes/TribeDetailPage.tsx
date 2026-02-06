@@ -79,6 +79,21 @@ const HeaderInfo = styled.div`
   }
 `;
 
+const HeaderLoader = styled.div`
+  height: 6px;
+  width: 64px;
+  border-radius: 999px;
+  background: ${({ theme }) => theme.border};
+  opacity: 0.7;
+  margin-top: 6px;
+  animation: pulse 1.6s ease-in-out infinite;
+
+  @keyframes pulse {
+    0%, 100% { opacity: 0.4; }
+    50% { opacity: 1; }
+  }
+`;
+
 const HeaderActions = styled.div`
   display: flex;
   gap: 6px;
@@ -612,6 +627,7 @@ const TribeDetailPage: React.FC<Props> = ({ currentUser, tribeId: propTribeId })
 
         <HeaderInfo>
           <h2>{tribe?.name || 'Loading...'}</h2>
+          {isLoading && !tribe && <HeaderLoader />}
           <MemberCountBadge onClick={() => setIsMembersOpen(true)}>
             <span>{tribe?.members?.length || 0} members</span>
           </MemberCountBadge>

@@ -1,11 +1,11 @@
 import React from 'react';
-import styled, { useTheme } from 'styled-components';
+import styled from 'styled-components';
 import { Tribe, User } from '../../types';
 import { useNavigate } from 'react-router-dom';
 import { Edit2, Users } from 'lucide-react';
-import * as api from '../../api';
 import { toast } from '../common/Toast';
 import TribeMembersModal from './TribeMembersModal';
+import EditTribeModal from './EditTribeModal';
 import ConfirmationModal from '../common/ConfirmationModal';
 
 const Card = styled.div`
@@ -130,6 +130,11 @@ const ButtonGroup = styled.div`
   margin-top: auto;
 `;
 
+const InlineEditContainer = styled.div`
+  width: 100%;
+  margin-top: 16px;
+`;
+
 
 
 interface TribeCardProps {
@@ -137,13 +142,28 @@ interface TribeCardProps {
   currentUser: User | null;
   allUsers: User[];
   onEdit?: (tribe: Tribe) => void;
+  isEditing?: boolean;
+  onCloseEdit?: () => void;
+  onSaveEdit?: (tribe: Tribe) => void;
+  onDeleteEdit?: () => void;
   onViewProfile?: (user: User) => void;
   onJoinToggle?: (tribeId: string) => Promise<void>;
   unreadCount?: number;
 }
 
-const TribeCard: React.FC<TribeCardProps> = ({ tribe, currentUser, allUsers, onEdit, onViewProfile, onJoinToggle, unreadCount }) => {
-  const theme = useTheme();
+const TribeCard: React.FC<TribeCardProps> = ({
+  tribe,
+  currentUser,
+  allUsers,
+  onEdit,
+  isEditing,
+  onCloseEdit,
+  onSaveEdit,
+  onDeleteEdit,
+  onViewProfile,
+  onJoinToggle,
+  unreadCount
+}) => {
   const navigate = useNavigate();
   const isMember = currentUser && tribe.members.includes(currentUser.id);
   const isOwner = currentUser && tribe.owner === currentUser.id;
@@ -316,6 +336,19 @@ const TribeCard: React.FC<TribeCardProps> = ({ tribe, currentUser, allUsers, onE
           )}
         </ButtonGroup>
       </Card>
+
+      {isEditing && onCloseEdit && onSaveEdit && (
+        <InlineEditContainer onClick={(event) => event.stopPropagation()}>
+          <EditTribeModal
+            tribe={tribe}
+            onClose={onCloseEdit}
+            onSuccess={onSaveEdit}
+            onDelete={onDeleteEdit ? () => onDeleteEdit() : undefined}
+            allUsers={allUsers}
+            variant="inline"
+          />
+        </InlineEditContainer>
+      )}
 
       <TribeMembersModal
         isOpen={isMembersModalOpen}
