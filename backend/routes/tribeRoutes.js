@@ -5,6 +5,8 @@ import User from '../models/userModel.js';
 import TribeMessage from '../models/tribeMessageModel.js';
 import Notification from '../models/notificationModel.js';
 import cloudinary from '../config/cloudinary.js';
+import { sendPushToUser, sendPushToUsers } from '../services/pushService.js';
+import { isPushEnabledFor } from '../utils/notificationPrefs.js';
 
 const router = express.Router();
 
@@ -189,6 +191,36 @@ router.put('/:id/join', protect, async (req, res) => {
             tribe.members = tribe.members.filter(id => id.toString() !== userId);
         } else {
             tribe.members.push(userId);
+            if (tribe.owner.toString() !== userId) {
+                const notification = new Notification({
+                    recipient: tribe.owner,
+                    sender: userId,
+                    type: 'tribe_join',
+                    tribeId: tribe._id,
+                });
+                await notification.save();
+                const populatedNotification = await notification.populate('sender', 'name username avatarUrl');
+                const recipientSocketId = req.onlineUsers?.get(tribe.owner.toString());
+                if (recipientSocketId) {
+                    req.io.to(recipientSocketId).emit('newNotification', populatedNotification);
+                }
+
+                const owner = await User.findById(tribe.owner).select('notificationPrefs isDisabled');
+                if (owner && !owner.isDisabled && isPushEnabledFor(owner, 'tribeJoins')) {
+                    await sendPushToUser(tribe.owner.toString(), {
+                        title: 'New tribe member',
+                        body: `${req.user?.name || 'Someone'} joined ${tribe.name}`,
+                        url: `/tribes/${tribe._id}`,
+                        icon: '/icons/icon-192.png',
+                        tag: `tribe-join-${tribe._id}`,
+                        data: {
+                            type: 'tribe_join',
+                            tribeId: tribe._id.toString(),
+                            url: `/tribes/${tribe._id}`,
+                        },
+                    });
+                }
+            }
         }
 
         await tribe.save();
@@ -301,7 +333,6 @@ router.post('/:id/messages', protect, async (req, res) => {
         if (req.io) {
             // Broadcast to the SPECIFIC tribe room
             const roomName = tribe._id.toString();
-            console.log(`📡 Emitting 'newTribeMessage' to room: ${roomName}`);
             req.io.to(roomName).emit('newTribeMessage', responseMessage);
 
             /* 🔥 OPTION B — UNREAD COUNTS (USER-SCOPED) */
@@ -314,6 +345,47 @@ router.post('/:id/messages', protect, async (req, res) => {
                     });
                 }
             });
+        }
+
+        const memberIds = tribe.members
+            .map((memberId) => memberId.toString())
+            .filter((memberId) => memberId !== req.user.id);
+
+        if (memberIds.length > 0) {
+            const memberUsers = await User.find({ _id: { $in: memberIds }, isDisabled: { $ne: true } })
+                .select('notificationPrefs');
+            const enabledMemberIds = memberUsers.map((member) => member._id.toString());
+
+            if (enabledMemberIds.length > 0) {
+                const messagePreview = text?.slice(0, 80) || 'Sent an attachment';
+                const notifications = enabledMemberIds.map((memberId) => ({
+                    recipient: memberId,
+                    sender: req.user.id,
+                    type: 'tribe_message',
+                    tribeId: tribe._id,
+                    text: messagePreview,
+                }));
+                await Notification.insertMany(notifications);
+
+                const pushRecipients = memberUsers
+                    .filter((member) => isPushEnabledFor(member, 'tribe'))
+                    .map((member) => member._id.toString());
+
+                if (pushRecipients.length > 0) {
+                    await sendPushToUsers(pushRecipients, {
+                        title: tribe.name,
+                        body: `${responseMessage.sender?.name || 'Someone'}: ${messagePreview}`,
+                        url: `/tribes/${tribe._id}`,
+                        icon: '/icons/icon-192.png',
+                        tag: `tribe-${tribe._id}`,
+                        data: {
+                            type: 'tribe_message',
+                            tribeId: tribe._id.toString(),
+                            url: `/tribes/${tribe._id}`,
+                        },
+                    });
+                }
+            }
         }
 
         res.status(201).json(populated);

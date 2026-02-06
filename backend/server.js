@@ -37,13 +37,13 @@ if (!process.env.JWT_SECRET) {
 }
 
 const startServer = async () => {
-  console.log("----------------------------------");
-  console.log("🚀 Starting Tribe Backend Server...");
+  console.info("----------------------------------");
+  console.info("🚀 Starting Tribe Backend Server...");
 
   try {
-    console.log("1. Attempting to connect to MongoDB...");
+    console.info("1. Attempting to connect to MongoDB...");
     await connectDB();
-    console.log("✅ MongoDB connected successfully.");
+    console.info("✅ MongoDB connected successfully.");
 
     const app = express();
     const httpServer = createServer(app);
@@ -92,16 +92,16 @@ const startServer = async () => {
       next();
     });
 
-    console.log("✅ Middleware configured.");
+    console.info("✅ Middleware configured.");
 
-    console.log("3. Initializing Socket.IO...");
+    console.info("3. Initializing Socket.IO...");
     const io = new Server(httpServer, {
       pingTimeout: 60000,
       cors: corsOptions,
     });
     app.set('io', io);
     const onlineUsers = initializeSocket(io);
-    console.log("✅ Socket.IO initialized.");
+    console.info("✅ Socket.IO initialized.");
 
     app.use((req, res, next) => {
       req.io = io;
@@ -109,7 +109,7 @@ const startServer = async () => {
       next();
     });
 
-    console.log("4. Registering API routes...");
+    console.info("4. Registering API routes...");
     // 🔒 Strict Limits (High Security)
     app.use('/api/auth', standardPayload, authRoutes);
     // ... (existing imports)
@@ -130,7 +130,7 @@ const startServer = async () => {
     app.use('/api/tribes', largePayload, tribeRoutes);
     app.use('/api/stories', largePayload, storyRoutes);
 
-    console.log("✅ API routes registered with security limits.");
+    console.info("✅ API routes registered with security limits.");
 
     app.get('/', (req, res) => {
       res.send('Tribe API is running...');
@@ -138,9 +138,9 @@ const startServer = async () => {
 
     const PORT = process.env.PORT || 5001;
     httpServer.listen(PORT, () => {
-      console.log("----------------------------------");
-      console.log(`🎉 Server is live and listening on port ${PORT}`);
-      console.log("----------------------------------");
+      console.info("----------------------------------");
+      console.info(`🎉 Server is live and listening on port ${PORT}`);
+      console.info("----------------------------------");
     });
 
   } catch (error) {

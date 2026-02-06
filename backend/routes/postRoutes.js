@@ -5,9 +5,9 @@ import protect from '../middleware/authMiddleware.js';
 import Post from '../models/postModel.js';
 import User from '../models/userModel.js';
 import Notification from '../models/notificationModel.js';
-import Like from '../models/likeModel.js';
-import Comment from '../models/commentModel.js';
 import cloudinary from '../config/cloudinary.js';
+import { sendPushToUser } from '../services/pushService.js';
+import { isPushEnabledFor } from '../utils/notificationPrefs.js';
 
 const router = express.Router();
 
@@ -21,9 +21,6 @@ const fullyPopulatePost = async (post) => {
 // @desc    Get posts for feed - Scalable & Optimized
 router.get('/feed', protect, async (req, res) => {
     try {
-        console.log("----------------------------------");
-        console.log(`🔍 GET /api/posts/feed - User: ${req.user.id}`);
-
         const currentUser = await User.findById(req.user.id);
         if (!currentUser) return res.status(401).json({ message: "User not found." });
 
@@ -39,8 +36,6 @@ router.get('/feed', protect, async (req, res) => {
             userIdsForFeed = userIdsForFeed.filter((id) => !disabledIds.has(id.toString()));
         }
 
-        console.log(`📋 Feed for users: ${userIdsForFeed.length}`);
-
         // Fetch Posts (Paginated)
         // Don't populate arrays from DB
         let posts = await Post.find({ user: { $in: userIdsForFeed }, isHidden: { $ne: true }, isDeleted: { $ne: true } })
@@ -50,10 +45,7 @@ router.get('/feed', protect, async (req, res) => {
             .limit(parseInt(req.query.limit) || 20)
             .populate('user', 'name username avatarUrl');
 
-        console.log(`✅ Personalized feed found: ${posts.length} posts`);
-
         if (posts.length === 0) {
-            console.log("⚠️ Feed empty. Fetching global posts...");
             let globalQuery = { isHidden: { $ne: true }, isDeleted: { $ne: true } };
             if (!isAdmin) {
                 const disabledUsers = await User.find({ isDisabled: true }).select('_id');
@@ -102,7 +94,6 @@ router.get('/feed', protect, async (req, res) => {
         }));
 
         const validPosts = postsWithData.filter(post => post.user !== null);
-        console.log(`📤 Returning ${validPosts.length} posts.`);
         res.json(validPosts);
 
     } catch (error) {
@@ -116,9 +107,6 @@ router.get('/feed', protect, async (req, res) => {
 // @desc    Get all posts for discover - Scalable
 router.get('/', protect, async (req, res) => {
     try {
-        console.log("----------------------------------");
-        console.log("🔍 GET /api/posts - Fetching Discover feed");
-
         let query = { isHidden: { $ne: true }, isDeleted: { $ne: true } };
         if (!req.user?.isAdmin) {
             const disabledUsers = await User.find({ isDisabled: true }).select('_id');
@@ -157,7 +145,6 @@ router.get('/', protect, async (req, res) => {
         }));
 
         const validPosts = postsWithData.filter(post => post.user !== null);
-        console.log(`✅ Discover found: ${validPosts.length} posts`);
         res.json(validPosts);
 
     } catch (error) {
@@ -411,6 +398,21 @@ router.put('/:id/like', protect, async (req, res) => {
                     if (recipientSocket) {
                         req.io.to(recipientSocket).emit('newNotification', populatedNotification);
                     }
+                    const recipientUser = await User.findById(post.user).select('notificationPrefs isDisabled');
+                    if (recipientUser && !recipientUser.isDisabled && isPushEnabledFor(recipientUser, 'likes')) {
+                        await sendPushToUser(post.user.toString(), {
+                            title: `${req.user?.name || 'Someone'} liked your post`,
+                            body: post.content?.slice(0, 80) || 'Tap to view your post',
+                            url: `/post/${post._id}`,
+                            icon: '/icons/icon-192.png',
+                            tag: `post-like-${post._id}`,
+                            data: {
+                                type: 'like',
+                                postId: post._id.toString(),
+                                url: `/post/${post._id}`,
+                            },
+                        });
+                    }
                 }
             }
         }
@@ -469,6 +471,21 @@ router.post('/:id/comments', protect, async (req, res) => {
                 const recipientSocket = req.onlineUsers.get(post.user.toString());
                 if (recipientSocket) {
                     req.io.to(recipientSocket).emit('newNotification', populatedNotification);
+                }
+                const recipientUser = await User.findById(post.user).select('notificationPrefs isDisabled');
+                if (recipientUser && !recipientUser.isDisabled && isPushEnabledFor(recipientUser, 'comments')) {
+                    await sendPushToUser(post.user.toString(), {
+                        title: `${req.user?.name || 'Someone'} commented on your post`,
+                        body: text.slice(0, 80),
+                        url: `/post/${post._id}`,
+                        icon: '/icons/icon-192.png',
+                        tag: `post-comment-${post._id}`,
+                        data: {
+                            type: 'comment',
+                            postId: post._id.toString(),
+                            url: `/post/${post._id}`,
+                        },
+                    });
                 }
             }
         }

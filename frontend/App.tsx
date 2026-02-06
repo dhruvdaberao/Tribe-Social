@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
+import { Routes, Route, Navigate, useNavigate, useLocation, useParams } from 'react-router-dom';
 import { useAuth } from './contexts/AuthContext';
 import { useSocket } from './contexts/SocketContext';
 import { GlobalContentProvider, useGlobalContent } from './contexts/GlobalContentContext';
@@ -24,6 +24,7 @@ import SettingsPage from './components/settings/SettingsPage';
 import AccountPage from './components/settings/AccountPage';
 import HelpPage from './components/settings/HelpPage';
 import AboutPage from './components/settings/AboutPage';
+import NotificationSettingsPage from './components/settings/NotificationSettingsPage';
 import RulesPoliciesPage from './pages/RulesPoliciesPage';
 import StoryCreator from './components/stories/StoryCreator';
 import StoryViewer from './components/stories/StoryViewer';
@@ -369,6 +370,16 @@ const MainLayout: React.FC = () => {
                                     setIsChatOpen={setIsChatOpen}
                                 />
                             } />
+                            <Route path="/messages/:userId" element={
+                                <ChatWrapper
+                                    currentUser={currentUser}
+                                    allUsers={visibleUsers}
+                                    psyduck={PSYDUCK_USER}
+                                    onViewProfile={handleViewProfile}
+                                    onSharePost={handleSharePost}
+                                    setIsChatOpen={setIsChatOpen}
+                                />
+                            } />
 
                             <Route path="/psyduck" element={
                                 <ChatPage
@@ -389,6 +400,8 @@ const MainLayout: React.FC = () => {
                             <Route path="/tribes/:tribeId" element={
                                 <TribeDetailPage currentUser={currentUser} />
                             } />
+                            <Route path="/tribes/:tribeId/chat" element={<TribeChatRedirect />} />
+                            <Route path="/post/:postId" element={<PostDeepLink />} />
 
                             <Route path="/notifications" element={
                                 <NotificationsPage
@@ -439,6 +452,7 @@ const MainLayout: React.FC = () => {
                             <Route path="/settings/account" element={
                                 <AccountPage currentUser={currentUser} allUsers={users} onLogout={logout} onDeleteAccount={handleDeleteAccount} onToggleBlock={handleToggleBlock} />
                             } />
+                            <Route path="/settings/notifications" element={<NotificationSettingsPage />} />
                             <Route path="/settings/help" element={<HelpPage />} />
                             <Route path="/settings/about" element={<AboutPage />} />
                             <Route path="/settings/rules" element={<RulesPoliciesPage />} />
@@ -546,8 +560,6 @@ const ProfileWrapper = ({ users, visibleUsers, tribes, posts, currentUser, mySto
     return <ProfilePageContent userId={userId} users={users} visibleUsers={visibleUsers} tribes={tribes} posts={posts} currentUser={currentUser} myStories={myStories} followingUserStories={followingUserStories} handlers={handlers} isPosting={isPosting} />
 };
 
-import { useParams } from 'react-router-dom';
-
 const ProfilePageContent = ({ userId, users, visibleUsers, tribes, posts, currentUser, myStories, followingUserStories, handlers, isPosting }: any) => {
     const params = useParams();
     const targetId = params.userId || userId;
@@ -590,9 +602,57 @@ const ProfilePageContent = ({ userId, users, visibleUsers, tribes, posts, curren
 // Wrapper for Chat to handle location state
 const ChatWrapper = ({ currentUser, allUsers, psyduck, onViewProfile, onSharePost, setIsChatOpen }: any) => {
     const location = useLocation();
-    const initialTargetUser = location.state?.targetUser || null;
-    return <ChatPage currentUser={currentUser} allUsers={allUsers} chukUser={psyduck} initialTargetUser={initialTargetUser} onViewProfile={onViewProfile} onSharePost={onSharePost} onConversationStateChange={setIsChatOpen} />;
+    const params = useParams();
+    const [initialTargetUser, setInitialTargetUser] = useState(location.state?.targetUser || null);
+
+    useEffect(() => {
+        const targetId = params?.userId;
+        if (!targetId) return;
+        const existing = allUsers.find((user: User) => user.id === targetId);
+        if (existing) {
+            setInitialTargetUser(existing);
+            return;
+        }
+        api.fetchUser(targetId)
+            .then(({ data }) => setInitialTargetUser(data))
+            .catch(() => setInitialTargetUser(null));
+    }, [params?.userId, allUsers]);
+
+    return (
+        <ChatPage
+            currentUser={currentUser}
+            allUsers={allUsers}
+            chukUser={psyduck}
+            initialTargetUser={initialTargetUser}
+            onViewProfile={onViewProfile}
+            onSharePost={onSharePost}
+            onConversationStateChange={setIsChatOpen}
+        />
+    );
 }
+
+const PostDeepLink = () => {
+    const { postId } = useParams();
+    const navigate = useNavigate();
+    const { handleViewPost } = useGlobalContent();
+
+    useEffect(() => {
+        if (!postId) return;
+        handleViewPost(postId)
+            .finally(() => navigate('/', { replace: true }));
+    }, [postId, handleViewPost, navigate]);
+
+    return (
+        <div className="min-h-[60vh] flex items-center justify-center text-secondary">
+            Loading post...
+        </div>
+    );
+};
+
+const TribeChatRedirect = () => {
+    const { tribeId } = useParams();
+    return <Navigate to={`/tribes/${tribeId}`} replace />;
+};
 
 
 const App: React.FC = () => {
