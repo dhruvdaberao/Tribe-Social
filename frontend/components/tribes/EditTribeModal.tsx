@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import styled, { useTheme } from 'styled-components';
-import { X, Camera, Trash2 } from 'lucide-react';
+import { X, Camera, Trash2, Edit3 } from 'lucide-react';
 import * as api from '../../api';
 import { toast } from '../common/Toast';
 import MediaSelectionModal from '../common/MediaSelectionModal';
@@ -99,9 +99,10 @@ const TextArea = styled.textarea`
   background: ${props => props.theme.background};
   color: ${props => props.theme.text};
   font-family: 'Outfit', sans-serif;
-  resize: vertical;
+  resize: none;
   min-height: 60px;
   font-size: 0.9rem; // Smaller font
+  padding-right: 2.25rem;
 
   &:focus {
     outline: none;
@@ -118,6 +119,7 @@ const Input = styled.input`
   font-family: 'Outfit', sans-serif;
   outline: none;
   font-size: 0.9rem;
+  padding-right: 2.25rem;
 `;
 
 const Select = styled.select`
@@ -178,6 +180,20 @@ const Label = styled.label`
   font-weight: 600;
   color: ${props => props.theme.textSecondary};
   margin-bottom: 2px;
+`;
+
+const FieldWrapper = styled.div`
+  position: relative;
+  width: 100%;
+`;
+
+const FieldIcon = styled.div`
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: ${props => props.theme.textSecondary};
+  pointer-events: none;
 `;
 
 const EditTribeModal: React.FC<EditTribeModalProps> = ({ tribe, onClose, onSuccess, onDelete, allUsers, variant = 'modal' }) => {
@@ -289,21 +305,31 @@ const EditTribeModal: React.FC<EditTribeModalProps> = ({ tribe, onClose, onSucce
                   background: theme.primary, borderRadius: '50%',
                   width: 24, height: 24, display: 'flex', alignItems: 'center', justifyContent: 'center',
                   color: 'white', fontSize: 16, border: `1px solid ${theme.primary}`
-                }}>+</div>
+                }}><Camera size={14} /></div>
               </div>
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column' }}>
               <Label>Tribe Name</Label>
-              <Input
-                value={name}
-                onChange={e => setName(e.target.value)}
-                placeholder="Tribe Name"
-                required
-              />
+              <FieldWrapper>
+                <Input
+                  value={name}
+                  onChange={e => setName(e.target.value)}
+                  placeholder="Tribe Name"
+                  required
+                />
+                <FieldIcon>
+                  <Edit3 size={16} />
+                </FieldIcon>
+              </FieldWrapper>
             </div>
 
-            <TextArea value={description} onChange={e => setDescription(e.target.value)} placeholder="Description" required />
+            <FieldWrapper>
+              <TextArea value={description} onChange={e => setDescription(e.target.value)} placeholder="Description" required />
+              <FieldIcon>
+                <Edit3 size={16} />
+              </FieldIcon>
+            </FieldWrapper>
 
             <div style={{ display: 'flex', flexDirection: 'column' }}>
               <Label>Chief</Label>

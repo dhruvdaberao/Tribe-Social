@@ -32,6 +32,7 @@ interface ServerToClientEvents {
   // 🔥 OPTION B: USER-SCOPED UNREAD EVENTS
   tribeUnread: (data: { tribeId: string }) => void;
   tribeMessageDeleted: (data: { tribeId: string; messageId: string }) => void;
+  tribeKicked: (data: { tribeId: string }) => void;
 
   // Other app-wide events
   newPost: (post: any) => void;

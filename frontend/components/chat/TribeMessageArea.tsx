@@ -17,6 +17,8 @@ interface TribeMessageAreaProps {
   onLoadMore?: () => void;
   onSendMessage: (payload: { text?: string; attachment?: File }) => void;
   onViewProfile?: (user: User) => void;
+  isReadOnly?: boolean;
+  inputPlaceholder?: string;
 }
 
 const TribeMessageArea: React.FC<TribeMessageAreaProps> = ({
@@ -31,7 +33,9 @@ const TribeMessageArea: React.FC<TribeMessageAreaProps> = ({
   isLoadingMore,
   onLoadMore,
   onSendMessage,
-  onViewProfile
+  onViewProfile,
+  isReadOnly = false,
+  inputPlaceholder
 }) => {
   const [inputText, setInputText] = useState('');
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -45,13 +49,13 @@ const TribeMessageArea: React.FC<TribeMessageAreaProps> = ({
 
   const handleSend = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!inputText.trim()) return;
+    if (isReadOnly || !inputText.trim()) return;
     onSendMessage({ text: inputText });
     setInputText('');
   };
 
   const handleAttachFile = (file: File) => {
-    if (!file) return;
+    if (!file || isReadOnly) return;
     onSendMessage({ attachment: file });
   };
 
@@ -303,8 +307,8 @@ const TribeMessageArea: React.FC<TribeMessageAreaProps> = ({
           onChange={e => setInputText(e.target.value)}
           onSend={handleSend}
           onAttachFile={handleAttachFile}
-          placeholder={`Message ${tribe.name}…`}
-          disabled={!inputText.trim()}
+          placeholder={inputPlaceholder ?? `Message ${tribe.name}…`}
+          disabled={isReadOnly || !inputText.trim()}
           isSending={isSending}
           isUploading={isUploading}
           uploadProgress={uploadProgress ?? undefined}
