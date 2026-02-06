@@ -380,6 +380,9 @@ export const MessageArea: React.FC<MessageAreaProps> = ({
               <p className="text-sm text-secondary leading-tight truncate">@{otherParticipant.username}</p>
             )}
           </div>
+          {isLoading && messages.length === 0 && (
+            <TinyLoader />
+          )}
         </div>
       </div>
 
@@ -544,3 +547,6 @@ export const MessageArea: React.FC<MessageAreaProps> = ({
 
 const SendIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="currentColor" viewBox="0 0 20 20"><path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z" /></svg>;
 const BackIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>;
+const TinyLoader = () => (
+  <div className="ml-3 h-2 w-12 rounded-full bg-border opacity-70 animate-pulse" aria-hidden="true" />
+);

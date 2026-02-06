@@ -467,14 +467,14 @@ const ChatPage: React.FC<ChatPageProps> = ({ currentUser, allUsers, chukUser, in
     <div className="h-full min-h-0 bg-surface md:border md:border-border md:shadow-lg flex overflow-hidden relative">
 
       <div
-        className={`w-full md:w-[320px] lg:w-[380px] flex-shrink-0 flex flex-col transition-transform duration-300 ease-in-out md:static absolute inset-0 z-10 md:border-r md:border-border bg-surface ${isMessageAreaVisible ? '-translate-x-full' : 'translate-x-0'
+        className={`w-full md:w-[320px] lg:w-[380px] flex-shrink-0 flex flex-col min-h-0 transition-transform duration-300 ease-in-out md:static absolute inset-0 z-10 md:border-r md:border-border bg-surface ${isMessageAreaVisible ? '-translate-x-full' : 'translate-x-0'
           } md:translate-x-0`}
       >
         <ConversationList conversations={conversations} isLoading={isLoadingConversations} currentUser={currentUser} chukUser={chukUser} userMap={userMap} activeConversationId={activeConversation?.id} onSelectConversation={handleSelectConversation} onNewMessage={() => setNewMessageModalOpen(true)} unreadCounts={unreadCounts.messages} />
       </div>
 
       <div
-        className={`w-full md:flex-1 flex flex-col transition-transform duration-300 ease-in-out md:static absolute inset-0 bg-background ${isMessageAreaVisible ? 'translate-x-0' : 'translate-x-full'
+        className={`w-full md:flex-1 flex flex-col min-h-0 transition-transform duration-300 ease-in-out md:static absolute inset-0 bg-background ${isMessageAreaVisible ? 'translate-x-0' : 'translate-x-full'
           } md:translate-x-0`}
       >
         {activeConversation ? (
