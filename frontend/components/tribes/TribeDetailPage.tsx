@@ -15,7 +15,7 @@ import ConfirmationModal from '../common/ConfirmationModal';
 
 /* ───────────── STYLES ───────────── */
 const PageContainer = styled.div`
-  height: 100%;
+  height: calc(var(--dvh, 1vh) * 100);
   display: flex;
   flex-direction: column;
   background: ${({ theme }) => theme.background};

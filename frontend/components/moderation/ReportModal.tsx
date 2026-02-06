@@ -12,7 +12,7 @@ const reasons = [
 ];
 
 interface ReportModalProps {
-  targetType: 'post' | 'user';
+  targetType: 'post' | 'user' | 'tribe';
   onClose: () => void;
   onSubmit: (payload: { reason: string; details: string }) => void;
 }
@@ -21,7 +21,11 @@ const ReportModal: React.FC<ReportModalProps> = ({ targetType, onClose, onSubmit
   const [reason, setReason] = useState(reasons[0]);
   const [details, setDetails] = useState('');
 
-  const title = useMemo(() => (targetType === 'post' ? 'Report Post' : 'Report User'), [targetType]);
+  const title = useMemo(() => {
+    if (targetType === 'post') return 'Report Post';
+    if (targetType === 'user') return 'Report User';
+    return 'Report Tribe';
+  }, [targetType]);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
