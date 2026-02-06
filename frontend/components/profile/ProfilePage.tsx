@@ -566,26 +566,28 @@ export const ProfilePage: React.FC<ProfilePageProps> = (props) => {
                             <input type="file" ref={avatarCameraRef} onChange={(e) => handleFileChange(e, 'avatar')} accept="image/*" capture="environment" className="hidden" />
                         </div>
 
-                        <div className="w-full sm:w-auto pt-2 sm:pt-4 flex items-center space-x-2">
+                        <div className="w-full sm:w-auto pt-2 sm:pt-4 flex flex-wrap items-center gap-2">
                             {isOwnProfile ? (
                                 <>
-                                    <button type="button" onClick={() => onNavigate('Settings')} className="w-full sm:w-auto font-semibold px-4 py-2 rounded-lg transition-colors bg-surface text-primary border border-border hover:bg-background flex items-center space-x-2">
-                                        <span>Settings</span>
-                                        <SettingsIcon />
-                                    </button>
+                                    {!isEditingProfile && (
+                                        <button type="button" onClick={() => onNavigate('Settings')} className="w-full sm:w-auto font-semibold px-4 py-2 rounded-lg transition-colors bg-surface text-primary border border-border hover:bg-background flex items-center space-x-2">
+                                            <span>Settings</span>
+                                            <SettingsIcon />
+                                        </button>
+                                    )}
                                     {isEditingProfile ? (
                                         <>
                                             <button
                                                 type="button"
                                                 onClick={cancelEditing}
-                                                className="w-full sm:w-auto font-semibold px-4 py-2 rounded-lg transition-colors bg-surface text-primary border border-border hover:bg-background"
+                                                className="w-full sm:w-auto flex-1 sm:flex-none font-semibold px-4 py-2 rounded-lg transition-colors bg-surface text-primary border border-border hover:bg-background"
                                             >
                                                 Cancel
                                             </button>
                                             <button
                                                 type="button"
                                                 onClick={handleSaveProfile}
-                                                className="w-full sm:w-auto bg-accent text-accent-text font-semibold px-6 py-2 rounded-lg hover:bg-accent-hover transition-colors"
+                                                className="w-full sm:w-auto flex-1 sm:flex-none bg-accent text-accent-text font-semibold px-6 py-2 rounded-lg hover:bg-accent-hover transition-colors"
                                             >
                                                 Save
                                             </button>

@@ -1,4 +1,5 @@
 import React from 'react';
+import ReactDOM from 'react-dom';
 import styled from 'styled-components';
 import { AlertTriangle } from 'lucide-react';
 
@@ -105,7 +106,8 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
 }) => {
     if (!isOpen) return null;
 
-    return (
+    // Root cause: fixed overlays inside transformed/scroll containers can render offset; portal to body to keep dialogs centered.
+    return ReactDOM.createPortal(
         <Overlay onClick={onClose}>
             <Modal onClick={e => e.stopPropagation()}>
                 <Header>
@@ -118,7 +120,8 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
                     <Button variant={variant} onClick={() => { onConfirm(); onClose(); }}>{confirmText}</Button>
                 </ButtonGroup>
             </Modal>
-        </Overlay>
+        </Overlay>,
+        document.body
     );
 };
 

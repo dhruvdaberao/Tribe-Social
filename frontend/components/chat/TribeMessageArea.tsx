@@ -109,6 +109,7 @@ const TribeMessageArea: React.FC<TribeMessageAreaProps> = ({
         bg-background
         min-h-0
         overflow-hidden
+        overscroll-none
       "
     >
       <div
@@ -116,8 +117,9 @@ const TribeMessageArea: React.FC<TribeMessageAreaProps> = ({
         onScroll={handleScroll}
         className="
           flex-1 overflow-y-auto w-full
-          px-4 py-3
+          px-4 py-3 pb-6
           space-y-4
+          overscroll-contain
         "
       >
         {isLoading && messages.length === 0 && (
