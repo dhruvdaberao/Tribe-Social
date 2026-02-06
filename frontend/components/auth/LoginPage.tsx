@@ -115,7 +115,7 @@ const LoginPage: React.FC = () => {
             <img
               src={theme === 'dark' ? '/white-color-logo.png' : '/black-color-logo.png'}
               alt="Tribe Logo"
-              className="h-36 sm:h-40 md:h-44 w-auto object-contain select-none"
+              className="h-44 sm:h-48 md:h-52 w-auto object-contain select-none"
             />
           </div>
           <p className="text-secondary mt-2">Connect with your community.</p>

@@ -9,7 +9,7 @@ import { useGlobalContent } from '../../contexts/GlobalContentContext';
 import TribeMessageArea from '../chat/TribeMessageArea';
 import TribeMembersModal from './TribeMembersModal';
 import EditTribeModal from './EditTribeModal';
-import { Users, ArrowLeft, Edit2, LogIn, LogOut, Flame } from 'lucide-react';
+import { Users, ArrowLeft, Edit2, LogIn, LogOut, Flame, X } from 'lucide-react';
 import { toast } from '../common/Toast';
 import ConfirmationModal from '../common/ConfirmationModal';
 
@@ -19,6 +19,8 @@ const PageContainer = styled.div`
   display: flex;
   flex-direction: column;
   background: ${({ theme }) => theme.background};
+  min-height: 0;
+  overflow: hidden;
 `;
 
 const Header = styled.header`
@@ -101,6 +103,53 @@ const ActionButton = styled.button`
   color: ${({ theme }) => theme.textSecondary};
 `;
 
+const CampfireOverlay = styled.div`
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  z-index: 200;
+`;
+
+const CampfireModal = styled.div`
+  width: min(480px, 100%);
+  background: ${({ theme }) => theme.cardBackground};
+  border: 1px solid ${({ theme }) => theme.border};
+  border-radius: 20px 20px 0 0;
+  padding: 20px;
+  box-shadow: 0 -12px 30px rgba(0, 0, 0, 0.3);
+`;
+
+const CampfireHeader = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+
+  h3 {
+    margin: 0;
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: ${({ theme }) => theme.textPrimary};
+  }
+`;
+
+const CampfireClose = styled.button`
+  background: none;
+  border: none;
+  color: ${({ theme }) => theme.textSecondary};
+  cursor: pointer;
+  padding: 4px;
+`;
+
+const CampfireBody = styled.p`
+  margin: 0;
+  color: ${({ theme }) => theme.textSecondary};
+  font-size: 0.95rem;
+`;
+
 /* ───────────── COMPONENT ───────────── */
 interface Props {
   currentUser: User | null;
@@ -135,6 +184,7 @@ const TribeDetailPage: React.FC<Props> = ({ currentUser, tribeId: propTribeId })
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isMembersOpen, setIsMembersOpen] = useState(false);
   const [isLeaveConfirmOpen, setIsLeaveConfirmOpen] = useState(false);
+  const [isCampfireOpen, setIsCampfireOpen] = useState(false);
   const [allUsers, setAllUsers] = useState<User[]>([]);
 
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -270,7 +320,6 @@ const TribeDetailPage: React.FC<Props> = ({ currentUser, tribeId: propTribeId })
   useEffect(() => {
     // Only join if we have a valid ID, are a member, AND socket is connected
     if (!id || !isMember || !socket || !socket.connected) {
-      // console.log('Skipping tribe room join (Waiting for connection/auth)...');
       return;
     }
 
@@ -367,6 +416,24 @@ const TribeDetailPage: React.FC<Props> = ({ currentUser, tribeId: propTribeId })
       reader.readAsDataURL(file);
     });
 
+  const sendTribeMessageWithSocket = async (payload: {
+    tribeId: string;
+    text?: string;
+    tempId?: string;
+    attachment?: { data: string; type: string; name?: string; size?: number } | null;
+  }) => {
+    if (!socket || !socket.connected) return null;
+    return new Promise<TribeMessage>((resolve, reject) => {
+      socket.timeout(15000).emit('sendTribeMessage', payload, (err: Error | null, response: { ok: boolean; message?: TribeMessage; error?: string }) => {
+        if (err || !response?.ok || !response.message) {
+          reject(new Error(response?.error || 'Socket send failed'));
+          return;
+        }
+        resolve(response.message);
+      });
+    });
+  };
+
   const handleSend = async (payload: { text?: string; attachment?: File }) => {
     if (!id || !currentUser || isSending || isUploading) return;
     const text = payload.text?.trim() || '';
@@ -406,7 +473,7 @@ const TribeDetailPage: React.FC<Props> = ({ currentUser, tribeId: propTribeId })
       let attachmentPayload = null;
       if (attachmentFile) {
         setIsUploading(true);
-        setUploadProgress(0);
+        setUploadProgress(null);
         const dataUrl = await readFileAsDataUrl(attachmentFile);
         attachmentPayload = {
           data: dataUrl,
@@ -416,25 +483,41 @@ const TribeDetailPage: React.FC<Props> = ({ currentUser, tribeId: propTribeId })
         };
       }
 
-      const { data } = await api.sendTribeMessage(
-        id,
-        { text, tempId, attachment: attachmentPayload } as any,
-        attachmentPayload
-          ? {
-            onUploadProgress: (event) => {
-              if (!event.total) return;
-              setUploadProgress(Math.round((event.loaded / event.total) * 100));
-            },
-          }
-          : undefined
-      );
+      let responseMessage: TribeMessage | null = null;
 
-      setMessages(prev => prev.map(m => (m.id === optimistic.id ? { ...data, status: undefined } : m)));
+      try {
+        responseMessage = await sendTribeMessageWithSocket({
+          tribeId: id,
+          text,
+          tempId,
+          attachment: attachmentPayload
+        });
+      } catch (socketError) {
+        responseMessage = null;
+      }
+
+      if (!responseMessage) {
+        const { data } = await api.sendTribeMessage(
+          id,
+          { text, tempId, attachment: attachmentPayload } as any,
+          attachmentPayload
+            ? {
+              onUploadProgress: (event) => {
+                if (!event.total) return;
+                setUploadProgress(Math.round((event.loaded / event.total) * 100));
+              },
+            }
+            : undefined
+        );
+        responseMessage = data;
+      }
+
+      setMessages(prev => prev.map(m => (m.id === optimistic.id ? { ...responseMessage, status: undefined } : m)));
       const updatedEntry = messageCache.current.get(id);
       if (updatedEntry) {
         messageCache.current.set(id, {
           ...updatedEntry,
-          messages: updatedEntry.messages.map(m => (m.id === optimistic.id ? { ...data, status: undefined } : m)),
+          messages: updatedEntry.messages.map(m => (m.id === optimistic.id ? { ...responseMessage, status: undefined } : m)),
         });
       }
     } catch (error) {
@@ -530,12 +613,14 @@ const TribeDetailPage: React.FC<Props> = ({ currentUser, tribeId: propTribeId })
         <HeaderInfo>
           <h2>{tribe?.name || 'Loading...'}</h2>
           <MemberCountBadge onClick={() => setIsMembersOpen(true)}>
-            <Flame size={14} />
             <span>{tribe?.members?.length || 0} members</span>
           </MemberCountBadge>
         </HeaderInfo>
 
         <HeaderActions>
+          <ActionButton onClick={() => setIsCampfireOpen(true)} aria-label="Open Campfire">
+            <Flame size={18} />
+          </ActionButton>
           {currentUser && tribe?.owner === currentUser.id && (
             <ActionButton onClick={() => setIsEditOpen(true)}>
               <Edit2 size={18} />
@@ -602,6 +687,20 @@ const TribeDetailPage: React.FC<Props> = ({ currentUser, tribeId: propTribeId })
           userMap={userMap}
           ownerId={tribe.owner}
         />
+      )}
+
+      {isCampfireOpen && (
+        <CampfireOverlay onClick={() => setIsCampfireOpen(false)}>
+          <CampfireModal onClick={(event) => event.stopPropagation()}>
+            <CampfireHeader>
+              <h3>Campfire</h3>
+              <CampfireClose onClick={() => setIsCampfireOpen(false)} aria-label="Close Campfire">
+                <X size={18} />
+              </CampfireClose>
+            </CampfireHeader>
+            <CampfireBody>Coming soon.</CampfireBody>
+          </CampfireModal>
+        </CampfireOverlay>
       )}
 
       <ConfirmationModal
