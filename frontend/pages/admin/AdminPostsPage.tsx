@@ -692,31 +692,47 @@ const ModerationActionModal: React.FC<{
         <div className="mt-5 space-y-4">
           <div>
             <label className="block text-sm font-semibold text-primary mb-2">Action</label>
-            <select
-              value={actionType}
-              onChange={(event) => setActionType(event.target.value as ActionType)}
-              className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm text-primary"
-            >
+            <div className="space-y-2">
               {['hide', 'delete', 'dismiss', 'warn'].map((option) => (
-                <option key={option} value={option}>
-                  {option}
-                </option>
+                <button
+                  key={option}
+                  type="button"
+                  onClick={() => setActionType(option as ActionType)}
+                  className={`w-full rounded-xl border px-3 py-2 text-left text-sm transition-colors ${
+                    actionType === option
+                      ? 'border-accent bg-accent/10 text-primary'
+                      : 'border-border bg-background text-secondary hover:bg-surface'
+                  }`}
+                >
+                  <span className="flex items-center gap-2">
+                    <span className={`h-3 w-3 rounded-full border ${actionType === option ? 'border-accent bg-accent' : 'border-border'}`} />
+                    {option}
+                  </span>
+                </button>
               ))}
-            </select>
+            </div>
           </div>
           <div>
             <label className="block text-sm font-semibold text-primary mb-2">Reason</label>
-            <select
-              value={reason}
-              onChange={(event) => setReason(event.target.value)}
-              className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm text-primary"
-            >
+            <div className="space-y-2">
               {reasons.map((option) => (
-                <option key={option} value={option}>
-                  {option}
-                </option>
+                <button
+                  key={option}
+                  type="button"
+                  onClick={() => setReason(option)}
+                  className={`w-full rounded-xl border px-3 py-2 text-left text-sm transition-colors ${
+                    reason === option
+                      ? 'border-accent bg-accent/10 text-primary'
+                      : 'border-border bg-background text-secondary hover:bg-surface'
+                  }`}
+                >
+                  <span className="flex items-center gap-2">
+                    <span className={`h-3 w-3 rounded-full border ${reason === option ? 'border-accent bg-accent' : 'border-border'}`} />
+                    {option}
+                  </span>
+                </button>
               ))}
-            </select>
+            </div>
           </div>
           <div>
             <label className="block text-sm font-semibold text-primary mb-2">Message to reporters</label>

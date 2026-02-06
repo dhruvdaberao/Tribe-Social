@@ -33,7 +33,7 @@ const AdminSettingsPage: React.FC<AdminSettingsPageProps> = ({ currentUser }) =>
           <AdminNavItem icon={<UserIcon size={24} />} text="Users" onClick={() => navigate('/admin/users')} />
           <AdminNavItem icon={<Users size={24} />} text="Tribes" onClick={() => navigate('/admin/tribes')} />
           {currentUser?.isSuperAdmin && (
-            <AdminNavItem icon={<Crown size={24} />} text="Super Admin" onClick={() => navigate('/admin/super')} />
+            <AdminNavItem icon={<Crown size={24} />} text="Super Admin" onClick={() => navigate('/super-admin')} />
           )}
         </div>
       </div>

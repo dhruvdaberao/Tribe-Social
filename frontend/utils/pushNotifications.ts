@@ -20,7 +20,6 @@ export const registerServiceWorker = async (): Promise<ServiceWorkerRegistration
 
     try {
         const registration = await navigator.serviceWorker.register('/service-worker.js');
-        console.log('✅ Service Worker registered:', registration.scope);
         return registration;
     } catch (error) {
         console.error('❌ Service Worker registration failed:', error);
@@ -101,7 +100,6 @@ export const subscribeToPush = async (): Promise<boolean> => {
         // Check if permission granted
         const permission = await requestNotificationPermission();
         if (permission !== 'granted') {
-            console.log('Notification permission denied');
             return false;
         }
 
@@ -124,8 +122,6 @@ export const subscribeToPush = async (): Promise<boolean> => {
             userVisibleOnly: true,
             applicationServerKey: urlBase64ToUint8Array(publicKey)
         });
-
-        console.log('✅ Push subscription created:', subscription.endpoint);
 
         // Send subscription to backend
         const success = await sendSubscriptionToBackend(subscription);
@@ -170,7 +166,6 @@ const sendSubscriptionToBackend = async (subscription: PushSubscription): Promis
             throw new Error('Failed to save subscription');
         }
 
-        console.log('✅ Subscription saved to backend');
         return true;
     } catch (error) {
         console.error('Failed to send subscription to backend:', error);
@@ -187,13 +182,11 @@ export const unsubscribeFromPush = async (): Promise<boolean> => {
         const subscription = await registration.pushManager.getSubscription();
 
         if (!subscription) {
-            console.log('No subscription to unsubscribe');
             return true;
         }
 
         // Unsubscribe locally
         await subscription.unsubscribe();
-        console.log('✅ Unsubscribed from push');
 
         // Remove from backend
         await removeSubscriptionFromBackend(subscription.endpoint);
@@ -225,7 +218,6 @@ const removeSubscriptionFromBackend = async (endpoint: string): Promise<void> =>
             body: JSON.stringify({ endpoint })
         });
 
-        console.log('✅ Subscription removed from backend');
     } catch (error) {
         console.error('Failed to remove subscription from backend:', error);
     }

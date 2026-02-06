@@ -175,6 +175,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeItem, onSelectItem, currentUser
   const DesktopNavLink: React.FC<{ item: typeof mainNavItems[0] }> = ({ item }) => (
     <button
       key={item.name}
+      type="button"
       onClick={() => onSelectItem(item.name)}
       className={`relative px-4 py-2 rounded-lg text-sm font-semibold transition-colors ${activeItem === item.name
         ? 'text-primary bg-surface shadow-sm'
@@ -189,6 +190,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeItem, onSelectItem, currentUser
   const MobileNavButton: React.FC<{ item: typeof mainNavItems[0] }> = ({ item }) => (
     <button
       key={item.name}
+      type="button"
       onClick={() => onSelectItem(item.name)}
       className={`relative flex flex-col items-center justify-center p-2 rounded-lg flex-1 transition-colors ${activeItem === item.name
         ? 'text-accent'
