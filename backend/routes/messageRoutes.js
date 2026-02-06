@@ -54,7 +54,6 @@
 //         res.status(200).json(conversations);
 
 //     } catch (error) {
-//         console.log("Error in getConversations controller: ", error.message);
 //         res.status(500).json({ error: "Internal server error" });
 //     }
 // });
@@ -100,7 +99,6 @@
 //         res.status(201).json(responseMessage);
 
 //     } catch (error) {
-//         console.log("Error in sendMessage controller: ", error.message);
 //         res.status(500).json({ error: "Internal server error" });
 //     }
 // });
@@ -122,7 +120,6 @@
 //         res.status(200).json(messages.map(m => m.toJSON()));
 
 //     } catch (error) {
-//         console.log("Error in getMessages controller: ", error.message);
 //         res.status(500).json({ error: "Internal server error" });
 //     }
 // });
@@ -141,7 +138,8 @@ import User from '../models/userModel.js';
 import protect from '../middleware/authMiddleware.js';
 import mongoose from 'mongoose';
 import Notification from '../models/notificationModel.js';
-import { sendPushNotification, buildNotificationPayload } from '../services/pushNotificationService.js';
+import { sendPushToUser } from '../services/pushService.js';
+import { isPushEnabledFor } from '../utils/notificationPrefs.js';
 import cloudinary from '../config/cloudinary.js';
 
 const router = express.Router();
@@ -219,7 +217,7 @@ router.post('/send/:receiverId', protect, async (req, res) => {
         const { receiverId } = req.params;
         const senderId = req.user._id;
 
-        const receiver = await User.findById(receiverId).select('isDisabled');
+        const receiver = await User.findById(receiverId).select('isDisabled notificationPrefs name');
         if (!receiver) {
             return res.status(404).json({ message: 'User not found' });
         }
@@ -278,19 +276,37 @@ router.post('/send/:receiverId', protect, async (req, res) => {
             req.io.to(recipientRoom).emit('newMessage', responseMessage);
         }
 
-        // Send push notification to receiver (if not online or not in chat)
-        const isReceiverOnline = req.onlineUsers?.get(receiverId.toString());
-        if (!isReceiverOnline) {
-            const sender = await User.findById(senderId).select('name');
-        const payload = buildNotificationPayload('message', {
-            senderName: sender?.name || 'Someone',
-            senderId: senderId.toString(),
-            messagePreview: message?.slice(0, 50) + (message?.length > 50 ? '...' : '') || 'Sent an attachment',
-            conversationId: `${senderId}-${receiverId}`
-        });
+        const sender = await User.findById(senderId).select('name username avatarUrl');
+        if (sender && receiverId.toString() !== senderId.toString()) {
+            const messagePreview = message?.slice(0, 50) + (message?.length > 50 ? '...' : '');
+            const notification = new Notification({
+                recipient: receiverId,
+                sender: senderId,
+                type: 'message',
+                text: messagePreview || 'Sent an attachment',
+            });
+            await notification.save();
+            const populatedNotification = await notification.populate('sender', 'name username avatarUrl');
 
-            if (payload) {
-                await sendPushNotification(receiverId.toString(), payload, 'message');
+            const recipientSocket = req.onlineUsers?.get(receiverId.toString());
+            if (recipientSocket) {
+                req.io.to(recipientSocket).emit('newNotification', populatedNotification);
+            }
+
+            const isReceiverOnline = req.onlineUsers?.get(receiverId.toString());
+            if (!isReceiverOnline && isPushEnabledFor(receiver, 'dm')) {
+                await sendPushToUser(receiverId.toString(), {
+                    title: sender?.name || 'New message',
+                    body: messagePreview || 'Sent an attachment',
+                    url: `/messages/${senderId}`,
+                    icon: '/icons/icon-192.png',
+                    tag: `dm-${senderId}`,
+                    data: {
+                        type: 'message',
+                        senderId: senderId.toString(),
+                        url: `/messages/${senderId}`,
+                    },
+                });
             }
         }
 

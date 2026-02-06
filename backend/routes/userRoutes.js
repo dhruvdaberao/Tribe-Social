@@ -5,6 +5,8 @@ import Post from '../models/postModel.js';
 import Notification from '../models/notificationModel.js';
 import Follow from '../models/followModel.js';
 import protect from '../middleware/authMiddleware.js';
+import { sendPushToUser } from '../services/pushService.js';
+import { isPushEnabledFor } from '../utils/notificationPrefs.js';
 
 const router = express.Router();
 
@@ -243,6 +245,20 @@ router.put('/:id/follow', protect, async (req, res) => {
                 if (recipientSocketId) {
                     req.io.to(recipientSocketId).emit('newNotification', populatedNotification);
                 }
+                if (isPushEnabledFor(userToFollow, 'follows')) {
+                    await sendPushToUser(userToFollow._id.toString(), {
+                        title: `${currentUser.name || 'Someone'} followed you`,
+                        body: 'Tap to view their profile',
+                        url: `/profile/${currentUser._id.toString()}`,
+                        icon: '/icons/icon-192.png',
+                        tag: `follow-${currentUser._id.toString()}`,
+                        data: {
+                            type: 'follow',
+                            senderId: currentUser._id.toString(),
+                            url: `/profile/${currentUser._id.toString()}`,
+                        },
+                    });
+                }
             }
         }
 
@@ -261,7 +277,7 @@ router.put('/:id/follow', protect, async (req, res) => {
         res.json({ message: 'Follow status updated' });
 
     } catch (error) {
-        console.log(error);
+        console.error(error);
         res.status(500).json({ message: 'Server Error' });
     }
 });

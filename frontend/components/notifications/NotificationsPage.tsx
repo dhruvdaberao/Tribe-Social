@@ -51,6 +51,8 @@ const NotificationItem: React.FC<{ notification: Notification; allTribes: Tribe[
       case 'tribe_join':
         const tribe = allTribes.find(t => t.id === notification.tribeId);
         return `joined your tribe: ${tribe?.name || ''}`;
+      case 'tribe_message':
+        return notification.text || 'sent a message in your tribe.';
       case 'admin_action':
         return notification.text || 'sent an admin update.';
       default:
@@ -66,6 +68,7 @@ const NotificationItem: React.FC<{ notification: Notification; allTribes: Tribe[
       case 'comment': return 'View Post';
       case 'story_like': return 'View Story';
       case 'tribe_join': return 'View Tribe';
+      case 'tribe_message': return 'View Tribe';
       case 'admin_action': return notification.postId ? 'View Post' : 'View Details';
       default: return 'View Details';
     }
@@ -98,6 +101,12 @@ const NotificationItem: React.FC<{ notification: Notification; allTribes: Tribe[
           if (tribe) onViewTribe(tribe);
         }
         break;
+      case 'tribe_message':
+        if (notification.tribeId) {
+          const tribe = allTribes.find(t => t.id === notification.tribeId);
+          if (tribe) onViewTribe(tribe);
+        }
+        break;
       case 'admin_action':
         if (notification.postId) {
           onViewPost(notification.postId);
@@ -113,6 +122,7 @@ const NotificationItem: React.FC<{ notification: Notification; allTribes: Tribe[
     message: <MessageIcon />,
     story_like: <StoryLikeIcon />,
     tribe_join: <TribeIcon />,
+    tribe_message: <TribeIcon />,
     admin_action: <AdminIcon />,
   }[notification.type];
 

@@ -12,14 +12,14 @@ dotenv.config();
 const migrate = async () => {
     try {
         await connectDB();
-        console.log('✅ Connected to MongoDB');
+        console.info('✅ Connected to MongoDB');
 
-        console.log('🚀 Starting Safe Migration...');
+        console.info('🚀 Starting Safe Migration...');
 
         // 1. Migrate Follows
-        console.log('--- Migrating User Relationships ---');
+        console.info('--- Migrating User Relationships ---');
         const users = await User.find({});
-        console.log(`Found ${users.length} users.`);
+        console.info(`Found ${users.length} users.`);
 
         let followCount = 0;
         for (const user of users) {
@@ -34,21 +34,21 @@ const migrate = async () => {
                 }
             }
         }
-        console.log(`✅ Migrated ${followCount} follow relationships.`);
+        console.info(`✅ Migrated ${followCount} follow relationships.`);
 
         // 2. Update User Counts
-        console.log('--- Updating User Counts ---');
+        console.info('--- Updating User Counts ---');
         for (const user of users) {
             const followersCount = await Follow.countDocuments({ following: user._id });
             const followingCount = await Follow.countDocuments({ follower: user._id });
             await User.findByIdAndUpdate(user._id, { followersCount, followingCount });
         }
-        console.log('✅ User counts updated.');
+        console.info('✅ User counts updated.');
 
         // 3. Migrate Posts (Likes and Comments)
-        console.log('--- Migrating Posts ---');
+        console.info('--- Migrating Posts ---');
         const posts = await Post.find({});
-        console.log(`Found ${posts.length} posts.`);
+        console.info(`Found ${posts.length} posts.`);
 
         let likeCount = 0;
         let commentCount = 0;
@@ -92,10 +92,10 @@ const migrate = async () => {
             await Post.findByIdAndUpdate(post._id, { likesCount, commentsCount });
         }
 
-        console.log(`✅ Migrated ${likeCount} likes and ${commentCount} comments.`);
-        console.log('✅ Post counts updated.');
+        console.info(`✅ Migrated ${likeCount} likes and ${commentCount} comments.`);
+        console.info('✅ Post counts updated.');
 
-        console.log('🎉 Migration Complete!');
+        console.info('🎉 Migration Complete!');
         process.exit(0);
 
     } catch (error) {

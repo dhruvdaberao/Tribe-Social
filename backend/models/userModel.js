@@ -1,6 +1,24 @@
 import mongoose from 'mongoose';
 import bcrypt from 'bcryptjs';
 
+const defaultNotificationPrefs = {
+  pushEnabled: true,
+  emailEnabled: true,
+  pushTypes: {
+    dm: true,
+    tribe: true,
+    likes: true,
+    comments: true,
+    follows: true,
+    tribeJoins: true,
+  },
+  emailTypes: {
+    newDevice: true,
+    digest: false,
+    moderation: true,
+  },
+};
+
 const userSchema = mongoose.Schema(
   {
     name: { type: String, required: true },
@@ -35,6 +53,20 @@ const userSchema = mongoose.Schema(
     deletedAt: { type: Date },
     deletedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
     lastModerationAt: { type: Date },
+    notificationPrefs: {
+      type: Object,
+      default: () => ({
+        ...defaultNotificationPrefs,
+        pushTypes: { ...defaultNotificationPrefs.pushTypes },
+        emailTypes: { ...defaultNotificationPrefs.emailTypes },
+      }),
+    },
+    lastLoginMeta: {
+      lastIp: { type: String, default: '' },
+      lastUserAgent: { type: String, default: '' },
+      lastLoginAt: { type: Date },
+      lastDeviceHash: { type: String, default: '' },
+    },
   },
   {
     timestamps: true,

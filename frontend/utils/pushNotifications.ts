@@ -3,7 +3,7 @@
  * Web Push API integration
  */
 
-const PUBLIC_KEY_ENDPOINT = '/api/push/public-key';
+const PUBLIC_KEY_ENDPOINT = '/api/push/vapidPublicKey';
 const SUBSCRIBE_ENDPOINT = '/api/push/subscribe';
 const UNSUBSCRIBE_ENDPOINT = '/api/push/unsubscribe';
 
@@ -14,7 +14,6 @@ let vapidPublicKey: string | null = null;
  */
 export const registerServiceWorker = async (): Promise<ServiceWorkerRegistration | null> => {
     if (!('serviceWorker' in navigator)) {
-        console.warn('Service Workers not supported');
         return null;
     }
 
@@ -22,7 +21,6 @@ export const registerServiceWorker = async (): Promise<ServiceWorkerRegistration
         const registration = await navigator.serviceWorker.register('/service-worker.js');
         return registration;
     } catch (error) {
-        console.error('❌ Service Worker registration failed:', error);
         return null;
     }
 };
@@ -76,7 +74,6 @@ const urlBase64ToUint8Array = (base64String: string): Uint8Array => {
  */
 export const requestNotificationPermission = async (): Promise<NotificationPermission> => {
     if (!('Notification' in window)) {
-        console.warn('Notifications not supported');
         return 'denied';
     }
 
@@ -106,14 +103,12 @@ export const subscribeToPush = async (): Promise<boolean> => {
         // Get service worker registration
         const registration = await navigator.serviceWorker.ready;
         if (!registration) {
-            console.error('No service worker registration');
             return false;
         }
 
         // Get VAPID public key
         const publicKey = await getVapidPublicKey();
         if (!publicKey) {
-            console.error('No VAPID public key');
             return false;
         }
 
@@ -127,7 +122,6 @@ export const subscribeToPush = async (): Promise<boolean> => {
         const success = await sendSubscriptionToBackend(subscription);
         return success;
     } catch (error) {
-        console.error('Failed to subscribe to push:', error);
         return false;
     }
 };
@@ -143,7 +137,6 @@ const sendSubscriptionToBackend = async (subscription: PushSubscription): Promis
 
         const token = localStorage.getItem('token')?.replace(/"/g, '').trim();
         if (!token) {
-            console.error('No auth token');
             return false;
         }
 
@@ -154,11 +147,7 @@ const sendSubscriptionToBackend = async (subscription: PushSubscription): Promis
                 'Authorization': `Bearer ${token}`
             },
             body: JSON.stringify({
-                endpoint: subscription.endpoint,
-                keys: {
-                    p256dh: btoa(String.fromCharCode(...new Uint8Array(subscription.getKey('p256dh')!))),
-                    auth: btoa(String.fromCharCode(...new Uint8Array(subscription.getKey('auth')!)))
-                }
+                subscription: subscription.toJSON(),
             })
         });
 
@@ -168,7 +157,6 @@ const sendSubscriptionToBackend = async (subscription: PushSubscription): Promis
 
         return true;
     } catch (error) {
-        console.error('Failed to send subscription to backend:', error);
         return false;
     }
 };
@@ -210,7 +198,7 @@ const removeSubscriptionFromBackend = async (endpoint: string): Promise<void> =>
         if (!token) return;
 
         await fetch(`${API_URL}${UNSUBSCRIBE_ENDPOINT}`, {
-            method: 'DELETE',
+            method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${token}`
@@ -219,7 +207,6 @@ const removeSubscriptionFromBackend = async (endpoint: string): Promise<void> =>
         });
 
     } catch (error) {
-        console.error('Failed to remove subscription from backend:', error);
     }
 };
 

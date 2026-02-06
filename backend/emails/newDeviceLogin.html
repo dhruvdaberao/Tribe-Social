@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>New Device Login</title>
+  </head>
+  <body style="margin:0; padding:0; background:#f6f4f2; font-family: Arial, sans-serif; color:#2f2a26;">
+    <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
+      <tr>
+        <td align="center" style="padding:32px 16px;">
+          <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="max-width:520px; background:#ffffff; border-radius:16px; overflow:hidden; border:1px solid #e6e1dd;">
+            <tr>
+              <td style="padding:24px 28px; background:#221d1a; color:#ffffff;">
+                <h1 style="margin:0; font-size:20px;">Tribe Social</h1>
+                <p style="margin:8px 0 0; font-size:14px; color:#d1c5bd;">Security alert</p>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:28px;">
+                <p style="margin:0 0 12px; font-size:16px;">Hi {{userName}},</p>
+                <p style="margin:0 0 16px; font-size:14px; line-height:1.6;">
+                  We noticed a login from a new device. If this was you, no action is needed.
+                </p>
+                <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background:#f8f6f4; border-radius:12px; padding:16px;">
+                  <tr>
+                    <td style="font-size:13px; color:#6a5f58; padding-bottom:6px;">Time</td>
+                    <td style="font-size:13px; text-align:right;">{{time}}</td>
+                  </tr>
+                  <tr>
+                    <td style="font-size:13px; color:#6a5f58; padding-bottom:6px;">IP Address</td>
+                    <td style="font-size:13px; text-align:right;">{{ip}}</td>
+                  </tr>
+                  <tr>
+                    <td style="font-size:13px; color:#6a5f58;">Device</td>
+                    <td style="font-size:13px; text-align:right;">{{userAgent}}</td>
+                  </tr>
+                </table>
+                <p style="margin:20px 0 0; font-size:14px; line-height:1.6;">
+                  If you don’t recognize this activity, please reset your password immediately.
+                </p>
+                <a href="{{resetUrl}}" style="display:inline-block; margin-top:16px; padding:12px 20px; background:#b59477; color:#ffffff; text-decoration:none; border-radius:8px; font-weight:bold;">Reset Password</a>
+                <p style="margin:24px 0 0; font-size:12px; color:#8a7b74;">
+                  This email was sent to keep your account secure.
+                </p>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>
