@@ -106,6 +106,7 @@ const MainLayout: React.FC = () => {
 
     const activeNavItem = getNavItemFromPath(location.pathname);
     const isFullHeightPage = ['Messages', 'TribeDetail', 'Settings', 'Psyduck'].includes(activeNavItem);
+    const isChatPage = ['Messages', 'TribeDetail'].includes(activeNavItem);
     const isWidePage = ['Discover', 'Tribes', 'Profile'].includes(activeNavItem);
 
     // Lazy Data Loading Trigger
@@ -172,7 +173,7 @@ const MainLayout: React.FC = () => {
 
     // Render Helpers
     const containerClass = isFullHeightPage
-        ? `h-[calc(100vh-${(activeNavItem === 'Messages' && !isChatOpen ? '8rem' : '4rem')})] md:h-[calc(100vh-4rem)] overflow-y-auto no-scrollbar`
+        ? `h-[calc(100vh-${(activeNavItem === 'Messages' && !isChatOpen ? '8rem' : '4rem')})] md:h-[calc(100vh-4rem)] ${isChatPage ? 'overflow-hidden' : 'overflow-y-auto no-scrollbar'}`
         : isWidePage ? 'max-w-5xl mx-auto px-4 md:px-6 pt-6 pb-24 md:pb-8'
             : 'max-w-2xl mx-auto px-4 md:px-6 pt-6 pb-24 md:pb-8';
 
@@ -464,6 +465,16 @@ const MainLayout: React.FC = () => {
                             />
                             <Route
                                 path="/admin/super"
+                                element={
+                                    currentUser?.isSuperAdmin ? (
+                                        <SuperAdminPage />
+                                    ) : (
+                                        <Navigate to="/admin" replace />
+                                    )
+                                }
+                            />
+                            <Route
+                                path="/super-admin"
                                 element={
                                     currentUser?.isSuperAdmin ? (
                                         <SuperAdminPage />

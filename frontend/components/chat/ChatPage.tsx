@@ -294,6 +294,24 @@ const ChatPage: React.FC<ChatPageProps> = ({ currentUser, allUsers, chukUser, in
       reader.readAsDataURL(file);
     });
 
+  const sendMessageWithSocket = useCallback(async (payload: {
+    receiverId: string;
+    message?: string;
+    tempId?: string;
+    attachment?: { data: string; type: string; name?: string; size?: number } | null;
+  }) => {
+    if (!socket || !socket.connected) return null;
+    return new Promise<Message>((resolve, reject) => {
+      socket.timeout(15000).emit('sendMessage', payload, (err: Error | null, response: { ok: boolean; message?: Message; error?: string }) => {
+        if (err || !response?.ok || !response.message) {
+          reject(new Error(response?.error || 'Socket send failed'));
+          return;
+        }
+        resolve(response.message);
+      });
+    });
+  }, [socket]);
+
   const handleSendMessage = async (payload: { text?: string; attachment?: File }) => {
     if (!activeConversation || isSending || isUploading) return;
     const text = payload.text?.trim() || '';
@@ -356,7 +374,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ currentUser, allUsers, chukUser, in
       let attachmentPayload = null;
       if (attachmentFile) {
         setIsUploading(true);
-        setUploadProgress(0);
+        setUploadProgress(null);
         const dataUrl = await readFileAsDataUrl(attachmentFile);
         attachmentPayload = {
           data: dataUrl,
@@ -366,29 +384,45 @@ const ChatPage: React.FC<ChatPageProps> = ({ currentUser, allUsers, chukUser, in
         };
       }
 
-      const { data } = await api.sendMessage(
-        otherUserId,
-        {
+      let responseMessage: Message | null = null;
+
+      try {
+        responseMessage = await sendMessageWithSocket({
+          receiverId: otherUserId,
           message: text,
           tempId,
-          attachment: attachmentPayload,
-        } as any,
-        attachmentPayload
-          ? {
-            onUploadProgress: (event) => {
-              if (!event.total) return;
-              setUploadProgress(Math.round((event.loaded / event.total) * 100));
-            },
-          }
-          : undefined
-      );
+          attachment: attachmentPayload
+        });
+      } catch (socketError) {
+        responseMessage = null;
+      }
+
+      if (!responseMessage) {
+        const { data } = await api.sendMessage(
+          otherUserId,
+          {
+            message: text,
+            tempId,
+            attachment: attachmentPayload,
+          } as any,
+          attachmentPayload
+            ? {
+              onUploadProgress: (event) => {
+                if (!event.total) return;
+                setUploadProgress(Math.round((event.loaded / event.total) * 100));
+              },
+            }
+            : undefined
+        );
+        responseMessage = data;
+      }
 
       setMessages(prev =>
-        prev.map((msg) => (msg.id === tempMessage.id ? { ...data, status: undefined } : msg))
+        prev.map((msg) => (msg.id === tempMessage.id ? { ...responseMessage, status: undefined } : msg))
       );
       messageCache.current.set(otherUserId, {
         messages: (messageCache.current.get(otherUserId)?.messages || []).map((msg) =>
-          msg.id === tempMessage.id ? { ...data, status: undefined } : msg
+          msg.id === tempMessage.id ? { ...responseMessage, status: undefined } : msg
         ),
         hasMore: messageCache.current.get(otherUserId)?.hasMore ?? false,
         oldestTimestamp: messageCache.current.get(otherUserId)?.oldestTimestamp,
@@ -406,7 +440,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ currentUser, allUsers, chukUser, in
       }
     } catch (error: any) {
       console.error("Failed to send message", error);
-      const serverMsg = error.response?.data?.message || "Connection failed";
+      const serverMsg = error.response?.data?.message || error.message || "Connection failed";
       toast.error(`Send Failed: ${serverMsg}`);
       setMessages(prev => prev.map(m => (m.id === tempMessage.id ? { ...m, status: 'failed' } : m)));
       const cachedEntry = messageCache.current.get(otherUserId);

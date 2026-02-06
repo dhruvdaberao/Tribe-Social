@@ -52,6 +52,26 @@ interface ClientToServerEvents {
   leaveRoom: (roomId: string) => void;
   typing: (data: { roomId: string, userName: string, userId: string }) => void;
   stopTyping: (data: { roomId: string, userName: string, userId: string }) => void;
+  sendMessage: (
+    payload: {
+      receiverId: string;
+      message?: string;
+      imageUrl?: string | null;
+      attachment?: { data: string; type: string; name?: string; size?: number } | null;
+      tempId?: string;
+    },
+    callback: (response: { ok: boolean; message?: Message; error?: string }) => void
+  ) => void;
+  sendTribeMessage: (
+    payload: {
+      tribeId: string;
+      text?: string;
+      imageUrl?: string | null;
+      attachment?: { data: string; type: string; name?: string; size?: number } | null;
+      tempId?: string;
+    },
+    callback: (response: { ok: boolean; message?: TribeMessage; error?: string }) => void
+  ) => void;
 }
 
 /* ───────────── CONTEXT TYPE ───────────── */
@@ -111,7 +131,6 @@ export const SocketProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     if (!currentUser) return;
 
     if (!socketRef.current) {
-      console.log("🔌 Initializing Socket.IO connection...");
       socketRef.current = io(SOCKET_URL, {
         auth: { userId: currentUser.id },
         withCredentials: true,
@@ -123,19 +142,17 @@ export const SocketProvider: React.FC<{ children: ReactNode }> = ({ children }) 
       const socket = socketRef.current;
 
       socket.on('connect', () => {
-        console.log('✅ Socket connected:', socket.id);
         setIsConnected(true);
         // User room is auto-joined by backend in new logic, but redundant join is safe
         socket.emit('joinRoom', `user-${currentUser.id}`);
       });
 
       socket.on('disconnect', () => {
-        console.log('❌ Socket disconnected');
         setIsConnected(false);
       });
 
       socket.on('connect_error', (err) => {
-        console.error('⚠️ Socket connect error:', err.message);
+        console.error('Socket connect error:', err.message);
         setIsConnected(false);
       });
 
@@ -196,7 +213,6 @@ export const SocketProvider: React.FC<{ children: ReactNode }> = ({ children }) 
   useEffect(() => {
     return () => {
       if (socketRef.current) {
-        console.log("🔌 Disconnecting socket on cleanup...");
         socketRef.current.disconnect();
         socketRef.current = null;
         setIsConnected(false);
@@ -207,17 +223,15 @@ export const SocketProvider: React.FC<{ children: ReactNode }> = ({ children }) 
   /* ───────────── HELPERS ───────────── */
   const joinRoom = useCallback((roomId: string) => {
     if (socketRef.current && socketRef.current.connected) {
-      console.log(`📤 Emitting joinRoom: ${roomId}`);
       socketRef.current.emit('joinRoom', roomId);
     } else {
-      console.warn(`⚠️ Cannot join room ${roomId}: Socket not connected`);
+      console.error(`Cannot join room ${roomId}: Socket not connected`);
       // TODO: Implement queueing if strictly needed, but usually retrying on 'connect' event in component is better
     }
   }, []);
 
   const leaveRoom = useCallback((roomId: string) => {
     if (socketRef.current) {
-      console.log(`📤 Emitting leaveRoom: ${roomId}`);
       socketRef.current.emit('leaveRoom', roomId);
     }
   }, []);

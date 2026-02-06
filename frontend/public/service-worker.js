@@ -4,20 +4,16 @@ const CACHE_NAME = 'tribe-v1';
 
 // Install event
 self.addEventListener('install', (event) => {
-    console.log('✅ Service Worker: Installed');
     self.skipWaiting();
 });
 
 // Activate event
 self.addEventListener('activate', (event) => {
-    console.log('✅ Service Worker: Activated');
     event.waitUntil(clients.claim());
 });
 
 // Push event - receive and display notification
 self.addEventListener('push', (event) => {
-    console.log('📩 Push event received');
-
     if (!event.data) {
         console.warn('⚠️ Push event has no data');
         return;
@@ -25,8 +21,6 @@ self.addEventListener('push', (event) => {
 
     try {
         const data = event.data.json();
-        console.log('📦 Push data:', data);
-
         const { title, body, icon, badge, data: notificationData } = data;
 
         // Validate required fields
@@ -46,13 +40,9 @@ self.addEventListener('push', (event) => {
             silent: false
         };
 
-        console.log('🔔 Showing notification:', title);
-
         event.waitUntil(
             self.registration.showNotification(title, options)
-                .then(() => {
-                    console.log('✅ Notification displayed successfully');
-                })
+                .then(() => {})
                 .catch((error) => {
                     console.error('❌ showNotification failed:', error);
                 })
@@ -64,14 +54,10 @@ self.addEventListener('push', (event) => {
 
 // Notification click event - handle navigation
 self.addEventListener('notificationclick', (event) => {
-    console.log('🖱️ Notification clicked');
-
     event.notification.close();
 
     const urlToOpen = event.notification.data?.url || '/';
     const fullUrl = new URL(urlToOpen, self.location.origin).href;
-
-    console.log('🔗 Opening URL:', fullUrl);
 
     event.waitUntil(
         clients.matchAll({ type: 'window', includeUncontrolled: true })
@@ -79,14 +65,12 @@ self.addEventListener('notificationclick', (event) => {
                 // Check if there's already a window open
                 for (const client of clientList) {
                     if (client.url === fullUrl && 'focus' in client) {
-                        console.log('✅ Focusing existing window');
                         return client.focus();
                     }
                 }
 
                 // If not, open a new window
                 if (clients.openWindow) {
-                    console.log('✅ Opening new window');
                     return clients.openWindow(fullUrl);
                 }
             })
@@ -98,5 +82,4 @@ self.addEventListener('notificationclick', (event) => {
 
 // Background sync (future feature)
 self.addEventListener('sync', (event) => {
-    console.log('🔄 Background sync:', event.tag);
 });
