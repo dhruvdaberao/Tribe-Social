@@ -284,7 +284,7 @@ export const MessageArea: React.FC<MessageAreaProps> = ({ conversation, messages
 
   return (
     // Removed rounded corners from the outer container
-    <div className="flex flex-col h-full bg-background">
+    <div className="flex flex-col h-full min-h-0 bg-background overflow-hidden">
       <div className="flex items-center p-3 border-b border-border bg-surface flex-shrink-0 z-10">
         <button onClick={onBack} className="md:hidden p-2 mr-2 text-primary">
             <BackIcon />
@@ -305,7 +305,7 @@ export const MessageArea: React.FC<MessageAreaProps> = ({ conversation, messages
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-4">
+      <div className="flex-1 min-h-0 overflow-y-auto p-4 overscroll-contain">
         {isLoading ? (
             <div className="w-full h-full flex items-center justify-center">
                 <img src="/duckload.gif" alt="Loading messages..." className="w-16 h-16" />
@@ -353,7 +353,7 @@ export const MessageArea: React.FC<MessageAreaProps> = ({ conversation, messages
         )}
       </div>
 
-      <div className="p-4 bg-transparent flex-shrink-0">
+      <div className="p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] bg-background border-t border-border flex-shrink-0">
         <form onSubmit={handleSendMessage} className="flex items-center space-x-3">
           <input
             type="text"
