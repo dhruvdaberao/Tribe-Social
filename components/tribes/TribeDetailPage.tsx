@@ -173,7 +173,7 @@ const TribeDetailPage: React.FC<TribeDetailPageProps> = (props) => {
 
   return (
     <>
-      <div className="flex flex-col h-full bg-surface border border-border shadow-md overflow-hidden">
+      <div className="flex flex-col h-full min-h-0 bg-surface border border-border shadow-md overflow-hidden">
         {/* Header */}
         <div className="flex items-center p-3 border-b border-border flex-shrink-0">
           <button onClick={onBack} className="p-2 mr-2 text-primary">
@@ -213,7 +213,7 @@ const TribeDetailPage: React.FC<TribeDetailPageProps> = (props) => {
         </div>
 
         {/* Messages */}
-        <div className="flex-1 overflow-y-auto p-4 bg-background">
+        <div className="flex-1 min-h-0 overflow-y-auto p-4 bg-background overscroll-contain">
           {isLoading ? (
             <div className="w-full h-full flex flex-col items-center justify-center">
               <img src="/busstop.gif" alt="Loading chats..." className="w-32 h-auto mb-4" />
@@ -279,7 +279,7 @@ const TribeDetailPage: React.FC<TribeDetailPageProps> = (props) => {
         </div>
 
         {/* Input */}
-        <div className="p-4 border-t border-border bg-surface flex-shrink-0">
+        <div className="p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] border-t border-border bg-surface flex-shrink-0">
           <form onSubmit={handleSendMessage} className="flex items-center space-x-3">
             <input
               type="text"
@@ -287,9 +287,9 @@ const TribeDetailPage: React.FC<TribeDetailPageProps> = (props) => {
               onChange={handleInputChange}
               placeholder={isMember ? `Message #${tribe.name}` : "You must be a member to chat"}
               className="flex-1 bg-background border border-border rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-accent text-primary min-w-0"
-              disabled={!isMember}
+              disabled={!isMember || isLoading}
             />
-            <button type="submit" className="bg-accent text-accent-text rounded-lg w-12 h-11 flex-shrink-0 flex items-center justify-center hover:bg-accent-hover transition-colors disabled:opacity-50" disabled={!inputText.trim() || !isMember}>
+            <button type="submit" className="bg-accent text-accent-text rounded-lg w-12 h-11 flex-shrink-0 flex items-center justify-center hover:bg-accent-hover transition-colors disabled:opacity-50" disabled={!inputText.trim() || !isMember || isLoading}>
               <SendIcon />
             </button>
           </form>
