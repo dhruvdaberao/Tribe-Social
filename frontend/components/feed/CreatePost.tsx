@@ -230,6 +230,7 @@ const CreatePost: React.FC<CreatePostProps> = ({ currentUser, allUsers, myStorie
   const [mentionQuery, setMentionQuery] = useState('');
   const [showMentions, setShowMentions] = useState(false);
   const [isMediaModalOpen, setIsMediaModalOpen] = useState(false);
+  const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
 
@@ -398,7 +399,10 @@ const CreatePost: React.FC<CreatePostProps> = ({ currentUser, allUsers, myStorie
             <div>
               <button
                 type="button"
-                onClick={() => setIsMediaModalOpen(true)}
+                onClick={(e) => {
+                  setAnchorEl(e.currentTarget);
+                  setIsMediaModalOpen(true);
+                }}
                 className="text-secondary hover:text-accent p-2 rounded-full transition-colors"
                 aria-label="Add image"
                 disabled={isPosting}
@@ -437,9 +441,13 @@ const CreatePost: React.FC<CreatePostProps> = ({ currentUser, allUsers, myStorie
 
       <MediaSelectionModal
         isOpen={isMediaModalOpen}
-        onClose={() => setIsMediaModalOpen(false)}
+        onClose={() => {
+          setIsMediaModalOpen(false);
+          setAnchorEl(null);
+        }}
         onSelectCamera={() => cameraInputRef.current?.click()}
         onSelectGallery={() => fileInputRef.current?.click()}
+        anchorEl={anchorEl}
       />
     </div>
   );

@@ -140,19 +140,61 @@ const IconWrapper = styled.div`
 
 // Redoing Styled Components with safe keys from theme.ts
 
+
 interface MediaSelectionModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSelectCamera: () => void;
   onSelectGallery: () => void;
+  anchorEl?: HTMLElement | null; // New prop for positioning
 }
 
-const MediaSelectionModal: React.FC<MediaSelectionModalProps> = ({ isOpen, onClose, onSelectCamera, onSelectGallery }) => {
+const MediaSelectionModal: React.FC<MediaSelectionModalProps> = ({ isOpen, onClose, onSelectCamera, onSelectGallery, anchorEl }) => {
+  const [position, setPosition] = React.useState<{ top: number; left: number } | null>(null);
+
+  React.useEffect(() => {
+    if (isOpen && anchorEl) {
+      const updatePosition = () => {
+        const rect = anchorEl.getBoundingClientRect();
+        const scrollTop = window.scrollY || document.documentElement.scrollTop;
+        const scrollLeft = window.scrollX || document.documentElement.scrollLeft;
+
+        // Basic positioning: Below the anchor, aligned left
+        // Add some offset (8px)
+        setPosition({
+          top: rect.bottom + scrollTop + 8,
+          left: rect.left + scrollLeft
+        });
+      };
+
+      updatePosition();
+      window.addEventListener('resize', updatePosition);
+      window.addEventListener('scroll', updatePosition);
+      return () => {
+        window.removeEventListener('resize', updatePosition);
+        window.removeEventListener('scroll', updatePosition);
+      };
+    } else {
+      setPosition(null);
+    }
+  }, [isOpen, anchorEl]);
+
   if (!isOpen) return null;
 
   return (
-    <Overlay onClick={onClose}>
-      <ModalContainer onClick={(e) => e.stopPropagation()}>
+    <Overlay onClick={onClose} style={position && window.innerWidth >= 640 ? { alignItems: 'flex-start', justifyContent: 'flex-start', background: 'transparent', pointerEvents: 'none' } : {}}>
+      <ModalContainer
+        onClick={(e) => e.stopPropagation()}
+        style={position && window.innerWidth >= 640 ? {
+          position: 'absolute',
+          top: position.top,
+          left: position.left,
+          marginTop: 0,
+          pointerEvents: 'auto',
+          width: '300px', // Smaller width for popover
+          boxShadow: '0 4px 20px rgba(0,0,0,0.15)'
+        } : {}}
+      >
         <Header>
           <h3>Add Media</h3>
           <CloseButton onClick={onClose}>
