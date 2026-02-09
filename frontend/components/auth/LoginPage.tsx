@@ -110,12 +110,12 @@ const LoginPage: React.FC = () => {
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <div className="w-full max-w-md">
-        <div className="text-center mb-10">
-          <div className="flex justify-center mb-6">
+        <div className="text-center mb-6">
+          <div className="flex justify-center mb-4">
             <img
               src={theme === 'dark' ? '/white-color-logo.png' : '/black-color-logo.png'}
               alt="Tribe Logo"
-              className="h-44 sm:h-48 md:h-52 w-auto object-contain select-none"
+              className="h-24 sm:h-32 md:h-40 w-auto object-contain select-none"
             />
           </div>
           <p className="text-secondary mt-2">Connect with your community.</p>

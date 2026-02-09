@@ -107,7 +107,7 @@ const TribeMessageArea: React.FC<TribeMessageAreaProps> = ({
       className="
         flex flex-col flex-1
         bg-background
-        min-h-0
+        h-[100dvh]
         overflow-hidden
         overscroll-none
       "
@@ -240,8 +240,8 @@ const TribeMessageArea: React.FC<TribeMessageAreaProps> = ({
                         </button>
                       </div>
                     ) : (
-                    /* NORMAL MESSAGE (Text + Optional Image) */
-                    <>
+                      /* NORMAL MESSAGE (Text + Optional Image) */
+                      <>
                         {renderAttachment(message)}
                         <p className="text-sm whitespace-pre-wrap break-words">
                           {message.text}

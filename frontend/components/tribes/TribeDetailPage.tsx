@@ -147,7 +147,7 @@ const CampfireHeader = styled.div`
     margin: 0;
     font-size: 1.1rem;
     font-weight: 700;
-    color: ${({ theme }) => theme.textPrimary};
+    color: ${({ theme }) => theme.text};
   }
 `;
 
@@ -651,7 +651,7 @@ const TribeDetailPage: React.FC<Props> = ({ currentUser, tribeId: propTribeId })
         </HeaderActions>
       </Header>
 
-      {/* Show loading spinner while tribe loads */}
+      {/* Show loading spinner while tribe loads, but keep layout stable */}
       {isLoading && !tribe ? (
         <div className="flex-1 flex items-center justify-center">
           <div className="text-center">
@@ -680,6 +680,15 @@ const TribeDetailPage: React.FC<Props> = ({ currentUser, tribeId: propTribeId })
         </div>
       )}
 
+      {/* Skeleton Input Bar during loading */}
+      {isLoading && !tribe && (
+        <div className="sticky bottom-0 p-4 bg-background border-t border-border flex-shrink-0 z-20 w-full pb-[calc(1rem+env(safe-area-inset-bottom))] opacity-50 pointer-events-none">
+          <div className="w-full h-[46px] bg-surface border border-border rounded-full flex items-center px-4">
+            <span className="text-secondary text-sm">Loading...</span>
+          </div>
+        </div>
+      )}
+
       <div ref={bottomRef} />
 
       {isEditOpen && tribe && (
@@ -701,7 +710,7 @@ const TribeDetailPage: React.FC<Props> = ({ currentUser, tribeId: propTribeId })
           onClose={() => setIsMembersOpen(false)}
           memberIds={tribe.members}
           userMap={userMap}
-          ownerId={tribe.owner}
+          ownerId={typeof tribe.owner === 'string' ? tribe.owner : tribe.owner.id}
         />
       )}
 

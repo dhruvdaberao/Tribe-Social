@@ -140,7 +140,8 @@ const Button = styled.button`
   font-weight: 600;
   cursor: pointer;
   transition: opacity 0.2s;
-  margin-top: 0.5rem;
+  transition: opacity 0.2s;
+  margin-top: 1.5rem; // Increased spacing for clear separation
 
   &:disabled {
     opacity: 0.7;
@@ -308,7 +309,7 @@ const EditTribeModal: React.FC<EditTribeModalProps> = ({ tribe, onClose, onSucce
             <div style={{ display: 'flex', flexDirection: 'column' }}>
               <Label>Chief</Label>
               <Select
-                value={ownerId}
+                value={String(ownerId)}
                 onChange={e => setOwnerId(e.target.value)}
               >
                 {members.map(member => (
