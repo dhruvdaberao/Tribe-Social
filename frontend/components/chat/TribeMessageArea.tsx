@@ -15,7 +15,9 @@ interface TribeMessageAreaProps {
   hasMore?: boolean;
   isLoadingMore?: boolean;
   onLoadMore?: () => void;
-  onSendMessage: (payload: { text?: string; attachment?: File }) => void;
+  onSendMessage: (payload: { text?: string; attachment?: File; replyTo?: string | null }) => void;
+  onDeleteMessage: (messageId: string) => void;
+  onDeleteMessageForMe: (messageId: string) => void;
   onViewProfile?: (user: User) => void;
 }
 
@@ -31,11 +33,17 @@ const TribeMessageArea: React.FC<TribeMessageAreaProps> = ({
   isLoadingMore,
   onLoadMore,
   onSendMessage,
+  onDeleteMessage,
+  onDeleteMessageForMe,
   onViewProfile
 }) => {
   const [inputText, setInputText] = useState('');
+  const [replyToMessage, setReplyToMessage] = useState<TribeMessage | null>(null);
+  const [actionMessage, setActionMessage] = useState<TribeMessage | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   /* ───────────── SCROLL TO BOTTOM SAFELY ───────────── */
   useEffect(() => {
@@ -46,13 +54,30 @@ const TribeMessageArea: React.FC<TribeMessageAreaProps> = ({
   const handleSend = (e: React.FormEvent) => {
     e.preventDefault();
     if (!inputText.trim()) return;
-    onSendMessage({ text: inputText });
+    onSendMessage({ text: inputText, replyTo: replyToMessage?.id || null });
     setInputText('');
+    setReplyToMessage(null);
   };
 
   const handleAttachFile = (file: File) => {
     if (!file) return;
-    onSendMessage({ attachment: file });
+    onSendMessage({ attachment: file, replyTo: replyToMessage?.id || null });
+    setReplyToMessage(null);
+  };
+
+  const openActionMenu = (message: TribeMessage) => {
+    setActionMessage(message);
+  };
+
+  const handleTouchStart = (message: TribeMessage) => {
+    if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
+    longPressTimerRef.current = setTimeout(() => {
+      openActionMenu(message);
+    }, 500);
+  };
+
+  const handleTouchEnd = () => {
+    if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
   };
 
   const handleScroll = () => {
@@ -105,9 +130,8 @@ const TribeMessageArea: React.FC<TribeMessageAreaProps> = ({
   return (
     <div
       className="
-        flex flex-col flex-1
+        flex flex-col flex-1 min-h-0
         bg-background
-        h-[100dvh]
         overflow-hidden
         overscroll-none
       "
@@ -117,7 +141,7 @@ const TribeMessageArea: React.FC<TribeMessageAreaProps> = ({
         onScroll={handleScroll}
         className="
           flex-1 overflow-y-auto w-full
-          px-4 py-3 pb-6
+          px-4 py-3 pb-[calc(5rem+env(safe-area-inset-bottom))]
           space-y-4
           overscroll-contain
         "
@@ -156,12 +180,23 @@ const TribeMessageArea: React.FC<TribeMessageAreaProps> = ({
               [],
               { hour: '2-digit', minute: '2-digit' }
             );
+            const replyMessage = message.replyTo ? messages.find(m => m.id === message.replyTo) : null;
+            const replySenderName = replyMessage
+              ? (replyMessage.senderId === currentUserId ? 'You' : replyMessage.sender?.name || 'User')
+              : '';
 
             return (
               <div
                 key={message.id || (message as any)._id || index}
                 className={`flex items-end gap-3 ${isCurrentUser ? 'justify-end' : 'justify-start'
                   }`}
+                onContextMenu={(event) => {
+                  event.preventDefault();
+                  openActionMenu(message);
+                }}
+                onTouchStart={() => handleTouchStart(message)}
+                onTouchEnd={handleTouchEnd}
+                onTouchMove={handleTouchEnd}
               >
                 {/* AVATAR */}
                 {!isCurrentUser && (
@@ -198,6 +233,12 @@ const TribeMessageArea: React.FC<TribeMessageAreaProps> = ({
                       : 'bg-surface text-primary rounded-tl-none'
                       }`}
                   >
+                    {replyMessage && (
+                      <div className={`mb-2 rounded-lg px-3 py-2 text-xs ${isCurrentUser ? 'bg-accent-text/20 text-accent-text' : 'bg-background text-secondary'}`}>
+                        <p className="font-semibold">{replySenderName}</p>
+                        <p className="line-clamp-2">{replyMessage.text}</p>
+                      </div>
+                    )}
                     {/* SHARED STORY CARD */}
                     {(message.text.includes('Shared a story') || message.text.includes('Shared Story') || message.text.includes('[Shared Story]')) ? (
                       <div className="flex flex-col min-w-[200px]">
@@ -298,6 +339,23 @@ const TribeMessageArea: React.FC<TribeMessageAreaProps> = ({
           pb-[calc(1rem+env(safe-area-inset-bottom))]
         "
       >
+        {replyToMessage && (
+          <div className="mb-3 flex items-center justify-between rounded-lg border border-border bg-surface px-3 py-2 text-xs text-secondary">
+            <div className="min-w-0">
+              <p className="font-semibold text-primary">
+                Replying to {replyToMessage.senderId === currentUser.id ? 'You' : replyToMessage.sender?.name || 'User'}
+              </p>
+              <p className="truncate">{replyToMessage.text}</p>
+            </div>
+            <button
+              type="button"
+              className="ml-3 text-secondary hover:text-primary"
+              onClick={() => setReplyToMessage(null)}
+            >
+              &times;
+            </button>
+          </div>
+        )}
         <ChatInput
           value={inputText}
           onChange={e => setInputText(e.target.value)}
@@ -308,8 +366,54 @@ const TribeMessageArea: React.FC<TribeMessageAreaProps> = ({
           isSending={isSending}
           isUploading={isUploading}
           uploadProgress={uploadProgress ?? undefined}
+          inputRef={inputRef}
         />
       </div>
+      {actionMessage && (
+        <div
+          className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-4 md:items-center"
+          onClick={() => setActionMessage(null)}
+        >
+          <div
+            className="w-full max-w-sm rounded-2xl bg-surface shadow-lg border border-border overflow-hidden"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <button
+              type="button"
+              className="w-full px-4 py-3 text-left text-sm text-primary hover:bg-background"
+              onClick={() => {
+                setReplyToMessage(actionMessage);
+                setActionMessage(null);
+                requestAnimationFrame(() => inputRef.current?.focus());
+              }}
+            >
+              Reply
+            </button>
+            <button
+              type="button"
+              className="w-full px-4 py-3 text-left text-sm text-primary hover:bg-background"
+              onClick={() => {
+                onDeleteMessageForMe(actionMessage.id);
+                setActionMessage(null);
+              }}
+            >
+              Delete for me
+            </button>
+            {actionMessage.senderId === currentUser.id && (
+              <button
+                type="button"
+                className="w-full px-4 py-3 text-left text-sm text-red-500 hover:bg-red-500/10"
+                onClick={() => {
+                  onDeleteMessage(actionMessage.id);
+                  setActionMessage(null);
+                }}
+              >
+                Delete for everyone
+              </button>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -85,6 +85,7 @@ export interface Message {
   attachmentSize?: number | null;
   status?: 'sending' | 'failed';
   clientTempId?: string;
+  replyTo?: string | null;
 }
 
 export interface Conversation {
@@ -136,6 +137,7 @@ export interface TribeMessage {
   attachmentSize?: number | null;
   status?: 'sending' | 'failed';
   clientTempId?: string;
+  replyTo?: string | null;
 }
 
 /* ===================== NOTIFICATIONS ===================== */
