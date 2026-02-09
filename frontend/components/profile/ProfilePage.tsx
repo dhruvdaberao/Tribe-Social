@@ -613,204 +613,204 @@ export const ProfilePage: React.FC<ProfilePageProps> = (props) => {
                                                 e.stopPropagation();
                                                 handleToggleFollow();
                                             }}
-                                            }}
-                                    className={`flex-1 sm:flex-none font-semibold px-6 py-2 rounded-lg transition-colors ${isFollowing ? 'bg-surface text-primary border border-border hover:bg-background' : 'bg-accent text-accent-text hover:bg-accent-hover'}`}
+
+                                            className={`flex-1 sm:flex-none font-semibold px-6 py-2 rounded-lg transition-colors ${isFollowing ? 'bg-surface text-primary border border-border hover:bg-background' : 'bg-accent text-accent-text hover:bg-accent-hover'}`}
                                         >
-                                    {isFollowing ? 'Unfollow' : 'Follow'}
-                                </button>
+                                            {isFollowing ? 'Unfollow' : 'Follow'}
+                                        </button>
                                     )}
-                            <div className="relative">
+                                    <div className="relative">
+                                        <button
+                                            type="button"
+                                            onClick={(e) => {
+                                                e.preventDefault();
+                                                setOptionsOpen(!optionsOpen);
+                                            }}
+                                            onBlur={() => setTimeout(() => setOptionsOpen(false), 150)}
+                                            className="p-2 rounded-full bg-surface text-primary border border-border hover:bg-background"
+                                            aria-label="More options"
+                                        >
+                                            <OptionsIcon />
+                                        </button>
+                                        {optionsOpen && (
+                                            <div className="absolute right-0 mt-2 w-48 bg-surface rounded-lg shadow-lg border border-border z-10 overflow-hidden">
+                                                <ShareButton shareData={{ title: `Check out ${safeUser.name}'s profile on Tribe!`, text: `See what ${safeUser.name} (@${safeUser.username}) is up to.`, url: window.location.href }} className="w-full text-left px-4 py-3 text-primary hover:bg-background transition-colors flex items-center space-x-2" onShare={() => setOptionsOpen(false)}>
+                                                    <ShareIcon className="h-5 w-5" /><span>Share Profile</span>
+                                                </ShareButton>
+                                                <button onClick={() => { onReportUser(safeUser.id); setOptionsOpen(false); }} className={`w-full text-left px-4 py-3 hover:bg-red-500/10 text-red-500 transition-colors flex items-center space-x-2`}>
+                                                    <FlagIcon className="h-5 w-5" /><span>Report User</span>
+                                                </button>
+                                                <button onClick={async () => {
+                                                    // @ts-ignore
+                                                    const success = await onToggleBlock(safeUser.id);
+                                                    setOptionsOpen(false);
+                                                    if (success && !isBlocked) {
+                                                        onNavigate('Discover');
+                                                    }
+                                                }} className={`w-full text-left px-4 py-3 hover:bg-background transition-colors flex items-center space-x-2 ${isBlocked ? 'text-secondary' : 'text-red-500'} border-t border-border`}>
+                                                    <BlockIcon className="h-5 w-5" /><span>{isBlocked ? 'Unblock User' : 'Block User'}</span>
+                                                </button>
+                                            </div>
+                                        )}
+                                    </div>
+                                </>
+                            )}
+                        </div>
+                    </div>
+
+                    <div className="mt-2">
+                        {isEditingProfile ? (
+                            <div className="grid gap-3 max-w-2xl">
+                                <div>
+                                    <label className="text-xs font-semibold text-secondary">Name</label>
+                                    <input
+                                        name="name"
+                                        value={editForm.name}
+                                        onChange={handleEditInputChange}
+                                        className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-primary focus:outline-none focus:ring-2 focus:ring-accent"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="text-xs font-semibold text-secondary">Username</label>
+                                    <input
+                                        name="username"
+                                        value={editForm.username}
+                                        onChange={handleEditInputChange}
+                                        className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-primary focus:outline-none focus:ring-2 focus:ring-accent"
+                                    />
+                                </div>
+                            </div>
+                        ) : (
+                            <>
+                                <h1 className="text-3xl font-bold text-primary font-display">{safeUser.name || "User"}</h1>
+                                <p className="text-md text-secondary">@{safeUser.username || "user"}</p>
+                            </>
+                        )}
+                        {safeUser.id === 'chuk-ai' ? (
+                            <div className="mt-2 p-3 bg-accent/10 rounded-lg border border-accent/20">
+                                <p className="text-sm text-primary italic">
+                                    "Psy... Psyduck has hidden his followers & following list with his Psychic ability! (But he might secretly follow you... Psy!)" 🦆🌀
+                                </p>
+                            </div>
+                        ) : (
+                            <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2">
                                 <button
                                     type="button"
-                                    onClick={(e) => {
-                                        e.preventDefault();
-                                        setOptionsOpen(!optionsOpen);
-                                    }}
-                                    onBlur={() => setTimeout(() => setOptionsOpen(false), 150)}
-                                    className="p-2 rounded-full bg-surface text-primary border border-border hover:bg-background"
-                                    aria-label="More options"
+                                    onClick={() => canViewLists && openFollowModal('following')}
+                                    className={`hover:underline ${!canViewLists ? 'cursor-not-allowed opacity-50' : ''}`}
+                                    title={!canViewLists ? "Follow to view lists" : ""}
                                 >
-                                    <OptionsIcon />
+                                    <span className="font-bold text-primary">
+                                        {safeUser.followingCount !== undefined
+                                            ? safeUser.followingCount
+                                            : (Array.isArray(safeUser.following) ? safeUser.following.length : 0)}
+                                    </span> <span className="text-secondary">Following</span>
                                 </button>
-                                {optionsOpen && (
-                                    <div className="absolute right-0 mt-2 w-48 bg-surface rounded-lg shadow-lg border border-border z-10 overflow-hidden">
-                                        <ShareButton shareData={{ title: `Check out ${safeUser.name}'s profile on Tribe!`, text: `See what ${safeUser.name} (@${safeUser.username}) is up to.`, url: window.location.href }} className="w-full text-left px-4 py-3 text-primary hover:bg-background transition-colors flex items-center space-x-2" onShare={() => setOptionsOpen(false)}>
-                                            <ShareIcon className="h-5 w-5" /><span>Share Profile</span>
-                                        </ShareButton>
-                                        <button onClick={() => { onReportUser(safeUser.id); setOptionsOpen(false); }} className={`w-full text-left px-4 py-3 hover:bg-red-500/10 text-red-500 transition-colors flex items-center space-x-2`}>
-                                            <FlagIcon className="h-5 w-5" /><span>Report User</span>
-                                        </button>
-                                        <button onClick={async () => {
-                                            // @ts-ignore
-                                            const success = await onToggleBlock(safeUser.id);
-                                            setOptionsOpen(false);
-                                            if (success && !isBlocked) {
-                                                onNavigate('Discover');
-                                            }
-                                        }} className={`w-full text-left px-4 py-3 hover:bg-background transition-colors flex items-center space-x-2 ${isBlocked ? 'text-secondary' : 'text-red-500'} border-t border-border`}>
-                                            <BlockIcon className="h-5 w-5" /><span>{isBlocked ? 'Unblock User' : 'Block User'}</span>
-                                        </button>
-                                    </div>
-                                )}
+                                <button
+                                    type="button"
+                                    onClick={() => canViewLists && openFollowModal('followers')}
+                                    className={`hover:underline ${!canViewLists ? 'cursor-not-allowed opacity-50' : ''}`}
+                                    title={!canViewLists ? "Follow to view lists" : ""}
+                                >
+                                    <span className="font-bold text-primary">
+                                        {safeUser.followersCount !== undefined
+                                            ? safeUser.followersCount
+                                            : (Array.isArray(safeUser.followers) ? safeUser.followers.length : 0)}
+                                    </span> <span className="text-secondary">Followers</span>
+                                </button>
                             </div>
-                        </>
-                            )}
+                        )}
+                        {isEditingProfile ? (
+                            <div className="mt-4 max-w-2xl">
+                                <label className="text-xs font-semibold text-secondary">Bio</label>
+                                <textarea
+                                    name="bio"
+                                    value={editForm.bio}
+                                    onChange={handleEditInputChange}
+                                    rows={3}
+                                    className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-primary focus:outline-none focus:ring-2 focus:ring-accent"
+                                />
+                            </div>
+                        ) : (
+                            <p className="text-primary mt-4 max-w-2xl whitespace-pre-wrap">{safeUser.bio}</p>
+                        )}
                     </div>
                 </div>
-
-                <div className="mt-2">
-                    {isEditingProfile ? (
-                        <div className="grid gap-3 max-w-2xl">
-                            <div>
-                                <label className="text-xs font-semibold text-secondary">Name</label>
-                                <input
-                                    name="name"
-                                    value={editForm.name}
-                                    onChange={handleEditInputChange}
-                                    className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-primary focus:outline-none focus:ring-2 focus:ring-accent"
-                                />
-                            </div>
-                            <div>
-                                <label className="text-xs font-semibold text-secondary">Username</label>
-                                <input
-                                    name="username"
-                                    value={editForm.username}
-                                    onChange={handleEditInputChange}
-                                    className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-primary focus:outline-none focus:ring-2 focus:ring-accent"
-                                />
-                            </div>
-                        </div>
-                    ) : (
-                        <>
-                            <h1 className="text-3xl font-bold text-primary font-display">{safeUser.name || "User"}</h1>
-                            <p className="text-md text-secondary">@{safeUser.username || "user"}</p>
-                        </>
-                    )}
-                    {safeUser.id === 'chuk-ai' ? (
-                        <div className="mt-2 p-3 bg-accent/10 rounded-lg border border-accent/20">
-                            <p className="text-sm text-primary italic">
-                                "Psy... Psyduck has hidden his followers & following list with his Psychic ability! (But he might secretly follow you... Psy!)" 🦆🌀
-                            </p>
-                        </div>
-                    ) : (
-                        <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2">
-                            <button
-                                type="button"
-                                onClick={() => canViewLists && openFollowModal('following')}
-                                className={`hover:underline ${!canViewLists ? 'cursor-not-allowed opacity-50' : ''}`}
-                                title={!canViewLists ? "Follow to view lists" : ""}
-                            >
-                                <span className="font-bold text-primary">
-                                    {safeUser.followingCount !== undefined
-                                        ? safeUser.followingCount
-                                        : (Array.isArray(safeUser.following) ? safeUser.following.length : 0)}
-                                </span> <span className="text-secondary">Following</span>
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => canViewLists && openFollowModal('followers')}
-                                className={`hover:underline ${!canViewLists ? 'cursor-not-allowed opacity-50' : ''}`}
-                                title={!canViewLists ? "Follow to view lists" : ""}
-                            >
-                                <span className="font-bold text-primary">
-                                    {safeUser.followersCount !== undefined
-                                        ? safeUser.followersCount
-                                        : (Array.isArray(safeUser.followers) ? safeUser.followers.length : 0)}
-                                </span> <span className="text-secondary">Followers</span>
-                            </button>
-                        </div>
-                    )}
-                    {isEditingProfile ? (
-                        <div className="mt-4 max-w-2xl">
-                            <label className="text-xs font-semibold text-secondary">Bio</label>
-                            <textarea
-                                name="bio"
-                                value={editForm.bio}
-                                onChange={handleEditInputChange}
-                                rows={3}
-                                className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-primary focus:outline-none focus:ring-2 focus:ring-accent"
-                            />
-                        </div>
-                    ) : (
-                        <p className="text-primary mt-4 max-w-2xl whitespace-pre-wrap">{safeUser.bio}</p>
-                    )}
-                </div>
             </div>
-        </div>
 
-            { isOwnProfile && <CreatePost currentUser={currentUser} allUsers={visibleUsers} myStories={myStories} onAddPost={onAddPost} isPosting={isPosting} onOpenStoryCreator={onOpenStoryCreator} onViewUserStories={onViewUserStories} /> }
+            {isOwnProfile && <CreatePost currentUser={currentUser} allUsers={visibleUsers} myStories={myStories} onAddPost={onAddPost} isPosting={isPosting} onOpenStoryCreator={onOpenStoryCreator} onViewUserStories={onViewUserStories} />}
 
-    <h2 className="text-xl font-bold text-primary my-6 font-display">{isOwnProfile ? "Your Posts" : `${(safeUser.name || "User").split(' ')[0]}'s Posts`}</h2>
+            <h2 className="text-xl font-bold text-primary my-6 font-display">{isOwnProfile ? "Your Posts" : `${(safeUser.name || "User").split(' ')[0]}'s Posts`}</h2>
 
-    {
-        isLoading ? (
-            <div className="flex justify-center p-8"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div></div>
-        ) : profilePosts.length > 0 ? (
-            <div className="grid grid-cols-3 gap-1 md:gap-2">
-                {profilePosts.map(post => (
-                    <PostGridItem key={post.id} post={post} onClick={() => setViewingPost(post)} />
-                ))}
-            </div>
-        ) : (
-            <div className="bg-surface p-8 text-center rounded-2xl border border-border">
-                <p className="text-secondary">
-                    {!isOwnProfile && !isFollowing ? (
-                        <>Follow <span className="font-bold text-primary">{safeUser.name.split(' ')[0]}</span> to see their posts</>
-                    ) : (
-                        "No posts yet."
-                    )}
-                </p>
-            </div>
-        )
-    }
+            {
+                isLoading ? (
+                    <div className="flex justify-center p-8"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div></div>
+                ) : profilePosts.length > 0 ? (
+                    <div className="grid grid-cols-3 gap-1 md:gap-2">
+                        {profilePosts.map(post => (
+                            <PostGridItem key={post.id} post={post} onClick={() => setViewingPost(post)} />
+                        ))}
+                    </div>
+                ) : (
+                    <div className="bg-surface p-8 text-center rounded-2xl border border-border">
+                        <p className="text-secondary">
+                            {!isOwnProfile && !isFollowing ? (
+                                <>Follow <span className="font-bold text-primary">{safeUser.name.split(' ')[0]}</span> to see their posts</>
+                            ) : (
+                                "No posts yet."
+                            )}
+                        </p>
+                    </div>
+                )
+            }
 
-    {
-        viewingPost && (
-            <PostViewModal
-                post={viewingPost}
-                currentUser={currentUser}
-                allUsers={visibleUsers}
-                allTribes={allTribes}
-                onLike={handleLike}
-                onComment={onCommentPost}
-                onDeletePost={handleDelete}
-                onHidePost={onHidePost}
-                onDeleteComment={onDeleteComment}
-                onViewProfile={(userToView) => { setViewingPost(null); onViewProfile(userToView); }}
-                onSharePost={onSharePost}
-                onReportPost={onReportPost}
-                onClose={() => setViewingPost(null)}
+            {
+                viewingPost && (
+                    <PostViewModal
+                        post={viewingPost}
+                        currentUser={currentUser}
+                        allUsers={visibleUsers}
+                        allTribes={allTribes}
+                        onLike={handleLike}
+                        onComment={onCommentPost}
+                        onDeletePost={handleDelete}
+                        onHidePost={onHidePost}
+                        onDeleteComment={onDeleteComment}
+                        onViewProfile={(userToView) => { setViewingPost(null); onViewProfile(userToView); }}
+                        onSharePost={onSharePost}
+                        onReportPost={onReportPost}
+                        onClose={() => setViewingPost(null)}
+                    />
+                )
+            }
+
+            {
+                followModal.isOpen && (
+                    <FollowListModal
+                        title={followModal.type === 'followers' ? 'Followers' : 'Following'}
+                        users={followModal.users}
+                        currentUser={currentUser}
+                        onClose={() => setFollowModal({ isOpen: false, type: 'followers', users: [], isLoading: false })}
+                        onToggleFollow={onToggleFollow}
+                        onViewProfile={(userToView) => { setFollowModal({ isOpen: false, type: 'followers', users: [], isLoading: false }); onViewProfile(userToView); }}
+                        isOwnProfile={isOwnProfile}
+                        listType={followModal.type}
+                        isLoading={followModal.isLoading}
+                    />
+                )
+            }
+            <MediaSelectionModal
+                isOpen={isMediaModalOpen}
+                onClose={() => setIsMediaModalOpen(false)}
+                onSelectCamera={() => {
+                    if (mediaTarget === 'avatar') avatarCameraRef.current?.click();
+                    if (mediaTarget === 'banner') bannerCameraRef.current?.click();
+                }}
+                onSelectGallery={() => {
+                    if (mediaTarget === 'avatar') avatarInputRef.current?.click();
+                    if (mediaTarget === 'banner') bannerInputRef.current?.click();
+                }}
             />
-        )
-    }
-
-    {
-        followModal.isOpen && (
-            <FollowListModal
-                title={followModal.type === 'followers' ? 'Followers' : 'Following'}
-                users={followModal.users}
-                currentUser={currentUser}
-                onClose={() => setFollowModal({ isOpen: false, type: 'followers', users: [], isLoading: false })}
-                onToggleFollow={onToggleFollow}
-                onViewProfile={(userToView) => { setFollowModal({ isOpen: false, type: 'followers', users: [], isLoading: false }); onViewProfile(userToView); }}
-                isOwnProfile={isOwnProfile}
-                listType={followModal.type}
-                isLoading={followModal.isLoading}
-            />
-        )
-    }
-    <MediaSelectionModal
-        isOpen={isMediaModalOpen}
-        onClose={() => setIsMediaModalOpen(false)}
-        onSelectCamera={() => {
-            if (mediaTarget === 'avatar') avatarCameraRef.current?.click();
-            if (mediaTarget === 'banner') bannerCameraRef.current?.click();
-        }}
-        onSelectGallery={() => {
-            if (mediaTarget === 'avatar') avatarInputRef.current?.click();
-            if (mediaTarget === 'banner') bannerInputRef.current?.click();
-        }}
-    />
         </div >
     );
 };
