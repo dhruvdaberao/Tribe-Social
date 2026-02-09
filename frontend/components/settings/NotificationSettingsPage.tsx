@@ -118,7 +118,7 @@ const NotificationSettingsPage: React.FC = () => {
           </p>
         </div>
 
-        <section className="space-y-4">
+        <section className="space-y-4 rounded-2xl border border-border bg-background/60 p-4">
           <div className="flex items-center justify-between py-2">
             <div className="flex items-center gap-3">
               <span className="p-2 rounded-lg bg-accent/10 text-accent">
@@ -144,7 +144,7 @@ const NotificationSettingsPage: React.FC = () => {
           </div>
         </section>
 
-        <section className="space-y-4">
+        <section className="space-y-4 rounded-2xl border border-border bg-background/60 p-4">
           <div className="flex items-center justify-between py-2">
             <div className="flex items-center gap-3">
               <span className="p-2 rounded-lg bg-accent/10 text-accent">

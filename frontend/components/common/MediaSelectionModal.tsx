@@ -150,7 +150,7 @@ interface MediaSelectionModalProps {
 }
 
 const MediaSelectionModal: React.FC<MediaSelectionModalProps> = ({ isOpen, onClose, onSelectCamera, onSelectGallery, anchorEl }) => {
-  const [position, setPosition] = React.useState<{ top: number; left: number } | null>(null);
+  const [position, setPosition] = React.useState<{ top: number; left: number; width: number } | null>(null);
 
   React.useEffect(() => {
     if (isOpen && anchorEl) {
@@ -158,12 +158,27 @@ const MediaSelectionModal: React.FC<MediaSelectionModalProps> = ({ isOpen, onClo
         const rect = anchorEl.getBoundingClientRect();
         const scrollTop = window.scrollY || document.documentElement.scrollTop;
         const scrollLeft = window.scrollX || document.documentElement.scrollLeft;
+        const viewportWidth = window.innerWidth;
+        const viewportHeight = window.innerHeight;
+        const modalWidth = Math.min(320, viewportWidth - 24);
+        const modalHeight = 220;
+        const desiredLeft = rect.left + scrollLeft;
+        const clampedLeft = Math.min(
+          Math.max(scrollLeft + 12, desiredLeft),
+          scrollLeft + viewportWidth - modalWidth - 12
+        );
+        const desiredTop = rect.bottom + scrollTop + 8;
+        const fitsBelow = desiredTop + modalHeight <= scrollTop + viewportHeight - 12;
+        const top = fitsBelow
+          ? desiredTop
+          : Math.max(scrollTop + 12, rect.top + scrollTop - modalHeight - 8);
 
         // Basic positioning: Below the anchor, aligned left
         // Add some offset (8px)
         setPosition({
-          top: rect.bottom + scrollTop + 8,
-          left: rect.left + scrollLeft
+          top,
+          left: clampedLeft,
+          width: modalWidth
         });
       };
 
@@ -180,19 +195,24 @@ const MediaSelectionModal: React.FC<MediaSelectionModalProps> = ({ isOpen, onClo
   }, [isOpen, anchorEl]);
 
   if (!isOpen) return null;
+  const isAnchored = Boolean(position);
 
   return (
-    <Overlay onClick={onClose} style={position && window.innerWidth >= 640 ? { alignItems: 'flex-start', justifyContent: 'flex-start', background: 'transparent', pointerEvents: 'none' } : {}}>
+    <Overlay
+      onClick={onClose}
+      style={isAnchored ? { alignItems: 'flex-start', justifyContent: 'flex-start', background: 'rgba(0, 0, 0, 0.35)' } : {}}
+    >
       <ModalContainer
         onClick={(e) => e.stopPropagation()}
-        style={position && window.innerWidth >= 640 ? {
+        style={isAnchored ? {
           position: 'absolute',
-          top: position.top,
-          left: position.left,
+          top: position?.top,
+          left: position?.left,
           marginTop: 0,
-          pointerEvents: 'auto',
-          width: '300px', // Smaller width for popover
-          boxShadow: '0 4px 20px rgba(0,0,0,0.15)'
+          width: position?.width,
+          maxWidth: '90vw',
+          borderRadius: '16px',
+          boxShadow: '0 8px 24px rgba(0,0,0,0.35)'
         } : {}}
       >
         <Header>
