@@ -308,7 +308,7 @@ router.get('/:id/messages', protect, async (req, res) => {
 
         const limit = Math.min(parseInt(req.query.limit, 10) || 50, 100);
         const before = req.query.before ? new Date(req.query.before) : null;
-        const query = { tribe: tribe._id };
+        const query = { tribe: tribe._id, deletedFor: { $ne: req.user._id } };
         if (before) {
             query.createdAt = { $lt: before };
         }
@@ -328,7 +328,7 @@ router.get('/:id/messages', protect, async (req, res) => {
 // POST /api/tribes/:id/messages
 router.post('/:id/messages', protect, async (req, res) => {
     try {
-        const { text, imageUrl, attachment } = req.body;
+        const { text, imageUrl, attachment, replyTo } = req.body;
 
         if (!text && !imageUrl && !attachment?.data) {
             return res.status(400).json({ message: 'Message cannot be empty' });
@@ -366,7 +366,8 @@ router.post('/:id/messages', protect, async (req, res) => {
             attachmentUrl,
             attachmentType,
             attachmentName,
-            attachmentSize
+            attachmentSize,
+            replyTo: replyTo || null
         });
 
         const populated = await message.populate(
@@ -386,6 +387,7 @@ router.post('/:id/messages', protect, async (req, res) => {
             attachmentType: populated.attachmentType,
             attachmentName: populated.attachmentName,
             attachmentSize: populated.attachmentSize,
+            replyTo: populated.replyTo ? populated.replyTo.toString() : null,
             timestamp: populated.createdAt
         };
 
@@ -452,6 +454,52 @@ router.post('/:id/messages', protect, async (req, res) => {
     } catch (error) {
         console.error('❌ POST /api/tribes/:id/messages ERROR:', error);
         res.status(500).json({ message: 'Server Error sending message' });
+    }
+});
+
+// DELETE /api/tribes/:id/messages/:messageId
+router.delete('/:id/messages/:messageId', protect, async (req, res) => {
+    try {
+        const { id, messageId } = req.params;
+        const userId = req.user._id;
+        const message = await TribeMessage.findById(messageId);
+        if (!message) {
+            return res.status(404).json({ message: 'Message not found' });
+        }
+        const tribe = await Tribe.findById(id).select('owner');
+        const isOwner = tribe?.owner?.toString() === userId.toString();
+        const isSender = message.sender.toString() === userId.toString();
+        if (!isSender && !isOwner && !req.user?.isAdmin) {
+            return res.status(403).json({ message: 'Not authorized to delete this message' });
+        }
+        await message.deleteOne();
+
+        if (req.io) {
+            req.io.to(id.toString()).emit('tribeMessageDeleted', { tribeId: id, messageId });
+        }
+
+        res.status(200).json({ ok: true, messageId });
+    } catch (error) {
+        console.error('❌ DELETE /api/tribes/:id/messages/:messageId ERROR:', error);
+        res.status(500).json({ message: 'Server Error deleting message' });
+    }
+});
+
+// PUT /api/tribes/:id/messages/:messageId/delete-for-me
+router.put('/:id/messages/:messageId/delete-for-me', protect, async (req, res) => {
+    try {
+        const { messageId } = req.params;
+        const userId = req.user._id;
+        const message = await TribeMessage.findById(messageId);
+        if (!message) {
+            return res.status(404).json({ message: 'Message not found' });
+        }
+        message.deletedFor = Array.from(new Set([...(message.deletedFor || []), userId]));
+        await message.save();
+        res.status(200).json({ ok: true, messageId });
+    } catch (error) {
+        console.error('❌ PUT /api/tribes/:id/messages/:messageId/delete-for-me ERROR:', error);
+        res.status(500).json({ message: 'Server Error updating message' });
     }
 });
 

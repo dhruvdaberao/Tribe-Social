@@ -9,6 +9,8 @@ const messageSchema = mongoose.Schema({
   attachmentType: { type: String, default: null },
   attachmentName: { type: String, default: null },
   attachmentSize: { type: Number, default: null },
+  replyTo: { type: mongoose.Schema.Types.ObjectId, ref: 'Message', default: null },
+  deletedFor: { type: [mongoose.Schema.Types.ObjectId], ref: 'User', default: [] },
 }, {
   timestamps: true,
 });
@@ -36,6 +38,12 @@ messageSchema.set('toJSON', {
     } else {
       returnedObject.receiverId = returnedObject.receiver.toString();
       delete returnedObject.receiver;
+    }
+
+    if (returnedObject.replyTo && typeof returnedObject.replyTo === 'object') {
+      returnedObject.replyTo = returnedObject.replyTo._id ? returnedObject.replyTo._id.toString() : returnedObject.replyTo.toString();
+    } else if (returnedObject.replyTo) {
+      returnedObject.replyTo = returnedObject.replyTo.toString();
     }
 
     returnedObject.text = returnedObject.message;
