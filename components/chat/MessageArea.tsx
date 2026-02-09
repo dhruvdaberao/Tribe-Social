@@ -327,7 +327,7 @@ export const MessageArea: React.FC<MessageAreaProps> = ({ conversation, messages
         </div>
       </div>
 
-      <div className="flex-1 min-h-0 overflow-y-auto p-4 pb-[calc(5rem+env(safe-area-inset-bottom))] overscroll-contain">
+      <div className="flex-1 min-h-0 overflow-y-auto p-4 overscroll-contain">
         {isLoading ? (
             <div className="w-full h-full flex items-center justify-center">
                 <img src="/duckload.gif" alt="Loading messages..." className="w-16 h-16" />
@@ -393,24 +393,7 @@ export const MessageArea: React.FC<MessageAreaProps> = ({ conversation, messages
         )}
       </div>
 
-      <div className="sticky bottom-0 p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] bg-background border-t border-border flex-shrink-0">
-        {replyToMessage && (
-          <div className="mb-3 flex items-center justify-between rounded-lg border border-border bg-surface px-3 py-2 text-xs text-secondary">
-            <div className="min-w-0">
-              <p className="font-semibold text-primary">
-                Replying to {replyToMessage.senderId === currentUser.id ? 'You' : userMap.get(replyToMessage.senderId)?.name || 'User'}
-              </p>
-              <p className="truncate">{replyToMessage.text}</p>
-            </div>
-            <button
-              type="button"
-              className="ml-3 text-secondary hover:text-primary"
-              onClick={() => setReplyToMessage(null)}
-            >
-              &times;
-            </button>
-          </div>
-        )}
+      <div className="p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] bg-background border-t border-border flex-shrink-0">
         <form onSubmit={handleSendMessage} className="flex items-center space-x-3">
           <input
             type="text"
