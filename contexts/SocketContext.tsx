@@ -77,7 +77,7 @@
 // // //   const [onlineUsers, setOnlineUsers] = useState<string[]>([]);
 // // //   const [notifications, setNotifications] = useState<Notification[]>([]);
 // // //   const activeChatPartnerId = useRef<string | null>(null);
-  
+
 // // //   const [unreadCounts, setUnreadCounts] = useState<{
 // // //     messages: { [key: string]: number };
 // // //     tribes: { [key: string]: number };
@@ -110,7 +110,7 @@
 
 // // //   useEffect(() => {
 // // //     if (!socket || !currentUser) return;
-    
+
 // // //     socket.on('connect', () => {
 // // //       console.log('Socket connected:', socket.id);
 // // //     });
@@ -261,7 +261,7 @@
 // //   const [onlineUsers, setOnlineUsers] = useState<string[]>([]);
 // //   const [notifications, setNotifications] = useState<Notification[]>([]);
 // //   const activeChatPartnerId = useRef<string | null>(null);
-  
+
 // //   const [unreadCounts, setUnreadCounts] = useState<{
 // //     messages: { [key: string]: number };
 // //     tribes: { [key: string]: number };
@@ -293,7 +293,7 @@
 
 // //   useEffect(() => {
 // //     if (!socket || !currentUser) return;
-    
+
 // //     socket.on('connect', () => {
 // //       console.log('Socket connected:', socket.id);
 // //     });
@@ -315,7 +315,7 @@
 // //     socket.on('newMessage', (message: Message) => {
 // //         // Correct check: Is the sender ME?
 // //         if (message.senderId === currentUser.id) return;
-        
+
 // //         // Is the chat currently open?
 // //         if (message.senderId === activeChatPartnerId.current) return;
 
@@ -331,7 +331,7 @@
 // //     socket.on('newTribeMessage', (message: TribeMessage) => {
 // //         // Helper to get ID whether it's a populated object or a string
 // //         const senderId = typeof message.sender === 'object' ? message.sender.id : message.senderId;
-        
+
 // //         // Only increment unread if I am NOT the sender
 // //         if(senderId && senderId !== currentUser.id) {
 // //             setUnreadCounts(prev => ({
@@ -456,7 +456,7 @@
 //   const [onlineUsers, setOnlineUsers] = useState<string[]>([]);
 //   const [notifications, setNotifications] = useState<Notification[]>([]);
 //   const activeChatPartnerId = useRef<string | null>(null);
-  
+
 //   const [unreadCounts, setUnreadCounts] = useState<{
 //     messages: { [key: string]: number };
 //     tribes: { [key: string]: number };
@@ -488,7 +488,7 @@
 
 //   useEffect(() => {
 //     if (!socket || !currentUser) return;
-    
+
 //     socket.on('connect', () => {
 //       console.log('Socket connected:', socket.id);
 //     });
@@ -525,7 +525,7 @@
 //         // Check if the sender is the current user (using ID or object property)
 //         // This prevents self-notifications
 //         const messageSenderId = typeof message.senderId === 'string' ? message.senderId : (message.senderId as any)?._id;
-        
+
 //         if(messageSenderId && messageSenderId !== currentUser.id) {
 //             setUnreadCounts(prev => ({
 //                 ...prev,
@@ -583,7 +583,7 @@
 import React, { createContext, useContext, useEffect, useState, ReactNode, useCallback, useRef } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { useAuth } from './AuthContext';
-import { Notification, Message, TribeMessage, User } from '../types';
+import { TribeNotification as Notification, Message, TribeMessage, User } from '../types';
 import { toast } from '../components/common/Toast';
 
 // Hardcoded the backend URL to remove the dependency on the problematic config file.
@@ -648,7 +648,7 @@ export const SocketProvider: React.FC<{ children: ReactNode }> = ({ children }) 
   const [onlineUsers, setOnlineUsers] = useState<string[]>([]);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const activeChatPartnerId = useRef<string | null>(null);
-  
+
   const [unreadCounts, setUnreadCounts] = useState<{
     messages: { [key: string]: number };
     tribes: { [key: string]: number };
@@ -675,12 +675,12 @@ export const SocketProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         setSocket(null);
       }
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentUser]);
 
   useEffect(() => {
     if (!socket || !currentUser) return;
-    
+
     socket.on('connect', () => {
       console.log('Socket connected:', socket.id);
     });
@@ -690,44 +690,44 @@ export const SocketProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     });
 
     socket.on('newNotification', (notification: Notification) => {
-        // Prevent notification if the user is the one who caused it (should be handled by backend, but safety check)
-        if (notification.sender.id === currentUser.id) return;
+      // Prevent notification if the user is the one who caused it (should be handled by backend, but safety check)
+      if (notification.sender.id === currentUser.id) return;
 
-        setNotifications(prev => [notification, ...prev]);
-        toast.info(
-            `${notification.sender.name} ${notification.type === 'follow' ? 'started following you' : notification.type === 'like' ? 'liked your post' : 'commented on your post'}.`
-        );
+      setNotifications(prev => [notification, ...prev]);
+      toast.info(
+        `${notification.sender.name} ${notification.type === 'follow' ? 'started following you' : notification.type === 'like' ? 'liked your post' : 'commented on your post'}.`
+      );
     });
 
     socket.on('newMessage', (message: Message) => {
-        // Don't create notification if user is sending the message or if the chat is already open
-        if (message.senderId === currentUser.id || message.senderId === activeChatPartnerId.current) {
-            return;
-        }
+      // Don't create notification if user is sending the message or if the chat is already open
+      if (message.senderId === currentUser.id || message.senderId === activeChatPartnerId.current) {
+        return;
+      }
 
-         setUnreadCounts(prev => ({
-            ...prev,
-            messages: {
-                ...prev.messages,
-                [message.senderId]: (prev.messages[message.senderId] || 0) + 1,
-            }
-        }));
+      setUnreadCounts(prev => ({
+        ...prev,
+        messages: {
+          ...prev.messages,
+          [message.senderId]: (prev.messages[message.senderId] || 0) + 1,
+        }
+      }));
     });
 
     socket.on('newTribeMessage', (message: TribeMessage) => {
-        // Only increment unread if I am NOT the sender
-        // Handle both object populated sender and string senderId
-        const senderId = typeof message.senderId === 'string' ? message.senderId : (message.senderId as any)?._id;
-        
-        if(senderId && senderId !== currentUser.id) {
-            setUnreadCounts(prev => ({
-                ...prev,
-                tribes: {
-                    ...prev.tribes,
-                    [message.tribeId!]: (prev.tribes[message.tribeId!] || 0) + 1,
-                }
-            }));
-        }
+      // Only increment unread if I am NOT the sender
+      // Handle both object populated sender and string senderId
+      const senderId = typeof message.senderId === 'string' ? message.senderId : (message.senderId as any)?._id;
+
+      if (senderId && senderId !== currentUser.id) {
+        setUnreadCounts(prev => ({
+          ...prev,
+          tribes: {
+            ...prev.tribes,
+            [message.tribeId!]: (prev.tribes[message.tribeId!] || 0) + 1,
+          }
+        }));
+      }
     });
 
     return () => {
@@ -741,19 +741,19 @@ export const SocketProvider: React.FC<{ children: ReactNode }> = ({ children }) 
 
   const clearUnreadMessages = useCallback((partnerId: string) => {
     setUnreadCounts(prev => {
-        if (!prev.messages[partnerId]) return prev;
-        const newMessages = { ...prev.messages };
-        delete newMessages[partnerId];
-        return { ...prev, messages: newMessages };
+      if (!prev.messages[partnerId]) return prev;
+      const newMessages = { ...prev.messages };
+      delete newMessages[partnerId];
+      return { ...prev, messages: newMessages };
     });
   }, []);
 
   const clearUnreadTribe = useCallback((tribeId: string) => {
     setUnreadCounts(prev => {
-        if (!prev.tribes[tribeId]) return prev;
-        const newTribes = { ...prev.tribes };
-        delete newTribes[tribeId];
-        return { ...prev, tribes: newTribes };
+      if (!prev.tribes[tribeId]) return prev;
+      const newTribes = { ...prev.tribes };
+      delete newTribes[tribeId];
+      return { ...prev, tribes: newTribes };
     });
   }, []);
 

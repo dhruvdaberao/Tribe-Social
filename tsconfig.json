@@ -38,17 +38,13 @@
     "*.ts",
     "*.tsx",
     "**/*.ts",
-    "**/*.tsx"
+    "**/*.tsx",
+    "vite.config.ts"
   ],
   "exclude": [
     "node_modules",
     "dist",
     "backend",
     "frontend"
-  ],
-  "references": [
-    {
-      "path": "./tsconfig.node.json"
-    }
   ]
 }

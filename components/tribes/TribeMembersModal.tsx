@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { User } from '../../types';
 import UserAvatar from '../common/UserAvatar';
 
@@ -8,10 +9,14 @@ interface TribeMembersModalProps {
   memberIds: string[];
   userMap: Map<string, User>;
   onViewProfile: (user: User) => void;
+  currentUser: User;
+  tribeOwnerId: string;
+  onKickMember: (userId: string) => void;
 }
 
-const TribeMembersModal: React.FC<TribeMembersModalProps> = ({ isOpen, onClose, memberIds, userMap, onViewProfile }) => {
+const TribeMembersModal: React.FC<TribeMembersModalProps> = ({ isOpen, onClose, memberIds, userMap, onViewProfile, currentUser, tribeOwnerId, onKickMember }) => {
   const [searchTerm, setSearchTerm] = useState('');
+  const isOwner = currentUser?.id === tribeOwnerId;
 
   const members = useMemo(() => {
     return memberIds.map(id => userMap.get(id)).filter((user): user is User => !!user);
@@ -25,12 +30,12 @@ const TribeMembersModal: React.FC<TribeMembersModalProps> = ({ isOpen, onClose, 
       user.username.toLowerCase().includes(term)
     );
   }, [searchTerm, members]);
-  
+
   if (!isOpen) return null;
 
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-60 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={onClose}>
-      <div className="bg-surface rounded-2xl shadow-xl w-full max-w-md h-[70vh] flex flex-col border border-border" onClick={e => e.stopPropagation()}>
+  return createPortal(
+    <div className="fixed inset-0 bg-black bg-opacity-60 backdrop-blur-sm flex items-center justify-center z-[70] p-4" onClick={onClose}>
+      <div className="bg-surface rounded-2xl shadow-xl w-full max-w-md h-[70vh] flex flex-col border border-border animate-in fade-in zoom-in duration-200" onClick={e => e.stopPropagation()}>
         <div className="p-4 border-b border-border flex-shrink-0">
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-xl font-bold text-primary">Tribe Members ({members.length})</h2>
@@ -42,6 +47,7 @@ const TribeMembersModal: React.FC<TribeMembersModalProps> = ({ isOpen, onClose, 
             onChange={(e) => setSearchTerm(e.target.value)}
             placeholder="Search members..."
             className="w-full bg-background border border-border rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-accent text-primary"
+            autoFocus
           />
         </div>
 
@@ -59,6 +65,19 @@ const TribeMembersModal: React.FC<TribeMembersModalProps> = ({ isOpen, onClose, 
                     <p className="font-semibold text-primary truncate">{user.name}</p>
                     <p className="text-sm text-secondary truncate">@{user.username}</p>
                   </div>
+                  {isOwner && user.id !== tribeOwnerId && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (window.confirm(`Are you sure you want to kick @${user.username}?`)) {
+                          onKickMember(user.id);
+                        }
+                      }}
+                      className="ml-auto text-red-500 hover:text-red-700 hover:bg-red-500/10 px-3 py-1 rounded-full text-sm font-medium transition-colors"
+                    >
+                      Kick
+                    </button>
+                  )}
                 </div>
               ))}
             </div>
@@ -67,7 +86,8 @@ const TribeMembersModal: React.FC<TribeMembersModalProps> = ({ isOpen, onClose, 
           )}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
 

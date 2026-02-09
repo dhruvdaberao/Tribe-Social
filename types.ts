@@ -119,7 +119,7 @@ export interface Comment {
 }
 
 export interface Post {
-  id:string;
+  id: string;
   author: User;
   content: string;
   imageUrl?: string;
@@ -165,7 +165,7 @@ export interface Tribe {
   messages: TribeMessage[];
 }
 
-export interface Notification {
+export interface TribeNotification {
   id: string;
   recipient: string; // User ID
   sender: User;
@@ -180,7 +180,7 @@ export interface Notification {
 
 export interface Story {
   id: string;
-  author: User; 
+  author: User;
   user: string; // User ID
   imageUrl?: string;
   text?: string;

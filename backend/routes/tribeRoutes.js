@@ -231,6 +231,66 @@ router.put('/:id/join', protect, async (req, res) => {
     }
 });
 
+// PUT /api/tribes/:id/kick/:userId
+router.put('/:id/kick/:userId', protect, async (req, res) => {
+    try {
+        const tribe = await Tribe.findById(req.params.id);
+        if (!tribe) return res.status(404).json({ message: 'Tribe not found' });
+
+        if (tribe.owner.toString() !== req.user.id) {
+            return res.status(403).json({ message: 'Only Chief can kick members' });
+        }
+
+        const targetUserId = req.params.userId;
+        if (targetUserId === tribe.owner.toString()) {
+            return res.status(400).json({ message: 'Cannot kick the Chief' });
+        }
+
+        const isMember = tribe.members.some(id => id.toString() === targetUserId);
+        if (!isMember) {
+            return res.status(404).json({ message: 'User is not a member' });
+        }
+
+        // Remove member
+        tribe.members = tribe.members.filter(id => id.toString() !== targetUserId);
+        await tribe.save();
+
+        // Notifications
+        if (req.io) {
+            // Force kick via socket if online
+            req.io.to(`user-${targetUserId}`).emit('kickedFromTribe', {
+                tribeId: tribe._id,
+                tribeName: tribe.name
+            });
+
+            // Notify tribe room? Maybe not necessary to announce publically, but maybe system message?
+            // Optional: System message
+            // ...
+        }
+
+        // Push Notification to kicked user
+        const kickedUser = await User.findById(targetUserId).select('notificationPrefs isDisabled');
+        if (kickedUser && !kickedUser.isDisabled && isPushEnabledFor(kickedUser, 'tribe')) {
+            await sendPushToUser(targetUserId, {
+                title: 'You were kicked',
+                body: `You have been removed from ${tribe.name}`,
+                url: `/tribes`, // Redirect to list presumably
+                icon: '/icons/icon-192.png',
+                tag: `tribe-kick-${tribe._id}`,
+                data: {
+                    type: 'tribe_kick',
+                    tribeId: tribe._id.toString()
+                }
+            });
+        }
+
+        res.status(200).json(tribe);
+    } catch (error) {
+        console.error('❌ PUT /api/tribes/:id/kick/:userId ERROR:', error);
+        res.status(500).json({ message: 'Server Error kicking member' });
+    }
+});
+
 /* ======================================================
    CHAT
 ====================================================== */

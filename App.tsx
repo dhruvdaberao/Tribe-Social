@@ -5,7 +5,7 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useAuth } from './contexts/AuthContext';
 import { useSocket } from './contexts/SocketContext';
-import { User, Post, Tribe, TribeMessage, Notification as NotificationType, Comment, Story } from './types';
+import { User, Post, Tribe, TribeMessage, TribeNotification as NotificationType, Comment, Story } from './types';
 import * as api from './api'; // Assumed in root based on instruction
 
 // Components
@@ -630,6 +630,20 @@ const App: React.FC = () => {
         }
     }
 
+    const handleKickMember = async (tribeId: string, userId: string) => {
+        try {
+            const { data: updatedTribe } = await api.kickMember(tribeId, userId);
+            setTribes(tribes.map(t => t.id === tribeId ? { ...t, members: updatedTribe.members } : t));
+            if (viewedTribe?.id === tribeId) {
+                setViewedTribe(prev => prev ? { ...prev, members: updatedTribe.members } : null);
+            }
+            toast.success("Member kicked from tribe.");
+        } catch (error) {
+            console.error("Failed to kick member:", error);
+            toast.error("Failed to kick member.");
+        }
+    };
+
     const handleCreateStory = async (storyData: Omit<Story, 'id' | 'user' | 'createdAt' | 'author' | 'likes'>) => {
         try {
             const { data: newStory } = await api.createStory(storyData);
@@ -753,7 +767,7 @@ const App: React.FC = () => {
                 return <TribesPage tribes={tribes} currentUser={currentUser} onJoinToggle={handleJoinToggle} onCreateTribe={handleCreateTribe} onViewTribe={handleViewTribe} onEditTribe={(tribe) => setEditingTribe(tribe)} />;
             case 'TribeDetail':
                 if (!viewedTribe) return <div className="text-center p-8">Tribe not found. Go back to discover more tribes.</div>;
-                return <TribeDetailPage tribe={viewedTribe} currentUser={currentUser} userMap={userMap} onSendMessage={handleSendTribeMessage} onDeleteMessage={handleDeleteTribeMessage} onDeleteTribe={handleDeleteTribe} onBack={() => setActiveNavItem('Tribes')} onViewProfile={handleViewProfile} onEditTribe={(tribe) => setEditingTribe(tribe)} onJoinToggle={handleJoinToggle} />;
+                return <TribeDetailPage tribe={viewedTribe} currentUser={currentUser} userMap={userMap} onSendMessage={handleSendTribeMessage} onDeleteMessage={handleDeleteTribeMessage} onDeleteTribe={handleDeleteTribe} onBack={() => setActiveNavItem('Tribes')} onViewProfile={handleViewProfile} onEditTribe={(tribe) => setEditingTribe(tribe)} onJoinToggle={handleJoinToggle} onKickMember={handleKickMember} />;
             case 'Notifications':
                 return <NotificationsPage notifications={notifications} allTribes={tribes} onViewProfile={handleViewProfile} onViewMessage={handleStartConversation} onViewPost={handleViewPost} onViewTribe={handleViewTribe} onViewStory={handleViewUserStories} />;
             case 'Profile':
@@ -770,9 +784,22 @@ const App: React.FC = () => {
         }
     };
 
-    let containerClass = 'max-w-2xl mx-auto px-4 md:px-6 pt-6 pb-24 md:pb-8';
+    let containerClass = 'max-w-2xl mx-auto px-4 md:px-6 pt-6 pb-24 md:pb-8'; // Default with bottom nav padding
+    const isChatPage = ['Messages', 'TribeDetail'].includes(activeNavItem);
+
     if (isFullHeightPage) {
-        containerClass = 'h-[calc(100vh-8rem)] md:h-[calc(100vh-4rem)]';
+        // For Chat pages: 
+        // 1. Remove horizontal padding/margin constraints to allow full width if needed (inner component handles it)
+        // 2. Remove bottom padding so we can use 100dvh and handle our own input positioning
+        // 3. We use h-screen or 100dvh for the specific chat layout.
+        containerClass = 'h-full w-full max-w-5xl mx-auto md:px-4 md:pb-4';
+        if (isChatPage) {
+            // Mobile specific: NO padding, full viewport.
+            // Desktop: keep some padding/max-width structure.
+            containerClass = 'h-[100dvh] w-full max-w-6xl mx-auto md:h-[calc(100vh-2rem)] md:my-4';
+        } else if (activeNavItem === 'Settings') {
+            containerClass = 'h-[calc(100vh-8rem)] md:h-[calc(100vh-4rem)] max-w-2xl mx-auto px-4';
+        }
     } else if (isWidePage) {
         containerClass = 'max-w-5xl mx-auto px-4 md:px-6 pt-6 pb-24 md:pb-8';
     }
@@ -780,8 +807,21 @@ const App: React.FC = () => {
     return (
         <div className="bg-background min-h-screen text-primary overflow-hidden">
             <Toaster />
+            {/* Pass a prop or logic to hide bottom nav on chat pages if possible, 
+                OR we ensure the ChatPage covers it with z-index. 
+                For now, we let Sidebar render, but ChatPage will likely cover it on mobile via z-index if we set it there. 
+                However, Sidebar prop updates are not in scope unless we open that file. 
+                We will assume ChatPage will use fixed/absolute positioning on mobile to cover. 
+            */}
             <Sidebar activeItem={activeNavItem} onSelectItem={handleSelectItem} currentUser={currentUser} unreadMessageCount={unreadMessageCount} unreadTribeCount={unreadTribeCount} unreadNotificationCount={unreadNotificationCount} />
-            <main className="pt-16 pb-16 md:pb-0">
+
+            {/* 
+              For Chat Pages on Mobile: 
+              - We remove pt-16 (top header padding) if the ChatPage has its own header.
+              - We remove pb-16 (bottom nav padding) effectively by not having it on the container.
+              - We use fixed inset-0 z-40 to go OVER the bottom nav and top bar if needed.
+            */}
+            <main className={`${isChatPage ? 'h-[100dvh] w-full' : 'pt-16 pb-16 md:pb-0'} ${isChatPage ? 'md:pt-16 md:pb-0' : ''}`}>
                 <div className={containerClass}>
                     {renderContent()}
                 </div>

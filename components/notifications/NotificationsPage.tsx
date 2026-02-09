@@ -57,7 +57,7 @@
 // //         return '';
 // //     }
 // //   };
-  
+
 // //   const getDetailsText = () => {
 // //     switch (notification.type) {
 // //         case 'follow': return 'View Profile';
@@ -69,7 +69,7 @@
 // //         default: return 'View Details';
 // //     }
 // //   };
-  
+
 // //   const handleClick = () => {
 // //     switch (type) {
 // //         case 'follow':
@@ -140,7 +140,7 @@
 
 // // const NotificationsPage: React.FC<NotificationsPageProps> = ({ notifications, allTribes, onViewProfile, onViewMessage, onViewPost, onViewTribe, onViewStory }) => {
 // //   const { setNotifications } = useSocket();
-  
+
 // //   const markAsRead = useCallback(async () => {
 // //     try {
 // //         if (notifications.some(n => !n.read)) {
@@ -159,7 +159,7 @@
 
 // //     return () => clearTimeout(timer);
 // //   }, [markAsRead]);
-  
+
 // //   return (
 // //     <div className="max-w-3xl mx-auto">
 // //       <h1 className="text-2xl font-bold text-primary mb-6 font-display">Notifications</h1>
@@ -264,7 +264,7 @@
 //         return '';
 //     }
 //   };
-  
+
 //   const getDetailsText = () => {
 //     switch (notification.type) {
 //         case 'follow': return 'View Profile';
@@ -276,7 +276,7 @@
 //         default: return 'View Details';
 //     }
 //   };
-  
+
 //   const handleClick = () => {
 //     switch (type) {
 //         case 'follow':
@@ -347,7 +347,7 @@
 
 // const NotificationsPage: React.FC<NotificationsPageProps> = ({ notifications, allTribes, onViewProfile, onViewMessage, onViewPost, onViewTribe, onViewStory }) => {
 //   const { setNotifications } = useSocket();
-  
+
 //   const markAsRead = useCallback(async () => {
 //     try {
 //         await api.markNotificationsRead();
@@ -363,7 +363,7 @@
 //         markAsRead();
 //     }
 //   }, [notifications, markAsRead]);
-  
+
 //   return (
 //     <div className="max-w-3xl mx-auto">
 //       <h1 className="text-2xl font-bold text-primary mb-6 font-display">Notifications</h1>
@@ -409,7 +409,7 @@
 
 
 import React, { useEffect, useCallback } from 'react';
-import { Notification, User, Tribe } from '../../types';
+import { TribeNotification as Notification, User, Tribe } from '../../types';
 import UserAvatar from '../common/UserAvatar';
 import * as api from '../../api.ts';
 import { useSocket } from '../../contexts/SocketContext';
@@ -425,19 +425,19 @@ interface NotificationsPageProps {
 }
 
 const timeAgo = (dateString: string) => {
-    if (!dateString) return '...';
-    const date = new Date(dateString);
-    const now = new Date();
-    const seconds = Math.round((now.getTime() - date.getTime()) / 1000);
-    const minutes = Math.round(seconds / 60);
-    const hours = Math.round(minutes / 60);
-    const days = Math.round(hours / 24);
+  if (!dateString) return '...';
+  const date = new Date(dateString);
+  const now = new Date();
+  const seconds = Math.round((now.getTime() - date.getTime()) / 1000);
+  const minutes = Math.round(seconds / 60);
+  const hours = Math.round(minutes / 60);
+  const days = Math.round(hours / 24);
 
-    if (seconds < 60) return `${seconds}s ago`;
-    if (minutes < 60) return `${minutes}m ago`;
-    if (hours < 24) return `${hours}h ago`;
-    if (days < 7) return `${days}d ago`;
-    return date.toLocaleDateString();
+  if (seconds < 60) return `${seconds}s ago`;
+  if (minutes < 60) return `${minutes}m ago`;
+  if (hours < 24) return `${hours}h ago`;
+  if (days < 7) return `${days}d ago`;
+  return date.toLocaleDateString();
 };
 
 const NotificationItem: React.FC<{ notification: Notification; allTribes: Tribe[]; onViewProfile: (user: User) => void; onViewMessage: (user: User) => void; onViewPost: (postId: string) => void; onViewTribe: (tribe: any) => void; onViewStory: (userId: string) => void; }> = ({ notification, allTribes, onViewProfile, onViewMessage, onViewPost, onViewTribe, onViewStory }) => {
@@ -462,40 +462,40 @@ const NotificationItem: React.FC<{ notification: Notification; allTribes: Tribe[
         return '';
     }
   };
-  
+
   const getDetailsText = () => {
     switch (notification.type) {
-        case 'follow': return 'View Profile';
-        case 'message': return 'View Message';
-        case 'like': return 'View Post';
-        case 'comment': return 'View Post';
-        case 'story_like': return 'View Story';
-        case 'tribe_join': return 'View Tribe';
-        default: return 'View Details';
+      case 'follow': return 'View Profile';
+      case 'message': return 'View Message';
+      case 'like': return 'View Post';
+      case 'comment': return 'View Post';
+      case 'story_like': return 'View Story';
+      case 'tribe_join': return 'View Tribe';
+      default: return 'View Details';
     }
   };
-  
+
   const handleClick = () => {
     switch (type) {
-        case 'follow':
-            onViewProfile(sender);
-            break;
-        case 'story_like':
-            onViewStory(sender.id);
-            break;
-        case 'message':
-            onViewMessage(sender);
-            break;
-        case 'like':
-        case 'comment':
-            if (notification.postId) onViewPost(notification.postId);
-            break;
-        case 'tribe_join':
-            if (notification.tribeId) {
-                const tribe = allTribes.find(t => t.id === notification.tribeId);
-                if (tribe) onViewTribe(tribe);
-            }
-            break;
+      case 'follow':
+        onViewProfile(sender);
+        break;
+      case 'story_like':
+        onViewStory(sender.id);
+        break;
+      case 'message':
+        onViewMessage(sender);
+        break;
+      case 'like':
+      case 'comment':
+        if (notification.postId) onViewPost(notification.postId);
+        break;
+      case 'tribe_join':
+        if (notification.tribeId) {
+          const tribe = allTribes.find(t => t.id === notification.tribeId);
+          if (tribe) onViewTribe(tribe);
+        }
+        break;
     }
   };
 
@@ -504,79 +504,79 @@ const NotificationItem: React.FC<{ notification: Notification; allTribes: Tribe[
     comment: <CommentIcon />,
     follow: <FollowIcon />,
     message: <MessageIcon />,
-    story_like: <StoryLikeIcon/>,
+    story_like: <StoryLikeIcon />,
     tribe_join: <TribeIcon />,
   }[notification.type];
 
   return (
     <div className={`bg-surface rounded-2xl border shadow-sm p-4 transition-colors ${!notification.read ? 'border-accent/50' : 'border-border'}`}>
-        <div className="flex items-start space-x-4">
-            <div className="relative flex-shrink-0">
-                <div className="w-12 h-12 cursor-pointer" onClick={(e) => { e.stopPropagation(); onViewProfile(sender);}}>
-                    <UserAvatar user={sender} />
-                </div>
-                <div className="absolute -bottom-1 -right-1 bg-surface p-0.5 rounded-full ring-2 ring-surface">
-                    <div className="w-5 h-5 text-accent">
-                        {Icon}
-                    </div>
-                </div>
+      <div className="flex items-start space-x-4">
+        <div className="relative flex-shrink-0">
+          <div className="w-12 h-12 cursor-pointer" onClick={(e) => { e.stopPropagation(); onViewProfile(sender); }}>
+            <UserAvatar user={sender} />
+          </div>
+          <div className="absolute -bottom-1 -right-1 bg-surface p-0.5 rounded-full ring-2 ring-surface">
+            <div className="w-5 h-5 text-accent">
+              {Icon}
             </div>
+          </div>
+        </div>
 
-            <div className="flex-1">
-                <p className="text-primary text-sm leading-relaxed">
-                    <strong className="hover:underline cursor-pointer" onClick={(e) => { e.stopPropagation(); onViewProfile(sender);}}>{sender.name}</strong>
-                    <span className="text-secondary"> @{sender.username} </span>
-                    {renderText()}
-                </p>
-                <p className="text-xs text-secondary mt-1">{timeAgo(timestamp)}</p>
-            </div>
+        <div className="flex-1">
+          <p className="text-primary text-sm leading-relaxed">
+            <strong className="hover:underline cursor-pointer" onClick={(e) => { e.stopPropagation(); onViewProfile(sender); }}>{sender.name}</strong>
+            <span className="text-secondary"> @{sender.username} </span>
+            {renderText()}
+          </p>
+          <p className="text-xs text-secondary mt-1">{timeAgo(timestamp)}</p>
         </div>
-        <div className="mt-3 flex justify-end">
-            <button
-                onClick={handleClick}
-                className="text-sm font-semibold bg-accent/10 text-accent px-4 py-1.5 rounded-lg hover:bg-accent/20 transition-colors"
-            >
-                {getDetailsText()}
-            </button>
-        </div>
+      </div>
+      <div className="mt-3 flex justify-end">
+        <button
+          onClick={handleClick}
+          className="text-sm font-semibold bg-accent/10 text-accent px-4 py-1.5 rounded-lg hover:bg-accent/20 transition-colors"
+        >
+          {getDetailsText()}
+        </button>
+      </div>
     </div>
   );
 };
 
 const NotificationsPage: React.FC<NotificationsPageProps> = ({ notifications, allTribes, onViewProfile, onViewMessage, onViewPost, onViewTribe, onViewStory }) => {
   const { setNotifications } = useSocket();
-  
+
   const markAsRead = useCallback(async () => {
     try {
-        await api.markNotificationsRead();
-        setNotifications(prev => prev.map(n => ({...n, read: true})));
+      await api.markNotificationsRead();
+      setNotifications(prev => prev.map(n => ({ ...n, read: true })));
     } catch (error) {
-        console.error("Failed to mark notifications as read", error);
+      console.error("Failed to mark notifications as read", error);
     }
   }, [setNotifications]);
 
   useEffect(() => {
     // Mark as read immediately if there are unread notifications
     if (notifications.some(n => !n.read)) {
-        markAsRead();
+      markAsRead();
     }
   }, [notifications, markAsRead]);
-  
+
   return (
     <div className="max-w-3xl mx-auto">
       <h1 className="text-2xl font-bold text-primary mb-6 font-display">Notifications</h1>
       <div className="space-y-3">
         {notifications.length > 0 ? (
           notifications.map(notification => (
-            <NotificationItem 
-                key={notification.id} 
-                notification={notification}
-                allTribes={allTribes}
-                onViewProfile={onViewProfile} 
-                onViewMessage={onViewMessage}
-                onViewPost={onViewPost}
-                onViewTribe={onViewTribe}
-                onViewStory={onViewStory}
+            <NotificationItem
+              key={notification.id}
+              notification={notification}
+              allTribes={allTribes}
+              onViewProfile={onViewProfile}
+              onViewMessage={onViewMessage}
+              onViewPost={onViewPost}
+              onViewTribe={onViewTribe}
+              onViewStory={onViewStory}
             />
           ))
         ) : (

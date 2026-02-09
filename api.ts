@@ -125,6 +125,7 @@ export const joinTribe = (id: string) => API.put(`/tribes/${id}/join`);
 export const fetchTribeMessages = (id: string) => API.get(`/tribes/${id}/messages`);
 export const sendTribeMessage = (id: string, messageData: any) => API.post(`/tribes/${id}/messages`, messageData);
 export const deleteTribeMessage = (tribeId: string, messageId: string) => API.delete(`/tribes/${tribeId}/messages/${messageId}`);
+export const kickMember = (id: string, userId: string) => API.put(`/tribes/${id}/kick/${userId}`);
 
 // AI Chat
 export const generateAiChat = (promptData: { prompt: string }) => API.post('/ai/chat', promptData);
