@@ -10,18 +10,19 @@ const Overlay = styled.div`
   align-items: flex-end; // Bottom sheet style for mobile feel, can be center for desktop
   justify-content: center;
   z-index: 2000; // Higher than standard modals
-  padding: 1rem;
+  padding: 0; // Mobile: Edge-to-edge
 
   @media (min-width: 640px) {
     align-items: center;
+    padding: 1rem;
   }
 `;
 
 const ModalContainer = styled.div`
   background: ${({ theme }) => theme.cardBackground};
   width: 100%;
-  max-width: 400px;
-  border-radius: 20px;
+  max-width: none; // Mobile: Full width
+  border-radius: 20px 20px 0 0; // Mobile: Bottom sheet
   padding: 24px;
   box-shadow: 0 10px 25px rgba(0,0,0,0.5);
   display: flex;
@@ -30,7 +31,8 @@ const ModalContainer = styled.div`
   animation: slideUp 0.3s ease-out;
 
   @media (min-width: 640px) {
-    border-radius: 16px;
+    max-width: 400px; // Desktop: Constrained
+    border-radius: 16px; // Desktop: All rounded
     animation: fadeIn 0.2s ease-out;
   }
 
@@ -90,7 +92,7 @@ const OptionButton = styled.button`
   justify-content: center;
   gap: 12px;
   background: ${({ theme }) => theme.background};
-  border: 1px solid ${({ theme }) => theme.borderColor};
+  border: 1px solid var(--color-border);
   border-radius: 16px;
   padding: 24px 16px;
   cursor: pointer;

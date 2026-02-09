@@ -131,8 +131,8 @@ export const ProfilePage: React.FC<ProfilePageProps> = (props) => {
 
     return (
         <div>
-            <div className="bg-surface rounded-2xl shadow-sm border border-border mb-6 overflow-hidden">
-                <div className="h-48 md:h-64 bg-background rounded-t-2xl">
+            <div className="bg-surface rounded-2xl shadow-sm border border-border mb-6">
+                <div className="h-48 md:h-64 bg-background rounded-t-2xl overflow-hidden">
                     {user.bannerUrl ? <img src={user.bannerUrl} alt={`${user.name}'s banner`} className="w-full h-full object-cover" /> : <div className="w-full h-full bg-gradient-to-br from-background via-surface to-background" />}
                 </div>
 
@@ -147,31 +147,32 @@ export const ProfilePage: React.FC<ProfilePageProps> = (props) => {
                             </div>
                         </div>
 
-                        <div className="w-full sm:w-auto pt-2 sm:pt-4 flex items-center space-x-2">
+                        <div className="w-full sm:w-auto pt-2 sm:pt-4 flex items-center space-x-3">
                             {isOwnProfile ? (
                                 <>
-                                    <button onClick={() => onNavigate('Settings')} className="w-full sm:w-auto font-semibold px-4 py-2 rounded-lg transition-colors bg-surface text-primary border border-border hover:bg-background flex items-center space-x-2">
+                                    <button onClick={() => onNavigate('Settings')} className="flex-1 sm:flex-none sm:w-auto font-semibold px-4 py-2 rounded-lg transition-colors bg-surface text-primary border border-border hover:bg-background flex items-center justify-center space-x-2">
                                         <span>Settings</span>
                                         <SettingsIcon />
                                     </button>
-                                    <button onClick={() => setEditModalOpen(true)} className="w-full sm:w-auto bg-accent text-accent-text font-semibold px-6 py-2 rounded-lg hover:bg-accent-hover transition-colors">
+                                    <button onClick={() => setEditModalOpen(true)} className="flex-1 sm:flex-none sm:w-auto bg-accent text-accent-text font-semibold px-6 py-2 rounded-lg hover:bg-accent-hover transition-colors flex items-center justify-center">
                                         Edit Profile
                                     </button>
                                 </>
                             ) : (
                                 <>
-                                    <button onClick={handleMessageClick} className="w-full sm:w-auto font-semibold px-6 py-2 rounded-lg transition-colors bg-surface text-primary border border-border hover:bg-background">Message</button>
-                                    <button onClick={() => onToggleFollow(user.id)} className={`w-full sm:w-auto font-semibold px-6 py-2 rounded-lg transition-colors ${isFollowing ? 'bg-surface text-primary border border-border hover:bg-background' : 'bg-accent text-accent-text hover:bg-accent-hover'}`}>
+                                    <button onClick={handleMessageClick} className="flex-1 sm:flex-none sm:w-auto font-semibold px-6 py-2 rounded-lg transition-colors bg-surface text-primary border border-border hover:bg-background flex items-center justify-center">Message</button>
+                                    <button onClick={() => onToggleFollow(user.id)} className={`flex-1 sm:flex-none sm:w-auto font-semibold px-6 py-2 rounded-lg transition-colors flex items-center justify-center ${isFollowing ? 'bg-surface text-primary border border-border hover:bg-background' : 'bg-accent text-accent-text hover:bg-accent-hover'}`}>
                                         {isFollowing ? 'Following' : 'Follow'}
                                     </button>
-                                    <div className="relative">
-                                        <button onClick={() => setOptionsOpen(!optionsOpen)} onBlur={() => setTimeout(() => setOptionsOpen(false), 150)} className="p-2 rounded-full bg-surface text-primary border border-border hover:bg-background" aria-label="More options"><OptionsIcon /></button>
+                                    {/* 3-dot menu */}
+                                    <div className="relative flex-shrink-0">
+                                        <button onClick={() => setOptionsOpen(!optionsOpen)} onBlur={() => setTimeout(() => setOptionsOpen(false), 150)} className="p-2.5 rounded-full bg-surface text-primary border border-border hover:bg-background flex items-center justify-center" aria-label="More options"><OptionsIcon /></button>
                                         {optionsOpen && (
-                                            <div className="absolute right-0 mt-2 w-48 bg-surface rounded-lg shadow-lg border border-border z-10">
+                                            <div className="absolute right-0 mt-2 w-48 bg-surface rounded-lg shadow-lg border border-border z-20">
                                                 <ShareButton shareData={{ title: `Check out ${user.name}'s profile on Tribe!`, text: `See what ${user.name} (@${user.username}) is up to.`, url: window.location.href }} className="w-full text-left px-4 py-2 text-primary hover:bg-background rounded-t-lg transition-colors flex items-center space-x-2" onShare={() => setOptionsOpen(false)}>
                                                     <ShareIcon /><span>Share Profile</span>
                                                 </ShareButton>
-                                                <button onClick={() => onStartConversation(user)} className={`w-full text-left px-4 py-2 hover:bg-background transition-colors flex items-center space-x-2 text-primary`}>
+                                                <button onClick={() => onStartConversation(user)} className={`w-full text-left px-4 py-2 hover:bg-background transition-colors flex items-center space-x-2 text-primary rounded-b-lg`}>
                                                     <BlockIcon /><span>Block User</span>
                                                 </button>
                                             </div>

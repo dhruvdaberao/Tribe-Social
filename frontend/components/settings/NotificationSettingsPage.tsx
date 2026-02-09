@@ -119,15 +119,15 @@ const NotificationSettingsPage: React.FC = () => {
         </div>
 
         <section className="space-y-4">
-          <div className="flex items-center justify-between p-4 bg-background rounded-xl border border-border">
+          <div className="flex items-center justify-between py-2">
             <div className="flex items-center gap-3">
-              <span className="p-2 rounded-lg bg-accent/20 text-accent">
+              <span className="p-2 rounded-lg bg-accent/10 text-accent">
                 <Bell size={20} />
               </span>
               <div>
                 <p className="font-semibold text-primary">Push notifications</p>
                 <p className="text-sm text-secondary">
-                  {isPushReady ? 'Enabled on this device.' : 'Enable on this device to receive alerts.'}
+                  {isPushReady ? 'Enabled on this device' : 'Enable to receive alerts'}
                 </p>
               </div>
             </div>
@@ -145,14 +145,14 @@ const NotificationSettingsPage: React.FC = () => {
         </section>
 
         <section className="space-y-4">
-          <div className="flex items-center justify-between p-4 bg-background rounded-xl border border-border">
+          <div className="flex items-center justify-between py-2">
             <div className="flex items-center gap-3">
-              <span className="p-2 rounded-lg bg-accent/20 text-accent">
+              <span className="p-2 rounded-lg bg-accent/10 text-accent">
                 <Mail size={20} />
               </span>
               <div>
                 <p className="font-semibold text-primary">Email notifications</p>
-                <p className="text-sm text-secondary">Security and digest updates to your inbox.</p>
+                <p className="text-sm text-secondary">Security and digest updates</p>
               </div>
             </div>
             <ToggleButton isOn={prefs.emailEnabled} onClick={handleEmailToggle} disabled={isSaving} />
