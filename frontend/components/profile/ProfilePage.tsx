@@ -566,7 +566,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = (props) => {
                             <input type="file" ref={avatarCameraRef} onChange={(e) => handleFileChange(e, 'avatar')} accept="image/*" capture="environment" className="hidden" />
                         </div>
 
-                        <div className="w-full sm:w-auto pt-2 sm:pt-4 flex flex-wrap items-center gap-2">
+                        <div className="w-full sm:w-auto pt-2 sm:pt-4 flex flex-nowrap items-center gap-2">
                             {isOwnProfile ? (
                                 <>
                                     {!isEditingProfile && (
@@ -604,7 +604,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = (props) => {
                                 </>
                             ) : (
                                 <>
-                                    <button type="button" onClick={() => handleMessageClick()} className="flex-1 sm:flex-none font-semibold px-6 py-2 rounded-lg transition-colors bg-surface text-primary border border-border hover:bg-background">Message</button>
+                                    <button type="button" onClick={() => handleMessageClick()} className="flex-1 min-w-0 sm:flex-none font-semibold px-6 py-2 rounded-lg transition-colors bg-surface text-primary border border-border hover:bg-background">Message</button>
                                     {safeUser.id !== 'chuk-ai' && (
                                         <button
                                             type="button"
@@ -614,12 +614,12 @@ export const ProfilePage: React.FC<ProfilePageProps> = (props) => {
                                                 handleToggleFollow();
                                             }}
 
-                                            className={`flex-1 sm:flex-none font-semibold px-6 py-2 rounded-lg transition-colors ${isFollowing ? 'bg-surface text-primary border border-border hover:bg-background' : 'bg-accent text-accent-text hover:bg-accent-hover'}`}
+                                            className={`flex-1 min-w-0 sm:flex-none font-semibold px-6 py-2 rounded-lg transition-colors ${isFollowing ? 'bg-surface text-primary border border-border hover:bg-background' : 'bg-accent text-accent-text hover:bg-accent-hover'}`}
                                         >
                                             {isFollowing ? 'Unfollow' : 'Follow'}
                                         </button>
                                     )}
-                                    <div className="relative">
+                                    <div className="relative flex-shrink-0">
                                         <button
                                             type="button"
                                             onClick={(e) => {
