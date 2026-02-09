@@ -204,6 +204,7 @@ const InlineTextArea = styled.textarea`
   font-size: 0.95rem;
   line-height: 1.4;
   min-height: 80px;
+  margin-bottom: 1rem;
   resize: vertical;
   outline: none;
 
