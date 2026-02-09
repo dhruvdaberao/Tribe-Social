@@ -23,9 +23,10 @@ interface ChatPageProps {
   onViewProfile: (user: User) => void;
   onSharePost: (post: Post, destination: { type: 'tribe' | 'user', id: string }) => void;
   onConversationStateChange?: (isOpen: boolean) => void;
+  onToggleBlock: (userId: string) => void;
 }
 
-const ChatPage: React.FC<ChatPageProps> = ({ currentUser, allUsers, chukUser, initialTargetUser, onViewProfile, onSharePost, onConversationStateChange }) => {
+const ChatPage: React.FC<ChatPageProps> = ({ currentUser, allUsers, chukUser, initialTargetUser, onViewProfile, onSharePost, onConversationStateChange, onToggleBlock }) => {
   const MAX_ATTACHMENT_BYTES = 20 * 1024 * 1024;
   const [conversations, setConversations] = useState<Conversation[]>(() => {
     try {
@@ -43,6 +44,15 @@ const ChatPage: React.FC<ChatPageProps> = ({ currentUser, allUsers, chukUser, in
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<number | null>(null);
+  const [autoDeleteMap, setAutoDeleteMap] = useState<Record<string, boolean>>(() => {
+    if (typeof window === 'undefined') return {};
+    try {
+      const stored = window.localStorage.getItem('dmAutoDelete');
+      return stored ? JSON.parse(stored) : {};
+    } catch {
+      return {};
+    }
+  });
 
   // Only show loading if we have NO cached conversations
   const [isLoadingConversations, setIsLoadingConversations] = useState(() => {
@@ -63,6 +73,11 @@ const ChatPage: React.FC<ChatPageProps> = ({ currentUser, allUsers, chukUser, in
       setActiveChatPartnerId(null);
     };
   }, [setActiveChatPartnerId]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    window.localStorage.setItem('dmAutoDelete', JSON.stringify(autoDeleteMap));
+  }, [autoDeleteMap]);
 
   // Notify parent about conversation state (for header visibility)
   useEffect(() => {
@@ -164,8 +179,20 @@ const ChatPage: React.FC<ChatPageProps> = ({ currentUser, allUsers, chukUser, in
 
     socket.on('newMessage', handleNewMessage);
 
+    const handleMessageDeleted = ({ messageId, senderId, receiverId }: { messageId: string; senderId: string; receiverId: string }) => {
+      const otherUserId = senderId === currentUser.id ? receiverId : senderId;
+      setMessages(prev => prev.filter(m => m.id !== messageId));
+      const cachedEntry = messageCache.current.get(otherUserId);
+      if (cachedEntry) {
+        messageCache.current.set(otherUserId, { ...cachedEntry, messages: cachedEntry.messages.filter(m => m.id !== messageId) });
+      }
+    };
+
+    socket.on('messageDeleted', handleMessageDeleted);
+
     return () => {
       socket.off('newMessage', handleNewMessage);
+      socket.off('messageDeleted', handleMessageDeleted);
     };
   }, [socket, activeConversation, currentUser.id]);
 
@@ -299,6 +326,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ currentUser, allUsers, chukUser, in
     message?: string;
     tempId?: string;
     attachment?: { data: string; type: string; name?: string; size?: number } | null;
+    replyTo?: string | null;
   }) => {
     if (!socket || !socket.connected) return null;
     return new Promise<Message>((resolve, reject) => {
@@ -312,10 +340,11 @@ const ChatPage: React.FC<ChatPageProps> = ({ currentUser, allUsers, chukUser, in
     });
   }, [socket]);
 
-  const handleSendMessage = async (payload: { text?: string; attachment?: File }) => {
+  const handleSendMessage = async (payload: { text?: string; attachment?: File; replyTo?: string | null }) => {
     if (!activeConversation || isSending || isUploading) return;
     const text = payload.text?.trim() || '';
     const attachmentFile = payload.attachment;
+    const replyTo = payload.replyTo || null;
     if (!text && !attachmentFile) return;
     if (attachmentFile && attachmentFile.size > MAX_ATTACHMENT_BYTES) {
       toast.error('Attachment must be 20MB or less.');
@@ -340,6 +369,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ currentUser, allUsers, chukUser, in
       receiverId: otherUserId,
       text,
       timestamp: new Date().toISOString(),
+      replyTo,
       status: 'sending',
       clientTempId: tempId,
       attachmentUrl: attachmentFile ? URL.createObjectURL(attachmentFile) : undefined,
@@ -391,7 +421,8 @@ const ChatPage: React.FC<ChatPageProps> = ({ currentUser, allUsers, chukUser, in
           receiverId: otherUserId,
           message: text,
           tempId,
-          attachment: attachmentPayload
+          attachment: attachmentPayload,
+          replyTo
         });
       } catch (socketError) {
         responseMessage = null;
@@ -404,6 +435,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ currentUser, allUsers, chukUser, in
             message: text,
             tempId,
             attachment: attachmentPayload,
+            replyTo,
           } as any,
           attachmentPayload
             ? {
@@ -462,6 +494,71 @@ const ChatPage: React.FC<ChatPageProps> = ({ currentUser, allUsers, chukUser, in
     // Assuming for now socket is the primary delivery mechanism for consistency.
   };
 
+  const handleDeleteMessage = async (messageId: string) => {
+    setMessages(prev => prev.filter(m => m.id !== messageId));
+    if (activeConversation) {
+      const otherUserId = activeConversation.participants.find(p => p.id !== currentUser.id)?.id;
+      if (otherUserId) {
+        const cachedEntry = messageCache.current.get(otherUserId);
+        if (cachedEntry) {
+          messageCache.current.set(otherUserId, { ...cachedEntry, messages: cachedEntry.messages.filter(m => m.id !== messageId) });
+        }
+      }
+    }
+    try {
+      await api.deleteMessage(messageId);
+    } catch (error) {
+      console.error("Failed to delete message", error);
+    }
+  };
+
+  const handleDeleteMessageForMe = async (messageId: string) => {
+    setMessages(prev => prev.filter(m => m.id !== messageId));
+    if (activeConversation) {
+      const otherUserId = activeConversation.participants.find(p => p.id !== currentUser.id)?.id;
+      if (otherUserId) {
+        const cachedEntry = messageCache.current.get(otherUserId);
+        if (cachedEntry) {
+          messageCache.current.set(otherUserId, { ...cachedEntry, messages: cachedEntry.messages.filter(m => m.id !== messageId) });
+        }
+      }
+    }
+    try {
+      await api.deleteMessageForMe(messageId);
+    } catch (error) {
+      console.error("Failed to delete message for me", error);
+    }
+  };
+
+  const handleClearConversation = async (otherUserId: string) => {
+    if (activeConversation && activeConversation.participants.some(p => p.id === otherUserId)) {
+      setMessages([]);
+    }
+    messageCache.current.set(otherUserId, { messages: [], hasMore: false });
+    setConversations(prev => prev.map(conv => {
+      const convoOtherId = conv.participants.find(p => p.id !== currentUser.id)?.id;
+      if (convoOtherId !== otherUserId) return conv;
+      return { ...conv, lastMessage: '', timestamp: new Date().toISOString() };
+    }));
+    try {
+      await api.clearConversation(otherUserId);
+    } catch (error) {
+      console.error("Failed to clear conversation", error);
+    }
+  };
+
+  const handleToggleAutoDelete = (otherUserId: string) => {
+    setAutoDeleteMap(prev => ({ ...prev, [otherUserId]: !prev[otherUserId] }));
+  };
+
+  const activeOtherUserId = activeConversation?.participants.find(p => p.id !== currentUser.id)?.id || null;
+  const autoDeleteEnabled = activeOtherUserId ? !!autoDeleteMap[activeOtherUserId] : false;
+  const filteredMessages = useMemo(() => {
+    if (!autoDeleteEnabled) return messages;
+    const cutoff = Date.now() - 24 * 60 * 60 * 1000;
+    return messages.filter(message => new Date(message.timestamp).getTime() >= cutoff);
+  }, [autoDeleteEnabled, messages]);
+
   return (
     // Removed rounded corners here (md:rounded-2xl)
     <div className="h-full min-h-0 bg-surface md:border md:border-border md:shadow-lg flex overflow-hidden relative">
@@ -470,7 +567,21 @@ const ChatPage: React.FC<ChatPageProps> = ({ currentUser, allUsers, chukUser, in
         className={`w-full md:w-[320px] lg:w-[380px] flex-shrink-0 flex flex-col min-h-0 transition-transform duration-300 ease-in-out md:static absolute inset-0 z-10 md:border-r md:border-border bg-surface ${isMessageAreaVisible ? '-translate-x-full' : 'translate-x-0'
           } md:translate-x-0`}
       >
-        <ConversationList conversations={conversations} isLoading={isLoadingConversations} currentUser={currentUser} chukUser={chukUser} userMap={userMap} activeConversationId={activeConversation?.id} onSelectConversation={handleSelectConversation} onNewMessage={() => setNewMessageModalOpen(true)} unreadCounts={unreadCounts.messages} />
+        <ConversationList
+          conversations={conversations}
+          isLoading={isLoadingConversations}
+          currentUser={currentUser}
+          chukUser={chukUser}
+          userMap={userMap}
+          activeConversationId={activeConversation?.id}
+          onSelectConversation={handleSelectConversation}
+          onNewMessage={() => setNewMessageModalOpen(true)}
+          unreadCounts={unreadCounts.messages}
+          onClearConversation={handleClearConversation}
+          onToggleBlock={onToggleBlock}
+          onToggleAutoDelete={handleToggleAutoDelete}
+          autoDeleteMap={autoDeleteMap}
+        />
       </div>
 
       <div
@@ -481,7 +592,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ currentUser, allUsers, chukUser, in
           <MessageArea
             key={activeConversation.id}
             conversation={activeConversation}
-            messages={messages}
+            messages={filteredMessages}
             isLoading={isLoadingMessages}
             currentUser={currentUser}
             userMap={userMap}
@@ -492,6 +603,8 @@ const ChatPage: React.FC<ChatPageProps> = ({ currentUser, allUsers, chukUser, in
             isLoadingMore={isLoadingMore}
             onLoadMore={handleLoadMoreMessages}
             onSendMessage={handleSendMessage}
+            onDeleteMessage={handleDeleteMessage}
+            onDeleteMessageForMe={handleDeleteMessageForMe}
             onBack={handleBackToList}
             onViewProfile={onViewProfile}
           />
