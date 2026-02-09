@@ -135,6 +135,7 @@ export interface Message {
   text: string;
   timestamp: string;
   imageUrl?: string;
+  replyTo?: string | null;
 }
 
 export interface Conversation {
@@ -153,6 +154,7 @@ export interface TribeMessage {
   text: string;
   timestamp: string;
   imageUrl?: string;
+  replyTo?: string | null;
 }
 
 export interface Tribe {

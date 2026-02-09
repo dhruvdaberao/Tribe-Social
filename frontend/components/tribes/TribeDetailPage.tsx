@@ -436,6 +436,7 @@ const TribeDetailPage: React.FC<Props> = ({ currentUser, tribeId: propTribeId })
     text?: string;
     tempId?: string;
     attachment?: { data: string; type: string; name?: string; size?: number } | null;
+    replyTo?: string | null;
   }) => {
     if (!socket || !socket.connected) return null;
     return new Promise<TribeMessage>((resolve, reject) => {
@@ -449,10 +450,11 @@ const TribeDetailPage: React.FC<Props> = ({ currentUser, tribeId: propTribeId })
     });
   };
 
-  const handleSend = async (payload: { text?: string; attachment?: File }) => {
+  const handleSend = async (payload: { text?: string; attachment?: File; replyTo?: string | null }) => {
     if (!id || !currentUser || isSending || isUploading) return;
     const text = payload.text?.trim() || '';
     const attachmentFile = payload.attachment;
+    const replyTo = payload.replyTo || null;
     if (!text && !attachmentFile) return;
     if (attachmentFile && attachmentFile.size > MAX_ATTACHMENT_BYTES) {
       toast.error('Attachment must be 20MB or less.');
@@ -467,6 +469,7 @@ const TribeDetailPage: React.FC<Props> = ({ currentUser, tribeId: propTribeId })
       senderId: currentUser.id,
       text,
       timestamp: new Date().toISOString(),
+      replyTo,
       status: 'sending',
       clientTempId: tempId,
       attachmentUrl: attachmentFile ? URL.createObjectURL(attachmentFile) : undefined,
@@ -505,7 +508,8 @@ const TribeDetailPage: React.FC<Props> = ({ currentUser, tribeId: propTribeId })
           tribeId: id,
           text,
           tempId,
-          attachment: attachmentPayload
+          attachment: attachmentPayload,
+          replyTo
         });
       } catch (socketError) {
         responseMessage = null;
@@ -514,7 +518,7 @@ const TribeDetailPage: React.FC<Props> = ({ currentUser, tribeId: propTribeId })
       if (!responseMessage) {
         const { data } = await api.sendTribeMessage(
           id,
-          { text, tempId, attachment: attachmentPayload } as any,
+          { text, tempId, attachment: attachmentPayload, replyTo } as any,
           attachmentPayload
             ? {
               onUploadProgress: (event) => {
@@ -550,6 +554,36 @@ const TribeDetailPage: React.FC<Props> = ({ currentUser, tribeId: propTribeId })
       setIsSending(false);
       setIsUploading(false);
       setUploadProgress(null);
+    }
+  };
+
+  const handleDeleteMessage = async (messageId: string) => {
+    if (!id) return;
+    setMessages(prev => prev.filter(m => m.id !== messageId));
+    const cachedEntry = messageCache.current.get(id);
+    if (cachedEntry) {
+      messageCache.current.set(id, { ...cachedEntry, messages: cachedEntry.messages.filter(m => m.id !== messageId) });
+    }
+    try {
+      await api.deleteTribeMessage(id, messageId);
+    } catch (error) {
+      console.error('Failed to delete tribe message', error);
+      toast.error('Failed to delete message.');
+    }
+  };
+
+  const handleDeleteMessageForMe = async (messageId: string) => {
+    if (!id) return;
+    setMessages(prev => prev.filter(m => m.id !== messageId));
+    const cachedEntry = messageCache.current.get(id);
+    if (cachedEntry) {
+      messageCache.current.set(id, { ...cachedEntry, messages: cachedEntry.messages.filter(m => m.id !== messageId) });
+    }
+    try {
+      await api.deleteTribeMessageForMe(id, messageId);
+    } catch (error) {
+      console.error('Failed to delete tribe message for me', error);
+      toast.error('Failed to delete message.');
     }
   };
 
@@ -672,6 +706,8 @@ const TribeDetailPage: React.FC<Props> = ({ currentUser, tribeId: propTribeId })
           isLoadingMore={isLoadingMore}
           onLoadMore={handleLoadMoreMessages}
           onSendMessage={handleSend}
+          onDeleteMessage={handleDeleteMessage}
+          onDeleteMessageForMe={handleDeleteMessageForMe}
         />
       ) : (
         <div className="flex-1 flex flex-col items-center justify-center gap-4">

@@ -368,6 +368,7 @@ const MainLayout: React.FC = () => {
                                     onViewProfile={handleViewProfile}
                                     onSharePost={handleSharePost}
                                     setIsChatOpen={setIsChatOpen}
+                                    onToggleBlock={handleToggleBlock}
                                 />
                             } />
                             <Route path="/messages/:userId" element={
@@ -378,6 +379,7 @@ const MainLayout: React.FC = () => {
                                     onViewProfile={handleViewProfile}
                                     onSharePost={handleSharePost}
                                     setIsChatOpen={setIsChatOpen}
+                                    onToggleBlock={handleToggleBlock}
                                 />
                             } />
 
@@ -390,6 +392,7 @@ const MainLayout: React.FC = () => {
                                     onViewProfile={handleViewProfile}
                                     onSharePost={handleSharePost}
                                     onConversationStateChange={setIsChatOpen}
+                                    onToggleBlock={handleToggleBlock}
                                 />
                             } />
 
@@ -600,7 +603,7 @@ const ProfilePageContent = ({ userId, users, visibleUsers, tribes, posts, curren
 };
 
 // Wrapper for Chat to handle location state
-const ChatWrapper = ({ currentUser, allUsers, psyduck, onViewProfile, onSharePost, setIsChatOpen }: any) => {
+const ChatWrapper = ({ currentUser, allUsers, psyduck, onViewProfile, onSharePost, setIsChatOpen, onToggleBlock }: any) => {
     const location = useLocation();
     const params = useParams();
     const [initialTargetUser, setInitialTargetUser] = useState(location.state?.targetUser || null);
@@ -627,6 +630,7 @@ const ChatWrapper = ({ currentUser, allUsers, psyduck, onViewProfile, onSharePos
             onViewProfile={onViewProfile}
             onSharePost={onSharePost}
             onConversationStateChange={setIsChatOpen}
+            onToggleBlock={onToggleBlock}
         />
     );
 }
