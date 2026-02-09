@@ -58,7 +58,7 @@ export const initializeSocket = (io) => {
       }
 
       try {
-        const { receiverId, message, imageUrl, attachment, tempId } = payload || {};
+        const { receiverId, message, imageUrl, attachment, tempId, replyTo } = payload || {};
 
         if (!receiverId) {
           callback?.({ ok: false, error: 'Missing receiver' });
@@ -104,7 +104,8 @@ export const initializeSocket = (io) => {
           attachmentUrl,
           attachmentType,
           attachmentName,
-          attachmentSize
+          attachmentSize,
+          replyTo: replyTo || null
         });
 
         await newMessage.save();
@@ -131,7 +132,7 @@ export const initializeSocket = (io) => {
       }
 
       try {
-        const { tribeId, text, imageUrl, attachment, tempId } = payload || {};
+        const { tribeId, text, imageUrl, attachment, tempId, replyTo } = payload || {};
 
         if (!tribeId) {
           callback?.({ ok: false, error: 'Missing tribe id' });
@@ -179,7 +180,8 @@ export const initializeSocket = (io) => {
           attachmentUrl,
           attachmentType,
           attachmentName,
-          attachmentSize
+          attachmentSize,
+          replyTo: replyTo || null
         });
 
         const populated = await message.populate('sender', 'name username avatarUrl');
@@ -196,6 +198,7 @@ export const initializeSocket = (io) => {
           attachmentType: populated.attachmentType,
           attachmentName: populated.attachmentName,
           attachmentSize: populated.attachmentSize,
+          replyTo: populated.replyTo ? populated.replyTo.toString() : null,
           timestamp: populated.createdAt
         };
 
