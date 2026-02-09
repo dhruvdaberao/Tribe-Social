@@ -37,6 +37,16 @@ const tribeMessageSchema = mongoose.Schema(
     attachmentSize: {
       type: Number,
       default: null
+    },
+    replyTo: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'TribeMessage',
+      default: null
+    },
+    deletedFor: {
+      type: [mongoose.Schema.Types.ObjectId],
+      ref: 'User',
+      default: []
     }
   },
   {
@@ -59,6 +69,12 @@ tribeMessageSchema.set('toJSON', {
     } else {
       returnedObject.senderId = returnedObject.sender.toString();
       delete returnedObject.sender; // Only delete if it's just an ID
+    }
+
+    if (returnedObject.replyTo && typeof returnedObject.replyTo === 'object') {
+      returnedObject.replyTo = returnedObject.replyTo._id ? returnedObject.replyTo._id.toString() : returnedObject.replyTo.toString();
+    } else if (returnedObject.replyTo) {
+      returnedObject.replyTo = returnedObject.replyTo.toString();
     }
 
     returnedObject.timestamp = returnedObject.createdAt;

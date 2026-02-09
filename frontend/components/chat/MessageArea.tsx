@@ -208,7 +208,9 @@ interface MessageAreaProps {
   hasMore?: boolean;
   isLoadingMore?: boolean;
   onLoadMore?: () => void;
-  onSendMessage: (payload: { text?: string; attachment?: File }) => void;
+  onSendMessage: (payload: { text?: string; attachment?: File; replyTo?: string | null }) => void;
+  onDeleteMessage: (messageId: string) => void;
+  onDeleteMessageForMe: (messageId: string) => void;
   onBack: () => void;
   onViewProfile: (user: User) => void;
 }
@@ -226,15 +228,21 @@ export const MessageArea: React.FC<MessageAreaProps> = ({
   isLoadingMore,
   onLoadMore,
   onSendMessage,
+  onDeleteMessage,
+  onDeleteMessageForMe,
   onBack,
   onViewProfile
 }) => {
   const [inputText, setInputText] = useState('');
   const [isTyping, setIsTyping] = useState(false);
+  const [replyToMessage, setReplyToMessage] = useState<Message | null>(null);
+  const [actionMessage, setActionMessage] = useState<Message | null>(null);
   const otherParticipantId = conversation.participants.find(p => p.id !== currentUser.id)?.id;
   const otherParticipant = otherParticipantId ? userMap.get(otherParticipantId) : null;
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const { socket, onlineUsers } = useSocket();
 
@@ -279,8 +287,9 @@ export const MessageArea: React.FC<MessageAreaProps> = ({
   const handleSendMessage = (e: React.FormEvent) => {
     e.preventDefault();
     if (inputText.trim()) {
-      onSendMessage({ text: inputText });
+      onSendMessage({ text: inputText, replyTo: replyToMessage?.id || null });
       setInputText('');
+      setReplyToMessage(null);
       if (socket && otherParticipantId) {
         if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
         socket.emit('stopTyping', { roomId: `dm-${[currentUser.id, otherParticipantId].sort().join('-')}`, userId: currentUser.id, userName: currentUser.name });
@@ -291,7 +300,23 @@ export const MessageArea: React.FC<MessageAreaProps> = ({
 
   const handleAttachFile = (file: File) => {
     if (!file) return;
-    onSendMessage({ attachment: file });
+    onSendMessage({ attachment: file, replyTo: replyToMessage?.id || null });
+    setReplyToMessage(null);
+  };
+
+  const openActionMenu = (message: Message) => {
+    setActionMessage(message);
+  };
+
+  const handleTouchStart = (message: Message) => {
+    if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
+    longPressTimerRef.current = setTimeout(() => {
+      openActionMenu(message);
+    }, 500);
+  };
+
+  const handleTouchEnd = () => {
+    if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
   };
 
   const handleScroll = () => {
@@ -359,7 +384,7 @@ export const MessageArea: React.FC<MessageAreaProps> = ({
 
   return (
     // Root cause: the chat page was scrolling at the document level when the keyboard opened; confine scrolling to the message list.
-    <div className="flex flex-col h-[100dvh] bg-background min-h-0 overflow-hidden overscroll-none">
+    <div className="flex flex-col flex-1 min-h-0 bg-background overflow-hidden overscroll-none">
       <div className="sticky top-0 flex items-center p-3 border-b border-border bg-surface flex-shrink-0 z-50">
         <button onClick={onBack} className="md:hidden p-2 mr-2 text-primary">
           <BackIcon />
@@ -387,7 +412,7 @@ export const MessageArea: React.FC<MessageAreaProps> = ({
         </div>
       </div>
 
-      <div ref={scrollContainerRef} onScroll={handleScroll} className="flex-1 overflow-y-auto p-4 pb-6 overscroll-contain">
+      <div ref={scrollContainerRef} onScroll={handleScroll} className="flex-1 overflow-y-auto p-4 pb-[calc(5rem+env(safe-area-inset-bottom))] overscroll-contain">
         {isLoading && messages.length === 0 ? (
           <div className="w-full h-full flex items-center justify-center">
             <div className="w-10 h-10 border-2 border-accent border-t-transparent rounded-full animate-spin" />
@@ -403,8 +428,20 @@ export const MessageArea: React.FC<MessageAreaProps> = ({
               const isCurrentUser = message.senderId === currentUser.id;
               const sender = isCurrentUser ? currentUser : userMap.get(message.senderId);
               const sentAt = new Date(message.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
+              const replyMessage = message.replyTo ? messages.find(m => m.id === message.replyTo) : null;
+              const replySender = replyMessage ? (replyMessage.senderId === currentUser.id ? 'You' : userMap.get(replyMessage.senderId)?.name || 'User') : '';
               return (
-                <div key={message.id} className={`flex items-end gap-2.5 ${isCurrentUser ? 'justify-end' : 'justify-start'}`}>
+                <div
+                  key={message.id}
+                  className={`flex items-end gap-2.5 ${isCurrentUser ? 'justify-end' : 'justify-start'}`}
+                  onContextMenu={(event) => {
+                    event.preventDefault();
+                    openActionMenu(message);
+                  }}
+                  onTouchStart={() => handleTouchStart(message)}
+                  onTouchEnd={handleTouchEnd}
+                  onTouchMove={handleTouchEnd}
+                >
                   {!isCurrentUser && (
                     <div className="w-8 h-8 flex-shrink-0 self-start">
                       {sender?.id === 'chuk-ai' ? (
@@ -417,6 +454,12 @@ export const MessageArea: React.FC<MessageAreaProps> = ({
                   <div className={`flex flex-col max-w-xs md:max-w-sm lg:max-w-md ${isCurrentUser ? 'items-end' : 'items-start'}`}>
                     {/* Modified rounded classes for proper chat bubble look */}
                     <div className={`px-4 py-2.5 break-words overflow-hidden w-full ${isCurrentUser ? 'bg-accent text-accent-text rounded-2xl rounded-tr-none' : 'bg-surface text-primary shadow-sm rounded-2xl rounded-tl-none'}`}>
+                      {replyMessage && (
+                        <div className={`mb-2 rounded-lg px-3 py-2 text-xs ${isCurrentUser ? 'bg-accent-text/20 text-accent-text' : 'bg-background text-secondary'}`}>
+                          <p className="font-semibold">{replySender}</p>
+                          <p className="line-clamp-2">{replyMessage.text}</p>
+                        </div>
+                      )}
 
                       {/* SHARED CONTENT LOGIC */}
                       {(message.text.includes('Shared a story') || message.text.includes('Shared Story') || message.text.includes('[Shared Story]')) ? (() => {
@@ -530,6 +573,23 @@ export const MessageArea: React.FC<MessageAreaProps> = ({
       </div>
 
       <div className="sticky bottom-0 p-4 bg-background border-t border-border flex-shrink-0 z-20 w-full pb-[calc(1rem+env(safe-area-inset-bottom))]">
+        {replyToMessage && (
+          <div className="mb-3 flex items-center justify-between rounded-lg border border-border bg-surface px-3 py-2 text-xs text-secondary">
+            <div className="min-w-0">
+              <p className="font-semibold text-primary">
+                Replying to {replyToMessage.senderId === currentUser.id ? 'You' : userMap.get(replyToMessage.senderId)?.name || 'User'}
+              </p>
+              <p className="truncate">{replyToMessage.text}</p>
+            </div>
+            <button
+              type="button"
+              className="ml-3 text-secondary hover:text-primary"
+              onClick={() => setReplyToMessage(null)}
+            >
+              &times;
+            </button>
+          </div>
+        )}
         <ChatInput
           value={inputText}
           onChange={handleInputChange}
@@ -540,8 +600,54 @@ export const MessageArea: React.FC<MessageAreaProps> = ({
           isSending={isSending}
           isUploading={isUploading}
           uploadProgress={uploadProgress ?? undefined}
+          inputRef={inputRef}
         />
       </div>
+      {actionMessage && (
+        <div
+          className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-4 md:items-center"
+          onClick={() => setActionMessage(null)}
+        >
+          <div
+            className="w-full max-w-sm rounded-2xl bg-surface shadow-lg border border-border overflow-hidden"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <button
+              type="button"
+              className="w-full px-4 py-3 text-left text-sm text-primary hover:bg-background"
+              onClick={() => {
+                setReplyToMessage(actionMessage);
+                setActionMessage(null);
+                requestAnimationFrame(() => inputRef.current?.focus());
+              }}
+            >
+              Reply
+            </button>
+            <button
+              type="button"
+              className="w-full px-4 py-3 text-left text-sm text-primary hover:bg-background"
+              onClick={() => {
+                onDeleteMessageForMe(actionMessage.id);
+                setActionMessage(null);
+              }}
+            >
+              Delete for me
+            </button>
+            {actionMessage.senderId === currentUser.id && (
+              <button
+                type="button"
+                className="w-full px-4 py-3 text-left text-sm text-red-500 hover:bg-red-500/10"
+                onClick={() => {
+                  onDeleteMessage(actionMessage.id);
+                  setActionMessage(null);
+                }}
+              >
+                Delete for everyone
+              </button>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 };

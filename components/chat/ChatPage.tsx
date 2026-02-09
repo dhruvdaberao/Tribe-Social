@@ -257,9 +257,10 @@ interface ChatPageProps {
   initialTargetUser: User | null;
   onViewProfile: (user: User) => void;
   onSharePost: (post: Post, destination: { type: 'tribe' | 'user', id: string }) => void;
+  onToggleBlock: (userId: string) => void;
 }
 
-const ChatPage: React.FC<ChatPageProps> = ({ currentUser, allUsers, chukUser, initialTargetUser, onViewProfile }) => {
+const ChatPage: React.FC<ChatPageProps> = ({ currentUser, allUsers, chukUser, initialTargetUser, onViewProfile, onToggleBlock }) => {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [activeConversation, setActiveConversation] = useState<Conversation | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -268,6 +269,15 @@ const ChatPage: React.FC<ChatPageProps> = ({ currentUser, allUsers, chukUser, in
   const [isMessageAreaVisible, setMessageAreaVisible] = useState(false);
   const [isNewMessageModalOpen, setNewMessageModalOpen] = useState(false);
   const [isSending, setIsSending] = useState(false);
+  const [autoDeleteMap, setAutoDeleteMap] = useState<Record<string, boolean>>(() => {
+    if (typeof window === 'undefined') return {};
+    try {
+      const stored = window.localStorage.getItem('dmAutoDelete');
+      return stored ? JSON.parse(stored) : {};
+    } catch {
+      return {};
+    }
+  });
   const { socket, clearUnreadMessages, unreadCounts, setActiveChatPartnerId } = useSocket();
 
   useEffect(() => {
@@ -277,6 +287,11 @@ const ChatPage: React.FC<ChatPageProps> = ({ currentUser, allUsers, chukUser, in
       setActiveChatPartnerId(null);
     };
   }, [setActiveChatPartnerId]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    window.localStorage.setItem('dmAutoDelete', JSON.stringify(autoDeleteMap));
+  }, [autoDeleteMap]);
 
   const userMap = useMemo(() => {
     const map = new Map(allUsers.map(user => [user.id, user]));
@@ -330,8 +345,21 @@ const ChatPage: React.FC<ChatPageProps> = ({ currentUser, allUsers, chukUser, in
 
     socket.on('newMessage', handleNewMessage);
 
+    const handleMessageDeleted = ({ messageId, senderId, receiverId }: { messageId: string; senderId: string; receiverId: string }) => {
+      const otherUserId = senderId === currentUser.id ? receiverId : senderId;
+      setMessages(prev => prev.filter(m => m.id !== messageId));
+      setConversations(prev => prev.map(conv => {
+        const convoOtherId = conv.participants.find(p => p.id !== currentUser.id)?.id;
+        if (convoOtherId !== otherUserId) return conv;
+        return { ...conv, lastMessage: conv.lastMessage, timestamp: conv.timestamp };
+      }));
+    };
+
+    socket.on('messageDeleted', handleMessageDeleted);
+
     return () => {
       socket.off('newMessage', handleNewMessage);
+      socket.off('messageDeleted', handleMessageDeleted);
     };
   }, [socket, activeConversation, currentUser.id]);
 
@@ -403,7 +431,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ currentUser, allUsers, chukUser, in
     setMessageAreaVisible(false);
   };
 
-  const handleSendMessage = async (text: string) => {
+  const handleSendMessage = async (text: string, replyTo?: string | null) => {
     if (!activeConversation || isSending) return;
     setIsSending(true);
     const otherUserId = activeConversation.participants.find(p => p.id !== currentUser.id)?.id;
@@ -411,7 +439,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ currentUser, allUsers, chukUser, in
       setIsSending(false);
       return;
     }
-    const tempMessage: Message = { id: `temp-${Date.now()}`, senderId: currentUser.id, receiverId: otherUserId, text, timestamp: new Date().toISOString() };
+    const tempMessage: Message = { id: `temp-${Date.now()}`, senderId: currentUser.id, receiverId: otherUserId, text, timestamp: new Date().toISOString(), replyTo: replyTo || null };
     setMessages(prev => [...prev, tempMessage]);
 
     if (otherUserId === chukUser.id) {
@@ -430,7 +458,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ currentUser, allUsers, chukUser, in
     }
 
     try {
-      await api.sendMessage(otherUserId, { message: text });
+      await api.sendMessage(otherUserId, { message: text, replyTo: replyTo || null });
       if (activeConversation.id.startsWith('temp-')) {
         const newConversations = await fetchConversations();
         const newConvo = newConversations.find((c: Conversation) => c.participants.some(p => p.id === otherUserId));
@@ -444,13 +472,74 @@ const ChatPage: React.FC<ChatPageProps> = ({ currentUser, allUsers, chukUser, in
     }
   };
 
+  const handleDeleteMessage = async (messageId: string) => {
+    if (!activeConversation) return;
+    setMessages(prev => prev.filter(m => m.id !== messageId));
+    try {
+      await api.deleteMessage(messageId);
+    } catch (error) {
+      console.error('Failed to delete message', error);
+    }
+  };
+
+  const handleDeleteMessageForMe = async (messageId: string) => {
+    setMessages(prev => prev.filter(m => m.id !== messageId));
+    try {
+      await api.deleteMessageForMe(messageId);
+    } catch (error) {
+      console.error('Failed to delete message for me', error);
+    }
+  };
+
+  const handleClearConversation = async (otherUserId: string) => {
+    if (activeConversation && activeConversation.participants.some(p => p.id === otherUserId)) {
+      setMessages([]);
+    }
+    setConversations(prev => prev.map(conv => {
+      const convoOtherId = conv.participants.find(p => p.id !== currentUser.id)?.id;
+      if (convoOtherId !== otherUserId) return conv;
+      return { ...conv, lastMessage: '', timestamp: new Date().toISOString() };
+    }));
+    try {
+      await api.clearConversation(otherUserId);
+    } catch (error) {
+      console.error('Failed to clear conversation', error);
+    }
+  };
+
+  const handleToggleAutoDelete = (otherUserId: string) => {
+    setAutoDeleteMap(prev => ({ ...prev, [otherUserId]: !prev[otherUserId] }));
+  };
+
+  const activeOtherUserId = activeConversation?.participants.find(p => p.id !== currentUser.id)?.id || null;
+  const autoDeleteEnabled = activeOtherUserId ? !!autoDeleteMap[activeOtherUserId] : false;
+  const filteredMessages = useMemo(() => {
+    if (!autoDeleteEnabled) return messages;
+    const cutoff = Date.now() - 24 * 60 * 60 * 1000;
+    return messages.filter(message => new Date(message.timestamp).getTime() >= cutoff);
+  }, [autoDeleteEnabled, messages]);
+
   return (
     <div className="fixed inset-0 z-50 bg-background md:static md:inset-auto md:z-auto md:h-full md:bg-surface md:border md:border-border md:shadow-lg flex overflow-hidden relative">
       <div
         className={`w-full md:w-[320px] lg:w-[380px] flex-shrink-0 flex flex-col transition-transform duration-300 ease-in-out md:static absolute inset-0 z-10 md:border-r md:border-border bg-surface ${isMessageAreaVisible ? '-translate-x-full' : 'translate-x-0'
           } md:translate-x-0`}
       >
-        <ConversationList conversations={conversations} isLoading={isLoadingConversations} currentUser={currentUser} chukUser={chukUser} userMap={userMap} activeConversationId={activeConversation?.id} onSelectConversation={handleSelectConversation} onNewMessage={() => setNewMessageModalOpen(true)} unreadCounts={unreadCounts.messages} />
+        <ConversationList
+          conversations={conversations}
+          isLoading={isLoadingConversations}
+          currentUser={currentUser}
+          chukUser={chukUser}
+          userMap={userMap}
+          activeConversationId={activeConversation?.id}
+          onSelectConversation={handleSelectConversation}
+          onNewMessage={() => setNewMessageModalOpen(true)}
+          unreadCounts={unreadCounts.messages}
+          onClearConversation={handleClearConversation}
+          onToggleBlock={onToggleBlock}
+          onToggleAutoDelete={handleToggleAutoDelete}
+          autoDeleteMap={autoDeleteMap}
+        />
       </div>
 
       <div
@@ -458,7 +547,20 @@ const ChatPage: React.FC<ChatPageProps> = ({ currentUser, allUsers, chukUser, in
           } md:translate-x-0`}
       >
         {activeConversation ? (
-          <MessageArea key={activeConversation.id} conversation={activeConversation} messages={messages} isLoading={isLoadingMessages} currentUser={currentUser} userMap={userMap} isSending={isSending} onSendMessage={handleSendMessage} onBack={handleBackToList} onViewProfile={onViewProfile} />
+          <MessageArea
+            key={activeConversation.id}
+            conversation={activeConversation}
+            messages={filteredMessages}
+            isLoading={isLoadingMessages}
+            currentUser={currentUser}
+            userMap={userMap}
+            isSending={isSending}
+            onSendMessage={handleSendMessage}
+            onDeleteMessage={handleDeleteMessage}
+            onDeleteMessageForMe={handleDeleteMessageForMe}
+            onBack={handleBackToList}
+            onViewProfile={onViewProfile}
+          />
         ) : (
           <div className="hidden md:flex w-full h-full flex-col items-center justify-center text-center p-8">
             <div className="w-24 h-24 text-secondary mb-4">

@@ -599,10 +599,10 @@ const App: React.FC = () => {
         }
     };
 
-    const handleSendTribeMessage = async (tribeId: string, text: string, imageUrl?: string) => {
+    const handleSendTribeMessage = async (tribeId: string, text: string, imageUrl?: string, replyTo?: string | null) => {
         if (!currentUser || !viewedTribe) return;
         try {
-            await api.sendTribeMessage(tribeId, { text, imageUrl });
+            await api.sendTribeMessage(tribeId, { text, imageUrl, replyTo: replyTo || null });
         } catch (error) {
             console.error("Failed to send tribe message:", error);
         }
@@ -617,6 +617,16 @@ const App: React.FC = () => {
             console.error("Failed to delete tribe message", error);
             toast.error("Could not delete message.");
             if (viewedTribe) setViewedTribe(prev => prev ? { ...prev, messages: originalMessages } : null);
+        }
+    }
+
+    const handleDeleteTribeMessageForMe = async (tribeId: string, messageId: string) => {
+        if (viewedTribe) setViewedTribe(prev => prev ? { ...prev, messages: prev.messages.filter(m => m.id !== messageId) } : null);
+        try {
+            await api.deleteTribeMessageForMe(tribeId, messageId);
+        } catch (error) {
+            console.error("Failed to delete tribe message for me", error);
+            toast.error("Could not delete message.");
         }
     }
 
@@ -762,12 +772,12 @@ const App: React.FC = () => {
             case 'Discover':
                 return <DiscoverPage posts={visiblePosts} users={visibleUsers} tribes={tribes} currentUser={currentUser} onLikePost={handleLikePost} onCommentPost={handleCommentPost} onDeletePost={handleDeletePost} onDeleteComment={handleDeleteComment} onToggleFollow={handleToggleFollow} onViewProfile={handleViewProfile} onViewTribe={handleViewTribe} onJoinToggle={handleJoinToggle} onEditTribe={(tribe) => setEditingTribe(tribe)} onSharePost={handleSharePost} onLoadMore={fetchAllPostsForDiscover} />;
             case 'Messages':
-                return <ChatPage currentUser={currentUser} allUsers={visibleUsers} chukUser={CHUK_AI_USER} initialTargetUser={chatTarget} onViewProfile={handleViewProfile} onSharePost={handleSharePost} />;
+                return <ChatPage currentUser={currentUser} allUsers={visibleUsers} chukUser={CHUK_AI_USER} initialTargetUser={chatTarget} onViewProfile={handleViewProfile} onSharePost={handleSharePost} onToggleBlock={handleToggleBlock} />;
             case 'Tribes':
                 return <TribesPage tribes={tribes} currentUser={currentUser} onJoinToggle={handleJoinToggle} onCreateTribe={handleCreateTribe} onViewTribe={handleViewTribe} onEditTribe={(tribe) => setEditingTribe(tribe)} />;
             case 'TribeDetail':
                 if (!viewedTribe) return <div className="text-center p-8">Tribe not found. Go back to discover more tribes.</div>;
-                return <TribeDetailPage tribe={viewedTribe} currentUser={currentUser} userMap={userMap} onSendMessage={handleSendTribeMessage} onDeleteMessage={handleDeleteTribeMessage} onDeleteTribe={handleDeleteTribe} onBack={() => setActiveNavItem('Tribes')} onViewProfile={handleViewProfile} onEditTribe={(tribe) => setEditingTribe(tribe)} onJoinToggle={handleJoinToggle} onKickMember={handleKickMember} />;
+                return <TribeDetailPage tribe={viewedTribe} currentUser={currentUser} userMap={userMap} onSendMessage={handleSendTribeMessage} onDeleteMessage={handleDeleteTribeMessage} onDeleteMessageForMe={handleDeleteTribeMessageForMe} onDeleteTribe={handleDeleteTribe} onBack={() => setActiveNavItem('Tribes')} onViewProfile={handleViewProfile} onEditTribe={(tribe) => setEditingTribe(tribe)} onJoinToggle={handleJoinToggle} onKickMember={handleKickMember} />;
             case 'Notifications':
                 return <NotificationsPage notifications={notifications} allTribes={tribes} onViewProfile={handleViewProfile} onViewMessage={handleStartConversation} onViewPost={handleViewPost} onViewTribe={handleViewTribe} onViewStory={handleViewUserStories} />;
             case 'Profile':
@@ -796,7 +806,7 @@ const App: React.FC = () => {
         if (isChatPage) {
             // Mobile specific: NO padding, full viewport.
             // Desktop: keep some padding/max-width structure.
-            containerClass = 'h-[100dvh] w-full max-w-6xl mx-auto md:h-[calc(100vh-2rem)] md:my-4';
+            containerClass = 'h-full w-full max-w-6xl mx-auto md:h-[calc(100vh-2rem)] md:my-4';
         } else if (activeNavItem === 'Settings') {
             containerClass = 'h-[calc(100vh-8rem)] md:h-[calc(100vh-4rem)] max-w-2xl mx-auto px-4';
         }
@@ -821,7 +831,7 @@ const App: React.FC = () => {
               - We remove pb-16 (bottom nav padding) effectively by not having it on the container.
               - We use fixed inset-0 z-40 to go OVER the bottom nav and top bar if needed.
             */}
-            <main className={`${isChatPage ? 'h-[100dvh] w-full' : 'pt-16 pb-16 md:pb-0'} ${isChatPage ? 'md:pt-16 md:pb-0' : ''}`}>
+            <main className={`${isChatPage ? 'fixed inset-0 z-[60] h-[100dvh] w-full md:static md:inset-auto md:z-auto md:pt-16 md:pb-0' : 'pt-16 pb-16 md:pb-0'}`}>
                 <div className={containerClass}>
                     {renderContent()}
                 </div>
