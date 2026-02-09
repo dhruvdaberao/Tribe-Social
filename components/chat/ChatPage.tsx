@@ -268,7 +268,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ currentUser, allUsers, chukUser, in
   const [isMessageAreaVisible, setMessageAreaVisible] = useState(false);
   const [isNewMessageModalOpen, setNewMessageModalOpen] = useState(false);
   const [isSending, setIsSending] = useState(false);
-  const { socket, onlineUsers, clearUnreadMessages, unreadCounts, setActiveChatPartnerId } = useSocket();
+  const { socket, clearUnreadMessages, unreadCounts, setActiveChatPartnerId } = useSocket();
 
   useEffect(() => {
     // When ChatPage is unmounted (e.g., user navigates away),

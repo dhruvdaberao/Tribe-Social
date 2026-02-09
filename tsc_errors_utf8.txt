@@ -1,0 +1,19 @@
+﻿components/auth/LoginPage.tsx(295,279): error TS2367: This comparison appears to be unintentional because the types '"login" | "register" | "forgot"' and '"otp"' have no overlap.
+components/chat/ChatPage.tsx(271,19): error TS6133: 'onlineUsers' is declared but its value is never read.
+components/clans/ClanDetailPage.tsx(2,23): error TS6133: 'TribeMessage' is declared but its value is never read.
+components/clans/ClanDetailPage.tsx(80,25): error TS2322: Type 'string | null' is not assignable to type 'string | undefined'.
+  Type 'null' is not assignable to type 'string | undefined'.
+components/feed/ImageCropModal.tsx(1,35): error TS6133: 'useEffect' is declared but its value is never read.
+components/feed/ImageCropModal.tsx(20,11): error TS6133: 'target' is declared but its value is never read.
+components/feed/PostCard.tsx(681,29): error TS6133: 'Comment' is declared but its value is never read.
+components/layout/Sidebar.tsx(291,40): error TS6133: 'isActive' is declared but its value is never read.
+components/layout/Sidebar.tsx(292,44): error TS6133: 'isActive' is declared but its value is never read.
+components/layout/Sidebar.tsx(293,44): error TS6133: 'isActive' is declared but its value is never read.
+components/layout/Sidebar.tsx(294,42): error TS6133: 'isActive' is declared but its value is never read.
+components/layout/Sidebar.tsx(295,41): error TS6133: 'isActive' is declared but its value is never read.
+components/profile/ProfilePage.tsx(28,1): error TS6133: 'PostCard' is declared but its value is never read.
+components/stories/StoryViewer.tsx(305,257): error TS6133: 'post' is declared but its value is never read.
+components/tribes/TribeCard.tsx(102,1): error TS6133: 'UserAvatar' is declared but its value is never read.
+contexts/ThemeContext.tsx(1,8): error TS6133: 'React' is declared but its value is never read.
+SocketContext.tsx(7,10): error TS2305: Module '"../Tribe-Social/types"' has no exported member 'Notification'.
+storage/safeStorage.ts(62,56): error TS6133: 'value' is declared but its value is never read.

@@ -59,7 +59,7 @@ export const safeSetSession = (key: string, value: any): boolean => {
 };
 
 // Fallback stub for IndexedDB (future implementation)
-export const fallbackToIndexedDB = async (key: string, value: any) => {
-    // TODO: Implement idb-keyval or similar here if sessionStorage limit is strictly insufficient.
-    console.log('Would fall back to IndexedDB for', key);
+export const fallbackToIndexedDB = async (key: string, _value: any) => {
+  // TODO: Implement idb-keyval or similar here if sessionStorage limit is strictly insufficient.
+  console.log('Would fall back to IndexedDB for', key);
 };

@@ -678,7 +678,7 @@
 
 
 import React, { useState, useMemo, useRef, useEffect } from 'react';
-import { Post, User, Tribe, Comment } from '../../types';
+import { Post, User, Tribe } from '../../types';
 import UserAvatar from '../common/UserAvatar';
 import ShareModal from '../common/ShareModal';
 import ShareButton from '../common/ShareButton';

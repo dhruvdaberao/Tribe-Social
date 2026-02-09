@@ -5,7 +5,7 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useAuth } from './contexts/AuthContext';
 import { useSocket } from './contexts/SocketContext';
-import { User, Post, Tribe, TribeMessage, TribeNotification as NotificationType, Comment, Story } from './types';
+import { User, Post, Tribe, TribeMessage, Comment, Story } from './types';
 import * as api from './api'; // Assumed in root based on instruction
 
 // Components
@@ -121,7 +121,7 @@ const App: React.FC = () => {
         return map;
     }, [users]);
 
-    const populatePost = useCallback((postFromApi: any, userMapToUse: Map<string, User>): Post | null => {
+    const populatePost = useCallback((postFromApi: any): Post | null => {
         const { user: author, ...restOfPost } = postFromApi;
         // If author is null (deleted user), skip
         if (!author) return null;
@@ -166,7 +166,7 @@ const App: React.FC = () => {
 
             if (feedPostsResult.status === 'fulfilled') {
                 const feedPostsData = feedPostsResult.value.data;
-                const populatedPosts = feedPostsData.map((post: any) => populatePost(post, new Map())).filter(Boolean);
+                const populatedPosts = feedPostsData.map((post: any) => populatePost(post)).filter(Boolean);
                 setPosts(populatedPosts as Post[]);
                 saveToCache('posts', populatedPosts.slice(0, 50)); // Cache top 50
             }
@@ -210,7 +210,7 @@ const App: React.FC = () => {
         if (isAllPostsLoaded) return;
         try {
             const { data } = await api.fetchPosts();
-            const populated = data.map((post: any) => populatePost(post, userMap)).filter(Boolean);
+            const populated = data.map((post: any) => populatePost(post)).filter(Boolean);
 
             setPosts(prev => {
                 const postMap = new Map(prev.map(p => [p.id, p]));
@@ -222,7 +222,7 @@ const App: React.FC = () => {
         } catch (error) {
             console.error("Failed to fetch all posts for discover", error);
         }
-    }, [isAllPostsLoaded, userMap, populatePost]);
+    }, [isAllPostsLoaded, populatePost]);
 
     useEffect(() => {
         if (!isAuthLoading && currentUser) {
@@ -250,7 +250,7 @@ const App: React.FC = () => {
     useEffect(() => {
         if (!socket || !userMap.size) return;
         const handleNewPost = (post: any) => {
-            const populated = populatePost(post, userMap);
+            const populated = populatePost(post);
             if (populated) {
                 setPosts(prev => {
                     const optimisticPostIndex = prev.findIndex(p => p.id === `temp-${post.tempId}`);
@@ -265,7 +265,7 @@ const App: React.FC = () => {
             }
         };
         const handlePostUpdated = (updatedPost: any) => {
-            const populated = populatePost(updatedPost, userMap);
+            const populated = populatePost(updatedPost);
             if (populated) setPosts(prev => prev.map(p => p.id === populated.id ? populated : p));
         };
         const handlePostDeleted = (postId: string) => setPosts(prev => prev.filter(p => p.id !== postId));
@@ -460,7 +460,7 @@ const App: React.FC = () => {
             try {
                 toast.info("Loading post...");
                 const { data } = await api.fetchPost(postId);
-                const populatedPost = populatePost(data, userMap);
+                const populatedPost = populatePost(data);
                 if (populatedPost) {
                     setPosts(prev => {
                         const postExists = prev.some(p => p.id === populatedPost.id);

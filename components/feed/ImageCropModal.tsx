@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef } from 'react';
 
 interface ImageCropModalProps {
   src: string;
@@ -10,20 +10,19 @@ interface ImageCropModalProps {
 const ImageCropModal: React.FC<ImageCropModalProps> = ({ src, onClose, onCropComplete, isPosting }) => {
   const imageRef = useRef<HTMLImageElement>(null);
   const canvasRef = useRef<HTMLDivElement>(null);
-  
+
   const [crop, setCrop] = useState({ x: 10, y: 10, width: 200, height: 250 });
   const [drag, setDrag] = useState({ active: false, type: '', offset: { x: 0, y: 0 } });
 
   const handleMouseDown = (e: React.MouseEvent, type: string) => {
     e.preventDefault();
     e.stopPropagation();
-    const target = e.currentTarget as HTMLDivElement;
     const startX = e.clientX;
     const startY = e.clientY;
-    
+
     let offset = { x: 0, y: 0 };
     if (type === 'move') {
-        offset = { x: startX - crop.x, y: startY - crop.y };
+      offset = { x: startX - crop.x, y: startY - crop.y };
     }
 
     setDrag({ active: true, type, offset });
@@ -39,33 +38,33 @@ const ImageCropModal: React.FC<ImageCropModalProps> = ({ src, onClose, onCropCom
     const y = e.clientY - canvasRect.top;
 
     setCrop(c => {
-        let { x: newX, y: newY, width: newWidth, height: newHeight } = c;
-        if (drag.type === 'move') {
-            newX = e.clientX - drag.offset.x;
-            newY = e.clientY - drag.offset.y;
-        } else { // Resize
-            const right = c.x + c.width;
-            const bottom = c.y + c.height;
-            if (drag.type.includes('right')) newWidth = x - c.x;
-            if (drag.type.includes('left')) {
-                newWidth = right - x;
-                newX = x;
-            }
-            if (drag.type.includes('bottom')) newHeight = y - c.y;
-            if (drag.type.includes('top')) {
-                newHeight = bottom - y;
-                newY = y;
-            }
+      let { x: newX, y: newY, width: newWidth, height: newHeight } = c;
+      if (drag.type === 'move') {
+        newX = e.clientX - drag.offset.x;
+        newY = e.clientY - drag.offset.y;
+      } else { // Resize
+        const right = c.x + c.width;
+        const bottom = c.y + c.height;
+        if (drag.type.includes('right')) newWidth = x - c.x;
+        if (drag.type.includes('left')) {
+          newWidth = right - x;
+          newX = x;
         }
-        
-        // Constrain movement
-        newX = Math.max(0, Math.min(newX, canvasRect.width - newWidth));
-        newY = Math.max(0, Math.min(newY, canvasRect.height - newHeight));
-        // Constrain size
-        newWidth = Math.max(50, Math.min(newWidth, canvasRect.width - newX));
-        newHeight = Math.max(50, Math.min(newHeight, canvasRect.height - newY));
+        if (drag.type.includes('bottom')) newHeight = y - c.y;
+        if (drag.type.includes('top')) {
+          newHeight = bottom - y;
+          newY = y;
+        }
+      }
 
-        return { x: newX, y: newY, width: newWidth, height: newHeight };
+      // Constrain movement
+      newX = Math.max(0, Math.min(newX, canvasRect.width - newWidth));
+      newY = Math.max(0, Math.min(newY, canvasRect.height - newHeight));
+      // Constrain size
+      newWidth = Math.max(50, Math.min(newWidth, canvasRect.width - newX));
+      newHeight = Math.max(50, Math.min(newHeight, canvasRect.height - newY));
+
+      return { x: newX, y: newY, width: newWidth, height: newHeight };
     });
   };
 
@@ -80,7 +79,7 @@ const ImageCropModal: React.FC<ImageCropModalProps> = ({ src, onClose, onCropCom
 
     const scaleX = image.naturalWidth / image.width;
     const scaleY = image.naturalHeight / image.height;
-    
+
     canvas.width = crop.width * scaleX;
     canvas.height = crop.height * scaleY;
 

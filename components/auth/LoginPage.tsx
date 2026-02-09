@@ -74,7 +74,7 @@
 
 //         <div className="bg-surface p-8 rounded-2xl shadow-lg border border-border">
 //           <h2 className="text-2xl font-bold text-center text-primary mb-8">{isLogin ? 'Log In' : 'Sign Up'}</h2>
-          
+
 //           <form onSubmit={handleSubmit}>
 //             {!isLogin && (
 //                 <>
@@ -233,7 +233,7 @@ const LoginPage: React.FC = () => {
         toast.success("Welcome back!");
         // Persistent reminder via success toast
         setTimeout(() => {
-            toast.info("Security Tip: Please update your password from Settings soon.");
+          toast.info("Security Tip: Please update your password from Settings soon.");
         }, 1500);
       }
     } catch (err: any) {
@@ -292,7 +292,7 @@ const LoginPage: React.FC = () => {
             {(mode === 'login' || mode === 'register' || mode === 'forgot') && (
               <div className="mb-4">
                 <label className="block text-secondary text-sm font-semibold mb-2">Email</label>
-                <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full p-3 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-accent text-primary" placeholder="you@example.com" disabled={isLoading || mode === 'otp'} />
+                <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full p-3 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-accent text-primary" placeholder="you@example.com" disabled={isLoading} />
               </div>
             )}
 
@@ -330,11 +330,11 @@ const LoginPage: React.FC = () => {
 
           <p className="text-center text-secondary text-sm mt-6">
             {mode === 'forgot' || mode === 'otp' ? (
-                <button onClick={() => { setMode('login'); setError(''); }} className="font-semibold text-accent hover:underline">Back to Login</button>
+              <button onClick={() => { setMode('login'); setError(''); }} className="font-semibold text-accent hover:underline">Back to Login</button>
             ) : mode === 'login' ? (
-                <>Don't have an account? <button onClick={() => { setMode('register'); setError(''); }} className="font-semibold text-accent hover:underline ml-1">Sign Up</button></>
+              <>Don't have an account? <button onClick={() => { setMode('register'); setError(''); }} className="font-semibold text-accent hover:underline ml-1">Sign Up</button></>
             ) : (
-                <>Already have an account? <button onClick={() => { setMode('login'); setError(''); }} className="font-semibold text-accent hover:underline ml-1">Log In</button></>
+              <>Already have an account? <button onClick={() => { setMode('login'); setError(''); }} className="font-semibold text-accent hover:underline ml-1">Log In</button></>
             )}
           </p>
         </div>

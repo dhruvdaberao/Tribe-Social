@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Tribe, User, TribeMessage } from '../../types';
+import { Tribe, User } from '../../types';
 
 interface TribeDetailPageProps {
   tribe: Tribe;
@@ -11,14 +11,14 @@ interface TribeDetailPageProps {
 }
 
 const TribePlaceholderIcon = () => (
-     <div className="w-10 h-10 rounded-full mr-3 bg-background border border-border flex items-center justify-center text-secondary p-2">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
-            <circle cx="9" cy="7" r="4"></circle>
-            <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
-            <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
-        </svg>
-    </div>
+  <div className="w-10 h-10 rounded-full mr-3 bg-background border border-border flex items-center justify-center text-secondary p-2">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+      <circle cx="9" cy="7" r="4"></circle>
+      <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+      <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+    </svg>
+  </div>
 );
 
 
@@ -37,34 +37,34 @@ const TribeDetailPage: React.FC<TribeDetailPageProps> = ({ tribe, currentUser, o
       setInputText('');
     }
   };
-  
+
   return (
     <div className="flex flex-col h-full bg-surface rounded-2xl border border-border shadow-md">
       {/* Header */}
       <div className="flex items-center p-3 border-b border-border flex-shrink-0">
         <button onClick={onBack} className="p-2 mr-2 text-primary">
-            <BackIcon />
+          <BackIcon />
         </button>
         {tribe.avatarUrl ? (
-            <img src={tribe.avatarUrl} alt={tribe.name} className="w-10 h-10 rounded-full mr-3 object-cover"/>
+          <img src={tribe.avatarUrl} alt={tribe.name} className="w-10 h-10 rounded-full mr-3 object-cover" />
         ) : (
-            <TribePlaceholderIcon />
+          <TribePlaceholderIcon />
         )}
         <div>
-            <h2 className="text-lg font-bold text-primary">{tribe.name}</h2>
-            <p className="text-sm text-secondary">{tribe.members.length} members</p>
+          <h2 className="text-lg font-bold text-primary">{tribe.name}</h2>
+          <p className="text-sm text-secondary">{tribe.members.length} members</p>
         </div>
         <div className="ml-auto">
-            {currentUser.id === tribe.owner && (
-                <button 
-                    onClick={() => onEditTribe(tribe)} 
-                    className="p-2 text-secondary hover:text-primary rounded-lg hover:bg-background flex items-center space-x-1 text-sm font-semibold"
-                    aria-label="Edit Tribe"
-                >
-                    <EditIcon />
-                    <span>Edit</span>
-                </button>
-            )}
+          {currentUser.id === tribe.owner && (
+            <button
+              onClick={() => onEditTribe(tribe)}
+              className="p-2 text-secondary hover:text-primary rounded-lg hover:bg-background flex items-center space-x-1 text-sm font-semibold"
+              aria-label="Edit Tribe"
+            >
+              <EditIcon />
+              <span>Edit</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -75,38 +75,38 @@ const TribeDetailPage: React.FC<TribeDetailPageProps> = ({ tribe, currentUser, o
             const isCurrentUser = message.sender.id === currentUser.id;
             return (
               <div key={message.id} className={`flex items-end gap-2.5 ${isCurrentUser ? 'justify-end' : 'justify-start'}`}>
-                 {!isCurrentUser && (
-                     <img 
-                        src={message.sender.avatarUrl} 
-                        alt={message.sender.name} 
-                        className="w-8 h-8 rounded-full cursor-pointer self-start"
-                        onClick={() => onViewProfile(message.sender)}
-                     />
-                 )}
+                {!isCurrentUser && (
+                  <img
+                    src={message.sender.avatarUrl || undefined}
+                    alt={message.sender.name}
+                    className="w-8 h-8 rounded-full cursor-pointer self-start"
+                    onClick={() => onViewProfile(message.sender)}
+                  />
+                )}
                 <div className={`flex flex-col w-full max-w-xs lg:max-w-md ${isCurrentUser ? 'items-end' : 'items-start'}`}>
-                    {!isCurrentUser && (
-                        <p 
-                            className="text-xs text-secondary mb-1 ml-3 cursor-pointer hover:underline"
-                            onClick={() => onViewProfile(message.sender)}
-                        >
-                            {message.sender.name}
-                        </p>
-                    )}
-                    <div className={`px-4 py-2.5 rounded-xl text-sm ${isCurrentUser ? 'bg-accent text-accent-text' : 'bg-surface text-primary shadow-sm'}`}>
-                        <p className="leading-relaxed">{message.text}</p>
-                    </div>
-                    <p className="text-xs text-secondary mt-1.5 px-1">{message.timestamp}</p>
+                  {!isCurrentUser && (
+                    <p
+                      className="text-xs text-secondary mb-1 ml-3 cursor-pointer hover:underline"
+                      onClick={() => onViewProfile(message.sender)}
+                    >
+                      {message.sender.name}
+                    </p>
+                  )}
+                  <div className={`px-4 py-2.5 rounded-xl text-sm ${isCurrentUser ? 'bg-accent text-accent-text' : 'bg-surface text-primary shadow-sm'}`}>
+                    <p className="leading-relaxed">{message.text}</p>
+                  </div>
+                  <p className="text-xs text-secondary mt-1.5 px-1">{message.timestamp}</p>
                 </div>
               </div>
             );
           })}
           {tribe.messages.length === 0 && (
-              <div className="text-center text-secondary p-8">
-                  <p>Welcome to #{tribe.name}!</p>
-                  <p className="text-sm">Be the first one to send a message.</p>
-              </div>
+            <div className="text-center text-secondary p-8">
+              <p>Welcome to #{tribe.name}!</p>
+              <p className="text-sm">Be the first one to send a message.</p>
+            </div>
           )}
-           <div ref={messagesEndRef} />
+          <div ref={messagesEndRef} />
         </div>
       </div>
 
