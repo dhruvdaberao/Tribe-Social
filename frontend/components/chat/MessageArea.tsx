@@ -386,79 +386,79 @@ export const MessageArea: React.FC<MessageAreaProps> = ({
   return (
     <>
       <ChatShell
-      className="flex-1"
-      header={(
-        <div className="flex items-center p-3 border-b border-border flex-shrink-0">
-        <button onClick={onBack} className="md:hidden p-2 mr-2 text-primary">
-          <BackIcon />
-        </button>
-        <div
-          className="flex items-center cursor-pointer overflow-hidden"
-          onClick={() => onViewProfile(otherParticipant)}
-        >
-          {otherParticipant.id === 'chuk-ai' ? (
-            <img src="/chuk-ai.png" alt="Chuk AI" className="h-10 w-auto mr-3 flex-shrink-0 object-contain" />
-          ) : (
-            <UserAvatar user={otherParticipant} className="w-10 h-10 rounded-full mr-3 flex-shrink-0" isOnline={isOtherUserOnline} />
-          )}
-          <div className="min-w-0">
-            <h2 className="text-lg font-bold text-primary leading-tight hover:underline truncate">{otherParticipant.name}</h2>
-            {isTyping ? (
-              <p className="text-sm text-accent leading-tight truncate italic">typing...</p>
-            ) : (
-              <p className="text-sm text-secondary leading-tight truncate">@{otherParticipant.username}</p>
-            )}
-          </div>
-          {isLoading && messages.length === 0 && (
-            <TinyLoader />
-          )}
-        </div>
-        </div>
-      )}
-      messagesRef={scrollContainerRef}
-      onMessagesScroll={handleScroll}
-      messagesClassName="p-4"
-      composer={(
-        <div className="p-4">
-          {replyToMessage && (
-            <div className="mb-3 flex items-center justify-between rounded-lg border border-border bg-surface px-3 py-2 text-xs text-secondary">
+        className="flex-1"
+        header={(
+          <div className="flex items-center p-3 border-b border-border flex-shrink-0">
+            <button onClick={onBack} className="md:hidden p-2 mr-2 text-primary">
+              <BackIcon />
+            </button>
+            <div
+              className="flex items-center cursor-pointer overflow-hidden"
+              onClick={() => onViewProfile(otherParticipant)}
+            >
+              {otherParticipant.id === 'chuk-ai' ? (
+                <img src="/chuk-ai.png" alt="Chuk AI" className="h-10 w-auto mr-3 flex-shrink-0 object-contain" />
+              ) : (
+                <UserAvatar user={otherParticipant} className="w-10 h-10 rounded-full mr-3 flex-shrink-0" isOnline={isOtherUserOnline} />
+              )}
               <div className="min-w-0">
-                <p className="font-semibold text-primary">
-                  Replying to {replyToMessage.senderId === currentUser.id ? 'You' : userMap.get(replyToMessage.senderId)?.name || 'User'}
-                </p>
-                <p className="truncate">{replyToMessage.text}</p>
+                <h2 className="text-lg font-bold text-primary leading-tight hover:underline truncate">{otherParticipant.name}</h2>
+                {isTyping ? (
+                  <p className="text-sm text-accent leading-tight truncate italic">typing...</p>
+                ) : (
+                  <p className="text-sm text-secondary leading-tight truncate">@{otherParticipant.username}</p>
+                )}
               </div>
-              <button
-                type="button"
-                className="ml-3 text-secondary hover:text-primary"
-                onClick={() => setReplyToMessage(null)}
-              >
-                &times;
-              </button>
+              {isLoading && messages.length === 0 && (
+                <TinyLoader />
+              )}
             </div>
-          )}
-          <ChatInput
-            value={inputText}
-            onChange={handleInputChange}
-            onSend={handleSendMessage}
-            onAttachFile={handleAttachFile}
-            placeholder="Type a message..."
-            disabled={!inputText.trim()}
-            isSending={isSending}
-            isUploading={isUploading}
-            uploadProgress={uploadProgress ?? undefined}
-            inputRef={inputRef}
-          />
-        </div>
-      )}
-    >
+          </div>
+        )}
+        messagesRef={scrollContainerRef}
+        onMessagesScroll={handleScroll}
+        messagesClassName="p-4"
+        composer={(
+          <div className="px-4 pt-2 pb-0">
+            {replyToMessage && (
+              <div className="mb-3 flex items-center justify-between rounded-lg border border-border bg-surface px-3 py-2 text-xs text-secondary">
+                <div className="min-w-0">
+                  <p className="font-semibold text-primary">
+                    Replying to {replyToMessage.senderId === currentUser.id ? 'You' : userMap.get(replyToMessage.senderId)?.name || 'User'}
+                  </p>
+                  <p className="truncate">{replyToMessage.text}</p>
+                </div>
+                <button
+                  type="button"
+                  className="ml-3 text-secondary hover:text-primary"
+                  onClick={() => setReplyToMessage(null)}
+                >
+                  &times;
+                </button>
+              </div>
+            )}
+            <ChatInput
+              value={inputText}
+              onChange={handleInputChange}
+              onSend={handleSendMessage}
+              onAttachFile={handleAttachFile}
+              placeholder="Type a message..."
+              disabled={!inputText.trim()}
+              isSending={isSending}
+              isUploading={isUploading}
+              uploadProgress={uploadProgress ?? undefined}
+              inputRef={inputRef}
+            />
+          </div>
+        )}
+      >
 
-      {isLoading && messages.length === 0 ? (
-        <div className="w-full h-full flex items-center justify-center">
-          <div className="w-10 h-10 border-2 border-accent border-t-transparent rounded-full animate-spin" />
-        </div>
-      ) : (
-        <div className="flex flex-col space-y-2">
+        {isLoading && messages.length === 0 ? (
+          <div className="w-full h-full flex items-center justify-center">
+            <div className="w-10 h-10 border-2 border-accent border-t-transparent rounded-full animate-spin" />
+          </div>
+        ) : (
+          <div className="flex flex-col space-y-2">
             {isLoadingMore && (
               <div className="flex justify-center py-2">
                 <div className="w-6 h-6 border-2 border-accent border-t-transparent rounded-full animate-spin" />
@@ -608,8 +608,8 @@ export const MessageArea: React.FC<MessageAreaProps> = ({
               <div className="flex justify-end"><p className="text-xs text-secondary mt-1.5 px-1 italic">Sending...</p></div>
             )}
             <div ref={messagesEndRef} />
-        </div>
-      )}
+          </div>
+        )}
       </ChatShell>
       {actionMessage && (
         <div

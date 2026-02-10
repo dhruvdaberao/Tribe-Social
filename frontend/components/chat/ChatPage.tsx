@@ -626,7 +626,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ currentUser, allUsers, chukUser, in
             </div>
 
             {/* Skeleton Input */}
-            <div className="flex-none bg-background border-t border-border p-4 pb-[env(safe-area-inset-bottom)]">
+            <div className="flex-none bg-background border-t border-border px-4 pt-2 pb-[env(safe-area-inset-bottom)]">
               <div className="w-full h-[46px] bg-surface border border-border rounded-lg opacity-50" />
             </div>
           </div>

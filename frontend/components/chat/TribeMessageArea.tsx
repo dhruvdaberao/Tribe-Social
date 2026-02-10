@@ -136,7 +136,7 @@ const TribeMessageArea: React.FC<TribeMessageAreaProps> = ({
         onMessagesScroll={handleScroll}
         messagesClassName="w-full px-4 py-3 space-y-4"
         composer={(
-          <div className="p-4">
+          <div className="px-4 pt-2 pb-0">
             {replyToMessage && (
               <div className="mb-3 flex items-center justify-between rounded-lg border border-border bg-surface px-3 py-2 text-xs text-secondary">
                 <div className="min-w-0">
