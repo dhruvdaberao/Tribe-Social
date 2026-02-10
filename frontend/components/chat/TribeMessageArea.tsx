@@ -3,6 +3,7 @@ import { Tribe, User, TribeMessage } from '../../types';
 import UserAvatar from '../common/UserAvatar';
 import { Image as ImageIcon } from 'lucide-react';
 import ChatInput from './ChatInput';
+import ChatShell from './ChatShell';
 
 interface TribeMessageAreaProps {
   tribe: Tribe;
@@ -128,23 +129,45 @@ const TribeMessageArea: React.FC<TribeMessageAreaProps> = ({
   };
 
   return (
-    <div
-      className="
-        flex flex-col flex-1 min-h-0
-        bg-background
-        overflow-hidden
-        overscroll-none
-      "
-    >
-      <div
-        ref={scrollContainerRef}
-        onScroll={handleScroll}
-        className="
-          flex-1 overflow-y-auto w-full
-          px-4 py-3 pb-[calc(5rem+env(safe-area-inset-bottom))]
-          space-y-4
-          overscroll-contain
-        "
+    <>
+      <ChatShell
+        className="flex-1"
+        messagesRef={scrollContainerRef}
+        onMessagesScroll={handleScroll}
+        messagesClassName="w-full px-4 py-3 space-y-4"
+        composer={(
+          <div className="p-4">
+            {replyToMessage && (
+              <div className="mb-3 flex items-center justify-between rounded-lg border border-border bg-surface px-3 py-2 text-xs text-secondary">
+                <div className="min-w-0">
+                  <p className="font-semibold text-primary">
+                    Replying to {replyToMessage.senderId === currentUser.id ? 'You' : replyToMessage.sender?.name || 'User'}
+                  </p>
+                  <p className="truncate">{replyToMessage.text}</p>
+                </div>
+                <button
+                  type="button"
+                  className="ml-3 text-secondary hover:text-primary"
+                  onClick={() => setReplyToMessage(null)}
+                >
+                  &times;
+                </button>
+              </div>
+            )}
+            <ChatInput
+              value={inputText}
+              onChange={e => setInputText(e.target.value)}
+              onSend={handleSend}
+              onAttachFile={handleAttachFile}
+              placeholder={`Message ${tribe.name}…`}
+              disabled={!inputText.trim()}
+              isSending={isSending}
+              isUploading={isUploading}
+              uploadProgress={uploadProgress ?? undefined}
+              inputRef={inputRef}
+            />
+          </div>
+        )}
       >
         {isLoading && messages.length === 0 && (
           <div className="h-full flex flex-col items-center justify-center opacity-70">
@@ -323,52 +346,7 @@ const TribeMessageArea: React.FC<TribeMessageAreaProps> = ({
         )}
 
         <div ref={bottomRef} />
-      </div>
-
-      {/* ───────────── INPUT BAR (MOBILE SAFE) ───────────── */}
-      {/* ───────────── INPUT BAR (MOBILE SAFE) ───────────── */}
-      <div
-        className="
-          sticky bottom-0
-          p-4 
-          bg-background 
-          border-t border-border
-          flex-shrink-0 
-          z-20
-          w-full
-          pb-[calc(1rem+env(safe-area-inset-bottom))]
-        "
-      >
-        {replyToMessage && (
-          <div className="mb-3 flex items-center justify-between rounded-lg border border-border bg-surface px-3 py-2 text-xs text-secondary">
-            <div className="min-w-0">
-              <p className="font-semibold text-primary">
-                Replying to {replyToMessage.senderId === currentUser.id ? 'You' : replyToMessage.sender?.name || 'User'}
-              </p>
-              <p className="truncate">{replyToMessage.text}</p>
-            </div>
-            <button
-              type="button"
-              className="ml-3 text-secondary hover:text-primary"
-              onClick={() => setReplyToMessage(null)}
-            >
-              &times;
-            </button>
-          </div>
-        )}
-        <ChatInput
-          value={inputText}
-          onChange={e => setInputText(e.target.value)}
-          onSend={handleSend}
-          onAttachFile={handleAttachFile}
-          placeholder={`Message ${tribe.name}…`}
-          disabled={!inputText.trim()}
-          isSending={isSending}
-          isUploading={isUploading}
-          uploadProgress={uploadProgress ?? undefined}
-          inputRef={inputRef}
-        />
-      </div>
+      </ChatShell>
       {actionMessage && (
         <div
           className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-4 md:items-center"
@@ -414,7 +392,7 @@ const TribeMessageArea: React.FC<TribeMessageAreaProps> = ({
           </div>
         </div>
       )}
-    </div>
+    </>
   );
 };
 
