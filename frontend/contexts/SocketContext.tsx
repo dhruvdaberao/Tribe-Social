@@ -25,6 +25,7 @@ interface ServerToClientEvents {
   // Notifications & messages
   newNotification: (notification: Notification) => void;
   newMessage: (message: Message) => void;
+  messageDeleted: (data: { messageId: string; senderId: string; receiverId: string }) => void;
 
   // 🔥 REAL-TIME TRIBE CHAT
   newTribeMessage: (message: TribeMessage) => void;

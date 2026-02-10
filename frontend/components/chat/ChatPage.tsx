@@ -609,9 +609,26 @@ const ChatPage: React.FC<ChatPageProps> = ({ currentUser, allUsers, chukUser, in
             onViewProfile={onViewProfile}
           />
         ) : isInitializing ? (
-          <div className="flex w-full h-full flex-col items-center justify-center text-center p-8">
-            <div className="w-10 h-10 border-2 border-accent border-t-transparent rounded-full animate-spin mb-4" />
-            <p className="text-secondary text-lg">Loading Psyduck chat...</p>
+          /* INITIALIZING STATE - MIMIC CHAT SHELL */
+          <div className="flex flex-col h-full bg-background overflow-hidden relative">
+            {/* Skeleton Header */}
+            <div className="flex-none bg-surface border-b border-border p-3 flex items-center gap-3">
+              <div className="w-8 h-8 rounded-full bg-border opacity-50 animate-pulse" />
+              <div className="h-4 w-32 bg-border opacity-50 rounded animate-pulse" />
+            </div>
+
+            {/* Spinner Body */}
+            <div className="flex-1 flex items-center justify-center">
+              <div className="flex flex-col items-center">
+                <div className="w-10 h-10 border-2 border-accent border-t-transparent rounded-full animate-spin mb-4" />
+                <p className="text-secondary text-lg">Loading Psyduck chat...</p>
+              </div>
+            </div>
+
+            {/* Skeleton Input */}
+            <div className="flex-none bg-background border-t border-border p-4 pb-[env(safe-area-inset-bottom)]">
+              <div className="w-full h-[46px] bg-surface border border-border rounded-lg opacity-50" />
+            </div>
           </div>
         ) : (
           <div className="flex w-full h-full flex-col items-center justify-center text-center p-8">

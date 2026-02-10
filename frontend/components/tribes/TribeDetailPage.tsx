@@ -685,45 +685,58 @@ const TribeDetailPage: React.FC<Props> = ({ currentUser, tribeId: propTribeId })
         </HeaderActions>
       </Header>
 
-      {/* Show loading spinner while tribe loads, but keep layout stable */}
-      {isLoading && !tribe ? (
-        <div className="flex-1 flex items-center justify-center">
-          <div className="text-center">
-            <div className="w-16 h-16 border-4 border-accent border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-            <p className="text-secondary">Loading tribe...</p>
+      {/* MAIN CONTENT AREA */}
+      <div className="flex-1 min-h-0 relative">
+        {isLoading && !tribe ? (
+          /* LOADING STATE - MIMIC CHAT SHELL */
+          <div className="flex flex-col h-full bg-background overflow-hidden">
+            {/* No Header here, it's above in PageContainer */}
+            <div className="flex-1 flex items-center justify-center">
+              <div className="text-center">
+                <div className="w-16 h-16 border-4 border-accent border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+                <p className="text-secondary">Loading tribe...</p>
+              </div>
+            </div>
+            {/* Placeholder Input */}
+            <div className="flex-none bg-background border-t border-border p-4 pb-[calc(1rem+env(safe-area-inset-bottom))]">
+              <div className="w-full h-[46px] bg-surface border border-border rounded-lg flex items-center px-4 opacity-50">
+                <span className="text-secondary text-sm">Loading...</span>
+              </div>
+            </div>
           </div>
-        </div>
-      ) : isMember ? (
-        <TribeMessageArea
-          tribe={tribe!}
-          messages={messages}
-          isLoading={areMessagesLoading}
-          currentUser={currentUser!}
-          isSending={isSending}
-          isUploading={isUploading}
-          uploadProgress={uploadProgress}
-          hasMore={hasMoreMessages}
-          isLoadingMore={isLoadingMore}
-          onLoadMore={handleLoadMoreMessages}
-          onSendMessage={handleSend}
-          onDeleteMessage={handleDeleteMessage}
-          onDeleteMessageForMe={handleDeleteMessageForMe}
-        />
-      ) : (
-        <div className="flex-1 flex flex-col items-center justify-center gap-4">
-          <p>Join this tribe to start chatting</p>
-          <button onClick={handleJoinToggle}>Join Tribe</button>
-        </div>
-      )}
-
-      {/* Skeleton Input Bar during loading */}
-      {isLoading && !tribe && (
-        <div className="sticky bottom-0 p-4 bg-background border-t border-border flex-shrink-0 z-20 w-full pb-[calc(1rem+env(safe-area-inset-bottom))] opacity-50 pointer-events-none">
-          <div className="w-full h-[46px] bg-surface border border-border rounded-full flex items-center px-4">
-            <span className="text-secondary text-sm">Loading...</span>
+        ) : isMember && tribe ? (
+          <TribeMessageArea
+            tribe={tribe}
+            messages={messages}
+            isLoading={areMessagesLoading}
+            currentUser={currentUser!}
+            isSending={isSending}
+            isUploading={isUploading}
+            uploadProgress={uploadProgress}
+            hasMore={hasMoreMessages}
+            isLoadingMore={isLoadingMore}
+            onLoadMore={handleLoadMoreMessages}
+            onSendMessage={handleSend}
+            onDeleteMessage={handleDeleteMessage}
+            onDeleteMessageForMe={handleDeleteMessageForMe}
+          />
+        ) : (
+          /* JOIN PROMPT */
+          <div className="flex-1 flex flex-col items-center justify-center gap-4 p-8 text-center">
+            <div className="w-24 h-24 bg-surface rounded-full flex items-center justify-center mb-2">
+              <Users size={48} className="text-secondary opacity-50" />
+            </div>
+            <h2 className="text-xl font-bold">Join {tribe?.name || 'Tribe'}</h2>
+            <p className="text-secondary max-w-sm">Join this tribe to start chatting with members and share your thoughts.</p>
+            <button
+              onClick={handleJoinToggle}
+              className="mt-4 px-8 py-3 bg-accent text-accent-text font-bold rounded-full hover:bg-accent-hover transition-colors shadow-lg shadow-accent/20"
+            >
+              Join Tribe
+            </button>
           </div>
-        </div>
-      )}
+        )}
+      </div>
 
       <div ref={bottomRef} />
 

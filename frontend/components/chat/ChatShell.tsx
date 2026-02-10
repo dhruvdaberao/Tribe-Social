@@ -37,11 +37,10 @@ const ChatShell: React.FC<ChatShellProps> = ({
 
   return (
     <div
-      className={`flex flex-col min-h-0 h-full bg-background overflow-hidden ${className}`}
-      style={{ height: 'var(--vvh, 100dvh)' }}
+      className={`flex flex-col h-full bg-background overflow-hidden ${className}`}
     >
       {header ? (
-        <div className="flex-none sticky top-0 z-50 bg-surface">
+        <div className="flex-none bg-surface border-b border-border z-10">
           {header}
         </div>
       ) : null}
@@ -55,7 +54,7 @@ const ChatShell: React.FC<ChatShellProps> = ({
       </div>
 
       {composer ? (
-        <div className="flex-none sticky bottom-0 z-40 bg-background border-t border-border pb-[env(safe-area-inset-bottom)]">
+        <div className="flex-none bg-background border-t border-border pb-[env(safe-area-inset-bottom)] z-10">
           {composer}
         </div>
       ) : null}
