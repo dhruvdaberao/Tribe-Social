@@ -388,7 +388,7 @@ export const MessageArea: React.FC<MessageAreaProps> = ({
       <ChatShell
         className="flex-1"
         header={(
-          <div className="flex items-center p-3 border-b border-border flex-shrink-0">
+          <div className="flex items-center p-3 border-b border-border flex-shrink-0 bg-surface z-50">
             <button onClick={onBack} className="md:hidden p-2 mr-2 text-primary">
               <BackIcon />
             </button>
@@ -419,7 +419,7 @@ export const MessageArea: React.FC<MessageAreaProps> = ({
         onMessagesScroll={handleScroll}
         messagesClassName="p-4"
         composer={(
-          <div className="px-4 pt-2 pb-0">
+          <div className="px-3 py-2 pb-0">
             {replyToMessage && (
               <div className="mb-3 flex items-center justify-between rounded-lg border border-border bg-surface px-3 py-2 text-xs text-secondary">
                 <div className="min-w-0">

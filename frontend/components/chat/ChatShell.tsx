@@ -40,7 +40,7 @@ const ChatShell: React.FC<ChatShellProps> = ({
       className={`flex flex-col h-full bg-background overflow-hidden ${className}`}
     >
       {header ? (
-        <div className="flex-none bg-surface border-b border-border z-10">
+        <div className="flex-none bg-surface border-b border-border z-50">
           {header}
         </div>
       ) : null}
