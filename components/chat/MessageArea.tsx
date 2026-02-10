@@ -202,17 +202,23 @@ interface MessageAreaProps {
   currentUser: User;
   userMap: Map<string, User>;
   isSending: boolean;
-  onSendMessage: (text: string) => void;
+  onSendMessage: (text: string, replyTo?: string | null) => void;
+  onDeleteMessage: (messageId: string) => void;
+  onDeleteMessageForMe: (messageId: string) => void;
   onBack: () => void;
   onViewProfile: (user: User) => void;
 }
 
-export const MessageArea: React.FC<MessageAreaProps> = ({ conversation, messages, isLoading, currentUser, userMap, isSending, onSendMessage, onBack, onViewProfile }) => {
+export const MessageArea: React.FC<MessageAreaProps> = ({ conversation, messages, isLoading, currentUser, userMap, isSending, onSendMessage, onDeleteMessage, onDeleteMessageForMe, onBack, onViewProfile }) => {
   const [inputText, setInputText] = useState('');
   const [isTyping, setIsTyping] = useState(false);
+  const [replyToMessage, setReplyToMessage] = useState<Message | null>(null);
+  const [actionMessage, setActionMessage] = useState<Message | null>(null);
   const otherParticipantId = conversation.participants.find(p => p.id !== currentUser.id)?.id;
   const otherParticipant = otherParticipantId ? userMap.get(otherParticipantId) : null;
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const { socket, onlineUsers } = useSocket();
   
@@ -256,14 +262,30 @@ export const MessageArea: React.FC<MessageAreaProps> = ({ conversation, messages
   const handleSendMessage = (e: React.FormEvent) => {
     e.preventDefault();
     if (inputText.trim()) {
-      onSendMessage(inputText);
+      onSendMessage(inputText, replyToMessage?.id || null);
       setInputText('');
+      setReplyToMessage(null);
       if (socket && otherParticipantId) {
         if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
         socket.emit('stopTyping', { roomId: `dm-${[currentUser.id, otherParticipantId].sort().join('-')}`, userId: currentUser.id, userName: currentUser.name });
         typingTimeoutRef.current = null;
       }
     }
+  };
+
+  const openActionMenu = (message: Message) => {
+    setActionMessage(message);
+  };
+
+  const handleTouchStart = (message: Message) => {
+    if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
+    longPressTimerRef.current = setTimeout(() => {
+      openActionMenu(message);
+    }, 500);
+  };
+
+  const handleTouchEnd = () => {
+    if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
   };
 
   if (!otherParticipant) {
@@ -312,12 +334,24 @@ export const MessageArea: React.FC<MessageAreaProps> = ({ conversation, messages
             </div>
         ) : (
             <div className="flex flex-col space-y-2">
-            {messages.map(message => {
+                {messages.map(message => {
                 const isCurrentUser = message.senderId === currentUser.id;
                 const sender = isCurrentUser ? currentUser : userMap.get(message.senderId);
                 const sentAt = new Date(message.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
+                const replyMessage = message.replyTo ? messages.find(m => m.id === message.replyTo) : null;
+                const replySender = replyMessage ? (replyMessage.senderId === currentUser.id ? 'You' : userMap.get(replyMessage.senderId)?.name || 'User') : '';
                 return (
-                <div key={message.id} className={`flex items-end gap-2.5 ${isCurrentUser ? 'justify-end' : 'justify-start'}`}>
+                <div
+                  key={message.id}
+                  className={`flex items-end gap-2.5 ${isCurrentUser ? 'justify-end' : 'justify-start'}`}
+                  onContextMenu={(event) => {
+                    event.preventDefault();
+                    openActionMenu(message);
+                  }}
+                  onTouchStart={() => handleTouchStart(message)}
+                  onTouchEnd={handleTouchEnd}
+                  onTouchMove={handleTouchEnd}
+                >
                     {!isCurrentUser && (
                         <div className="w-8 h-8 rounded-full flex-shrink-0 self-start">
                         <UserAvatar user={sender || null} />
@@ -326,6 +360,12 @@ export const MessageArea: React.FC<MessageAreaProps> = ({ conversation, messages
                     <div className={`flex flex-col w-full max-w-xs lg:max-w-md ${isCurrentUser ? 'items-end' : 'items-start'}`}>
                         {/* Modified rounded classes for proper chat bubble look */}
                         <div className={`px-4 py-2.5 ${isCurrentUser ? 'bg-accent text-accent-text rounded-2xl rounded-tr-none' : 'bg-surface text-primary shadow-sm rounded-2xl rounded-tl-none'}`}>
+                            {replyMessage && (
+                              <div className={`mb-2 rounded-lg px-3 py-2 text-xs ${isCurrentUser ? 'bg-accent-text/20 text-accent-text' : 'bg-background text-secondary'}`}>
+                                <p className="font-semibold">{replySender}</p>
+                                <p className="line-clamp-2">{replyMessage.text}</p>
+                              </div>
+                            )}
                             {message.imageUrl && <img src={message.imageUrl} alt="Shared content" className="mb-2 rounded-lg w-full" />}
                             <div className="text-sm leading-relaxed">
                                 {sender?.id === 'chuk-ai' ? (
@@ -361,6 +401,7 @@ export const MessageArea: React.FC<MessageAreaProps> = ({ conversation, messages
             onChange={handleInputChange}
             placeholder="Type a message..."
             className="flex-1 bg-surface border border-border rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-accent text-primary min-w-0"
+            ref={inputRef}
           />
           {/* Changed rounded-full to rounded-lg */}
           <button type="submit" className="bg-accent text-accent-text rounded-lg w-12 h-11 flex-shrink-0 flex items-center justify-center hover:bg-accent-hover transition-colors disabled:opacity-50" disabled={!inputText.trim() || isSending}>
@@ -368,6 +409,51 @@ export const MessageArea: React.FC<MessageAreaProps> = ({ conversation, messages
           </button>
         </form>
       </div>
+      {actionMessage && (
+        <div
+          className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-4 md:items-center"
+          onClick={() => setActionMessage(null)}
+        >
+          <div
+            className="w-full max-w-sm rounded-2xl bg-surface shadow-lg border border-border overflow-hidden"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <button
+              type="button"
+              className="w-full px-4 py-3 text-left text-sm text-primary hover:bg-background"
+              onClick={() => {
+                setReplyToMessage(actionMessage);
+                setActionMessage(null);
+                requestAnimationFrame(() => inputRef.current?.focus());
+              }}
+            >
+              Reply
+            </button>
+            <button
+              type="button"
+              className="w-full px-4 py-3 text-left text-sm text-primary hover:bg-background"
+              onClick={() => {
+                onDeleteMessageForMe(actionMessage.id);
+                setActionMessage(null);
+              }}
+            >
+              Delete for me
+            </button>
+            {actionMessage.senderId === currentUser.id && (
+              <button
+                type="button"
+                className="w-full px-4 py-3 text-left text-sm text-red-500 hover:bg-red-500/10"
+                onClick={() => {
+                  onDeleteMessage(actionMessage.id);
+                  setActionMessage(null);
+                }}
+              >
+                Delete for everyone
+              </button>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 };

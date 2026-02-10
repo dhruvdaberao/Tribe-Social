@@ -115,6 +115,9 @@ export const deleteComment = (postId: string, commentId: string) => API.delete(`
 export const fetchConversations = () => API.get('/messages/conversations');
 export const fetchMessages = (otherUserId: string) => API.get(`/messages/${otherUserId}`);
 export const sendMessage = (receiverId: string, messageData: any) => API.post(`/messages/send/${receiverId}`, messageData);
+export const deleteMessage = (messageId: string) => API.delete(`/messages/${messageId}`);
+export const deleteMessageForMe = (messageId: string) => API.put(`/messages/${messageId}/delete-for-me`);
+export const clearConversation = (otherUserId: string) => API.put(`/messages/clear/${otherUserId}`);
 
 // Tribes
 export const fetchTribes = () => API.get('/tribes');
@@ -125,6 +128,7 @@ export const joinTribe = (id: string) => API.put(`/tribes/${id}/join`);
 export const fetchTribeMessages = (id: string) => API.get(`/tribes/${id}/messages`);
 export const sendTribeMessage = (id: string, messageData: any) => API.post(`/tribes/${id}/messages`, messageData);
 export const deleteTribeMessage = (tribeId: string, messageId: string) => API.delete(`/tribes/${tribeId}/messages/${messageId}`);
+export const deleteTribeMessageForMe = (tribeId: string, messageId: string) => API.put(`/tribes/${tribeId}/messages/${messageId}/delete-for-me`);
 export const kickMember = (id: string, userId: string) => API.put(`/tribes/${id}/kick/${userId}`);
 
 // AI Chat

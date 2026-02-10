@@ -151,7 +151,7 @@ router.get('/conversations', protect, async (req, res) => {
         const userId = new mongoose.Types.ObjectId(req.user.id);
 
         const messages = await Message.aggregate([
-            { $match: { $or: [{ sender: userId }, { receiver: userId }] } },
+            { $match: { $or: [{ sender: userId }, { receiver: userId }], deletedFor: { $ne: userId } } },
             { $sort: { createdAt: -1 } },
             {
                 $group: {
@@ -213,7 +213,7 @@ router.get('/conversations', protect, async (req, res) => {
 // @desc    Send a message to a user
 router.post('/send/:receiverId', protect, async (req, res) => {
     try {
-        const { message, imageUrl, attachment } = req.body;
+        const { message, imageUrl, attachment, replyTo } = req.body;
         const { receiverId } = req.params;
         const senderId = req.user._id;
 
@@ -253,7 +253,8 @@ router.post('/send/:receiverId', protect, async (req, res) => {
             attachmentUrl,
             attachmentType,
             attachmentName,
-            attachmentSize
+            attachmentSize,
+            replyTo: replyTo || null
         });
 
         await newMessage.save();
@@ -340,6 +341,7 @@ router.get('/:userToChatId', protect, async (req, res) => {
                 { sender: senderId, receiver: userToChatId },
                 { sender: userToChatId, receiver: senderId },
             ],
+            deletedFor: { $ne: senderId },
         };
         if (before) {
             query.createdAt = { $lt: before };
@@ -354,6 +356,83 @@ router.get('/:userToChatId', protect, async (req, res) => {
     } catch (error) {
         console.error("Error in getMessages controller: ", error.message);
         res.status(500).json({ error: "Internal server error" });
+    }
+});
+
+// @route   PUT /api/messages/:messageId/delete-for-me
+// @desc    Hide a message for the current user
+router.put('/:messageId/delete-for-me', protect, async (req, res) => {
+    try {
+        const { messageId } = req.params;
+        const userId = req.user._id;
+        const message = await Message.findById(messageId);
+        if (!message) {
+            return res.status(404).json({ message: 'Message not found' });
+        }
+        const isParticipant = message.sender.toString() === userId.toString() || message.receiver.toString() === userId.toString();
+        if (!isParticipant) {
+            return res.status(403).json({ message: 'Not authorized to modify this message' });
+        }
+        message.deletedFor = Array.from(new Set([...(message.deletedFor || []), userId]));
+        await message.save();
+        res.status(200).json({ ok: true, messageId });
+    } catch (error) {
+        console.error('Error deleting message for user:', error.message);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// @route   DELETE /api/messages/:messageId
+// @desc    Delete a message for everyone
+router.delete('/:messageId', protect, async (req, res) => {
+    try {
+        const { messageId } = req.params;
+        const userId = req.user._id;
+        const message = await Message.findById(messageId);
+        if (!message) {
+            return res.status(404).json({ message: 'Message not found' });
+        }
+        const isSender = message.sender.toString() === userId.toString();
+        if (!isSender && !req.user?.isAdmin) {
+            return res.status(403).json({ message: 'Not authorized to delete this message' });
+        }
+        const senderId = message.sender.toString();
+        const receiverId = message.receiver.toString();
+        await message.deleteOne();
+
+        if (req.io) {
+            const roomName = `dm-${[senderId, receiverId].sort().join('-')}`;
+            req.io.to(roomName).emit('messageDeleted', {
+                messageId,
+                senderId,
+                receiverId
+            });
+        }
+
+        res.status(200).json({ ok: true, messageId });
+    } catch (error) {
+        console.error('Error deleting message:', error.message);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// @route   PUT /api/messages/clear/:otherUserId
+// @desc    Clear a conversation for the current user
+router.put('/clear/:otherUserId', protect, async (req, res) => {
+    try {
+        const { otherUserId } = req.params;
+        const userId = req.user._id;
+        const query = {
+            $or: [
+                { sender: userId, receiver: otherUserId },
+                { sender: otherUserId, receiver: userId }
+            ]
+        };
+        const result = await Message.updateMany(query, { $addToSet: { deletedFor: userId } });
+        res.status(200).json({ ok: true, modified: result.modifiedCount });
+    } catch (error) {
+        console.error('Error clearing conversation:', error.message);
+        res.status(500).json({ error: 'Internal server error' });
     }
 });
 

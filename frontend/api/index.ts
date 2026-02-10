@@ -218,6 +218,15 @@ export const fetchMessages = async (otherUserId: string, params?: { limit?: numb
 export const sendMessage = (receiverId: string, messageData: any, config?: { onUploadProgress?: (event: any) => void }) =>
   API.post(`/messages/send/${receiverId}`, messageData, config);
 
+export const deleteMessage = (messageId: string) =>
+  API.delete(`/messages/${messageId}`);
+
+export const deleteMessageForMe = (messageId: string) =>
+  API.put(`/messages/${messageId}/delete-for-me`);
+
+export const clearConversation = (otherUserId: string) =>
+  API.put(`/messages/clear/${otherUserId}`);
+
 /* ───────────── TRIBES ───────────── */
 export const fetchTribes = async () => {
   const res = await API.get('/tribes');
@@ -290,6 +299,9 @@ export const sendTribeMessage = async (id: string, messageData: any, config?: { 
 
 export const deleteTribeMessage = (tribeId: string, messageId: string) =>
   API.delete(`/tribes/${tribeId}/messages/${messageId}`);
+
+export const deleteTribeMessageForMe = (tribeId: string, messageId: string) =>
+  API.put(`/tribes/${tribeId}/messages/${messageId}/delete-for-me`);
 
 /* ───────────── AI CHAT ───────────── */
 export const generateAiChat = (promptData: { prompt: string }) =>

@@ -225,6 +225,8 @@ const Sidebar: React.FC<SidebarProps> = ({ activeItem, onSelectItem, currentUser
     </button>
   );
 
+  const shouldHideBottomNav = activeItem === 'TribeDetail' || activeItem === 'Messages';
+
   return (
     <>
       {/* Top Header */}
@@ -272,11 +274,13 @@ const Sidebar: React.FC<SidebarProps> = ({ activeItem, onSelectItem, currentUser
       </header>
 
       {/* Mobile Bottom Nav */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-surface border-t border-border flex justify-around items-center h-16 z-50">
-        {mobileNavItems.map(item => (
-          <MobileNavButton key={item.name} item={item} />
-        ))}
-      </nav>
+      {!shouldHideBottomNav && (
+        <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-surface border-t border-border flex justify-around items-center h-16 z-50">
+          {mobileNavItems.map(item => (
+            <MobileNavButton key={item.name} item={item} />
+          ))}
+        </nav>
+      )}
     </>
   );
 };

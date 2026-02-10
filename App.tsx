@@ -599,10 +599,10 @@ const App: React.FC = () => {
         }
     };
 
-    const handleSendTribeMessage = async (tribeId: string, text: string, imageUrl?: string) => {
+    const handleSendTribeMessage = async (tribeId: string, text: string, imageUrl?: string, replyTo?: string | null) => {
         if (!currentUser || !viewedTribe) return;
         try {
-            await api.sendTribeMessage(tribeId, { text, imageUrl });
+            await api.sendTribeMessage(tribeId, { text, imageUrl, replyTo: replyTo || null });
         } catch (error) {
             console.error("Failed to send tribe message:", error);
         }
@@ -617,6 +617,16 @@ const App: React.FC = () => {
             console.error("Failed to delete tribe message", error);
             toast.error("Could not delete message.");
             if (viewedTribe) setViewedTribe(prev => prev ? { ...prev, messages: originalMessages } : null);
+        }
+    }
+
+    const handleDeleteTribeMessageForMe = async (tribeId: string, messageId: string) => {
+        if (viewedTribe) setViewedTribe(prev => prev ? { ...prev, messages: prev.messages.filter(m => m.id !== messageId) } : null);
+        try {
+            await api.deleteTribeMessageForMe(tribeId, messageId);
+        } catch (error) {
+            console.error("Failed to delete tribe message for me", error);
+            toast.error("Could not delete message.");
         }
     }
 
@@ -762,12 +772,12 @@ const App: React.FC = () => {
             case 'Discover':
                 return <DiscoverPage posts={visiblePosts} users={visibleUsers} tribes={tribes} currentUser={currentUser} onLikePost={handleLikePost} onCommentPost={handleCommentPost} onDeletePost={handleDeletePost} onDeleteComment={handleDeleteComment} onToggleFollow={handleToggleFollow} onViewProfile={handleViewProfile} onViewTribe={handleViewTribe} onJoinToggle={handleJoinToggle} onEditTribe={(tribe) => setEditingTribe(tribe)} onSharePost={handleSharePost} onLoadMore={fetchAllPostsForDiscover} />;
             case 'Messages':
-                return <ChatPage currentUser={currentUser} allUsers={visibleUsers} chukUser={CHUK_AI_USER} initialTargetUser={chatTarget} onViewProfile={handleViewProfile} onSharePost={handleSharePost} />;
+                return <ChatPage currentUser={currentUser} allUsers={visibleUsers} chukUser={CHUK_AI_USER} initialTargetUser={chatTarget} onViewProfile={handleViewProfile} onSharePost={handleSharePost} onToggleBlock={handleToggleBlock} />;
             case 'Tribes':
                 return <TribesPage tribes={tribes} currentUser={currentUser} onJoinToggle={handleJoinToggle} onCreateTribe={handleCreateTribe} onViewTribe={handleViewTribe} onEditTribe={(tribe) => setEditingTribe(tribe)} />;
             case 'TribeDetail':
                 if (!viewedTribe) return <div className="text-center p-8">Tribe not found. Go back to discover more tribes.</div>;
-                return <TribeDetailPage tribe={viewedTribe} currentUser={currentUser} userMap={userMap} onSendMessage={handleSendTribeMessage} onDeleteMessage={handleDeleteTribeMessage} onDeleteTribe={handleDeleteTribe} onBack={() => setActiveNavItem('Tribes')} onViewProfile={handleViewProfile} onEditTribe={(tribe) => setEditingTribe(tribe)} onJoinToggle={handleJoinToggle} onKickMember={handleKickMember} />;
+                return <TribeDetailPage tribe={viewedTribe} currentUser={currentUser} userMap={userMap} onSendMessage={handleSendTribeMessage} onDeleteMessage={handleDeleteTribeMessage} onDeleteMessageForMe={handleDeleteTribeMessageForMe} onDeleteTribe={handleDeleteTribe} onBack={() => setActiveNavItem('Tribes')} onViewProfile={handleViewProfile} onEditTribe={(tribe) => setEditingTribe(tribe)} onJoinToggle={handleJoinToggle} onKickMember={handleKickMember} />;
             case 'Notifications':
                 return <NotificationsPage notifications={notifications} allTribes={tribes} onViewProfile={handleViewProfile} onViewMessage={handleStartConversation} onViewPost={handleViewPost} onViewTribe={handleViewTribe} onViewStory={handleViewUserStories} />;
             case 'Profile':
