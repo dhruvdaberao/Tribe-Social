@@ -174,7 +174,10 @@ const MainLayout: React.FC = () => {
 
     // Render Helpers
     const containerClass = isFullHeightPage
-        ? `h-[calc(var(--dvh,1vh)*100-${(activeNavItem === 'Messages' && !isChatOpen ? '8rem' : '4rem')})] md:h-[calc(var(--dvh,1vh)*100-4rem)] ${isChatPage ? 'overflow-hidden' : 'overflow-y-auto no-scrollbar'}`
+        ? `${isChatPage
+            ? 'h-[calc(var(--vvh,var(--dvh,1vh)*100))] overflow-hidden'
+            : `h-[calc(var(--dvh,1vh)*100-${(activeNavItem === 'Messages' && !isChatOpen ? '8rem' : '4rem')})] md:h-[calc(var(--dvh,1vh)*100-4rem)] overflow-y-auto no-scrollbar`
+        }`
         : isWidePage ? 'max-w-5xl mx-auto px-4 md:px-6 pt-6 pb-24 md:pb-8'
             : 'max-w-2xl mx-auto px-4 md:px-6 pt-6 pb-24 md:pb-8';
 
