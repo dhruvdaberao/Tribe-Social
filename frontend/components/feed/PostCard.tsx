@@ -940,29 +940,29 @@ const PostCard: React.FC<PostCardProps> = (props) => {
             <span className="cursor-pointer hover:underline" onClick={() => setShowComments(prev => !prev)}>{post.commentsCount != null ? post.commentsCount : visibleComments.length} Comments</span>
           </div>
         </div>
-        <div className="flex justify-around items-center p-2 text-secondary font-semibold">
+        <div className="flex justify-between items-center p-2 text-secondary font-semibold">
           <button
             onClick={handleLikeClick}
             onAnimationEnd={() => setIsAnimating(false)}
-            className={`flex items-center space-x-2 px-6 py-2 rounded-xl w-full justify-center transition-all duration-200 active:scale-95 ${isLiked ? 'text-accent bg-accent/5' : 'text-secondary hover:bg-background hover:text-primary'
+            className={`flex-1 flex items-center space-x-2 px-2 md:px-6 py-2 rounded-xl justify-center transition-all duration-200 active:scale-95 ${isLiked ? 'text-accent bg-accent/5' : 'text-secondary hover:bg-background hover:text-primary'
               } ${isAnimating ? 'animate-pop' : ''}`}
           >
             <LikeIcon filled={isLiked} />
-            <span>{isLiked ? 'Liked' : 'Like'}</span>
+            <span className="text-sm md:text-base">{isLiked ? 'Liked' : 'Like'}</span>
           </button>
           <button
             onClick={() => setShowComments(!showComments)}
-            className={`flex items-center space-x-2 px-6 py-2 rounded-xl w-full justify-center transition-all duration-200 active:scale-95 ${showComments ? 'bg-background text-primary' : 'text-secondary hover:bg-background hover:text-primary'}`}
+            className={`flex-1 flex items-center space-x-2 px-2 md:px-6 py-2 rounded-xl justify-center transition-all duration-200 active:scale-95 ${showComments ? 'bg-background text-primary' : 'text-secondary hover:bg-background hover:text-primary'}`}
           >
             <CommentIcon />
-            <span>Comment</span>
+            <span className="text-sm md:text-base">Comment</span>
           </button>
           <button
             onClick={() => setIsShareModalOpen(true)}
-            className="flex items-center space-x-2 px-6 py-2 rounded-xl hover:bg-background hover:text-primary w-full justify-center transition-all duration-200 active:scale-95 text-secondary"
+            className="flex-1 flex items-center space-x-2 px-2 md:px-6 py-2 rounded-xl hover:bg-background hover:text-primary justify-center transition-all duration-200 active:scale-95 text-secondary"
           >
             <ShareIcon />
-            <span>Share</span>
+            <span className="text-sm md:text-base">Share</span>
           </button>
         </div>
 
