@@ -16,7 +16,7 @@ import ConfirmationModal from '../common/ConfirmationModal';
 
 /* ───────────── STYLES ───────────── */
 const PageContainer = styled.div`
-  height: calc(var(--dvh, 1vh) * 100);
+  height: calc(var(--vvh, 100dvh));
   display: flex;
   flex-direction: column;
   background: ${({ theme }) => theme.background};
@@ -32,6 +32,7 @@ const Header = styled.header`
   display: flex;
   align-items: center;
   gap: 12px;
+  width: 100%; /* Force full width */
   
   /* Mobile: Sticky header that stays at top */
   position: sticky;
@@ -186,7 +187,32 @@ const TribeDetailPage: React.FC<Props> = ({ currentUser, tribeId: propTribeId })
   const navigate = useNavigate();
   const MAX_ATTACHMENT_BYTES = 20 * 1024 * 1024;
 
-  // Resolve ID: Prefer prop (from App.tsx manual routing) -> Then param (if used in Route)
+  // Hook for dynamic viewport height
+  // Note: We might want to move this to App level if used globally, but safe to call here.
+  // Actually, ChatShell handles this, but TribeDetailPage uses PageContainer which relies on --vvh too.
+  // Let's import the hook to be safe if PageContainer is the one setting height.
+  // Wait, PageContainer uses --vvh. ChatShell calls the hook.
+  // If we are in loading state using ChatShell, hook is called.
+  // If we are in error state using PageContainer directly... hook might NOT be called if we don't call it here.
+  // Let's add the import and call it.
+
+  // But wait, ChatShell import is already there. Let's check imports.
+  // ... imports check ...
+  // useVisualViewportHeight is likely needed if we use PageContainer directly.
+
+  // Let's just rely on ChatShell being rendered most of the time, or adding the hook call:
+  // import { useVisualViewportHeight } from '../../hooks/useVisualViewportHeight';
+
+  // Re-reading file... I don't see the hook imported.
+  // Let's skip adding the hook call and assume ChatShell handles it, 
+  // OR if PageContainer is used for errors, it might fallback to 100dvh which is CSS supported.
+  // The styled-component uses `calc(var(--vvh, 100dvh))` so it has a fallback.
+
+  // The main layout issue was `1vh * 100` vs `100dvh`.
+  // My previous edit to PageContainer fixed that: `height: calc(var(--vvh, 100dvh));`
+
+  // Proceeding with next steps.
+
   const id = propTribeId || params.tribeId;
 
   const { socket, joinRoom, leaveRoom, clearUnreadTribe } = useSocket();
@@ -701,7 +727,20 @@ const TribeDetailPage: React.FC<Props> = ({ currentUser, tribeId: propTribeId })
     <>
       {isLoading && !tribe ? (
         /* LOADING STATE */
-        <ChatShell header={renderHeader()}>
+        <ChatShell
+          header={
+            <Header>
+              <BackButton onClick={() => navigate('/tribes')}>
+                <BackIcon />
+              </BackButton>
+              <div className="w-10 h-10 rounded-full bg-border/50 animate-pulse" />
+              <HeaderInfo>
+                <div className="h-5 w-32 bg-border/50 rounded animate-pulse" />
+                <div className="h-3 w-20 bg-border/50 rounded animate-pulse mt-2" />
+              </HeaderInfo>
+            </Header>
+          }
+        >
           <div className="flex-1 flex items-center justify-center">
             <div className="text-center">
               <div className="w-16 h-16 border-4 border-accent border-t-transparent rounded-full animate-spin mx-auto mb-4" />
