@@ -388,12 +388,12 @@ export const MessageArea: React.FC<MessageAreaProps> = ({
       <ChatShell
         className="flex-1"
         header={(
-          <div className="flex items-center px-4 py-3 border-b border-border flex-shrink-0 bg-surface/95 backdrop-blur-md z-50 sticky top-0 shadow-sm transition-all duration-200">
+          <div className="flex items-center px-4 py-3 border-b border-border flex-shrink-0 bg-surface/95 backdrop-blur-md z-50 sticky top-0 shadow-sm transition-all duration-200 w-full">
             <button onClick={onBack} className="md:hidden p-2 -ml-2 mr-2 text-primary hover:bg-background rounded-full transition-colors">
               <BackIcon />
             </button>
             <div
-              className="flex items-center cursor-pointer overflow-hidden group"
+              className="flex items-center cursor-pointer overflow-hidden group flex-1"
               onClick={() => onViewProfile(otherParticipant)}
             >
               {otherParticipant.id === 'chuk-ai' ? (

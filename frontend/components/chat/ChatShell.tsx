@@ -42,10 +42,10 @@ const ChatShell: React.FC<ChatShellProps> = ({
 
   return (
     <div
-      className={`fixed inset-0 z-[100] flex flex-col bg-background overflow-hidden h-[var(--vvh,100vh)] md:relative md:inset-auto md:z-0 md:h-full ${className}`}
+      className={`fixed inset-0 z-[100] flex flex-col bg-background overflow-hidden h-[var(--vvh,100dvh)] md:relative md:inset-auto md:z-0 md:h-full ${className}`}
     >
       {header ? (
-        <div className="flex-none bg-surface border-b border-border z-50">
+        <div className="flex-none border-b border-border z-50">
           {header}
         </div>
       ) : null}
@@ -59,7 +59,7 @@ const ChatShell: React.FC<ChatShellProps> = ({
       </div>
 
       {composer ? (
-        <div className="flex-none bg-background border-t border-border pb-[env(safe-area-inset-bottom)] z-50">
+        <div className="flex-none bg-background border-t border-border z-50 pb-[calc(env(safe-area-inset-bottom,20px))] md:pb-0">
           {composer}
         </div>
       ) : null}

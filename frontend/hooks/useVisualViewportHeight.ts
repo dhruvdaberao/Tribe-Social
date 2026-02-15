@@ -24,4 +24,11 @@ export const useVisualViewportHeight = () => {
       window.visualViewport?.removeEventListener('scroll', setViewportHeight);
     };
   }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    // Force update on mount
+    const height = window.visualViewport?.height ?? window.innerHeight;
+    document.documentElement.style.setProperty('--vvh', `${height}px`);
+  }, []);
 };
