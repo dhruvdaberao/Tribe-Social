@@ -131,6 +131,7 @@ import { useTheme } from '../../contexts/ThemeContext';
 import { User } from '../../types';
 import type { NavItem } from '../../App';
 import UserAvatar from '../common/UserAvatar';
+import Skeleton from '../common/Skeleton';
 import { Home, Compass, MessageCircle, Users, Heart, Sun, Moon } from 'lucide-react';
 
 interface SidebarProps {
@@ -177,9 +178,9 @@ const Sidebar: React.FC<SidebarProps> = ({ activeItem, onSelectItem, currentUser
       key={item.name}
       type="button"
       onClick={() => onSelectItem(item.name)}
-      className={`relative px-4 py-2 rounded-lg text-sm font-semibold transition-colors ${activeItem === item.name
-        ? 'text-primary bg-surface shadow-sm'
-        : 'text-accent-text/80 hover:bg-black/10'
+      className={`relative px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200 ${activeItem === item.name
+        ? 'text-primary bg-surface shadow-md ring-1 ring-black/5 transform scale-[1.02]'
+        : 'text-accent-text/80 hover:bg-white/10 hover:text-accent-text'
         }`}
     >
       {item.name}
@@ -234,25 +235,36 @@ const Sidebar: React.FC<SidebarProps> = ({ activeItem, onSelectItem, currentUser
         <div className="flex items-center space-x-2">
           <button
             onClick={toggleTheme}
-            className="text-accent-text/80 hover:text-accent-text hover:bg-black/10 rounded-full p-2 flex-shrink-0"
+            className="text-accent-text/80 hover:text-accent-text hover:bg-black/10 rounded-full p-2 flex-shrink-0 transition-colors"
             aria-label="Toggle theme"
           >
-            {theme === 'light' ? <MoonIcon /> : <SunIcon />}
+            {theme === 'dark' ? <SunIcon /> : <MoonIcon />}
           </button>
           <button
             onClick={() => onSelectItem('Psyduck')}
-            className="text-accent-text/80 hover:text-accent-text hover:bg-black/10 rounded-full p-1 flex-shrink-0"
+            className="text-accent-text/80 hover:text-accent-text hover:bg-black/10 rounded-full p-1 flex-shrink-0 transition-colors"
             aria-label="Open Psyduck AI Assistant"
           >
             <PsyduckIcon />
           </button>
-          <button onClick={() => onSelectItem('Profile')} aria-label="View Profile" className="flex items-center space-x-3 rounded-full hover:bg-black/10 p-1 transition-colors">
-            <UserAvatar user={currentUser} className="w-10 h-10 flex-shrink-0" />
-            <div className="hidden lg:block text-left">
-              <p className="font-semibold text-primary text-sm leading-tight truncate">{currentUser?.name}</p>
-              <p className="text-secondary text-xs leading-tight truncate">@{currentUser?.username}</p>
+
+          {currentUser ? (
+            <button onClick={() => onSelectItem('Profile')} aria-label="View Profile" className="flex items-center space-x-3 rounded-full hover:bg-black/10 p-1 transition-colors group">
+              <UserAvatar user={currentUser} className="w-10 h-10 flex-shrink-0 ring-2 ring-transparent group-hover:ring-accent/50 transition-all" />
+              <div className="hidden lg:block text-left">
+                <p className="font-semibold text-primary text-sm leading-tight truncate">{currentUser.name}</p>
+                <p className="text-secondary text-xs leading-tight truncate">@{currentUser.username}</p>
+              </div>
+            </button>
+          ) : (
+            <div className="flex items-center space-x-3 p-1">
+              <Skeleton variant="circular" width={40} height={40} />
+              <div className="hidden lg:block space-y-1">
+                <Skeleton variant="text" width={80} />
+                <Skeleton variant="text" width={50} />
+              </div>
             </div>
-          </button>
+          )}
         </div>
       </header>
 

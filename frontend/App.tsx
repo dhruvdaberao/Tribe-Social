@@ -325,6 +325,7 @@ const MainLayout: React.FC = () => {
                                         currentUser={currentUser}
                                         allUsers={visibleUsers}
                                         allTribes={tribes}
+                                        isLoading={isFetching}
                                         onLikePost={handleLikePost}
                                         onCommentPost={handleCommentPost}
                                         onDeletePost={handleDeletePost}

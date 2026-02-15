@@ -388,25 +388,25 @@ export const MessageArea: React.FC<MessageAreaProps> = ({
       <ChatShell
         className="flex-1"
         header={(
-          <div className="flex items-center p-3 border-b border-border flex-shrink-0 bg-surface z-50">
-            <button onClick={onBack} className="md:hidden p-2 mr-2 text-primary">
+          <div className="flex items-center px-4 py-3 border-b border-border flex-shrink-0 bg-surface/95 backdrop-blur-md z-50 sticky top-0 shadow-sm transition-all duration-200">
+            <button onClick={onBack} className="md:hidden p-2 -ml-2 mr-2 text-primary hover:bg-background rounded-full transition-colors">
               <BackIcon />
             </button>
             <div
-              className="flex items-center cursor-pointer overflow-hidden"
+              className="flex items-center cursor-pointer overflow-hidden group"
               onClick={() => onViewProfile(otherParticipant)}
             >
               {otherParticipant.id === 'chuk-ai' ? (
-                <img src="/chuk-ai.png" alt="Chuk AI" className="h-10 w-auto mr-3 flex-shrink-0 object-contain" />
+                <img src="/chuk-ai.png" alt="Chuk AI" className="h-10 w-auto mr-3 flex-shrink-0 object-contain drop-shadow-sm" />
               ) : (
-                <UserAvatar user={otherParticipant} className="w-10 h-10 rounded-full mr-3 flex-shrink-0" isOnline={isOtherUserOnline} />
+                <UserAvatar user={otherParticipant} className="w-10 h-10 rounded-full mr-3 flex-shrink-0 ring-2 ring-transparent group-hover:ring-accent/20 transition-all duration-300" isOnline={isOtherUserOnline} />
               )}
-              <div className="min-w-0">
-                <h2 className="text-lg font-bold text-primary leading-tight hover:underline truncate">{otherParticipant.name}</h2>
+              <div className="min-w-0 flex flex-col justify-center">
+                <h2 className="text-base font-bold text-primary leading-tight group-hover:text-accent transition-colors truncate">{otherParticipant.name}</h2>
                 {isTyping ? (
-                  <p className="text-sm text-accent leading-tight truncate italic">typing...</p>
+                  <p className="text-xs text-accent font-medium animate-pulse">typing...</p>
                 ) : (
-                  <p className="text-sm text-secondary leading-tight truncate">@{otherParticipant.username}</p>
+                  <p className="text-xs text-secondary truncate font-medium">@{otherParticipant.username}</p>
                 )}
               </div>
               {isLoading && messages.length === 0 && (
@@ -419,18 +419,18 @@ export const MessageArea: React.FC<MessageAreaProps> = ({
         onMessagesScroll={handleScroll}
         messagesClassName="p-4"
         composer={(
-          <div className="px-3 py-2 pb-0">
+          <div className="px-4 py-3 bg-background/95 backdrop-blur-sm border-t border-border z-20">
             {replyToMessage && (
-              <div className="mb-3 flex items-center justify-between rounded-lg border border-border bg-surface px-3 py-2 text-xs text-secondary">
-                <div className="min-w-0">
+              <div className="mb-3 flex items-center justify-between rounded-2xl border border-border bg-surface px-4 py-2 text-xs text-secondary shadow-sm">
+                <div className="min-w-0 border-l-2 border-accent pl-2">
                   <p className="font-semibold text-primary">
                     Replying to {replyToMessage.senderId === currentUser.id ? 'You' : userMap.get(replyToMessage.senderId)?.name || 'User'}
                   </p>
-                  <p className="truncate">{replyToMessage.text}</p>
+                  <p className="truncate opacity-80">{replyToMessage.text}</p>
                 </div>
                 <button
                   type="button"
-                  className="ml-3 text-secondary hover:text-primary"
+                  className="ml-3 p-1 rounded-full hover:bg-background text-secondary hover:text-primary transition-colors"
                   onClick={() => setReplyToMessage(null)}
                 >
                   &times;

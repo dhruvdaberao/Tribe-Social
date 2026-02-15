@@ -25,9 +25,10 @@ const PageContainer = styled.div`
 `;
 
 const Header = styled.header`
-  padding: 14px;
-  background: ${({ theme }) => theme.cardBackground};
-  /* border-bottom removed for clean look */
+  padding: 12px 16px;
+  background: ${({ theme }) => theme.cardBackground}F2; /* Opacity for blur effect */
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid ${({ theme }) => theme.border};
   display: flex;
   align-items: center;
   gap: 12px;
@@ -36,14 +37,15 @@ const Header = styled.header`
   position: sticky;
   top: 0;
   z-index: 100;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
   
   /* Safe area support for notched devices */
-  padding-top: max(14px, env(safe-area-inset-top));
+  padding-top: max(12px, env(safe-area-inset-top));
   
   @media (max-width: 640px) {
-    padding: 10px;
-    padding-top: max(10px, env(safe-area-inset-top));
-    gap: 8px;
+    padding: 12px;
+    padding-top: max(12px, env(safe-area-inset-top));
+    gap: 10px;
   }
 `;
 
@@ -51,7 +53,14 @@ const BackButton = styled.button`
   background: none;
   border: none;
   cursor: pointer;
-  padding: 6px;
+  padding: 8px;
+  margin-left: -8px;
+  border-radius: 50%;
+  transition: background 0.2s;
+  
+  &:hover {
+    background: ${({ theme }) => theme.hover};
+  }
 `;
 
 const Avatar = styled.div<{ $src?: string | null }>`

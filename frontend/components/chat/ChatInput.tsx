@@ -33,7 +33,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
                 <button
                     type="button"
                     onClick={() => fileInputRef.current?.click()}
-                    className="h-11 w-11 rounded-lg border border-border bg-surface text-primary flex items-center justify-center hover:bg-background transition-colors"
+                    className="h-10 w-10 rounded-full text-secondary flex items-center justify-center hover:bg-surface hover:text-primary transition-all duration-200"
                     aria-label="Attach media"
                     disabled={isUploading}
                 >
@@ -59,16 +59,16 @@ const ChatInput: React.FC<ChatInputProps> = ({
                 value={value}
                 onChange={onChange}
                 placeholder={placeholder}
-                className="flex-1 bg-surface border border-border rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-accent text-primary min-w-0"
+                className="flex-1 bg-surface border-none ring-1 ring-border rounded-full px-5 py-2.5 focus:outline-none focus:ring-2 focus:ring-accent text-primary min-w-0 shadow-sm transition-shadow duration-200"
                 style={{ fontSize: '16px' }} // iOS zoom prevention (from TribeMessageArea, good to keep)
             />
             <button
                 type="submit"
-                className="bg-accent text-accent-text rounded-lg w-12 h-11 flex-shrink-0 flex items-center justify-center hover:bg-accent-hover transition-colors disabled:opacity-50"
+                className={`rounded-full w-10 h-10 flex-shrink-0 flex items-center justify-center transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed ${!value.trim() ? 'bg-surface text-secondary' : 'bg-accent text-accent-text hover:bg-accent/90 shadow-md hover:shadow-lg hover:scale-105 active:scale-95'}`}
                 disabled={disabled || isSending || isUploading}
             >
                 {isSending ? (
-                    <div className="w-5 h-5 border-2 border-accent-text border-t-transparent rounded-full animate-spin"></div>
+                    <div className="w-5 h-5 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
                 ) : (
                     <SendIcon />
                 )}

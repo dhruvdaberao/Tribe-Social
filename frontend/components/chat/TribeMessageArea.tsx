@@ -139,18 +139,18 @@ const TribeMessageArea: React.FC<TribeMessageAreaProps> = ({
         onMessagesScroll={handleScroll}
         messagesClassName="w-full px-4 py-3 space-y-4"
         composer={(
-          <div className="px-3 py-2 pb-0">
+          <div className="px-4 py-3 bg-background/95 backdrop-blur-sm border-t border-border z-20">
             {replyToMessage && (
-              <div className="mb-3 flex items-center justify-between rounded-lg border border-border bg-surface px-3 py-2 text-xs text-secondary">
-                <div className="min-w-0">
+              <div className="mb-3 flex items-center justify-between rounded-2xl border border-border bg-surface px-4 py-2 text-xs text-secondary shadow-sm">
+                <div className="min-w-0 border-l-2 border-accent pl-2">
                   <p className="font-semibold text-primary">
                     Replying to {replyToMessage.senderId === currentUser.id ? 'You' : replyToMessage.sender?.name || 'User'}
                   </p>
-                  <p className="truncate">{replyToMessage.text}</p>
+                  <p className="truncate opacity-80">{replyToMessage.text}</p>
                 </div>
                 <button
                   type="button"
-                  className="ml-3 text-secondary hover:text-primary"
+                  className="ml-3 p-1 rounded-full hover:bg-background text-secondary hover:text-primary transition-colors"
                   onClick={() => setReplyToMessage(null)}
                 >
                   &times;

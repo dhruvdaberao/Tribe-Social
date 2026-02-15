@@ -788,25 +788,25 @@ const PostCard: React.FC<PostCardProps> = (props) => {
 
   return (
     <>
-      <div className={`bg-surface border-border rounded-2xl shadow-md ${onModalClose ? '' : 'border mb-6'}`}>
+      <div className="bg-surface border border-border rounded-2xl shadow-sm hover:shadow-md transition-shadow duration-300 mb-6">
         {/* Post Header */}
         <div className="flex items-center p-5">
           {onModalClose && (
-            <button onClick={onModalClose} className="p-2 mr-2 -ml-2 text-primary rounded-full hover:bg-background">
+            <button onClick={onModalClose} className="p-2 mr-2 -ml-2 text-primary rounded-full hover:bg-background transition-colors">
               <BackIcon />
             </button>
           )}
-          <div className="w-12 h-12 rounded-full cursor-pointer" onClick={() => onViewProfile(post.author)}>
+          <div className="w-12 h-12 rounded-full cursor-pointer overflow-hidden ring-2 ring-transparent hover:ring-accent/50 transition-all" onClick={() => onViewProfile(post.author)}>
             <UserAvatar user={post.author} className="w-full h-full" />
           </div>
           <div className="ml-4">
             <p
-              className="font-bold text-primary cursor-pointer hover:underline"
+              className="font-bold text-primary cursor-pointer hover:underline text-lg leading-tight"
               onClick={() => onViewProfile(post.author)}
             >
               {post.author.name}
             </p>
-            <p className="text-sm text-secondary">{timeAgo(post.timestamp)}</p>
+            <p className="text-sm text-secondary font-medium">{timeAgo(post.timestamp)}</p>
           </div>
           <div className="ml-auto relative">
             <button
@@ -814,7 +814,7 @@ const PostCard: React.FC<PostCardProps> = (props) => {
               aria-haspopup="true"
               aria-expanded={optionsOpen}
               onClick={(e) => { e.stopPropagation(); setOptionsOpen(!optionsOpen); }}
-              className="text-secondary p-2 rounded-full hover:bg-background focus:outline-none focus:ring-2 focus:ring-accent"
+              className={`text-secondary p-2 rounded-full hover:bg-background focus:outline-none focus:ring-2 focus:ring-accent transition-all duration-200 ${optionsOpen ? 'bg-background text-primary' : ''}`}
             >
               <OptionsIcon />
             </button>
@@ -940,11 +940,11 @@ const PostCard: React.FC<PostCardProps> = (props) => {
             <span className="cursor-pointer hover:underline" onClick={() => setShowComments(prev => !prev)}>{post.commentsCount != null ? post.commentsCount : visibleComments.length} Comments</span>
           </div>
         </div>
-        <div className="flex justify-around items-center p-1 text-secondary font-semibold">
+        <div className="flex justify-around items-center p-2 text-secondary font-semibold">
           <button
             onClick={handleLikeClick}
             onAnimationEnd={() => setIsAnimating(false)}
-            className={`flex items-center space-x-2 p-2 rounded-lg w-full justify-center transition-colors ${isLiked ? 'text-accent hover:bg-accent/10' : 'text-secondary hover:bg-background'
+            className={`flex items-center space-x-2 px-6 py-2 rounded-xl w-full justify-center transition-all duration-200 active:scale-95 ${isLiked ? 'text-accent bg-accent/5' : 'text-secondary hover:bg-background hover:text-primary'
               } ${isAnimating ? 'animate-pop' : ''}`}
           >
             <LikeIcon filled={isLiked} />
@@ -952,14 +952,14 @@ const PostCard: React.FC<PostCardProps> = (props) => {
           </button>
           <button
             onClick={() => setShowComments(!showComments)}
-            className="flex items-center space-x-2 p-2 rounded-lg hover:bg-background w-full justify-center transition-colors"
+            className={`flex items-center space-x-2 px-6 py-2 rounded-xl w-full justify-center transition-all duration-200 active:scale-95 ${showComments ? 'bg-background text-primary' : 'text-secondary hover:bg-background hover:text-primary'}`}
           >
             <CommentIcon />
             <span>Comment</span>
           </button>
           <button
             onClick={() => setIsShareModalOpen(true)}
-            className="flex items-center space-x-2 p-2 rounded-lg hover:bg-background w-full justify-center transition-colors"
+            className="flex items-center space-x-2 px-6 py-2 rounded-xl hover:bg-background hover:text-primary w-full justify-center transition-all duration-200 active:scale-95 text-secondary"
           >
             <ShareIcon />
             <span>Share</span>

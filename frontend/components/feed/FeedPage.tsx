@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { Post, User, Tribe } from '../../types';
+import PostSkeleton from './PostSkeleton';
 import PostCard from './PostCard';
 
 interface FeedPageProps {
@@ -7,6 +8,7 @@ interface FeedPageProps {
   currentUser: User;
   allUsers: User[];
   allTribes: Tribe[];
+  isLoading?: boolean;
   onLikePost: (postId: string) => void;
   onCommentPost: (postId: string, text: string) => void;
   onDeletePost: (postId: string) => void;
@@ -21,7 +23,7 @@ interface FeedPageProps {
 }
 
 const FeedPage: React.FC<FeedPageProps> = (props) => {
-  const { posts, currentUser, allUsers, allTribes, onLikePost, onCommentPost, onDeletePost, onHidePost, onDeleteComment, onViewProfile, onSharePost, onReportPost, onVisitDiscover, onLoadMore, hasMore } = props;
+  const { posts, currentUser, allUsers, allTribes, isLoading, onLikePost, onCommentPost, onDeletePost, onHidePost, onDeleteComment, onViewProfile, onSharePost, onReportPost, onVisitDiscover, onLoadMore, hasMore } = props;
   const observerTarget = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -48,31 +50,39 @@ const FeedPage: React.FC<FeedPageProps> = (props) => {
   return (
     <div>
       <h1 className="text-[28px] font-bold text-primary mb-6 font-display leading-[1.2]">Home Feed</h1>
-      <div className="space-y-6">
-        {posts.map(post => (
-          <PostCard
-            key={post.id}
-            post={post}
-            currentUser={currentUser}
-            allUsers={allUsers}
-            allTribes={allTribes}
-            onLike={onLikePost}
-            onComment={onCommentPost}
-            onDeletePost={onDeletePost}
-            onHidePost={onHidePost}
-            onDeleteComment={onDeleteComment}
-            onViewProfile={onViewProfile}
-            onSharePost={onSharePost}
-            onReportPost={onReportPost}
-          />
-        ))}
-      </div>
+      {isLoading && posts.length === 0 ? (
+        <div className="space-y-6">
+          <PostSkeleton />
+          <PostSkeleton />
+          <PostSkeleton />
+        </div>
+      ) : (
+        <div className="space-y-6">
+          {posts.map(post => (
+            <PostCard
+              key={post.id}
+              post={post}
+              currentUser={currentUser}
+              allUsers={allUsers}
+              allTribes={allTribes}
+              onLike={onLikePost}
+              onComment={onCommentPost}
+              onDeletePost={onDeletePost}
+              onHidePost={onHidePost}
+              onDeleteComment={onDeleteComment}
+              onViewProfile={onViewProfile}
+              onSharePost={onSharePost}
+              onReportPost={onReportPost}
+            />
+          ))}
+        </div>
+      )}
 
       {hasMore ? (
         <div ref={observerTarget} className="py-8 flex justify-center w-full">
-          <img src="/duckload.gif" alt="Loading..." className="w-12 h-12 opacity-50" />
+          <PostSkeleton />
         </div>
-      ) : (
+      ) : posts.length > 0 ? (
         <div className="py-12 flex flex-col items-center justify-center text-center">
           <div className="bg-surface border border-border rounded-2xl p-8 max-w-sm w-full mx-4">
             <div className="w-16 h-16 bg-accent/10 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -95,7 +105,7 @@ const FeedPage: React.FC<FeedPageProps> = (props) => {
             </button>
           </div>
         </div>
-      )}
+      ) : null}
     </div>
   );
 };
