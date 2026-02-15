@@ -7,6 +7,7 @@ import * as api from '../../api';
 import { useSocket } from '../../contexts/SocketContext';
 import { useGlobalContent } from '../../contexts/GlobalContentContext';
 import TribeMessageArea from '../chat/TribeMessageArea';
+import ChatShell from '../chat/ChatShell'; // Added import
 import TribeMembersModal from './TribeMembersModal';
 import EditTribeModal from './EditTribeModal';
 import { Users, ArrowLeft, Edit2, LogIn, LogOut, Flame, X } from 'lucide-react';
@@ -418,9 +419,10 @@ const TribeDetailPage: React.FC<Props> = ({ currentUser, tribeId: propTribeId })
     };
   }, [socket, id, isMember, userMap, clearUnreadTribe]);
 
-  useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+  /* ───────────── REMOVED LEGACY SCROLL ───────────── */
+  // useEffect(() => {
+  //   bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+  // }, [messages]);
 
   /* ───────────── SEND MESSAGE ───────────── */
   const readFileAsDataUrl = (file: File) =>
@@ -647,82 +649,79 @@ const TribeDetailPage: React.FC<Props> = ({ currentUser, tribeId: propTribeId })
     );
   }
 
+  /* ───────────── RENDER HELPERS ───────────── */
+  const renderHeader = () => (
+    <Header>
+      <BackButton onClick={() => navigate('/tribes')}>
+        <BackIcon />
+      </BackButton>
+
+      <Avatar $src={tribe?.avatarUrl}>
+        {!tribe?.avatarUrl && <Users size={20} color="#D6B9A0" />}
+      </Avatar>
+
+      <HeaderInfo>
+        <h2>{tribe?.name || 'Loading...'}</h2>
+        {isLoading && !tribe && <HeaderLoader />}
+        <MemberCountBadge onClick={() => setIsMembersOpen(true)}>
+          <span>{tribe?.members?.length || 0} members</span>
+        </MemberCountBadge>
+      </HeaderInfo>
+
+      <HeaderActions>
+        <ActionButton onClick={() => setIsCampfireOpen(true)} aria-label="Open Campfire">
+          <Flame size={18} />
+        </ActionButton>
+        {currentUser && tribe?.owner === currentUser.id && (
+          <ActionButton onClick={() => setIsEditOpen(true)}>
+            <Edit2 size={18} />
+          </ActionButton>
+        )}
+
+        {currentUser && tribe && (
+          <ActionButton onClick={handleJoinToggle}>
+            {isMember ? <LogOut size={18} /> : <LogIn size={18} />}
+          </ActionButton>
+        )}
+      </HeaderActions>
+    </Header>
+  );
+
   /* ───────────── ALWAYS SHOW CHAT UI (NO LOADING SCREEN) ───────────── */
   return (
-    <PageContainer>
-      <Header>
-        <BackButton onClick={() => navigate('/tribes')}>
-          <BackIcon />
-        </BackButton>
-
-        <Avatar $src={tribe?.avatarUrl}>
-          {!tribe?.avatarUrl && <Users size={20} color="#D6B9A0" />}
-        </Avatar>
-
-        <HeaderInfo>
-          <h2>{tribe?.name || 'Loading...'}</h2>
-          {isLoading && !tribe && <HeaderLoader />}
-          <MemberCountBadge onClick={() => setIsMembersOpen(true)}>
-            <span>{tribe?.members?.length || 0} members</span>
-          </MemberCountBadge>
-        </HeaderInfo>
-
-        <HeaderActions>
-          <ActionButton onClick={() => setIsCampfireOpen(true)} aria-label="Open Campfire">
-            <Flame size={18} />
-          </ActionButton>
-          {currentUser && tribe?.owner === currentUser.id && (
-            <ActionButton onClick={() => setIsEditOpen(true)}>
-              <Edit2 size={18} />
-            </ActionButton>
-          )}
-
-          {currentUser && tribe && (
-            <ActionButton onClick={handleJoinToggle}>
-              {isMember ? <LogOut size={18} /> : <LogIn size={18} />}
-            </ActionButton>
-          )}
-        </HeaderActions>
-      </Header>
-
-      {/* MAIN CONTENT AREA */}
-      <div className="flex-1 min-h-0 relative">
-        {isLoading && !tribe ? (
-          /* LOADING STATE - MIMIC CHAT SHELL */
-          <div className="flex flex-col h-full bg-background overflow-hidden">
-            {/* No Header here, it's above in PageContainer */}
-            <div className="flex-1 flex items-center justify-center">
-              <div className="text-center">
-                <div className="w-16 h-16 border-4 border-accent border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-                <p className="text-secondary">Loading tribe...</p>
-              </div>
-            </div>
-            {/* Placeholder Input */}
-            <div className="flex-none bg-background border-t border-border px-3 py-2 pb-[env(safe-area-inset-bottom)]">
-              <div className="w-full h-11 bg-surface border border-border rounded-lg flex items-center px-4 opacity-50">
-                <span className="text-secondary text-sm">Loading...</span>
-              </div>
+    <>
+      {isLoading && !tribe ? (
+        /* LOADING STATE */
+        <ChatShell header={renderHeader()}>
+          <div className="flex-1 flex items-center justify-center">
+            <div className="text-center">
+              <div className="w-16 h-16 border-4 border-accent border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+              <p className="text-secondary">Loading tribe...</p>
             </div>
           </div>
-        ) : isMember && tribe ? (
-          <TribeMessageArea
-            tribe={tribe}
-            messages={messages}
-            isLoading={areMessagesLoading}
-            currentUser={currentUser!}
-            isSending={isSending}
-            isUploading={isUploading}
-            uploadProgress={uploadProgress}
-            hasMore={hasMoreMessages}
-            isLoadingMore={isLoadingMore}
-            onLoadMore={handleLoadMoreMessages}
-            onSendMessage={handleSend}
-            onDeleteMessage={handleDeleteMessage}
-            onDeleteMessageForMe={handleDeleteMessageForMe}
-          />
-        ) : (
-          /* JOIN PROMPT */
-          <div className="flex-1 flex flex-col items-center justify-center gap-4 p-8 text-center">
+        </ChatShell>
+      ) : isMember && tribe ? (
+        /* CHAT STATE */
+        <TribeMessageArea
+          tribe={tribe}
+          messages={messages}
+          isLoading={areMessagesLoading}
+          currentUser={currentUser!}
+          isSending={isSending}
+          isUploading={isUploading}
+          uploadProgress={uploadProgress}
+          hasMore={hasMoreMessages}
+          isLoadingMore={isLoadingMore}
+          onLoadMore={handleLoadMoreMessages}
+          onSendMessage={handleSend}
+          onDeleteMessage={handleDeleteMessage}
+          onDeleteMessageForMe={handleDeleteMessageForMe}
+          header={renderHeader()}
+        />
+      ) : (
+        /* JOIN PROMPT */
+        <ChatShell header={renderHeader()}>
+          <div className="flex-1 flex flex-col items-center justify-center gap-4 p-8 text-center min-h-0 overflow-y-auto">
             <div className="w-24 h-24 bg-surface rounded-full flex items-center justify-center mb-2">
               <Users size={48} className="text-secondary opacity-50" />
             </div>
@@ -735,10 +734,8 @@ const TribeDetailPage: React.FC<Props> = ({ currentUser, tribeId: propTribeId })
               Join Tribe
             </button>
           </div>
-        )}
-      </div>
-
-      <div ref={bottomRef} />
+        </ChatShell>
+      )}
 
       {isEditOpen && tribe && (
         <EditTribeModal
@@ -787,7 +784,7 @@ const TribeDetailPage: React.FC<Props> = ({ currentUser, tribeId: propTribeId })
         onClose={() => setIsLeaveConfirmOpen(false)}
         onConfirm={performJoinToggle}
       />
-    </PageContainer>
+    </>
   );
 };
 

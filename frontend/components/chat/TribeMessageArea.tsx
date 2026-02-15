@@ -20,6 +20,7 @@ interface TribeMessageAreaProps {
   onDeleteMessage: (messageId: string) => void;
   onDeleteMessageForMe: (messageId: string) => void;
   onViewProfile?: (user: User) => void;
+  header?: React.ReactNode; // Added header prop
 }
 
 const TribeMessageArea: React.FC<TribeMessageAreaProps> = ({
@@ -36,7 +37,8 @@ const TribeMessageArea: React.FC<TribeMessageAreaProps> = ({
   onSendMessage,
   onDeleteMessage,
   onDeleteMessageForMe,
-  onViewProfile
+  onViewProfile,
+  header // Destructure header
 }) => {
   const [inputText, setInputText] = useState('');
   const [replyToMessage, setReplyToMessage] = useState<TribeMessage | null>(null);
@@ -132,6 +134,7 @@ const TribeMessageArea: React.FC<TribeMessageAreaProps> = ({
     <>
       <ChatShell
         className="flex-1"
+        header={header} // Pass header to ChatShell
         messagesRef={scrollContainerRef}
         onMessagesScroll={handleScroll}
         messagesClassName="w-full px-4 py-3 space-y-4"
