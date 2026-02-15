@@ -34,9 +34,7 @@ const Header = styled.header`
   gap: 12px;
   width: 100%; /* Force full width */
   
-  /* Mobile: Sticky header that stays at top */
-  position: sticky;
-  top: 0;
+  /* Mobile: Header stays at top naturally in flex col */
   z-index: 100;
   box-shadow: 0 1px 2px rgba(0,0,0,0.05);
   

@@ -27,8 +27,19 @@ export const useVisualViewportHeight = () => {
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    // Force update on mount
-    const height = window.visualViewport?.height ?? window.innerHeight;
-    document.documentElement.style.setProperty('--vvh', `${height}px`);
+
+    const updateHeight = () => {
+      const height = window.visualViewport?.height ?? window.innerHeight;
+      document.documentElement.style.setProperty('--vvh', `${height}px`);
+    };
+
+    // Force update immediately
+    updateHeight();
+
+    // Poll for a short duration to ensure stability on mobile mount
+    const intervals = [100, 300, 500, 1000];
+    const timers = intervals.map(t => setTimeout(updateHeight, t));
+
+    return () => timers.forEach(clearTimeout);
   }, []);
 };

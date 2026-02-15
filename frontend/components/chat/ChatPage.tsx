@@ -613,7 +613,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ currentUser, allUsers, chukUser, in
           /* INITIALIZING STATE - USING CHAT SHELL */
           <ChatShell
             header={(
-              <div className="flex items-center px-4 py-3 border-b border-border flex-shrink-0 bg-surface/95 backdrop-blur-md z-50 w-full">
+              <div className="flex items-center px-4 py-3 border-b border-border flex-shrink-0 bg-surface/95 backdrop-blur-md z-50 w-full shadow-sm">
                 <div className="w-8 h-8 rounded-full bg-border opacity-50 animate-pulse mr-3" />
                 <div className="h-4 w-32 bg-border opacity-50 rounded animate-pulse" />
               </div>
