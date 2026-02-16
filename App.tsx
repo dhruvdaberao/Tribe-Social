@@ -795,7 +795,7 @@ const App: React.FC = () => {
     };
 
     let containerClass = 'max-w-2xl mx-auto px-4 md:px-6 pt-6 pb-24 md:pb-8'; // Default with bottom nav padding
-    const isChatPage = ['Messages', 'TribeDetail'].includes(activeNavItem);
+    const isChatPage = ['TribeDetail'].includes(activeNavItem);
 
     if (isFullHeightPage) {
         // For Chat pages: 

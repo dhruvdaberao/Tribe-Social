@@ -8,7 +8,12 @@ const vapidEmail = process.env.VAPID_EMAIL || 'mailto:support@tribe-social.com';
 const vapidConfigured = Boolean(vapidPublicKey && vapidPrivateKey);
 
 if (vapidConfigured) {
-  webpush.setVapidDetails(vapidEmail, vapidPublicKey, vapidPrivateKey);
+webpush.setVapidDetails(
+  process.env.VAPID_SUBJECT, // must be mailto: or https://
+  process.env.VAPID_PUBLIC_KEY,
+  process.env.VAPID_PRIVATE_KEY
+);
+
 }
 
 const serializeSubscription = (subscription) => ({

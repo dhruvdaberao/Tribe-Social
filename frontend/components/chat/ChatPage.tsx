@@ -1,10 +1,3 @@
-
-
-
-
-
-
-
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Conversation, User, Message, Post } from '../../types';
 import ConversationList from './ConversationList';
@@ -63,13 +56,22 @@ const ChatPage: React.FC<ChatPageProps> = ({ currentUser, allUsers, chukUser, in
   const [isNewMessageModalOpen, setNewMessageModalOpen] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const [isInitializing, setIsInitializing] = useState(!!initialTargetUser);
-  // Cache for messages: key is conversationId (or otherUserId), value is Message[]
+  // Cache for messages
   const messageCache = React.useRef<Map<string, { messages: Message[]; hasMore: boolean; oldestTimestamp?: string }>>(new Map());
   const { socket, onlineUsers, clearUnreadMessages, unreadCounts, setActiveChatPartnerId } = useSocket();
 
+  // Viewport for mobile chat
+  const [viewportHeight, setViewportHeight] = useState<number | null>(null);
   useEffect(() => {
-    // When ChatPage is unmounted (e.g., user navigates away),
-    // ensure we clear the active chat partner ID so notifications resume correctly.
+    if (typeof window !== 'undefined' && window.visualViewport) {
+      const handleResize = () => setViewportHeight(window.visualViewport!.height);
+      window.visualViewport.addEventListener('resize', handleResize);
+      setViewportHeight(window.visualViewport.height);
+      return () => window.visualViewport!.removeEventListener('resize', handleResize);
+    }
+  }, []);
+
+  useEffect(() => {
     return () => {
       setActiveChatPartnerId(null);
     };
@@ -80,7 +82,6 @@ const ChatPage: React.FC<ChatPageProps> = ({ currentUser, allUsers, chukUser, in
     window.localStorage.setItem('dmAutoDelete', JSON.stringify(autoDeleteMap));
   }, [autoDeleteMap]);
 
-  // Notify parent about conversation state (for header visibility)
   useEffect(() => {
     onConversationStateChange?.(!!activeConversation);
   }, [activeConversation, onConversationStateChange]);
@@ -96,7 +97,6 @@ const ChatPage: React.FC<ChatPageProps> = ({ currentUser, allUsers, chukUser, in
     try {
       const { data } = await api.fetchConversations();
       setConversations(data);
-      // Update cache
       safeSetItem('tribe_storage_conversations', JSON.stringify(data));
       return data;
     } catch (error) {
@@ -109,26 +109,19 @@ const ChatPage: React.FC<ChatPageProps> = ({ currentUser, allUsers, chukUser, in
 
   useEffect(() => {
     let mounted = true;
-
-    // 1️⃣ Cache loaded in initial state.
-    // 2️⃣ Fetch fresh data in background
     fetchConversations().then(() => {
       if (!mounted) return;
     });
-
     return () => {
       mounted = false;
     };
   }, [fetchConversations]);
 
-  // Listen for new messages via socket
   useEffect(() => {
     if (!socket) return;
 
     const handleNewMessage = (message: Message) => {
       const isActiveConversation = (activeConversation?.participants.some(p => p.id === message.senderId) && activeConversation?.participants.some(p => p.id === message.receiverId));
-
-      // Update Cache First
       const senderId = message.senderId;
       const receiverId = message.receiverId;
       const otherUserId = senderId === currentUser.id ? receiverId : senderId;
@@ -145,12 +138,9 @@ const ChatPage: React.FC<ChatPageProps> = ({ currentUser, allUsers, chukUser, in
 
       if (isActiveConversation) {
         setMessages(prev => {
-          // 🔥 Deduplication Logic
           const messageMap = new Map();
           prev.forEach(m => messageMap.set(m.id, m));
           messageMap.set(message.id, message);
-
-          // Handle Optimistic Replacement if applicable
           if ((message as any).tempId) {
             const tempKey = `temp-${(message as any).tempId}`;
             if (messageMap.has(tempKey)) {
@@ -158,7 +148,6 @@ const ChatPage: React.FC<ChatPageProps> = ({ currentUser, allUsers, chukUser, in
               messageMap.set(message.id, message);
             }
           }
-
           return Array.from(messageMap.values()).sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
         });
       }
@@ -166,7 +155,6 @@ const ChatPage: React.FC<ChatPageProps> = ({ currentUser, allUsers, chukUser, in
       setConversations(prev => {
         const otherUserId = message.senderId === currentUser.id ? message.receiverId : message.senderId;
         const convoIndex = prev.findIndex(c => c.participants.some(p => p.id === otherUserId));
-
         if (convoIndex > -1) {
           const updatedConvo = { ...prev[convoIndex], lastMessage: message.text, timestamp: message.timestamp };
           const restConvos = [...prev.slice(0, convoIndex), ...prev.slice(convoIndex + 1)];
@@ -207,33 +195,26 @@ const ChatPage: React.FC<ChatPageProps> = ({ currentUser, allUsers, chukUser, in
     setActiveChatPartnerId(otherUserId);
     clearUnreadMessages(otherUserId);
 
-    // Join logic: Only if socket is ready
     if (socket && socket.connected) {
       socket.emit('joinRoom', `dm-${[currentUser.id, otherUserId].sort().join('-')}`);
-    } else {
-      // Queue it or let the 'connect' handler in useEffect deal with it if we tracked active room there
-      // For now, we rely on the user finding it works when they are online
     }
 
-    // AI Check
     if (otherUserId === chukUser.id) {
       setMessages([{ id: 'chuk-intro', senderId: chukUser.id, receiverId: currentUser.id, text: `Psy... Hi ${currentUser.name.split(' ')[0]}! I'm Psyduck! What's on your mind? ...Psy? 🦆`, timestamp: new Date().toISOString() }]);
       setMessageAreaVisible(true);
-      setIsInitializing(false); // Clear loading state
+      setIsInitializing(false);
       return;
     }
 
-    // CHECK CACHE FIRST
     const cachedEntry = messageCache.current.get(otherUserId);
     if (cachedEntry?.messages && cachedEntry.messages.length > 0) {
       setMessages(cachedEntry.messages);
       setHasMoreMessages(cachedEntry.hasMore);
       setMessageAreaVisible(true);
-      // Optional: Background refresh if needed, but for now trust cache + socket
       setIsLoadingMessages(false);
     } else {
       setIsLoadingMessages(true);
-      setMessageAreaVisible(true); // Show area immediately even if loading
+      setMessageAreaVisible(true);
       try {
         const { data } = await api.fetchMessages(otherUserId, { limit: 50 });
         const hasMore = data.length === 50;
@@ -273,11 +254,10 @@ const ChatPage: React.FC<ChatPageProps> = ({ currentUser, allUsers, chukUser, in
     if (initialTargetUser && !activeConversation) {
       setIsInitializing(true);
       handleStartNewConversation(initialTargetUser);
-      // Fallback timeout in case initialization stalls
       const timeout = setTimeout(() => setIsInitializing(false), 2000);
       return () => clearTimeout(timeout);
     }
-  }, [initialTargetUser?.id]); // Only depend on ID to prevent re-runs
+  }, [initialTargetUser?.id]);
 
   const handleBackToList = () => {
     if (activeConversation) {
@@ -416,7 +396,6 @@ const ChatPage: React.FC<ChatPageProps> = ({ currentUser, allUsers, chukUser, in
       }
 
       let responseMessage: Message | null = null;
-
       try {
         responseMessage = await sendMessageWithSocket({
           receiverId: otherUserId,
@@ -465,10 +444,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ currentUser, allUsers, chukUser, in
         const newConversations = await fetchConversations();
         const newConvo = newConversations.find((c: Conversation) => c.participants.some(p => p.id === otherUserId));
         if (newConvo) {
-          setActiveConversation({
-            ...newConvo,
-            messages: messages
-          });
+          setActiveConversation({ ...newConvo, messages: messages });
         }
       }
     } catch (error: any) {
@@ -476,23 +452,11 @@ const ChatPage: React.FC<ChatPageProps> = ({ currentUser, allUsers, chukUser, in
       const serverMsg = error.response?.data?.message || error.message || "Connection failed";
       toast.error(`Send Failed: ${serverMsg}`);
       setMessages(prev => prev.map(m => (m.id === tempMessage.id ? { ...m, status: 'failed' } : m)));
-      const cachedEntry = messageCache.current.get(otherUserId);
-      if (cachedEntry) {
-        messageCache.current.set(otherUserId, {
-          ...cachedEntry,
-          messages: cachedEntry.messages.map(m => (m.id === tempMessage.id ? { ...m, status: 'failed' } : m)),
-        });
-      }
     } finally {
       setIsSending(false);
       setIsUploading(false);
       setUploadProgress(null);
     }
-
-    // We rely on socket for the update to replace the temporary message, 
-    // OR we could manually replace it here if API returned the message object. 
-    // api.sendMessage usually returns { success: true, data: Message } but need to check API.
-    // Assuming for now socket is the primary delivery mechanism for consistency.
   };
 
   const handleDeleteMessage = async (messageId: string) => {
@@ -561,12 +525,16 @@ const ChatPage: React.FC<ChatPageProps> = ({ currentUser, allUsers, chukUser, in
   }, [autoDeleteEnabled, messages]);
 
   return (
-    // Removed rounded corners here (md:rounded-2xl)
-    <div className="h-full min-h-0 bg-surface md:border md:border-border md:shadow-lg flex overflow-hidden relative">
+    <div className="md:h-[calc(100vh-2rem)] md:border md:border-border md:shadow-lg flex md:overflow-hidden relative bg-surface">
 
+      {/* 
+        CONVERSATION LIST (SIDEBAR)
+        Mobile: Full width, hidden when chat is open
+        Desktop: Fixed width 
+      */}
       <div
-        className={`w-full md:w-[320px] lg:w-[380px] flex-shrink-0 flex flex-col min-h-0 transition-transform duration-300 ease-in-out md:static absolute inset-0 z-10 md:border-r md:border-border bg-surface ${isMessageAreaVisible ? '-translate-x-full' : 'translate-x-0'
-          } md:translate-x-0`}
+        className={`w-full md:w-[320px] lg:w-[380px] flex-shrink-0 flex flex-col h-full bg-surface ${isMessageAreaVisible ? 'hidden md:flex' : 'flex'
+          } md:border-r md:border-border`}
       >
         <ConversationList
           conversations={conversations}
@@ -585,9 +553,20 @@ const ChatPage: React.FC<ChatPageProps> = ({ currentUser, allUsers, chukUser, in
         />
       </div>
 
+      {/* 
+        MESSAGE AREA (MAIN CONTENT)
+        Mobile: Fixed Overlay on top of everything (z-[60]), controlled by isMessageAreaVisible
+        Desktop: Flex-1, static
+      */}
       <div
-        className={`w-full md:flex-1 flex flex-col min-h-0 transition-transform duration-300 ease-in-out md:static absolute inset-0 bg-background ${isMessageAreaVisible ? 'translate-x-0' : 'translate-x-full'
-          } md:translate-x-0`}
+        className={`
+          md:flex-1 md:flex md:flex-col md:relative md:bg-background
+          ${isMessageAreaVisible
+            ? 'fixed inset-0 z-[60] flex flex-col bg-background' // Mobile active state
+            : 'hidden md:flex' // Mobile inactive state
+          }
+        `}
+        style={isMessageAreaVisible && typeof window !== 'undefined' && window.innerWidth < 768 && viewportHeight ? { height: `${viewportHeight}px` } : {}}
       >
         {activeConversation ? (
           <MessageArea
@@ -610,7 +589,6 @@ const ChatPage: React.FC<ChatPageProps> = ({ currentUser, allUsers, chukUser, in
             onViewProfile={onViewProfile}
           />
         ) : isInitializing ? (
-          /* INITIALIZING STATE - USING CHAT SHELL */
           <ChatShell
             header={(
               <div className="flex items-center px-4 py-3 border-b border-border flex-shrink-0 bg-surface/95 backdrop-blur-md z-50 w-full shadow-sm">
