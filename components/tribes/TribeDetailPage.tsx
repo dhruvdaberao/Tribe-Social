@@ -7,6 +7,7 @@ import UserAvatar from '../common/UserAvatar';
 import { useSocket } from '../../contexts/SocketContext';
 import TribeMembersModal from './TribeMembersModal';
 import * as api from '../../api';
+import { useVisualViewport } from '../../hooks/useVisualViewport';
 
 interface TribeDetailPageProps {
   tribe: Tribe;
@@ -50,6 +51,17 @@ const TribeDetailPage: React.FC<TribeDetailPageProps> = (props) => {
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const { socket, clearUnreadTribe } = useSocket();
   const isMember = tribe.members.includes(currentUser.id);
+
+  // Mobile Support: Visual Viewport & IsMobile check
+  const viewportHeight = useVisualViewport();
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.matchMedia('(max-width: 767px)').matches);
+    checkMobile(); // Check on mount
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   // Fetch messages immediately on mount
   useEffect(() => {
@@ -195,7 +207,10 @@ const TribeDetailPage: React.FC<TribeDetailPageProps> = (props) => {
 
   return (
     <>
-      <div className="flex flex-col h-full min-h-0 bg-surface border border-border shadow-md overflow-hidden">
+      <div
+        className="fixed top-0 left-0 w-full z-50 bg-background md:static md:inset-auto md:z-auto md:h-full md:min-h-0 md:bg-surface md:border md:border-border md:shadow-md flex flex-col overflow-hidden"
+        style={isMobile && viewportHeight ? { height: `${viewportHeight}px` } : {}}
+      >
         {/* Header */}
         <div className="flex items-center p-3 border-b border-border flex-shrink-0">
           <button onClick={onBack} className="p-2 mr-2 text-primary">
