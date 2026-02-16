@@ -41,7 +41,10 @@ CLOUDINARY_URL=cloudinary://...
    - Verify User A sees message instantly (Optimistic) and *does not* see a second copy appear after server response.
    - Verify User B sees message with correct Name/Avatar (not "Anonymous").
 
-6. **Offline Mode**:
-   - Disconnect internet/wifi.
-   - Try to navigate or post.
-   - Verify "You are offline" toast appears.
+    - Verify "You are offline" toast appears.
+
+7. **Notification System (New)**:
+   - **Environment**: Ensure `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_EMAIL`, `RESEND_API_KEY`, and `CRON_SECRET` are set.
+   - **Moderation**: Create a dummy report and check if Admin receives email/push.
+   - **Digest**: Trigger `/api/cron/digest` manually (with `Authorization: <CRON_SECRET>`) and check for email.
+   - **Deep Links**: Click a "Tribe Join" or "Report" notification and verify it opens the correct page.

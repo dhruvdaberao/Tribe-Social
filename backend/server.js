@@ -25,6 +25,7 @@ import storyRoutes from './routes/storyRoutes.js';
 import pushRoutes from './routes/pushRoutes.js';
 import moderationRoutes from './routes/moderationRoutes.js';
 import reportRoutes from './routes/reportRoutes.js';
+import cronRoutes from './routes/cronRoutes.js'; // Cron
 import { initializeSocket } from './socketManager.js';
 
 dotenv.config();
@@ -122,6 +123,7 @@ const startServer = async () => {
     app.use('/api/ai', standardPayload, aiRoutes);
     // ...
     app.use('/api/push', standardPayload, pushRoutes);
+    app.use('/api/cron', standardPayload, cronRoutes); // ⏳ CRON JOBS
 
     // 📸 Large Limits (Content Creation)
     app.use('/api/posts', largePayload, postRoutes);

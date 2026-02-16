@@ -45,7 +45,7 @@ self.addEventListener('push', (event) => {
 
         event.waitUntil(
             self.registration.showNotification(title, options)
-                .then(() => {})
+                .then(() => { })
                 .catch((error) => {
                     console.error('❌ showNotification failed:', error);
                 })
@@ -67,8 +67,11 @@ self.addEventListener('notificationclick', (event) => {
             .then((clientList) => {
                 // Check if there's already a window open
                 for (const client of clientList) {
-                    if (client.url === fullUrl && 'focus' in client) {
-                        return client.focus();
+                    // Match origin to ensure we are focusing ANY app window, then navigate
+                    if (client.url.startsWith(self.location.origin) && 'focus' in client) {
+                        client.focus();
+                        client.navigate(fullUrl); // Navigate the focused window to the target
+                        return;
                     }
                 }
 
