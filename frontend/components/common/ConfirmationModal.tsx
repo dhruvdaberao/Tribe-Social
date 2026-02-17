@@ -1,7 +1,7 @@
 import React from 'react';
-import ReactDOM from 'react-dom';
 import styled from 'styled-components';
 import { AlertTriangle } from 'lucide-react';
+import ModalPortal from './ModalPortal';
 
 interface ConfirmationModalProps {
     isOpen: boolean;
@@ -13,20 +13,6 @@ interface ConfirmationModalProps {
     cancelText?: string;
     variant?: 'danger' | 'primary';
 }
-
-const Overlay = styled.div`
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.7);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-  padding: 1rem;
-`;
 
 const Modal = styled.div`
   background: ${props => props.theme.cardBackground};
@@ -104,12 +90,14 @@ const Button = styled.button<{ variant?: 'danger' | 'primary' | 'secondary' }>`
 const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
     isOpen, onClose, onConfirm, title, message, confirmText = 'Confirm', cancelText = 'Cancel', variant = 'danger'
 }) => {
-    if (!isOpen) return null;
-
-    // Root cause: fixed overlays inside transformed/scroll containers can render offset; portal to body to keep dialogs centered.
-    return ReactDOM.createPortal(
-        <Overlay onClick={onClose}>
-            <Modal onClick={e => e.stopPropagation()}>
+    return (
+        <ModalPortal
+            isOpen={isOpen}
+            onClose={onClose}
+            zIndex={9999}
+            overlayStyle={{ background: 'rgba(0, 0, 0, 0.7)' }}
+        >
+            <Modal>
                 <Header>
                     {variant === 'danger' && <AlertTriangle size={24} color="#ef4444" />}
                     <h3>{title}</h3>
@@ -120,8 +108,7 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
                     <Button variant={variant} onClick={() => { onConfirm(); onClose(); }}>{confirmText}</Button>
                 </ButtonGroup>
             </Modal>
-        </Overlay>,
-        document.body
+        </ModalPortal>
     );
 };
 
