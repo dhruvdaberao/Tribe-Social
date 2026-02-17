@@ -50,6 +50,7 @@ const TribeDetailPage: React.FC<TribeDetailPageProps> = (props) => {
   const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const { socket, clearUnreadTribe } = useSocket();
+  const previousMessageCountRef = useRef(0);
   const isMember = tribe.members.includes(currentUser.id);
 
   // Mobile Support: Visual Viewport & IsMobile check
@@ -84,7 +85,9 @@ const TribeDetailPage: React.FC<TribeDetailPageProps> = (props) => {
 
   useEffect(() => {
     if (!isLoading) {
-      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+      const isNewMessage = localMessages.length > previousMessageCountRef.current;
+      messagesEndRef.current?.scrollIntoView({ behavior: isNewMessage ? 'smooth' : 'auto', block: 'end' });
+      previousMessageCountRef.current = localMessages.length;
     }
   }, [localMessages, isLoading]);
 
@@ -208,11 +211,11 @@ const TribeDetailPage: React.FC<TribeDetailPageProps> = (props) => {
   return (
     <>
       <div
-        className="fixed top-0 left-0 w-full z-50 bg-background md:static md:inset-auto md:z-auto md:h-full md:min-h-0 md:bg-surface md:border md:border-border md:shadow-md flex flex-col overflow-hidden"
+        className="h-full min-h-0 w-full bg-background md:bg-surface md:border md:border-border md:shadow-md flex flex-col overflow-hidden"
         style={isMobile && viewportHeight ? { height: `${viewportHeight}px` } : {}}
       >
         {/* Header */}
-        <div className="flex items-center p-3 border-b border-border flex-shrink-0">
+        <div className="sticky top-0 z-20 flex items-center p-3 border-b border-border bg-surface flex-shrink-0">
           <button onClick={onBack} className="p-2 mr-2 text-primary">
             <BackIcon />
           </button>
@@ -334,7 +337,7 @@ const TribeDetailPage: React.FC<TribeDetailPageProps> = (props) => {
         </div>
 
         {/* Input */}
-        <div className="p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] border-t border-border bg-surface flex-shrink-0">
+        <div className="px-4 pt-3 pb-[max(env(safe-area-inset-bottom),0.5rem)] border-t border-border bg-surface flex-shrink-0">
           <form onSubmit={handleSendMessage} className="flex items-center space-x-3">
             <input
               type="text"

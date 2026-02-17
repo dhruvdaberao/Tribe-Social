@@ -32,14 +32,14 @@
 //   };
 
 //   return (
-//     <div className="h-full flex flex-col bg-surface">
-//       <div className="p-5 border-b border-border flex-shrink-0 flex justify-between items-center">
+//     <div className="h-full min-h-0 flex flex-col bg-surface">
+//       <div className="sticky top-0 z-10 p-5 border-b border-border bg-surface flex-shrink-0 flex justify-between items-center">
 //         <h2 className="text-3xl font-bold font-display text-primary">Messages</h2>
 //         <button onClick={onNewMessage} className="p-2 rounded-full text-primary bg-background border border-border hover:bg-accent hover:text-accent-text transition-colors" aria-label="New Message">
 //             <PlusIcon />
 //         </button>
 //       </div>
-//       <div className="overflow-y-auto flex-1">
+//       <div className="overflow-y-auto flex-1 min-h-0 overscroll-contain">
 //           {/* Chuk AI Static Conversation */}
 //           <ConversationItem
 //               key={chukConversation.id}
@@ -156,14 +156,14 @@ const ConversationList: React.FC<ConversationListProps> = ({ conversations, isLo
   };
 
   return (
-    <div className="h-full flex flex-col bg-surface">
-      <div className="p-5 border-b border-border flex-shrink-0 flex justify-between items-center">
+    <div className="h-full min-h-0 flex flex-col bg-surface">
+      <div className="sticky top-0 z-10 p-5 border-b border-border bg-surface flex-shrink-0 flex justify-between items-center">
         <h2 className="text-3xl font-bold font-display text-primary">Messages</h2>
         <button onClick={onNewMessage} className="p-2 rounded-full text-primary bg-background border border-border hover:bg-accent hover:text-accent-text transition-colors" aria-label="New Message">
             <PlusIcon />
         </button>
       </div>
-      <div className="overflow-y-auto flex-1">
+      <div className="overflow-y-auto flex-1 min-h-0 overscroll-contain">
           {/* Chuk AI Static Conversation */}
           <ConversationItem
               key={chukConversation.id}
@@ -172,6 +172,11 @@ const ConversationList: React.FC<ConversationListProps> = ({ conversations, isLo
               isActive={chukConversation.id === activeConversationId}
               onSelect={onSelectConversation}
               unreadCount={0}
+              isBlocked={false}
+              isAutoDeleteEnabled={false}
+              onClearConversation={() => {}}
+              onToggleBlock={() => {}}
+              onToggleAutoDelete={() => {}}
           />
         
         {isLoading ? (
