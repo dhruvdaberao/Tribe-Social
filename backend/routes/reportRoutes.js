@@ -2,29 +2,12 @@ import express from 'express';
 import rateLimit from 'express-rate-limit';
 import protect from '../middleware/authMiddleware.js';
 import requireAdmin from '../middleware/adminMiddleware.js';
-import Report from '../models/reportModel.js';
+import Report, { reportReasons } from '../models/reportModel.js';
 import Post from '../models/postModel.js';
 import User from '../models/userModel.js';
 import Tribe from '../models/tribeModel.js';
 
 const router = express.Router();
-import Notification from '../models/notificationModel.js';
-import { sendPushToUser, sendPushToUsers } from '../services/pushService.js';
-import { sendEmail, renderTemplate } from '../services/emailService.js';
-import { isEmailEnabledFor, isPushEnabledFor } from '../utils/notificationPrefs.js';
-
-// Helper: Get Admins
-const getAdmins = async () => {
-  const superAdmins = (await import('../config/superAdmins.js')).default;
-  const adminUsers = await User.find({
-    $or: [
-      { isAdmin: true },
-      { username: { $in: superAdmins.map(s => s.toLowerCase()) } }
-    ],
-    isDisabled: { $ne: true }
-  }).select('_id email notificationPrefs');
-  return adminUsers;
-};
 
 const reportLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -34,19 +17,43 @@ const reportLimiter = rateLimit({
   message: { message: 'Too many reports submitted. Please wait and try again.' },
 });
 
+const getTargetFromPayload = (body) => {
+  if (body.reportedPost) return { targetType: 'post', targetId: body.reportedPost };
+  if (body.reportedUser) return { targetType: 'user', targetId: body.reportedUser };
+  if (body.reportedTribe) return { targetType: 'tribe', targetId: body.reportedTribe };
+  if (body.targetType && body.targetId) return { targetType: body.targetType, targetId: body.targetId };
+  return { targetType: null, targetId: null };
+};
+
+const toTargetFields = (targetType, targetId) => ({
+  reportedPost: targetType === 'post' ? targetId : null,
+  reportedUser: targetType === 'user' ? targetId : null,
+  reportedTribe: targetType === 'tribe' ? targetId : null,
+});
+
 router.post('/', protect, reportLimiter, async (req, res) => {
   try {
-    const { targetType, targetId, reason, details = '', escalatedToSuperAdmin = false } = req.body;
-    if (!targetType || !targetId || !reason) {
-      return res.status(400).json({ message: 'targetType, targetId, and reason are required.' });
+    const { reason, details = '', escalatedToSuperAdmin = false } = req.body;
+    const { targetType, targetId } = getTargetFromPayload(req.body);
+
+    if (!req.user?.id) {
+      return res.status(400).json({ message: 'Reporter user id is required.' });
+    }
+
+    if (!targetType || !targetId) {
+      return res.status(400).json({ message: 'Exactly one report target is required.' });
     }
 
     if (!['post', 'user', 'tribe'].includes(targetType)) {
-      return res.status(400).json({ message: 'Invalid targetType.' });
+      return res.status(400).json({ message: 'Invalid target type.' });
+    }
+
+    if (!reason || !reportReasons.includes(reason)) {
+      return res.status(400).json({ message: `Reason must be one of: ${reportReasons.join(', ')}.` });
     }
 
     if (targetType === 'post') {
-      const post = await Post.findById(targetId);
+      const post = await Post.findById(targetId).select('_id');
       if (!post) return res.status(404).json({ message: 'Post not found.' });
     }
 
@@ -54,20 +61,19 @@ router.post('/', protect, reportLimiter, async (req, res) => {
       if (targetId.toString() === req.user.id.toString()) {
         return res.status(400).json({ message: 'You cannot report yourself.' });
       }
-      const user = await User.findById(targetId);
+      const user = await User.findById(targetId).select('_id');
       if (!user) return res.status(404).json({ message: 'User not found.' });
     }
 
     if (targetType === 'tribe') {
-      const tribe = await Tribe.findById(targetId);
+      const tribe = await Tribe.findById(targetId).select('_id');
       if (!tribe) return res.status(404).json({ message: 'Tribe not found.' });
     }
 
     const since = new Date(Date.now() - 24 * 60 * 60 * 1000);
     const existingReport = await Report.findOne({
       reporterId: req.user.id,
-      targetType,
-      targetId,
+      ...toTargetFields(targetType, targetId),
       createdAt: { $gte: since },
     });
 
@@ -77,130 +83,31 @@ router.post('/', protect, reportLimiter, async (req, res) => {
 
     const report = await Report.create({
       reporterId: req.user.id,
-      targetType,
-      targetId,
       reason,
       details,
       escalatedToSuperAdmin: Boolean(escalatedToSuperAdmin) && Boolean(req.user?.isAdmin),
+      ...toTargetFields(targetType, targetId),
     });
-
-    // --- NOTIFICATION LOGIC ---
-    try {
-      const admins = await getAdmins();
-
-      // 1. In-App Notifications for Admins
-      const adminIds = admins.map(a => a._id);
-      const notifications = adminIds.map(adminId => ({
-        recipient: adminId,
-        sender: req.user.id,
-        type: 'report_created', // Make sure frontend handles this or maps to default
-        text: `New report on ${targetType}: ${reason}`,
-        reportId: report._id
-      }));
-      // Note: reportId isn't in standard schema, but Mongoose is flexible or we can adapt
-      // Better to put link in 'relatedId' or similar if schema calls for it,
-      // For now, text is enough.
-
-      if (notifications.length > 0) {
-        await Notification.insertMany(notifications);
-        // Realtime
-        admins.forEach(admin => {
-          if (req.io) {
-            const socketId = req.onlineUsers?.get(admin._id.toString());
-            if (socketId) {
-              req.io.to(socketId).emit('newNotification', {
-                type: 'report_created',
-                text: `New report on ${targetType}: ${reason}`,
-                sender: { name: 'System' }
-              });
-            }
-          }
-        });
-      }
-
-      // 2. Email & Push to Admins
-      const frontendUrl = process.env.FRONTEND_URL || 'https://tribe-social.vercel.app';
-      const adminUrl = `${frontendUrl}/admin/moderation`;
-      const timeString = new Date().toLocaleString();
-
-      // Parallelize for speed
-      await Promise.all(admins.map(async (admin) => {
-        // Email
-        if (isEmailEnabledFor(admin, 'moderation')) {
-          try {
-            const html = await renderTemplate('moderationAlert.html', {
-              targetType,
-              targetId,
-              reason,
-              details: details || 'No details provided',
-              reporterName: req.user.username,
-              time: timeString,
-              adminUrl
-            });
-            await sendEmail({
-              to: admin.email,
-              subject: `[Violations] New Report: ${reason}`,
-              html
-            });
-          } catch (e) {
-            console.error(`Failed to email admin ${admin.email}`, e);
-          }
-        }
-
-        // Push
-        // (Assuming admins want push for this, checking 'moderation' pref if exists or default)
-        // We reused 'moderation' email pref for push logic or just send it?
-        // Let's check a generic push pref or just send it for admins.
-        // User model doesn't have 'moderation' in pushTypes by default.
-        // We will FORCE it if pushEnabled is true for now, for admins.
-        if (admin.notificationPrefs?.pushEnabled) {
-          await sendPushToUser(admin._id.toString(), {
-            title: 'New Content Report',
-            body: `${reason} (${targetType})`,
-            url: '/admin/moderation',
-            icon: '/icons/icon-192.png',
-            tag: `report-${report._id}`,
-            data: { url: '/admin/moderation' }
-          });
-        }
-      }));
-
-    } catch (notifyError) {
-      console.error('Notification trigger failed for report:', notifyError);
-      // Don't fail the request
-    }
 
     res.status(201).json(report);
   } catch (error) {
-    console.error('Report creation error:', error);
-    res.status(500).json({ message: 'Server error' });
+    if (error?.message?.includes('Exactly one of reportedPost')) {
+      return res.status(400).json({ message: 'Exactly one of reportedPost, reportedUser, or reportedTribe is required.' });
+    }
+    return res.status(500).json({ message: 'Server error' });
   }
 });
 
 router.get('/', protect, requireAdmin, async (req, res) => {
   try {
-    const {
-      targetType,
-      targetId,
-      status,
-      reason,
-      startDate,
-      endDate,
-      page = 1,
-      limit = 20,
-    } = req.query;
+    const { targetType, status, reason, page = 1, limit = 20 } = req.query;
 
     const query = {};
-    if (targetType) query.targetType = targetType;
-    if (targetId) query.targetId = targetId;
     if (status) query.status = status;
     if (reason) query.reason = reason;
-
-    if (startDate || endDate) {
-      query.createdAt = {};
-      if (startDate) query.createdAt.$gte = new Date(startDate);
-      if (endDate) query.createdAt.$lte = new Date(endDate);
-    }
+    if (targetType === 'post') query.reportedPost = { $ne: null };
+    if (targetType === 'user') query.reportedUser = { $ne: null };
+    if (targetType === 'tribe') query.reportedTribe = { $ne: null };
 
     const skip = (parseInt(page, 10) - 1) * parseInt(limit, 10);
     const [reports, total] = await Promise.all([
@@ -209,21 +116,16 @@ router.get('/', protect, requireAdmin, async (req, res) => {
         .skip(skip)
         .limit(parseInt(limit, 10))
         .populate('reporterId', 'name username avatarUrl')
-        .populate({
-          path: 'targetId',
-          populate: { path: 'user owner', select: 'name username avatarUrl' },
-        }),
+        .populate('reportedPost', 'content user isHidden isDeleted createdAt')
+        .populate('reportedUser', 'name username avatarUrl isAdmin isSuperAdmin isHidden isDeleted isDisabled')
+        .populate('reportedTribe', 'name owner isHidden isDeleted createdAt')
+        .populate({ path: 'reportedPost', populate: { path: 'user', select: 'name username avatarUrl' } })
+        .populate({ path: 'reportedTribe', populate: { path: 'owner', select: 'name username avatarUrl isAdmin isSuperAdmin' } }),
       Report.countDocuments(query),
     ]);
 
-    res.json({
-      reports,
-      total,
-      page: parseInt(page, 10),
-      pages: Math.ceil(total / parseInt(limit, 10)),
-    });
-  } catch (error) {
-    console.error('Fetch reports error:', error);
+    res.json({ reports, total, page: parseInt(page, 10), pages: Math.ceil(total / parseInt(limit, 10)) });
+  } catch {
     res.status(500).json({ message: 'Server error' });
   }
 });
@@ -231,22 +133,13 @@ router.get('/', protect, requireAdmin, async (req, res) => {
 router.patch('/:id', protect, requireAdmin, async (req, res) => {
   try {
     const { status } = req.body;
-    if (!status) {
-      return res.status(400).json({ message: 'Status is required.' });
-    }
+    if (!status) return res.status(400).json({ message: 'Status is required.' });
 
-    const report = await Report.findByIdAndUpdate(
-      req.params.id,
-      { $set: { status } },
-      { new: true }
-    );
-    if (!report) {
-      return res.status(404).json({ message: 'Report not found.' });
-    }
+    const report = await Report.findByIdAndUpdate(req.params.id, { $set: { status } }, { new: true });
+    if (!report) return res.status(404).json({ message: 'Report not found.' });
 
     res.json(report);
-  } catch (error) {
-    console.error('Update report error:', error);
+  } catch {
     res.status(500).json({ message: 'Server error' });
   }
 });

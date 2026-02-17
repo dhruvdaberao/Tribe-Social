@@ -21,6 +21,8 @@ const ChatShell: React.FC<ChatShellProps> = ({
   messagesClassName = ''
 }) => {
   useVisualViewportHeight();
+  const composerRef = React.useRef<HTMLDivElement>(null);
+  const [composerOffset, setComposerOffset] = React.useState(72);
 
   React.useEffect(() => {
     // Prevent body scroll while chat is open to avoid double scrollbars
@@ -40,6 +42,28 @@ const ChatShell: React.FC<ChatShellProps> = ({
     };
   }, []);
 
+  React.useEffect(() => {
+    if (!composerRef.current) {
+      setComposerOffset(16);
+      return;
+    }
+
+    const updateComposerOffset = () => {
+      const composerHeight = composerRef.current?.offsetHeight ?? 0;
+      setComposerOffset(composerHeight + 10);
+    };
+
+    updateComposerOffset();
+    const observer = new ResizeObserver(updateComposerOffset);
+    observer.observe(composerRef.current);
+    window.visualViewport?.addEventListener('resize', updateComposerOffset);
+
+    return () => {
+      observer.disconnect();
+      window.visualViewport?.removeEventListener('resize', updateComposerOffset);
+    };
+  }, [composer]);
+
   return (
     <div
       className={`fixed inset-0 z-[100] flex flex-col bg-background overflow-hidden h-[var(--vvh,100dvh)] md:relative md:inset-auto md:z-0 md:h-full ${className}`}
@@ -54,12 +78,16 @@ const ChatShell: React.FC<ChatShellProps> = ({
         ref={messagesRef}
         onScroll={onMessagesScroll}
         className={`flex-1 min-h-0 overflow-y-auto overscroll-contain ${messagesClassName}`}
+        style={{ paddingBottom: `${composerOffset}px` }}
       >
         {children}
       </div>
 
       {composer ? (
-        <div className="flex-none bg-background border-t border-border z-50 pb-[calc(env(safe-area-inset-bottom,20px))] md:pb-0">
+        <div
+          ref={composerRef}
+          className="flex-none bg-background border-t border-border z-50 pb-[max(env(safe-area-inset-bottom,0px),8px)] md:pb-0"
+        >
           {composer}
         </div>
       ) : null}

@@ -110,6 +110,7 @@ export interface Tribe {
   avatarUrl?: string | null;
   owner: string | User;
   members: string[];
+  memberLimit?: 10 | 30 | 50 | 100;
   createdAt?: string;
   isHidden?: boolean;
   hiddenAt?: string | null;

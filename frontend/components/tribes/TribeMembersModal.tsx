@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import ConfirmationModal from '../common/ConfirmationModal';
 import { User } from '../../types';
 import UserAvatar from '../common/UserAvatar';
 import ModalPortal from '../common/ModalPortal';
@@ -10,10 +11,14 @@ interface TribeMembersModalProps {
   userMap: Map<string, User>;
   onViewProfile?: (user: User) => void;
   ownerId?: string;
+  currentUserId?: string;
+  canKick?: boolean;
+  onKick?: (userId: string) => Promise<void> | void;
 }
 
-const TribeMembersModal: React.FC<TribeMembersModalProps> = ({ isOpen, onClose, memberIds, userMap, onViewProfile, ownerId }) => {
+const TribeMembersModal: React.FC<TribeMembersModalProps> = ({ isOpen, onClose, memberIds, userMap, onViewProfile, ownerId, currentUserId, canKick = false, onKick }) => {
   const [searchTerm, setSearchTerm] = useState('');
+  const [kickTargetId, setKickTargetId] = useState<string | null>(null);
 
   const members = useMemo(() => {
     return memberIds.map(id => userMap.get(id)).filter((user): user is User => !!user);
@@ -57,8 +62,9 @@ const TribeMembersModal: React.FC<TribeMembersModalProps> = ({ isOpen, onClose, 
                 <div
                   key={user.id}
                   onClick={() => onViewProfile?.(user)}
-                  className="flex cursor-pointer items-center p-4 transition-colors hover:bg-background"
+                  className="flex cursor-pointer items-center justify-between p-4 transition-colors hover:bg-background"
                 >
+                  <div className="flex items-center min-w-0">
                   <UserAvatar user={user} className="h-10 w-10 flex-shrink-0" />
                   <div className="ml-3 overflow-hidden">
                     <div className="flex items-center gap-2">
@@ -71,6 +77,19 @@ const TribeMembersModal: React.FC<TribeMembersModalProps> = ({ isOpen, onClose, 
                     </div>
                     <p className="truncate text-sm text-secondary">@{user.username}</p>
                   </div>
+                  </div>
+                  {canKick && onKick && user.id !== ownerId && user.id !== currentUserId && (
+                    <button
+                      type="button"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        setKickTargetId(user.id);
+                      }}
+                      className="ml-3 rounded-lg border border-red-500/40 px-3 py-1 text-xs font-semibold text-red-300 hover:bg-red-500/10"
+                    >
+                      Kick
+                    </button>
+                  )}
                 </div>
               ))}
             </div>
@@ -79,6 +98,20 @@ const TribeMembersModal: React.FC<TribeMembersModalProps> = ({ isOpen, onClose, 
           )}
         </div>
       </div>
+
+      <ConfirmationModal
+        isOpen={Boolean(kickTargetId)}
+        title="Kick Member"
+        message="Remove this member from the tribe?"
+        confirmText="Kick"
+        cancelText="Cancel"
+        variant="danger"
+        onClose={() => setKickTargetId(null)}
+        onConfirm={() => {
+          if (kickTargetId && onKick) onKick(kickTargetId);
+          setKickTargetId(null);
+        }}
+      />
     </ModalPortal>
   );
 };

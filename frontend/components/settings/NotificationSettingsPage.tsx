@@ -109,7 +109,8 @@ const NotificationSettingsPage: React.FC = () => {
   };
 
   return (
-    <div className="max-w-2xl mx-auto px-4 py-8">
+    <div className="h-[calc(var(--vvh,100dvh)-4rem)] md:h-auto min-h-0 overflow-hidden">
+      <div className="mx-auto h-full max-w-2xl overflow-y-auto px-4 py-6 md:py-8 pb-[calc(6rem+env(safe-area-inset-bottom,0px))] md:pb-8">
       <div className="bg-surface rounded-2xl shadow-sm border border-border p-6 space-y-6">
         <div>
           <h1 className="text-2xl font-bold font-display text-primary">Notifications</h1>
@@ -172,6 +173,7 @@ const NotificationSettingsPage: React.FC = () => {
             to re-enable.
           </p>
         </div>
+      </div>
       </div>
     </div>
   );

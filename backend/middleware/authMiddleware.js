@@ -2,7 +2,7 @@ import jwt from 'jsonwebtoken';
 import User from '../models/userModel.js';
 import superAdmins from '../config/superAdmins.js';
 
-const DISABLED_MESSAGE = 'Your account has been disabled by the Admin.';
+const DISABLED_MESSAGE = 'Your account has been disabled by the Admin';
 
 const protect = async (req, res, next) => {
   let token;

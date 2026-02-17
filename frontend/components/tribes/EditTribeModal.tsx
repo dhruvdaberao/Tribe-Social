@@ -14,6 +14,7 @@ interface EditTribeModalProps {
   onDelete?: (tribeId: string) => void;
   allUsers: import('../../types').User[];
   variant?: 'modal' | 'inline';
+  onManageMembers?: () => void;
 }
 
 const Overlay = styled.div`
@@ -181,11 +182,12 @@ const Label = styled.label`
   margin-bottom: 2px;
 `;
 
-const EditTribeModal: React.FC<EditTribeModalProps> = ({ tribe, onClose, onSuccess, onDelete, allUsers, variant = 'modal' }) => {
+const EditTribeModal: React.FC<EditTribeModalProps> = ({ tribe, onClose, onSuccess, onDelete, allUsers, variant = 'modal', onManageMembers }) => {
   const [name, setName] = useState(tribe.name);
   const [description, setDescription] = useState(tribe.description);
   const [avatarUrl, setAvatarUrl] = useState(tribe.avatarUrl || '');
   const [ownerId, setOwnerId] = useState(tribe.owner);
+  const [memberLimit, setMemberLimit] = useState<number>(tribe.memberLimit || 50);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [isMediaModalOpen, setIsMediaModalOpen] = useState(false);
@@ -229,7 +231,7 @@ const EditTribeModal: React.FC<EditTribeModalProps> = ({ tribe, onClose, onSucce
     setIsSubmitting(true);
     setError('');
     try {
-      const updatedData: any = { name, description, avatarUrl };
+      const updatedData: any = { name, description, avatarUrl, memberLimit };
       if (ownerId !== tribe.owner) updatedData.owner = ownerId;
 
       const updatedTribe = await api.updateTribe(tribe.id, updatedData);

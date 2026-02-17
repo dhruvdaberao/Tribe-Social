@@ -34,7 +34,7 @@ API.interceptors.request.use(req => {
   return req;
 });
 
-const DISABLED_MESSAGE = 'Your account has been disabled by the Admin.';
+const DISABLED_MESSAGE = 'Your account has been disabled by the Admin';
 let disabledLogoutTriggered = false;
 
 API.interceptors.response.use(
@@ -255,6 +255,11 @@ export const deleteTribe = (id: string) =>
 
 export const joinTribe = async (id: string) => {
   const res = await API.put(`/tribes/${id}/join`);
+  return { data: normalizeId(res.data) };
+};
+
+export const kickTribeMember = async (tribeId: string, userId: string) => {
+  const res = await API.put(`/tribes/${tribeId}/kick/${userId}`);
   return { data: normalizeId(res.data) };
 };
 

@@ -25,6 +25,7 @@ const tribeSchema = mongoose.Schema(
         type: mongoose.Schema.Types.ObjectId, 
         ref: 'User' 
     }],
+    memberLimit: { type: Number, enum: [10, 30, 50, 100], default: 50 },
     isHidden: { type: Boolean, default: false },
     hiddenAt: { type: Date },
     hiddenBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },

@@ -80,7 +80,7 @@ import superAdmins from '../config/superAdmins.js';
 import { sendEmail, renderTemplate } from '../services/emailService.js';
 import { isEmailEnabledFor } from '../utils/notificationPrefs.js';
 
-const DISABLED_MESSAGE = 'Your account has been disabled by the Admin.';
+const DISABLED_MESSAGE = 'Your account has been disabled by the Admin';
 
 const getClientIp = (req) => {
   const forwarded = req.headers['x-forwarded-for'];

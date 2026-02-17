@@ -35,7 +35,7 @@ router.get('/', protect, async (req, res) => {
         }
         const tribes = await Tribe.find(query)
             .sort({ createdAt: -1 })
-            .select('name description avatarUrl owner members createdAt')
+            .select('name description avatarUrl owner members memberLimit createdAt')
             .lean();
 
         const response = !req.user?.isAdmin ? await filterDisabledMembers(tribes) : tribes;
@@ -50,7 +50,7 @@ router.get('/', protect, async (req, res) => {
 router.get('/:id', protect, async (req, res) => {
     try {
         const tribe = await Tribe.findById(req.params.id)
-            .select('name description avatarUrl owner members createdAt isHidden isDeleted')
+            .select('name description avatarUrl owner members memberLimit createdAt isHidden isDeleted')
             .lean();
 
         if (!tribe) {
@@ -75,7 +75,7 @@ router.get('/:id', protect, async (req, res) => {
 // POST /api/tribes
 router.post('/', protect, async (req, res) => {
     try {
-        const { name, description, avatarUrl } = req.body;
+        const { name, description, avatarUrl, memberLimit = 50 } = req.body;
 
         if (!name || !description) {
             return res.status(400).json({ message: 'Name and description are required' });
@@ -92,12 +92,18 @@ router.post('/', protect, async (req, res) => {
             finalAvatarUrl = await uploadBase64ToCloudinary(avatarUrl, 'tribe_avatars');
         }
 
+        const allowedLimits = [10, 30, 50, 100];
+        if (!allowedLimits.includes(Number(memberLimit))) {
+            return res.status(400).json({ message: 'memberLimit must be one of 10, 30, 50, 100.' });
+        }
+
         const tribe = await Tribe.create({
             name,
             description,
             avatarUrl: finalAvatarUrl,
             owner: req.user.id,
-            members: [req.user.id]
+            members: [req.user.id],
+            memberLimit: Number(memberLimit),
         });
 
         res.status(201).json(tribe);
@@ -128,6 +134,19 @@ router.put('/:id', protect, async (req, res) => {
 
         tribe.name = req.body.name || tribe.name;
         tribe.description = req.body.description || tribe.description;
+
+        if (req.body.memberLimit !== undefined) {
+            const nextLimit = Number(req.body.memberLimit);
+            if (![10, 30, 50, 100].includes(nextLimit)) {
+                return res.status(400).json({ message: 'memberLimit must be one of 10, 30, 50, 100.' });
+            }
+            if (nextLimit < tribe.members.length) {
+                return res.status(400).json({
+                    message: `Limit is below current members (${tribe.members.length}). Kick members to reduce to ${nextLimit} before lowering.`,
+                });
+            }
+            tribe.memberLimit = nextLimit;
+        }
 
         if (req.body.avatarUrl !== undefined) {
             if (req.body.avatarUrl && req.body.avatarUrl !== tribe.avatarUrl) {
@@ -190,6 +209,10 @@ router.put('/:id/join', protect, async (req, res) => {
             }
             tribe.members = tribe.members.filter(id => id.toString() !== userId);
         } else {
+            const currentLimit = Number(tribe.memberLimit || 50);
+            if (tribe.members.length >= currentLimit) {
+                return res.status(400).json({ message: `This tribe is full (limit: ${currentLimit}).` });
+            }
             tribe.members.push(userId);
             if (tribe.owner.toString() !== userId) {
                 const notification = new Notification({
@@ -267,6 +290,14 @@ router.put('/:id/kick/:userId', protect, async (req, res) => {
             // Optional: System message
             // ...
         }
+
+        await Notification.create({
+            recipient: targetUserId,
+            sender: req.user.id,
+            type: 'admin_action',
+            text: `You were removed from ${tribe.name}.`,
+            tribeId: tribe._id,
+        });
 
         // Push Notification to kicked user
         const kickedUser = await User.findById(targetUserId).select('notificationPrefs isDisabled');

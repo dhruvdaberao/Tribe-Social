@@ -106,6 +106,7 @@ const CreateTribeModal: React.FC<CreateTribeModalProps> = ({ onClose, onSuccess 
   const theme = useTheme();
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
+  const [memberLimit, setMemberLimit] = useState(50);
   const [avatarUrl, setAvatarUrl] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -120,7 +121,7 @@ const CreateTribeModal: React.FC<CreateTribeModalProps> = ({ onClose, onSuccess 
     setIsSubmitting(true);
 
     try {
-      const { data } = await api.createTribe({ name, description, avatarUrl });
+      const { data } = await api.createTribe({ name, description, avatarUrl, memberLimit });
       toast.success("Tribe created successfully");
       onSuccess(data);
     } catch (err: any) {

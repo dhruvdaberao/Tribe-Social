@@ -122,6 +122,14 @@ const applyTribeAction = async ({ tribe, actionType, adminId }) => {
   await tribe.save();
 };
 
+
+const reportTargetQuery = (targetType, targetId) => {
+  if (targetType === 'post') return { reportedPost: targetId };
+  if (targetType === 'user') return { reportedUser: targetId };
+  if (targetType === 'tribe') return { reportedTribe: targetId };
+  return {};
+};
+
 const sendReportNotifications = async ({ reporterIds, adminId, message, targetType, targetId }) => {
   if (!message || reporterIds.length === 0) return;
   await Promise.all(
@@ -173,19 +181,11 @@ router.post('/action', protect, requireAdmin, async (req, res) => {
       await applyTribeAction({ tribe: targetDoc, actionType, adminId: req.user.id });
     }
 
-    if (targetType === 'tribe') {
-      targetDoc = await Tribe.findById(targetId);
-      if (!targetDoc) return res.status(404).json({ message: 'Tribe not found.' });
-      await applyTribeAction({ tribe: targetDoc, actionType, adminId: req.user.id });
-    }
-
     const status = getActionStatus(actionType);
-    await Report.updateMany(
-      { targetType, targetId },
-      { $set: { status } }
-    );
+    const reportQuery = reportTargetQuery(targetType, targetId);
+    await Report.updateMany(reportQuery, { $set: { status } });
 
-    const reports = await Report.find({ targetType, targetId }).select('reporterId').lean();
+    const reports = await Report.find(reportQuery).select('reporterId').lean();
     const reporterIds = [...new Set(reports.map((report) => report.reporterId.toString()))];
     await sendReportNotifications({ reporterIds, adminId: req.user.id, message, targetType, targetId });
 

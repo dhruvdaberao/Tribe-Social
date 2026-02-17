@@ -1,31 +1,42 @@
 import mongoose from 'mongoose';
 
+const reportReasons = ['Spam', 'Harassment', 'Hate Speech', 'Violence', 'Misinformation', 'Scam or Fraud', 'Other'];
+
 const reportSchema = mongoose.Schema(
   {
     reporterId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
-    targetType: { type: String, enum: ['post', 'user', 'tribe'], required: true, index: true },
-    targetModel: { type: String, enum: ['Post', 'User', 'Tribe'], required: true },
-    targetId: { type: mongoose.Schema.Types.ObjectId, required: true, refPath: 'targetModel', index: true },
-    reason: { type: String, required: true },
-    details: { type: String, default: '' },
+    reportedPost: { type: mongoose.Schema.Types.ObjectId, ref: 'Post', default: null, index: true },
+    reportedUser: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null, index: true },
+    reportedTribe: { type: mongoose.Schema.Types.ObjectId, ref: 'Tribe', default: null, index: true },
+    reason: { type: String, enum: reportReasons, required: true },
+    details: { type: String, default: '', maxlength: 1000 },
     escalatedToSuperAdmin: { type: Boolean, default: false },
     status: { type: String, enum: ['open', 'reviewed', 'dismissed', 'actioned'], default: 'open', index: true },
   },
   { timestamps: true }
 );
 
-reportSchema.pre('validate', function setTargetModel(next) {
-  if (this.targetType === 'post') {
-    this.targetModel = 'Post';
-  } else if (this.targetType === 'user') {
-    this.targetModel = 'User';
-  } else if (this.targetType === 'tribe') {
-    this.targetModel = 'Tribe';
+reportSchema.virtual('targetType').get(function getTargetType() {
+  if (this.reportedPost) return 'post';
+  if (this.reportedUser) return 'user';
+  if (this.reportedTribe) return 'tribe';
+  return null;
+});
+
+reportSchema.virtual('targetId').get(function getTargetId() {
+  return this.reportedPost || this.reportedUser || this.reportedTribe || null;
+});
+
+reportSchema.pre('validate', function validateSingleTarget(next) {
+  const targets = [this.reportedPost, this.reportedUser, this.reportedTribe].filter(Boolean);
+  if (targets.length !== 1) {
+    return next(new Error('Exactly one of reportedPost, reportedUser, or reportedTribe is required.'));
   }
   next();
 });
 
 reportSchema.set('toJSON', {
+  virtuals: true,
   transform: (document, returnedObject) => {
     returnedObject.id = returnedObject._id.toString();
     delete returnedObject._id;
@@ -35,3 +46,4 @@ reportSchema.set('toJSON', {
 
 const Report = mongoose.model('Report', reportSchema);
 export default Report;
+export { reportReasons };

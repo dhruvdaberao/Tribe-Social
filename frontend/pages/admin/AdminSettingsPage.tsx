@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronRight, FileText, ShieldCheck, ArrowLeft, User as UserIcon, Users, Crown } from 'lucide-react';
+import { ChevronRight, FileText, ShieldCheck, ArrowLeft, User as UserIcon, Users, Crown, Flag } from 'lucide-react';
 import { User } from '../../types';
 
 interface AdminSettingsPageProps {
@@ -32,6 +32,7 @@ const AdminSettingsPage: React.FC<AdminSettingsPageProps> = ({ currentUser }) =>
           <AdminNavItem icon={<FileText size={24} />} text="Posts" onClick={() => navigate('/admin/posts')} />
           <AdminNavItem icon={<UserIcon size={24} />} text="Users" onClick={() => navigate('/admin/users')} />
           <AdminNavItem icon={<Users size={24} />} text="Tribes" onClick={() => navigate('/admin/tribes')} />
+          <AdminNavItem icon={<Flag size={24} />} text="Reports" onClick={() => navigate('/admin/reports')} />
           {currentUser?.isSuperAdmin && (
             <AdminNavItem icon={<Crown size={24} />} text="Super Admin" onClick={() => navigate('/super-admin')} />
           )}
