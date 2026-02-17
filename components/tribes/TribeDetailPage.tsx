@@ -7,7 +7,7 @@ import UserAvatar from '../common/UserAvatar';
 import { useSocket } from '../../contexts/SocketContext';
 import TribeMembersModal from './TribeMembersModal';
 import * as api from '../../api';
-import { useVisualViewport } from '../../hooks/useVisualViewport';
+import ChatShell from '../chat/ChatShell';
 
 interface TribeDetailPageProps {
   tribe: Tribe;
@@ -52,17 +52,6 @@ const TribeDetailPage: React.FC<TribeDetailPageProps> = (props) => {
   const { socket, clearUnreadTribe } = useSocket();
   const previousMessageCountRef = useRef(0);
   const isMember = tribe.members.includes(currentUser.id);
-
-  // Mobile Support: Visual Viewport & IsMobile check
-  const viewportHeight = useVisualViewport();
-  const [isMobile, setIsMobile] = useState(false);
-
-  useEffect(() => {
-    const checkMobile = () => setIsMobile(window.matchMedia('(max-width: 767px)').matches);
-    checkMobile(); // Check on mount
-    window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
-  }, []);
 
   // Fetch messages immediately on mount
   useEffect(() => {
@@ -210,12 +199,10 @@ const TribeDetailPage: React.FC<TribeDetailPageProps> = (props) => {
 
   return (
     <>
-      <div
-        className="h-full min-h-0 w-full bg-background md:bg-surface md:border md:border-border md:shadow-md flex flex-col overflow-hidden"
-        style={isMobile && viewportHeight ? { height: `${viewportHeight}px` } : {}}
-      >
-        {/* Header */}
-        <div className="sticky top-0 z-20 flex items-center p-3 border-b border-border bg-surface flex-shrink-0">
+      <ChatShell
+        className="md:bg-surface md:border md:border-border md:shadow-md"
+        header={(
+          <div className="flex items-center p-3 bg-surface">
           <button onClick={onBack} className="p-2 mr-2 text-primary">
             <BackIcon />
           </button>
@@ -250,11 +237,30 @@ const TribeDetailPage: React.FC<TribeDetailPageProps> = (props) => {
               </>
             )}
           </div>
-        </div>
+          </div>
+        )}
+        composer={(
+          <div className="px-4 pt-3 pb-2 bg-surface">
+            <form onSubmit={handleSendMessage} className="flex items-center space-x-3">
+              <input
+                type="text"
+                value={inputText}
+                onChange={handleInputChange}
+                placeholder={isMember ? `Message #${tribe.name}` : "You must be a member to chat"}
+                className="flex-1 bg-background border border-border rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-accent text-primary min-w-0"
+                disabled={!isMember || isLoading}
+                ref={inputRef}
+              />
+              <button type="submit" className="bg-accent text-accent-text rounded-lg w-12 h-11 flex-shrink-0 flex items-center justify-center hover:bg-accent-hover transition-colors disabled:opacity-50" disabled={!inputText.trim() || !isMember || isLoading}>
+                <SendIcon />
+              </button>
+            </form>
+          </div>
+        )}
+        messagesClassName="p-4 bg-background"
+      >
 
-        {/* Messages */}
-        <div className="flex-1 min-h-0 overflow-y-auto p-4 bg-background overscroll-contain">
-          {isLoading ? (
+        {isLoading ? (
             <div className="w-full h-full flex flex-col items-center justify-center">
               <img src="/busstop.gif" alt="Loading chats..." className="w-32 h-auto mb-4" />
               <p className="text-secondary text-sm">Loading conversations...</p>
@@ -334,24 +340,6 @@ const TribeDetailPage: React.FC<TribeDetailPageProps> = (props) => {
               <div ref={messagesEndRef} />
             </div>
           )}
-        </div>
-
-        {/* Input */}
-        <div className="px-4 pt-3 pb-[max(env(safe-area-inset-bottom),0.5rem)] border-t border-border bg-surface flex-shrink-0">
-          <form onSubmit={handleSendMessage} className="flex items-center space-x-3">
-            <input
-              type="text"
-              value={inputText}
-              onChange={handleInputChange}
-              placeholder={isMember ? `Message #${tribe.name}` : "You must be a member to chat"}
-              className="flex-1 bg-background border border-border rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-accent text-primary min-w-0"
-              disabled={!isMember || isLoading}
-            />
-            <button type="submit" className="bg-accent text-accent-text rounded-lg w-12 h-11 flex-shrink-0 flex items-center justify-center hover:bg-accent-hover transition-colors disabled:opacity-50" disabled={!inputText.trim() || !isMember || isLoading}>
-              <SendIcon />
-            </button>
-          </form>
-        </div>
         {actionMessage && (
           <div
             className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-4 md:items-center"
@@ -397,7 +385,7 @@ const TribeDetailPage: React.FC<TribeDetailPageProps> = (props) => {
             </div>
           </div>
         )}
-      </div>
+      </ChatShell>
       {isMembersModalOpen && (
         <TribeMembersModal
           isOpen={isMembersModalOpen}
