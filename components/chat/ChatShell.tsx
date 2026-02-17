@@ -25,7 +25,7 @@ const ChatShell: React.FC<ChatShellProps> = ({
         ['--chat-vh' as string]: 'var(--vvh, 100dvh)',
       }}
     >
-      <header className="z-20 border-b border-border bg-surface">
+      <header className="z-30 border-b border-border bg-surface w-full relative">
         {header}
       </header>
 
@@ -34,7 +34,7 @@ const ChatShell: React.FC<ChatShellProps> = ({
       </div>
 
       <footer
-        className="z-20 border-t border-border bg-surface"
+        className="z-30 border-t border-border bg-surface"
         style={{
           transform: 'translateY(calc(-1 * var(--keyboardOffset, 0px)))',
           paddingBottom: 'env(safe-area-inset-bottom)',

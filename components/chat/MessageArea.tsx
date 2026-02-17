@@ -26,7 +26,7 @@
 //   const messagesEndRef = useRef<HTMLDivElement>(null);
 //   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 //   const { socket, onlineUsers } = useSocket();
-  
+
 //   const isOtherUserOnline = otherParticipantId ? onlineUsers.includes(otherParticipantId) : false;
 
 //   useEffect(() => {
@@ -238,7 +238,7 @@ export const MessageArea: React.FC<MessageAreaProps> = ({ conversation, messages
       if (userId === otherParticipantId) setIsTyping(true);
     };
     const handleStopTyping = ({ userId }: { userId: string }) => {
-       if (userId === otherParticipantId) setIsTyping(false);
+      if (userId === otherParticipantId) setIsTyping(false);
     };
     socket.on('userTyping', handleTyping);
     socket.on('userStoppedTyping', handleStopTyping);
@@ -293,126 +293,126 @@ export const MessageArea: React.FC<MessageAreaProps> = ({ conversation, messages
   };
 
   if (!otherParticipant) {
-      return (
-          <div className="flex flex-col h-full bg-surface">
-              <div className="flex items-center p-3 border-b border-border flex-shrink-0">
-                  <button onClick={onBack} className="md:hidden p-2 mr-2 text-primary">
-                      <BackIcon />
-                  </button>
-                  <h2 className="text-lg font-bold text-primary">Error</h2>
-              </div>
-              <div className="flex-1 flex items-center justify-center p-4 text-center">
-                  <p className="text-secondary">Could not load conversation. The user may no longer exist.</p>
-              </div>
-          </div>
-      );
+    return (
+      <div className="flex flex-col h-full bg-surface">
+        <div className="flex items-center p-3 border-b border-border flex-shrink-0">
+          <button onClick={onBack} className="md:hidden p-2 mr-2 text-primary">
+            <BackIcon />
+          </button>
+          <h2 className="text-lg font-bold text-primary">Error</h2>
+        </div>
+        <div className="flex-1 flex items-center justify-center p-4 text-center">
+          <p className="text-secondary">Could not load conversation. The user may no longer exist.</p>
+        </div>
+      </div>
+    );
   }
 
   return (
     <>
       <ChatShell
-      header={(
-        <div className="flex items-center p-3 bg-surface">
-          <button onClick={onBack} className="md:hidden p-2 mr-2 text-primary">
-            <BackIcon />
-          </button>
-          <div
-            className="flex items-center cursor-pointer overflow-hidden"
-            onClick={() => onViewProfile(otherParticipant)}
-          >
-            <UserAvatar user={otherParticipant} className="w-10 h-10 rounded-full mr-3 flex-shrink-0" isOnline={isOtherUserOnline} />
-            <div className="min-w-0">
-              <h2 className="text-lg font-bold text-primary leading-tight hover:underline truncate">{otherParticipant.name}</h2>
-              {isTyping ? (
-                <p className="text-sm text-accent leading-tight truncate italic">typing...</p>
-              ) : (
-                <p className="text-sm text-secondary leading-tight truncate">@{otherParticipant.username}</p>
-              )}
+        header={(
+          <div className="flex items-center p-3 bg-surface">
+            <button onClick={onBack} className="md:hidden p-2 mr-2 text-primary">
+              <BackIcon />
+            </button>
+            <div
+              className="flex items-center cursor-pointer overflow-hidden"
+              onClick={() => onViewProfile(otherParticipant)}
+            >
+              <UserAvatar user={otherParticipant} className="w-10 h-10 rounded-full mr-3 flex-shrink-0" isOnline={isOtherUserOnline} />
+              <div className="min-w-0">
+                <h2 className="text-lg font-bold text-primary leading-tight hover:underline truncate">{otherParticipant.name}</h2>
+                {isTyping ? (
+                  <p className="text-sm text-accent leading-tight truncate italic">typing...</p>
+                ) : (
+                  <p className="text-sm text-secondary leading-tight truncate">@{otherParticipant.username}</p>
+                )}
+              </div>
             </div>
           </div>
-        </div>
-      )}
-      composer={(
-        <div className="px-4 pt-3 pb-2">
-          <form onSubmit={handleSendMessage} className="flex items-center space-x-3">
-            <input
-              type="text"
-              value={inputText}
-              onChange={handleInputChange}
-              placeholder="Type a message..."
-              className="flex-1 bg-surface border border-border rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-accent text-primary min-w-0"
-              ref={inputRef}
-            />
-            <button type="submit" className="bg-accent text-accent-text rounded-lg w-12 h-11 flex-shrink-0 flex items-center justify-center hover:bg-accent-hover transition-colors disabled:opacity-50" disabled={!inputText.trim() || isSending}>
-              {isSending ? <div className="w-5 h-5 border-2 border-accent-text border-t-transparent rounded-full animate-spin"></div> : <SendIcon />}
-            </button>
-          </form>
-        </div>
-      )}
-      messagesClassName="p-4"
-    >
-      {isLoading ? (
-        <div className="w-full h-full flex items-center justify-center">
-          <img src="/duckload.gif" alt="Loading messages..." className="w-16 h-16" />
-        </div>
-      ) : (
-        <div className="flex flex-col space-y-2">
-          {messages.map(message => {
-            const isCurrentUser = message.senderId === currentUser.id;
-            const sender = isCurrentUser ? currentUser : userMap.get(message.senderId);
-            const sentAt = new Date(message.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
-            const replyMessage = message.replyTo ? messages.find(m => m.id === message.replyTo) : null;
-            const replySender = replyMessage ? (replyMessage.senderId === currentUser.id ? 'You' : userMap.get(replyMessage.senderId)?.name || 'User') : '';
-            return (
-              <div
-                key={message.id}
-                className={`flex items-end gap-2.5 ${isCurrentUser ? 'justify-end' : 'justify-start'}`}
-                onContextMenu={(event) => {
-                  event.preventDefault();
-                  openActionMenu(message);
-                }}
-                onTouchStart={() => handleTouchStart(message)}
-                onTouchEnd={handleTouchEnd}
-                onTouchMove={handleTouchEnd}
-              >
-                {!isCurrentUser && (
-                  <div className="w-8 h-8 rounded-full flex-shrink-0 self-start">
-                    <UserAvatar user={sender || null} />
-                  </div>
-                )}
-                <div className={`flex flex-col w-full max-w-xs lg:max-w-md ${isCurrentUser ? 'items-end' : 'items-start'}`}>
-                  <div className={`px-4 py-2.5 ${isCurrentUser ? 'bg-accent text-accent-text rounded-2xl rounded-tr-none' : 'bg-surface text-primary shadow-sm rounded-2xl rounded-tl-none'}`}>
-                    {replyMessage && (
-                      <div className={`mb-2 rounded-lg px-3 py-2 text-xs ${isCurrentUser ? 'bg-accent-text/20 text-accent-text' : 'bg-background text-secondary'}`}>
-                        <p className="font-semibold">{replySender}</p>
-                        <p className="line-clamp-2">{replyMessage.text}</p>
-                      </div>
-                    )}
-                    {message.imageUrl && <img src={message.imageUrl} alt="Shared content" className="mb-2 rounded-lg w-full" />}
-                    <div className="text-sm leading-relaxed">
-                      {sender?.id === 'chuk-ai' ? (
-                        <MarkdownRenderer text={message.text} />
-                      ) : (
-                        <p className="whitespace-pre-wrap break-words">{message.text}</p>
-                      )}
+        )}
+        composer={(
+          <div className="px-4 pt-3 pb-1">
+            <form onSubmit={handleSendMessage} className="flex items-center space-x-3">
+              <input
+                type="text"
+                value={inputText}
+                onChange={handleInputChange}
+                placeholder="Type a message..."
+                className="flex-1 bg-surface border border-border rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-accent text-primary min-w-0"
+                ref={inputRef}
+              />
+              <button type="submit" className="bg-accent text-accent-text rounded-lg w-12 h-11 flex-shrink-0 flex items-center justify-center hover:bg-accent-hover transition-colors disabled:opacity-50" disabled={!inputText.trim() || isSending}>
+                {isSending ? <div className="w-5 h-5 border-2 border-accent-text border-t-transparent rounded-full animate-spin"></div> : <SendIcon />}
+              </button>
+            </form>
+          </div>
+        )}
+        messagesClassName="p-4"
+      >
+        {isLoading ? (
+          <div className="w-full h-full flex items-center justify-center">
+            <img src="/duckload.gif" alt="Loading messages..." className="w-16 h-16" />
+          </div>
+        ) : (
+          <div className="flex flex-col space-y-2">
+            {messages.map(message => {
+              const isCurrentUser = message.senderId === currentUser.id;
+              const sender = isCurrentUser ? currentUser : userMap.get(message.senderId);
+              const sentAt = new Date(message.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
+              const replyMessage = message.replyTo ? messages.find(m => m.id === message.replyTo) : null;
+              const replySender = replyMessage ? (replyMessage.senderId === currentUser.id ? 'You' : userMap.get(replyMessage.senderId)?.name || 'User') : '';
+              return (
+                <div
+                  key={message.id}
+                  className={`flex items-end gap-2.5 ${isCurrentUser ? 'justify-end' : 'justify-start'}`}
+                  onContextMenu={(event) => {
+                    event.preventDefault();
+                    openActionMenu(message);
+                  }}
+                  onTouchStart={() => handleTouchStart(message)}
+                  onTouchEnd={handleTouchEnd}
+                  onTouchMove={handleTouchEnd}
+                >
+                  {!isCurrentUser && (
+                    <div className="w-8 h-8 rounded-full flex-shrink-0 self-start">
+                      <UserAvatar user={sender || null} />
                     </div>
+                  )}
+                  <div className={`flex flex-col w-full max-w-xs lg:max-w-md ${isCurrentUser ? 'items-end' : 'items-start'}`}>
+                    <div className={`px-4 py-2.5 ${isCurrentUser ? 'bg-accent text-accent-text rounded-2xl rounded-tr-none' : 'bg-surface text-primary shadow-sm rounded-2xl rounded-tl-none'}`}>
+                      {replyMessage && (
+                        <div className={`mb-2 rounded-lg px-3 py-2 text-xs ${isCurrentUser ? 'bg-accent-text/20 text-accent-text' : 'bg-background text-secondary'}`}>
+                          <p className="font-semibold">{replySender}</p>
+                          <p className="line-clamp-2">{replyMessage.text}</p>
+                        </div>
+                      )}
+                      {message.imageUrl && <img src={message.imageUrl} alt="Shared content" className="mb-2 rounded-lg w-full" />}
+                      <div className="text-sm leading-relaxed">
+                        {sender?.id === 'chuk-ai' ? (
+                          <MarkdownRenderer text={message.text} />
+                        ) : (
+                          <p className="whitespace-pre-wrap break-words">{message.text}</p>
+                        )}
+                      </div>
+                    </div>
+                    <p className="text-xs text-secondary mt-1.5 px-1">{sentAt}</p>
                   </div>
-                  <p className="text-xs text-secondary mt-1.5 px-1">{sentAt}</p>
                 </div>
+              );
+            })}
+            {messages.length === 0 && (
+              <div className="text-center text-secondary p-8">
+                <p>This is the beginning of your conversation with {otherParticipant.name}.</p>
               </div>
-            );
-          })}
-          {messages.length === 0 && (
-            <div className="text-center text-secondary p-8">
-              <p>This is the beginning of your conversation with {otherParticipant.name}.</p>
-            </div>
-          )}
-          {isSending && otherParticipant.id !== 'chuk-ai' && (
-            <div className="flex justify-end"><p className="text-xs text-secondary mt-1.5 px-1 italic">Sending...</p></div>
-          )}
-          <div ref={messagesEndRef} />
-        </div>
-      )}
+            )}
+            {isSending && otherParticipant.id !== 'chuk-ai' && (
+              <div className="flex justify-end"><p className="text-xs text-secondary mt-1.5 px-1 italic">Sending...</p></div>
+            )}
+            <div ref={messagesEndRef} />
+          </div>
+        )}
       </ChatShell>
       {actionMessage && (
         <div

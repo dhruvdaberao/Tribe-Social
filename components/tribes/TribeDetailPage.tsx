@@ -203,44 +203,44 @@ const TribeDetailPage: React.FC<TribeDetailPageProps> = (props) => {
         className="md:bg-surface md:border md:border-border md:shadow-md"
         header={(
           <div className="flex items-center p-3 bg-surface">
-          <button onClick={onBack} className="p-2 mr-2 text-primary">
-            <BackIcon />
-          </button>
-          {tribe.avatarUrl ? (
-            <img src={tribe.avatarUrl} alt={tribe.name} className="w-10 h-10 rounded-full mr-3 object-cover" />
-          ) : (
-            <TribePlaceholderIcon />
-          )}
-          <div className="flex-1 min-w-0">
-            <h2 className="text-lg font-bold text-primary truncate">{tribe.name}</h2>
-            <button onClick={() => setMembersModalOpen(true)} className={`text-sm truncate text-left hover:underline ${typingUsers.length > 0 && typingUsers.some(u => u !== currentUser.name) ? 'text-accent italic' : 'text-secondary'}`}>
-              {typingText}
+            <button onClick={onBack} className="p-2 mr-2 text-primary">
+              <BackIcon />
             </button>
-          </div>
-          <div className="ml-auto flex items-center space-x-1 sm:space-x-2 flex-shrink-0">
-            {currentUser.id === tribe.owner && (
-              <>
-                <button
-                  onClick={() => onEditTribe(tribe)}
-                  className="p-2 text-secondary hover:text-primary rounded-full hover:bg-background"
-                  aria-label="Edit Tribe"
-                >
-                  <EditIcon />
-                </button>
-                <button
-                  onClick={() => onDeleteTribe(tribe.id)}
-                  className="p-2 text-red-500 hover:bg-red-500/10 rounded-full"
-                  aria-label="Delete Tribe"
-                >
-                  <TrashIcon />
-                </button>
-              </>
+            {tribe.avatarUrl ? (
+              <img src={tribe.avatarUrl} alt={tribe.name} className="w-10 h-10 rounded-full mr-3 object-cover" />
+            ) : (
+              <TribePlaceholderIcon />
             )}
-          </div>
+            <div className="flex-1 min-w-0">
+              <h2 className="text-lg font-bold text-primary truncate">{tribe.name}</h2>
+              <button onClick={() => setMembersModalOpen(true)} className={`text-sm truncate text-left hover:underline ${typingUsers.length > 0 && typingUsers.some(u => u !== currentUser.name) ? 'text-accent italic' : 'text-secondary'}`}>
+                {typingText}
+              </button>
+            </div>
+            <div className="ml-auto flex items-center space-x-1 sm:space-x-2 flex-shrink-0">
+              {currentUser.id === tribe.owner && (
+                <>
+                  <button
+                    onClick={() => onEditTribe(tribe)}
+                    className="p-2 text-secondary hover:text-primary rounded-full hover:bg-background"
+                    aria-label="Edit Tribe"
+                  >
+                    <EditIcon />
+                  </button>
+                  <button
+                    onClick={() => onDeleteTribe(tribe.id)}
+                    className="p-2 text-red-500 hover:bg-red-500/10 rounded-full"
+                    aria-label="Delete Tribe"
+                  >
+                    <TrashIcon />
+                  </button>
+                </>
+              )}
+            </div>
           </div>
         )}
         composer={(
-          <div className="px-4 pt-3 pb-2 bg-surface">
+          <div className="px-4 pt-3 pb-1 bg-surface">
             <form onSubmit={handleSendMessage} className="flex items-center space-x-3">
               <input
                 type="text"
@@ -261,85 +261,85 @@ const TribeDetailPage: React.FC<TribeDetailPageProps> = (props) => {
       >
 
         {isLoading ? (
-            <div className="w-full h-full flex flex-col items-center justify-center">
-              <img src="/busstop.gif" alt="Loading chats..." className="w-32 h-auto mb-4" />
-              <p className="text-secondary text-sm">Loading conversations...</p>
-            </div>
-          ) : (
-            <div className="flex flex-col space-y-2">
-              {localMessages.map(message => {
-                // Ensure we check ID robustly (handle object vs string)
-                const msgSenderId = typeof message.senderId === 'string' ? message.senderId : message.sender?.id;
-                // If sender object exists, use its ID, otherwise use senderId string
-                const actualSenderId = message.sender?.id || msgSenderId;
-                const isCurrentUser = String(actualSenderId) === String(currentUser.id);
+          <div className="w-full h-full flex flex-col items-center justify-center">
+            <img src="/busstop.gif" alt="Loading chats..." className="w-32 h-auto mb-4" />
+            <p className="text-secondary text-sm">Loading conversations...</p>
+          </div>
+        ) : (
+          <div className="flex flex-col space-y-2">
+            {localMessages.map(message => {
+              // Ensure we check ID robustly (handle object vs string)
+              const msgSenderId = typeof message.senderId === 'string' ? message.senderId : message.sender?.id;
+              // If sender object exists, use its ID, otherwise use senderId string
+              const actualSenderId = message.sender?.id || msgSenderId;
+              const isCurrentUser = String(actualSenderId) === String(currentUser.id);
 
-                // Get sender details: Prioritize the 'sender' object (populated by backend)
-                // If not available, check userMap, otherwise fall back to a safe object.
-                const sender = message.sender && message.sender.name ? message.sender : (userMap.get(actualSenderId || '') || { name: 'Anonymous', avatarUrl: null, id: 'unknown', username: 'unknown' });
-                const replyMessage = message.replyTo ? localMessages.find(m => m.id === message.replyTo) : null;
-                const replySenderName = replyMessage ? (replyMessage.senderId === currentUser.id ? 'You' : replyMessage.sender?.name || userMap.get(replyMessage.senderId || '')?.name || 'User') : '';
+              // Get sender details: Prioritize the 'sender' object (populated by backend)
+              // If not available, check userMap, otherwise fall back to a safe object.
+              const sender = message.sender && message.sender.name ? message.sender : (userMap.get(actualSenderId || '') || { name: 'Anonymous', avatarUrl: null, id: 'unknown', username: 'unknown' });
+              const replyMessage = message.replyTo ? localMessages.find(m => m.id === message.replyTo) : null;
+              const replySenderName = replyMessage ? (replyMessage.senderId === currentUser.id ? 'You' : replyMessage.sender?.name || userMap.get(replyMessage.senderId || '')?.name || 'User') : '';
 
-                return (
-                  <div
-                    key={message.id}
-                    className={`flex items-end gap-2.5 group ${isCurrentUser ? 'justify-end' : 'justify-start'}`}
-                    onContextMenu={(event) => {
-                      event.preventDefault();
-                      openActionMenu(message);
-                    }}
-                    onTouchStart={() => handleTouchStart(message)}
-                    onTouchEnd={handleTouchEnd}
-                    onTouchMove={handleTouchEnd}
-                  >
+              return (
+                <div
+                  key={message.id}
+                  className={`flex items-end gap-2.5 group ${isCurrentUser ? 'justify-end' : 'justify-start'}`}
+                  onContextMenu={(event) => {
+                    event.preventDefault();
+                    openActionMenu(message);
+                  }}
+                  onTouchStart={() => handleTouchStart(message)}
+                  onTouchEnd={handleTouchEnd}
+                  onTouchMove={handleTouchEnd}
+                >
+                  {!isCurrentUser && (
+                    <div
+                      className="w-8 h-8 rounded-full cursor-pointer self-start flex-shrink-0"
+                      onClick={() => sender.id !== 'unknown' && onViewProfile(sender as User)}
+                    >
+                      <UserAvatar user={sender as User} className="w-full h-full" />
+                    </div>
+                  )}
+                  {isCurrentUser && (
+                    <button onClick={() => onDeleteMessage(tribe.id, message.id)} className="text-secondary p-1 rounded-full hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <TrashIcon className="h-4 w-4" />
+                    </button>
+                  )}
+                  <div className={`flex flex-col w-full max-w-xs lg:max-w-md ${isCurrentUser ? 'items-end' : 'items-start'}`}>
                     {!isCurrentUser && (
-                      <div
-                        className="w-8 h-8 rounded-full cursor-pointer self-start flex-shrink-0"
+                      <p
+                        className="text-xs text-secondary mb-1 ml-3 cursor-pointer hover:underline"
                         onClick={() => sender.id !== 'unknown' && onViewProfile(sender as User)}
                       >
-                        <UserAvatar user={sender as User} className="w-full h-full" />
-                      </div>
+                        {sender.name}
+                      </p>
                     )}
-                    {isCurrentUser && (
-                      <button onClick={() => onDeleteMessage(tribe.id, message.id)} className="text-secondary p-1 rounded-full hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <TrashIcon className="h-4 w-4" />
-                      </button>
-                    )}
-                    <div className={`flex flex-col w-full max-w-xs lg:max-w-md ${isCurrentUser ? 'items-end' : 'items-start'}`}>
-                      {!isCurrentUser && (
-                        <p
-                          className="text-xs text-secondary mb-1 ml-3 cursor-pointer hover:underline"
-                          onClick={() => sender.id !== 'unknown' && onViewProfile(sender as User)}
-                        >
-                          {sender.name}
-                        </p>
+                    <div className={`px-4 py-2.5 text-sm break-words ${isCurrentUser ? 'bg-accent text-accent-text rounded-2xl rounded-tr-none' : 'bg-surface text-primary shadow-sm rounded-2xl rounded-tl-none'}`}>
+                      {replyMessage && (
+                        <div className={`mb-2 rounded-lg px-3 py-2 text-xs ${isCurrentUser ? 'bg-accent-text/20 text-accent-text' : 'bg-background text-secondary'}`}>
+                          <p className="font-semibold">{replySenderName}</p>
+                          <p className="line-clamp-2">{replyMessage.text}</p>
+                        </div>
                       )}
-                      <div className={`px-4 py-2.5 text-sm break-words ${isCurrentUser ? 'bg-accent text-accent-text rounded-2xl rounded-tr-none' : 'bg-surface text-primary shadow-sm rounded-2xl rounded-tl-none'}`}>
-                        {replyMessage && (
-                          <div className={`mb-2 rounded-lg px-3 py-2 text-xs ${isCurrentUser ? 'bg-accent-text/20 text-accent-text' : 'bg-background text-secondary'}`}>
-                            <p className="font-semibold">{replySenderName}</p>
-                            <p className="line-clamp-2">{replyMessage.text}</p>
-                          </div>
-                        )}
-                        {message.imageUrl && (
-                          <img src={message.imageUrl} alt="Shared content" className="mb-2 rounded-lg w-full" />
-                        )}
-                        <p className="leading-relaxed whitespace-pre-wrap">{message.text}</p>
-                      </div>
-                      <p className="text-xs text-secondary mt-1.5 px-1">{new Date(message.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
+                      {message.imageUrl && (
+                        <img src={message.imageUrl} alt="Shared content" className="mb-2 rounded-lg w-full" />
+                      )}
+                      <p className="leading-relaxed whitespace-pre-wrap">{message.text}</p>
                     </div>
+                    <p className="text-xs text-secondary mt-1.5 px-1">{new Date(message.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
                   </div>
-                );
-              })}
-              {localMessages.length === 0 && (
-                <div className="text-center text-secondary p-8">
-                  <p>Welcome to #{tribe.name}!</p>
-                  <p className="text-sm">Be the first one to send a message.</p>
                 </div>
-              )}
-              <div ref={messagesEndRef} />
-            </div>
-          )}
+              );
+            })}
+            {localMessages.length === 0 && (
+              <div className="text-center text-secondary p-8">
+                <p>Welcome to #{tribe.name}!</p>
+                <p className="text-sm">Be the first one to send a message.</p>
+              </div>
+            )}
+            <div ref={messagesEndRef} />
+          </div>
+        )}
         {actionMessage && (
           <div
             className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-4 md:items-center"

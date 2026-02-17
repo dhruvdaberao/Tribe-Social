@@ -1,5 +1,5 @@
 # 🐛 Tribe Social - Comprehensive Bug Report & Project Analysis
-**Last Updated**: February 16, 2026
+**Last Updated**: February 17, 2026
 **Status**: Active Development
 **Analysis Depth**: Full Codebase Audit
 
@@ -7,32 +7,32 @@
 
 ## 🚨 PRIORITY 1: CRITICAL BUGS (App Store Blockers)
 
-### ❌ 1. **User Reporting System - MISSING** ⚠️ **APP STORE REJECTION RISK**
-- **Status**: NOT IMPLEMENTED
-- **Impact**: **CRITICAL** - Apple App Store and Google Play Store **WILL REJECT** social apps without reporting
-- **Missing Components**:
-  - ❌ No `Report` model in backend
-  - ❌ No `/api/reports` routes
-  - ❌ No `ReportModal` component in frontend
-  - ❌ No "Report" buttons on posts/profiles/tribes
-  - ❌ No admin dashboard for reviewing reports
-- **Current State**: `postModel.js` and `userModel.js` have `reports: []` array but no actual reporting flow
+### ❌ 1. **User Reporting System - FRONTEND DISCONNECTED** ⚠️ **APP STORE REJECTION RISK**
+- **Status**: **PARTIALLY IMPLEMENTED**
+- **Impact**: **CRITICAL** - Apple/Google will reject the app.
+- **Current State**:
+  - ✅ Backend: `reportRoutes.js` and `reportModel.js` exist and are functional.
+  - ✅ Frontend: `ReportModal.tsx` exists.
+  - ❌ **Integration Missing**: `ReportModal` is NOT imported or used in `PostCard`, `ProfilePage`, or `TribeDetailPage`. There are no "Report" buttons in the UI.
 - **Fix Required**:
-  1. Create `reportModel.js`: `{ reporter, reportedUser, reportedPost, reportedTribe, reason, status, createdAt }`
-  2. Create `/api/reports` routes (POST create, GET list for admins)
-  3. Create `ReportModal.tsx` with reason selection (Spam, Harassment, Violence, etc.)
-  4. Add "Report" option to PostCard, ProfilePage, TribeDetailPage menus
-  5. Create admin panel route `/admin/reports` with approve/dismiss actions
-- **Estimated Effort**: 8-12 hours
+  1. Add "Report" button to 3-dot menus on Posts, Profiles, and Tribes.
+  2. Connect `ReportModal` to these buttons.
+  3. Ensure API calls to `/api/reports` work.
+- **Estimated Effort**: 2-3 hours
 
 ---
 
 ## 🔴 PRIORITY 2: MAJOR BUGS (Functionality Breaking)
 
-### ⚠️ 1. **Duplicate Clan/Tribe Code**
-- **Status**: RESOLVED ✅
-- **Impact**: HIGH - Code confusion, maintenance burden, potential bugs
-- **Fix**: Deleted all clan-related files and verified no imports reference them.
+### ⚠️ 1. **Duplicate Clan/Tribe Code - CLEANUP REQUIRED**
+- **Status**: **EXISTS (Leftover Code)**
+- **Impact**: HIGH - Confusion for developers.
+- **Findings**:
+  - `components/clans/ClansPage.tsx` exists but is unused.
+  - `components/clans/ClanCard.tsx` (likely) exists.
+  - App uses `components/tribes/TribesPage.tsx`.
+- **Fix**: Delete `frontend/components/clans` directory entirely.
+- **Estimated Effort**: 15 minutes
 
 ### ⚠️ 2. **Story Auto-Deletion Not Implemented**
 - **Status**: PARTIAL - Model has `expiresAt` field but no cleanup
@@ -45,22 +45,15 @@
 
 ### ⚠️ 3. **Console.log Statements in Production**
 - **Status**: 40+ instances found
-- **Impact**: MEDIUM - Performance overhead, security risk (exposes data in browser)
-- **Locations**:
-  - `SocketContext.tsx`
-  - `TribeDetailPage.tsx`
-  - `TribeCard.tsx`
-  - `service-worker.js`
-  - `pushNotifications.ts`
-  - `ProfilePage.tsx`
-- **Fix**: Replace with proper logging library or remove
+- **Impact**: MEDIUM - Performance overhead, security risk
+- **Locations**: `SocketContext.tsx`, `TribeDetailPage.tsx`, `service-worker.js`, etc.
+- **Fix**: Replace with proper logging library or remove.
 - **Estimated Effort**: 2-3 hours
 
 ### ⚠️ 4. **TypeScript Strict Mode Disabled**
 - **Status**: `tsconfig.json` missing `"strict": true`
-- **Impact**: MEDIUM - No null/undefined checks, potential runtime errors
-- **Current Config**: Only basic settings, no `strictNullChecks`, `strictFunctionTypes`, etc.
-- **Fix**: Enable strict mode incrementally
+- **Impact**: MEDIUM - No null/undefined checks, potential runtime errors.
+- **Fix**: Enable strict mode incrementally.
 - **Estimated Effort**: 4-6 hours
 
 ---
@@ -68,38 +61,31 @@
 ## 🟠 PRIORITY 3: PERFORMANCE & UX ISSUES
 
 ### 1. **No Skeleton Loaders**
-- **Status**: Using spinners only
-- **Impact**: MEDIUM - Poor perceived performance
-- **Missing**: Skeleton UI for Feed, Profile, Discover, Tribes, Messages
-- **Fix**: Create `SkeletonCard`, `SkeletonProfile`, `SkeletonList` components
+- **Status**: Using spinners only.
+- **Impact**: MEDIUM - Poor perceived performance.
+- **Fix**: Create `SkeletonCard`, `SkeletonProfile` components.
 - **Estimated Effort**: 3-4 hours
 
 ### 2. **No Virtual Scrolling**
-- **Status**: Renders all items at once
-- **Impact**: MEDIUM - Performance degrades with 500+ posts/users
-- **Risk**: App freezes with large datasets
-- **Fix**: Implement `react-window` or `react-virtuoso` for Feed, Discover, Tribes list
+- **Status**: Renders all items at once.
+- **Impact**: MEDIUM - Performance degrades with large lists.
+- **Fix**: Implement `react-window`.
 - **Estimated Effort**: 4-6 hours
 
 ### 3. **No Image Compression**
-- **Status**: Images uploaded raw to Cloudinary
-- **Impact**: MEDIUM - Slow loads, high bandwidth costs
-- **Fix**: 
-  - Client-side: Use `browser-image-compression` before upload
-  - Cloudinary: Apply transformations (e.g., `f_auto,q_auto,w_800`)
+- **Status**: Images uploaded raw.
+- **Impact**: MEDIUM - Slow loads, high cost.
+- **Fix**: Use `browser-image-compression` client-side.
 - **Estimated Effort**: 2-3 hours
 
-### 4. **No Error Boundaries (Per-Page)**
-- **Status**: Only global error boundary
-- **Impact**: LOW-MEDIUM - Single error crashes entire section
-- **Fix**: Add `ErrorBoundary` wrapper for Feed, Profile, Tribes, Messages pages
+### 4. **No Error Boundaries**
+- **Status**: Only global boundary.
+- **Fix**: Add boundaries for Feed, Profile, Tribes.
 - **Estimated Effort**: 2 hours
 
-### 5. **No Offline Support / PWA**
-- **Status**: Service worker exists but incomplete
-- **Impact**: MEDIUM - Poor UX on unstable connections
-- **Current**: `service-worker.js` handles push notifications only
-- **Fix**: Implement offline caching for posts, profiles, tribes (read-only)
+### 5. **Offline Support**
+- **Status**: `service-worker.js` exists in `frontend/public` but is minimal.
+- **Fix**: Implement caching for read-only access.
 - **Estimated Effort**: 6-8 hours
 
 ---
@@ -107,125 +93,56 @@
 ## 🟡 PRIORITY 4: MISSING FEATURES
 
 ### 1. **Global Search - Limited**
-- **Status**: Search UI exists but basic
-- **Missing**: Full-text search across Users, Posts, Tribes
-- **Current**: Likely client-side filtering only
-- **Fix**: Implement MongoDB Atlas Search or regex-based search with indexes
+- **Status**: Basic UI only.
+- **Fix**: Implement MongoDB Atlas Search.
 - **Estimated Effort**: 4-6 hours
 
-### 2. **Email Notifications**
-- **Status**: RESOLVED ✅
-- **Analysis**: Implemented Daily Digest and Moderation Alerts using Resend.
-- **Files**: `digestService.js`, `reportRoutes.js`, `emailService.js`
-
-### 3. **Push Notifications**
-- **Status**: RESOLVED ✅
-- **Analysis**: Full integration with Service Worker, VAPID, and backend triggers for all social events.
-- **Files**: `pushRoutes.js`, `service-worker.js`, `pushService.js`
-
-### 4. **Tribe Member Limits**
-- **Status**: No cap on members
-- **Risk**: Performance issues with very large tribes (10K+ members)
-- **Fix**: Add configurable limit (e.g., 1000 for free tier, unlimited for premium)
+### 2. **Tribe Member Limits**
+- **Status**: No cap.
+- **Fix**: Add configurable limit.
 - **Estimated Effort**: 1-2 hours
 
-### 5. **Message Read Receipts**
-- **Status**: No visual indicator
-- **Impact**: LOW - Nice-to-have
-- **Fix**: Add `readBy: [userId]` to `messageModel`, update UI
+### 3. **Message Read Receipts**
+- **Status**: Not implemented.
+- **Fix**: Add `readBy` array.
 - **Estimated Effort**: 3-4 hours
 
-### 6. **Admin Dashboard**
-- **Status**: NOT IMPLEMENTED
-- **Impact**: HIGH - No way to manage reports, users, content
-- **Required For**: User reporting system, moderation
-- **Fix**: Create `/admin` route with:
-  - Reports management
-  - User ban/unban
-  - Content moderation
-  - Analytics dashboard
+### 4. **Admin Dashboard**
+- **Status**: **Backend Routes Exist**, Frontend Missing.
+- **Details**: `reportRoutes.js` has admin checks, but no UI pages exist at `/admin`.
+- **Fix**: Build Admin UI.
 - **Estimated Effort**: 12-16 hours
 
 ---
 
 ## 🐞 MINOR BUGS & EDGE CASES
 
-### 1. **Blocked Users Visible in Tribes**
-- **Status**: Working as intended (per user request)
-- **Note**: Blocked users can still appear in group contexts
+### 1. **No Rate Limiting (Global)**
+- **Status**: PARTIAL.
+- **Details**: `express-rate-limit` is used in `reportRoutes.js` but not globally or on auth routes.
+- **Fix**: Apply global limiter in `server.js`.
+- **Estimated Effort**: 1 hour
 
-### 2. **No Rate Limiting on API Routes**
-- **Status**: NOT IMPLEMENTED
-- **Impact**: LOW-MEDIUM - Vulnerable to spam/abuse
-- **Fix**: Add `express-rate-limit` middleware
-- **Estimated Effort**: 1-2 hours
-
-### 3. **No Input Sanitization**
-- **Status**: PARTIAL - Basic validation only
-- **Risk**: XSS attacks via post content, tribe names
-- **Fix**: Add `DOMPurify` on frontend, `validator.js` on backend
+### 2. **No Input Sanitization**
+- **Status**: Basic validation only.
+- **Fix**: Add `DOMPurify`.
 - **Estimated Effort**: 2-3 hours
 
-### 4. **No Pagination on Tribes/Users List**
-- **Status**: Returns all items
-- **Impact**: LOW - Performance issue with 1000+ tribes
-- **Fix**: Add pagination to `/api/tribes`, `/api/users` routes
+### 3. **No Pagination on Tribes/Users List**
+- **Status**: Returns all items.
+- **Fix**: Add pagination API.
 - **Estimated Effort**: 2-3 hours
 
-### 5. **No "Forgot Password" Flow**
-- **Status**: NOT IMPLEMENTED
-- **Impact**: MEDIUM - Users locked out if they forget password
-- **Fix**: Add password reset via email (OTP already exists in `otpModel.js`)
+### 4. **No "Forgot Password" Flow**
+- **Status**: Not implemented.
+- **Fix**: Implement email reset flow.
 - **Estimated Effort**: 3-4 hours
 
 ---
 
-## 🚀 STRATEGIC DIFFERENTIATORS (Future Features)
+## 🚀 FUTURE FEATURES (Strategic)
 
-### 1. 🛡️ **Tribe Reputation System** (Gamification)
-- **Concept**: Users earn badges/XP from Tribe participation
-- **USP**: Grind to become "Elder" or "Chief" - meaningful status
-- **Status**: NOT IMPLEMENTED
-- **Estimated Effort**: 20-30 hours
-
-### 2. 🔥 **Campfires** (Drop-in Audio Rooms)
-- **Concept**: Permanent voice channels per Tribe (like Discord voice)
-- **USP**: Ambient audio - listen before joining
-- **Status**: NOT IMPLEMENTED
-- **Tech**: WebRTC, Agora, or Daily.co API
-- **Estimated Effort**: 40-60 hours
-
-### 3. 🧠 **Psyduck as Active Moderator** (AI Agent)
-- **Concept**: AI interjects in debates to fact-check/summarize
-- **USP**: "AI-Moderated Civil Discourse"
-- **Current**: Basic chatbot only
-- **Status**: PARTIAL
-- **Estimated Effort**: 30-40 hours
-
-### 4. 🧭 **The Compass** (Contextual Discovery)
-- **Concept**: Choose "Vibe" (Learning, Ranting, Chilling) for feed
-- **USP**: Intentional browsing vs doomscrolling
-- **Status**: NOT IMPLEMENTED
-- **Estimated Effort**: 15-20 hours
-
----
-
-## ✅ RECENTLY FIXED (February 16, 2026)
-
-1. ✅ **Notification System Complete** (Push + Email Digests + Moderation)
-2. ✅ **Mobile Chat Layout** (Visual Viewport fix)
-3. ✅ **Tribe Chat Header** (Layout stability)
-4. ✅ Follow/Unfollow button reversion (useEffect dependency fix)
-5. ✅ Psyduck chat layout (mobile brown screen)
-6. ✅ Block user redirect
-7. ✅ Database scalability (separate collections)
-8. ✅ Frontend architecture (GlobalContentContext)
-9. ✅ Payload limits (per-route)
-10. ✅ Settings page refactor (sub-pages)
-11. ✅ Profile banner overflow
-12. ✅ Edit Tribe modal compacting
-13. ✅ Custom Confirmation Modal (replaced system alerts)
-
----
-
-**Report Compiled By**: Antigravity AI
+1.  **Tribe Reputation System** (Gamification)
+2.  **Campfires** (Audio Rooms)
+3.  **Psyduck as Active Moderator**
+4.  **The Compass** (Contextual Discovery)
