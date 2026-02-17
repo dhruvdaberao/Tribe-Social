@@ -795,18 +795,18 @@ const App: React.FC = () => {
     };
 
     let containerClass = 'max-w-2xl mx-auto px-4 md:px-6 pt-6 pb-24 md:pb-8'; // Default with bottom nav padding
-    const isChatPage = ['TribeDetail'].includes(activeNavItem);
+    const isChatPage = ['Messages', 'TribeDetail'].includes(activeNavItem);
 
     if (isFullHeightPage) {
         // For Chat pages: 
         // 1. Remove horizontal padding/margin constraints to allow full width if needed (inner component handles it)
         // 2. Remove bottom padding so we can use 100dvh and handle our own input positioning
         // 3. We use h-screen or 100dvh for the specific chat layout.
-        containerClass = 'h-full w-full max-w-5xl mx-auto md:px-4 md:pb-4';
+        containerClass = 'h-full min-h-0 w-full max-w-5xl mx-auto md:px-4 md:pb-4';
         if (isChatPage) {
             // Mobile specific: NO padding, full viewport.
             // Desktop: keep some padding/max-width structure.
-            containerClass = 'h-full w-full max-w-6xl mx-auto md:h-[calc(100vh-2rem)] md:my-4';
+            containerClass = 'h-full min-h-0 w-full max-w-6xl mx-auto md:h-[calc(100vh-2rem)] md:my-4';
         } else if (activeNavItem === 'Settings') {
             containerClass = 'h-[calc(100vh-8rem)] md:h-[calc(100vh-4rem)] max-w-2xl mx-auto px-4';
         }
@@ -831,8 +831,8 @@ const App: React.FC = () => {
               - We remove pb-16 (bottom nav padding) effectively by not having it on the container.
               - We use fixed inset-0 z-40 to go OVER the bottom nav and top bar if needed.
             */}
-            <main className={`flex-1 overflow-hidden ${isChatPage ? 'fixed inset-0 z-[60] h-[100dvh] w-full md:static md:inset-auto md:z-auto md:pt-16 md:pb-0' : 'pt-16 pb-16 md:pb-0'}`}>
-                <div className={containerClass}>
+            <main className={`flex-1 min-h-0 overflow-hidden ${isChatPage ? 'fixed inset-0 z-[60] h-[100dvh] w-full md:static md:inset-auto md:z-auto md:pt-16 md:pb-0' : 'pt-16 pb-16 md:pb-0'}`}>
+                <div className={`${containerClass} min-h-0`}>
                     {renderContent()}
                 </div>
             </main>

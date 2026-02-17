@@ -98,7 +98,7 @@
 
 //   return (
 //     <div className="flex flex-col h-full bg-background">
-//       <div className="flex items-center p-3 border-b border-border bg-surface flex-shrink-0 z-10">
+//       <div className="sticky top-0 z-20 flex items-center p-3 border-b border-border bg-surface flex-shrink-0">
 //         <button onClick={onBack} className="md:hidden p-2 mr-2 text-primary">
 //             <BackIcon />
 //         </button>
@@ -221,11 +221,14 @@ export const MessageArea: React.FC<MessageAreaProps> = ({ conversation, messages
   const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const { socket, onlineUsers } = useSocket();
-  
+  const previousMessageCountRef = useRef(0);
+
   const isOtherUserOnline = otherParticipantId ? onlineUsers.includes(otherParticipantId) : false;
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    const isNewMessage = messages.length > previousMessageCountRef.current;
+    messagesEndRef.current?.scrollIntoView({ behavior: isNewMessage ? 'smooth' : 'auto', block: 'end' });
+    previousMessageCountRef.current = messages.length;
   }, [messages, isLoading]);
 
   useEffect(() => {
@@ -307,7 +310,7 @@ export const MessageArea: React.FC<MessageAreaProps> = ({ conversation, messages
   return (
     // Removed rounded corners from the outer container
     <div className="flex flex-col h-full min-h-0 bg-background overflow-hidden">
-      <div className="flex items-center p-3 border-b border-border bg-surface flex-shrink-0 z-10">
+      <div className="sticky top-0 z-20 flex items-center p-3 border-b border-border bg-surface flex-shrink-0">
         <button onClick={onBack} className="md:hidden p-2 mr-2 text-primary">
             <BackIcon />
         </button>
@@ -393,7 +396,7 @@ export const MessageArea: React.FC<MessageAreaProps> = ({ conversation, messages
         )}
       </div>
 
-      <div className="p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] bg-background border-t border-border flex-shrink-0">
+      <div className="px-4 pt-3 pb-[max(env(safe-area-inset-bottom),0.5rem)] bg-background border-t border-border flex-shrink-0">
         <form onSubmit={handleSendMessage} className="flex items-center space-x-3">
           <input
             type="text"
