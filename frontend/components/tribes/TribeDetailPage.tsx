@@ -645,6 +645,22 @@ const TribeDetailPage: React.FC<Props> = ({ currentUser, tribeId: propTribeId })
     }
   };
 
+
+  const handleKickMember = async (userId: string) => {
+    if (!id || !tribe) return;
+    const previousMembers = tribe.members;
+    const nextMembers = tribe.members.filter((memberId) => memberId !== userId);
+    setTribe({ ...tribe, members: nextMembers });
+    try {
+      const { data } = await api.kickTribeMember(id, userId);
+      setTribe(data);
+      toast.success('Member removed.');
+    } catch (error: any) {
+      setTribe({ ...tribe, members: previousMembers });
+      toast.error(error?.response?.data?.message || 'Failed to kick member.');
+    }
+  };
+
   const handleJoinToggle = async () => {
     if (!id || !tribe || !currentUser) return;
 
@@ -697,7 +713,7 @@ const TribeDetailPage: React.FC<Props> = ({ currentUser, tribeId: propTribeId })
         <h2>{tribe?.name || 'Loading...'}</h2>
         {isLoading && !tribe && <HeaderLoader />}
         <MemberCountBadge onClick={() => setIsMembersOpen(true)}>
-          <span>{tribe?.members?.length || 0} members</span>
+          <span>{tribe?.members?.length || 0}/{tribe?.memberLimit || 50} members</span>
         </MemberCountBadge>
       </HeaderInfo>
 
@@ -793,6 +809,10 @@ const TribeDetailPage: React.FC<Props> = ({ currentUser, tribeId: propTribeId })
           }}
           onDelete={handleDeleteTribe}
           allUsers={allUsers}
+          onManageMembers={() => {
+            setIsEditOpen(false);
+            setIsMembersOpen(true);
+          }}
         />
       )}
 
@@ -803,6 +823,9 @@ const TribeDetailPage: React.FC<Props> = ({ currentUser, tribeId: propTribeId })
           memberIds={tribe.members}
           userMap={userMap}
           ownerId={typeof tribe.owner === 'string' ? tribe.owner : tribe.owner.id}
+          currentUserId={currentUser?.id}
+          canKick={currentUser?.id === (typeof tribe.owner === 'string' ? tribe.owner : tribe.owner.id)}
+          onKick={handleKickMember}
         />
       )}
 

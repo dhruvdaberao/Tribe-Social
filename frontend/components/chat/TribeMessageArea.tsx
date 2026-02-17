@@ -47,11 +47,18 @@ const TribeMessageArea: React.FC<TribeMessageAreaProps> = ({
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const shouldAutoScrollRef = useRef(true);
 
   /* ───────────── SCROLL TO BOTTOM SAFELY ───────────── */
   useEffect(() => {
-    if (isLoadingMore) return;
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+    if (isLoadingMore || !scrollContainerRef.current) return;
+    const container = scrollContainerRef.current;
+    const distanceFromBottom = container.scrollHeight - container.scrollTop - container.clientHeight;
+    const isNearBottom = distanceFromBottom < 120;
+    if (isNearBottom || shouldAutoScrollRef.current) {
+      bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+      shouldAutoScrollRef.current = true;
+    }
   }, [messages, isLoadingMore]);
 
   const handleSend = (e: React.FormEvent) => {
@@ -84,9 +91,13 @@ const TribeMessageArea: React.FC<TribeMessageAreaProps> = ({
   };
 
   const handleScroll = () => {
-    if (!onLoadMore || !hasMore || isLoadingMore) return;
     const container = scrollContainerRef.current;
-    if (container && container.scrollTop < 120) {
+    if (!container) return;
+    const distanceFromBottom = container.scrollHeight - container.scrollTop - container.clientHeight;
+    shouldAutoScrollRef.current = distanceFromBottom < 120;
+
+    if (!onLoadMore || !hasMore || isLoadingMore) return;
+    if (container.scrollTop < 120) {
       onLoadMore();
     }
   };

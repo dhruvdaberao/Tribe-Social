@@ -15,18 +15,30 @@ const reasons = [
 interface ReportModalProps {
   targetType: 'post' | 'user' | 'tribe';
   onClose: () => void;
-  onSubmit: (payload: { reason: string; details: string }) => void;
+  onSubmit: (payload: { reason: string; details: string }) => Promise<void> | void;
 }
 
 const ReportModal: React.FC<ReportModalProps> = ({ targetType, onClose, onSubmit }) => {
   const [reason, setReason] = useState(reasons[0]);
   const [details, setDetails] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const title = useMemo(() => {
     if (targetType === 'post') return 'Report Post';
     if (targetType === 'user') return 'Report User';
     return 'Report Tribe';
   }, [targetType]);
+
+
+  const handleSubmit = async () => {
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+    try {
+      await onSubmit({ reason, details });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   return (
     <ModalPortal
@@ -91,10 +103,11 @@ const ReportModal: React.FC<ReportModalProps> = ({ targetType, onClose, onSubmit
           Cancel
         </button>
         <button
-          onClick={() => onSubmit({ reason, details })}
-          className="rounded-lg bg-red-500 px-4 py-2 text-sm font-semibold text-white hover:bg-red-600"
+          onClick={handleSubmit}
+          disabled={isSubmitting}
+          className="rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-accent-text hover:bg-accent/90 disabled:opacity-60 disabled:cursor-not-allowed"
         >
-          Submit Report
+          {isSubmitting ? 'Submitting…' : 'Submit Report'}
         </button>
       </div>
     </ModalPortal>

@@ -38,6 +38,7 @@ import AdminPostsPage from './pages/admin/AdminPostsPage';
 import AdminUsersPage from './pages/admin/AdminUsersPage';
 import AdminTribesPage from './pages/admin/AdminTribesPage';
 import SuperAdminPage from './pages/admin/SuperAdminPage';
+import AdminReportsPage from './pages/admin/AdminReportsPage';
 
 export type NavItem = 'Home' | 'Discover' | 'Messages' | 'Tribes' | 'Notifications' | 'Profile' | 'Psyduck' | 'TribeDetail' | 'Settings';
 
@@ -262,7 +263,6 @@ const MainLayout: React.FC = () => {
             });
             toast.success("Report submitted. Thank you for keeping Tribe safe.");
         } catch (error) {
-            console.error("Failed to submit report:", error);
             toast.error("Failed to submit report.");
         } finally {
             setReportTarget(null);
@@ -493,6 +493,17 @@ const MainLayout: React.FC = () => {
                                     )
                                 }
                             />
+
+                            <Route
+                                path="/admin/reports"
+                                element={
+                                    currentUser?.isAdmin ? (
+                                        <AdminReportsPage />
+                                    ) : (
+                                        <Navigate to="/settings" replace />
+                                    )
+                                }
+                            />
                             <Route
                                 path="/admin/tribes"
                                 element={
@@ -508,6 +519,17 @@ const MainLayout: React.FC = () => {
                                 element={
                                     currentUser?.isSuperAdmin ? (
                                         <SuperAdminPage />
+                                    ) : (
+                                        <Navigate to="/admin" replace />
+                                    )
+                                }
+                            />
+
+                            <Route
+                                path="/super-admin/reports"
+                                element={
+                                    currentUser?.isSuperAdmin ? (
+                                        <AdminReportsPage />
                                     ) : (
                                         <Navigate to="/admin" replace />
                                     )

@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { AlertTriangle, Crown, MessageSquare, MoreVertical, Search, ShieldCheck, Trash2, UserPlus, X } from 'lucide-react';
+import { AlertTriangle, Crown, MessageSquare, MoreVertical, Search, ShieldCheck, Trash2, UserPlus, X, Flag } from 'lucide-react';
 import { toast } from '../../components/common/Toast';
 import * as api from '../../api';
 import { Report, User } from '../../types';
@@ -55,13 +55,20 @@ const SuperAdminPage: React.FC = () => {
           </button>
         </div>
 
-        <div className="mt-6 grid gap-3 md:grid-cols-2">
+        <div className="mt-6 grid gap-3 md:grid-cols-3">
           <TopActionCard
             title="Admin Leaders"
             description="Promote, demote, and manage admins"
             icon={<ShieldCheck size={18} />}
             active={isLeadersView}
             onClick={() => navigate('/admin/super?view=leaders')}
+          />
+          <TopActionCard
+            title="Reports"
+            description="Review all reports across entities"
+            icon={<Flag size={18} />}
+            active={false}
+            onClick={() => navigate('/super-admin/reports')}
           />
           <TopActionCard
             title="Reported Admins"
