@@ -815,7 +815,7 @@ const App: React.FC = () => {
     }
 
     return (
-        <div className="bg-background h-[100dvh] text-primary overflow-hidden flex flex-col">
+        <div className="bg-background h-[var(--vvh,100dvh)] text-primary overflow-hidden flex flex-col">
             <Toaster />
             {/* Pass a prop or logic to hide bottom nav on chat pages if possible, 
                 OR we ensure the ChatPage covers it with z-index. 
@@ -831,7 +831,7 @@ const App: React.FC = () => {
               - We remove pb-16 (bottom nav padding) effectively by not having it on the container.
               - We use fixed inset-0 z-40 to go OVER the bottom nav and top bar if needed.
             */}
-            <main className={`flex-1 min-h-0 overflow-hidden ${isChatPage ? 'fixed inset-0 z-[60] h-[100dvh] w-full md:static md:inset-auto md:z-auto md:pt-16 md:pb-0' : 'pt-16 pb-16 md:pb-0'}`}>
+            <main className={`flex-1 min-h-0 overflow-hidden ${isChatPage ? 'fixed inset-0 z-[60] h-[var(--vvh,100dvh)] w-full md:static md:inset-auto md:z-auto md:pt-16 md:pb-0' : 'pt-16 pb-16 md:pb-0'}`}>
                 <div className={`${containerClass} min-h-0`}>
                     {renderContent()}
                 </div>

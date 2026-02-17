@@ -249,7 +249,6 @@ import { MessageArea } from './MessageArea';
 import NewMessageModal from './NewMessageModal';
 import * as api from '../../api';
 import { useSocket } from '../../contexts/SocketContext';
-import { useVisualViewport } from '../../hooks/useVisualViewport';
 
 interface ChatPageProps {
   currentUser: User;
@@ -280,17 +279,6 @@ const ChatPage: React.FC<ChatPageProps> = ({ currentUser, allUsers, chukUser, in
     }
   });
   const { socket, clearUnreadMessages, unreadCounts, setActiveChatPartnerId } = useSocket();
-
-  // Mobile Support: Visual Viewport & IsMobile check
-  const viewportHeight = useVisualViewport();
-  const [isMobile, setIsMobile] = useState(false);
-
-  useEffect(() => {
-    const checkMobile = () => setIsMobile(window.matchMedia('(max-width: 767px)').matches);
-    checkMobile(); // Check on mount
-    window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
-  }, []);
 
   useEffect(() => {
     // When ChatPage is unmounted (e.g., user navigates away),
@@ -534,7 +522,6 @@ const ChatPage: React.FC<ChatPageProps> = ({ currentUser, allUsers, chukUser, in
   return (
     <div
       className="h-full min-h-0 w-full bg-background md:bg-surface md:border md:border-border md:shadow-lg flex overflow-hidden relative"
-      style={isMobile && viewportHeight ? { height: `${viewportHeight}px` } : {}}
     >
       <div
         className={`w-full md:w-[320px] lg:w-[380px] flex-shrink-0 flex flex-col min-h-0 transition-transform duration-300 ease-in-out md:static absolute inset-0 z-10 md:border-r md:border-border bg-surface ${isMessageAreaVisible ? '-translate-x-full' : 'translate-x-0'
