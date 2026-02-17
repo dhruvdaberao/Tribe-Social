@@ -806,7 +806,7 @@ const App: React.FC = () => {
         if (isChatPage) {
             // Mobile specific: NO padding, full viewport.
             // Desktop: keep some padding/max-width structure.
-            containerClass = 'h-full min-h-0 w-full max-w-6xl mx-auto md:h-[calc(100vh-2rem)] md:my-4';
+            containerClass = 'mt-16 h-[calc(var(--vvh,100dvh)-4rem)] min-h-0 w-full max-w-6xl mx-auto md:h-[calc(var(--vvh,100dvh)-6rem)] md:my-4';
         } else if (activeNavItem === 'Settings') {
             containerClass = 'h-[calc(100vh-8rem)] md:h-[calc(100vh-4rem)] max-w-2xl mx-auto px-4';
         }
@@ -831,7 +831,7 @@ const App: React.FC = () => {
               - We remove pb-16 (bottom nav padding) effectively by not having it on the container.
               - We use fixed inset-0 z-40 to go OVER the bottom nav and top bar if needed.
             */}
-            <main className={`flex-1 min-h-0 overflow-hidden ${isChatPage ? 'pt-16 pb-0' : 'pt-16 pb-16 md:pb-0'}`}>
+            <main className={`flex-1 min-h-0 overflow-hidden ${isChatPage ? 'pt-0 pb-0' : 'pt-16 pb-16 md:pb-0'}`}>
                 <div className={`${containerClass} min-h-0`}>
                     {renderContent()}
                 </div>

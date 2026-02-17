@@ -1,4 +1,5 @@
-import React, { useEffect } from 'react';
+import React from 'react';
+import useChatViewport from '../../hooks/useChatViewport';
 
 interface ChatShellProps {
   header: React.ReactNode;
@@ -8,12 +9,6 @@ interface ChatShellProps {
   messagesClassName?: string;
 }
 
-const updateViewportHeightVar = () => {
-  if (typeof window === 'undefined') return;
-  const height = window.visualViewport?.height ?? window.innerHeight;
-  document.documentElement.style.setProperty('--vvh', `${height}px`);
-};
-
 const ChatShell: React.FC<ChatShellProps> = ({
   header,
   composer,
@@ -21,46 +16,30 @@ const ChatShell: React.FC<ChatShellProps> = ({
   className = '',
   messagesClassName = ''
 }) => {
-  useEffect(() => {
-    updateViewportHeightVar();
-
-    const viewport = window.visualViewport;
-    viewport?.addEventListener('resize', updateViewportHeightVar);
-    viewport?.addEventListener('scroll', updateViewportHeightVar);
-    window.addEventListener('resize', updateViewportHeightVar);
-
-    const previousBodyOverflow = document.body.style.overflow;
-    const previousHtmlOverflow = document.documentElement.style.overflow;
-    const previousBodyOverscroll = document.body.style.overscrollBehaviorY;
-
-    document.body.style.overflow = 'hidden';
-    document.documentElement.style.overflow = 'hidden';
-    document.body.style.overscrollBehaviorY = 'none';
-
-    return () => {
-      viewport?.removeEventListener('resize', updateViewportHeightVar);
-      viewport?.removeEventListener('scroll', updateViewportHeightVar);
-      window.removeEventListener('resize', updateViewportHeightVar);
-
-      document.body.style.overflow = previousBodyOverflow;
-      document.documentElement.style.overflow = previousHtmlOverflow;
-      document.body.style.overscrollBehaviorY = previousBodyOverscroll;
-    };
-  }, []);
+  useChatViewport();
 
   return (
     <section
-      className={`h-[var(--vvh,100dvh)] md:h-full min-h-0 w-full flex flex-col overflow-hidden bg-background ${className}`}
+      className={`chat-shell grid grid-rows-[auto_minmax(0,1fr)_auto] h-[var(--chat-vh,100vh)] supports-[height:100dvh]:h-[var(--chat-vh,100dvh)] min-h-0 w-full overflow-hidden bg-background ${className}`}
+      style={{
+        ['--chat-vh' as string]: 'var(--vvh, 100dvh)',
+      }}
     >
-      <header className="z-30 flex-none border-b border-border bg-surface pt-[env(safe-area-inset-top)]">
+      <header className="z-20 border-b border-border bg-surface">
         {header}
       </header>
 
-      <div className={`flex-1 min-h-0 overflow-y-auto overscroll-contain ${messagesClassName}`}>
+      <div className={`min-h-0 overflow-y-auto overscroll-contain ${messagesClassName}`}>
         {children}
       </div>
 
-      <footer className="z-30 flex-none border-t border-border bg-surface pb-[max(env(safe-area-inset-bottom),0px)]">
+      <footer
+        className="z-20 border-t border-border bg-surface"
+        style={{
+          transform: 'translateY(calc(-1 * var(--keyboardOffset, 0px)))',
+          paddingBottom: 'env(safe-area-inset-bottom)',
+        }}
+      >
         {composer}
       </footer>
     </section>
