@@ -1,45 +1,19 @@
 import React from 'react';
 import styled from 'styled-components';
 import { Camera, Image as ImageIcon, X } from 'lucide-react';
-
-const Overlay = styled.div`
-  position: fixed;
-  top: 0; left: 0; right: 0; bottom: 0;
-  background: rgba(0, 0, 0, 0.5); // consistent with other modals
-  display: flex;
-  align-items: flex-end; // Bottom sheet style for mobile feel, can be center for desktop
-  justify-content: center;
-  z-index: 2000; // Higher than standard modals
-  padding: 0; // Mobile: Edge-to-edge
-
-  @media (min-width: 640px) {
-    align-items: center;
-    padding: 1rem;
-  }
-`;
+import ModalPortal from './ModalPortal';
 
 const ModalContainer = styled.div`
   background: ${({ theme }) => theme.cardBackground};
   width: 100%;
-  max-width: none; // Mobile: Full width
-  border-radius: 20px 20px 0 0; // Mobile: Bottom sheet
+  max-width: 400px;
+  border-radius: 16px;
   padding: 24px;
   box-shadow: 0 10px 25px rgba(0,0,0,0.5);
   display: flex;
   flex-direction: column;
   gap: 20px;
-  animation: slideUp 0.3s ease-out;
-
-  @media (min-width: 640px) {
-    max-width: 400px; // Desktop: Constrained
-    border-radius: 16px; // Desktop: All rounded
-    animation: fadeIn 0.2s ease-out;
-  }
-
-  @keyframes slideUp {
-    from { transform: translateY(100%); opacity: 0; }
-    to { transform: translateY(0); opacity: 1; }
-  }
+  animation: fadeIn 0.2s ease-out;
 
   @keyframes fadeIn {
     from { opacity: 0; transform: scale(0.95); }
@@ -57,7 +31,7 @@ const Header = styled.div`
     font-size: 1.25rem;
     font-weight: 700;
     color: ${({ theme }) => theme.text};
-    font-family: inherit; // Use global font
+    font-family: inherit;
   }
 `;
 
@@ -126,98 +100,29 @@ const IconWrapper = styled.div`
   color: ${({ theme }) => theme.primary};
   margin-bottom: 4px;
   box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-`; // Neutral distinctive bg
-// Or check theme usage:
-// theme.surface might not exist in that strict theme file I saw.
-// Let's use theme.background for button, and theme.cardBackground for modal.
-// IconWrapper needs to contrast against theme.background.
-// Let's use theme.cardBackground if button is theme.background.
-
-// Re-defining IconWrapper safely based on likely available theme keys (background/cardBackground/primary)
-// theme.surface was used in CreatePost but I saw lightTheme keys: background, cardBackground, border.
-// I will use theme.cardBackground for button background? No, button is background effectively.
-// Let's stick to safe keys.
-
-// Redoing Styled Components with safe keys from theme.ts
-
+`;
 
 interface MediaSelectionModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSelectCamera: () => void;
   onSelectGallery: () => void;
-  anchorEl?: HTMLElement | null; // New prop for positioning
+  anchorEl?: HTMLElement | null;
 }
 
-const MediaSelectionModal: React.FC<MediaSelectionModalProps> = ({ isOpen, onClose, onSelectCamera, onSelectGallery, anchorEl }) => {
-  const [position, setPosition] = React.useState<{ top: number; left: number; width: number } | null>(null);
-
-  React.useEffect(() => {
-    if (isOpen && anchorEl) {
-      const updatePosition = () => {
-        const rect = anchorEl.getBoundingClientRect();
-        const scrollTop = window.scrollY || document.documentElement.scrollTop;
-        const scrollLeft = window.scrollX || document.documentElement.scrollLeft;
-        const viewportWidth = window.innerWidth;
-        const viewportHeight = window.innerHeight;
-        const modalWidth = Math.min(320, viewportWidth - 24);
-        const modalHeight = 220;
-        const desiredLeft = rect.left + scrollLeft;
-        const clampedLeft = Math.min(
-          Math.max(scrollLeft + 12, desiredLeft),
-          scrollLeft + viewportWidth - modalWidth - 12
-        );
-        const desiredTop = rect.bottom + scrollTop + 8;
-        const fitsBelow = desiredTop + modalHeight <= scrollTop + viewportHeight - 12;
-        const top = fitsBelow
-          ? desiredTop
-          : Math.max(scrollTop + 12, rect.top + scrollTop - modalHeight - 8);
-
-        // Basic positioning: Below the anchor, aligned left
-        // Add some offset (8px)
-        setPosition({
-          top,
-          left: clampedLeft,
-          width: modalWidth
-        });
-      };
-
-      updatePosition();
-      window.addEventListener('resize', updatePosition);
-      window.addEventListener('scroll', updatePosition);
-      return () => {
-        window.removeEventListener('resize', updatePosition);
-        window.removeEventListener('scroll', updatePosition);
-      };
-    } else {
-      setPosition(null);
-    }
-  }, [isOpen, anchorEl]);
-
-  if (!isOpen) return null;
-  const isAnchored = Boolean(position);
-
+const MediaSelectionModal: React.FC<MediaSelectionModalProps> = ({ isOpen, onClose, onSelectCamera, onSelectGallery }) => {
   return (
-    <Overlay
-      onClick={onClose}
-      style={isAnchored ? { alignItems: 'flex-start', justifyContent: 'flex-start', background: 'rgba(0, 0, 0, 0.35)' } : {}}
+    <ModalPortal
+      isOpen={isOpen}
+      onClose={onClose}
+      overlayStyle={{ background: 'rgba(0, 0, 0, 0.5)' }}
+      contentStyle={{ width: '100%', maxWidth: '400px' }}
+      zIndex={9999}
     >
-      <ModalContainer
-        onClick={(e) => e.stopPropagation()}
-        style={isAnchored ? {
-          position: 'absolute',
-          top: position?.top,
-          left: position?.left,
-          marginTop: 0,
-          width: position?.width,
-          maxWidth: '90vw',
-          borderRadius: '16px',
-          boxShadow: '0 8px 24px rgba(0,0,0,0.35)'
-        } : {}}
-      >
+      <ModalContainer>
         <Header>
           <h3>Add Media</h3>
-          <CloseButton onClick={onClose}>
+          <CloseButton onClick={onClose} aria-label="Close add media modal">
             <X size={24} />
           </CloseButton>
         </Header>
@@ -238,7 +143,7 @@ const MediaSelectionModal: React.FC<MediaSelectionModalProps> = ({ isOpen, onClo
           </OptionButton>
         </OptionsGrid>
       </ModalContainer>
-    </Overlay>
+    </ModalPortal>
   );
 };
 

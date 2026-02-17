@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { User } from '../../types';
 import UserAvatar from '../common/UserAvatar';
+import ModalPortal from '../common/ModalPortal';
 
 interface TribeMembersModalProps {
   isOpen: boolean;
@@ -27,55 +28,58 @@ const TribeMembersModal: React.FC<TribeMembersModalProps> = ({ isOpen, onClose, 
     );
   }, [searchTerm, members]);
 
-  if (!isOpen) return null;
-
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-60 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={onClose}>
-      <div className="bg-surface rounded-2xl shadow-xl w-full max-w-md h-[70vh] flex flex-col border border-border" onClick={e => e.stopPropagation()}>
-        <div className="p-4 border-b border-border flex-shrink-0">
-          <div className="flex justify-between items-center mb-4">
+    <ModalPortal
+      isOpen={isOpen}
+      onClose={onClose}
+      overlayClassName="bg-black/60 backdrop-blur-sm"
+      contentClassName="w-full max-w-md"
+    >
+      <div className="flex h-[70vh] w-full flex-col rounded-2xl border border-border bg-surface shadow-xl">
+        <div className="flex-shrink-0 border-b border-border p-4">
+          <div className="mb-4 flex items-center justify-between">
             <h2 className="text-xl font-bold text-primary">Tribe Members ({members.length})</h2>
-            <button onClick={onClose} className="text-secondary hover:text-primary text-2xl leading-none">&times;</button>
+            <button onClick={onClose} className="text-2xl leading-none text-secondary hover:text-primary" aria-label="Close members modal">&times;</button>
           </div>
           <input
             type="text"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             placeholder="Search members..."
-            className="w-full bg-background border border-border rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-accent text-primary"
+            className="w-full rounded-lg border border-border bg-background p-2 text-primary focus:outline-none focus:ring-2 focus:ring-accent"
           />
         </div>
 
-        <div className="overflow-y-auto flex-1">
+        <div className="flex-1 overflow-y-auto">
           {filteredMembers.length > 0 ? (
             <div className="divide-y divide-border">
               {filteredMembers.map(user => (
                 <div
                   key={user.id}
                   onClick={() => onViewProfile?.(user)}
-                  className="p-4 flex items-center cursor-pointer hover:bg-background transition-colors"
+                  className="flex cursor-pointer items-center p-4 transition-colors hover:bg-background"
                 >
-                  <UserAvatar user={user} className="w-10 h-10 flex-shrink-0" />
+                  <UserAvatar user={user} className="h-10 w-10 flex-shrink-0" />
                   <div className="ml-3 overflow-hidden">
                     <div className="flex items-center gap-2">
-                      <p className="font-semibold text-primary truncate">{user.name}</p>
+                      <p className="truncate font-semibold text-primary">{user.name}</p>
                       {ownerId && user.id === ownerId && (
-                        <span className="px-2 py-0.5 rounded-full bg-accent/20 text-accent text-xs font-bold border border-accent/30">
+                        <span className="rounded-full border border-accent/30 bg-accent/20 px-2 py-0.5 text-xs font-bold text-accent">
                           Chief
                         </span>
                       )}
                     </div>
-                    <p className="text-sm text-secondary truncate">@{user.username}</p>
+                    <p className="truncate text-sm text-secondary">@{user.username}</p>
                   </div>
                 </div>
               ))}
             </div>
           ) : (
-            <p className="text-secondary text-center p-8">No members found.</p>
+            <p className="p-8 text-center text-secondary">No members found.</p>
           )}
         </div>
       </div>
-    </div>
+    </ModalPortal>
   );
 };
 
