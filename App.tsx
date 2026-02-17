@@ -831,7 +831,7 @@ const App: React.FC = () => {
               - We remove pb-16 (bottom nav padding) effectively by not having it on the container.
               - We use fixed inset-0 z-40 to go OVER the bottom nav and top bar if needed.
             */}
-            <main className={`flex-1 min-h-0 overflow-hidden ${isChatPage ? 'fixed inset-0 z-[60] h-[var(--vvh,100dvh)] w-full md:static md:inset-auto md:z-auto md:pt-16 md:pb-0' : 'pt-16 pb-16 md:pb-0'}`}>
+            <main className={`flex-1 min-h-0 overflow-hidden ${isChatPage ? 'pt-16 pb-0' : 'pt-16 pb-16 md:pb-0'}`}>
                 <div className={`${containerClass} min-h-0`}>
                     {renderContent()}
                 </div>

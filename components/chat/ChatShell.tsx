@@ -52,7 +52,7 @@ const ChatShell: React.FC<ChatShellProps> = ({
     <section
       className={`h-[var(--vvh,100dvh)] md:h-full min-h-0 w-full flex flex-col overflow-hidden bg-background ${className}`}
     >
-      <header className="sticky top-0 z-30 flex-none border-b border-border bg-surface">
+      <header className="z-30 flex-none border-b border-border bg-surface pt-[env(safe-area-inset-top)]">
         {header}
       </header>
 
@@ -60,7 +60,7 @@ const ChatShell: React.FC<ChatShellProps> = ({
         {children}
       </div>
 
-      <footer className="sticky bottom-0 z-30 flex-none border-t border-border bg-surface pb-[env(safe-area-inset-bottom)]">
+      <footer className="z-30 flex-none border-t border-border bg-surface pb-[max(env(safe-area-inset-bottom),0px)]">
         {composer}
       </footer>
     </section>
