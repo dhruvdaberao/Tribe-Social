@@ -34,7 +34,7 @@
 
 //   // FIX: Changed JSX.Element to React.ReactElement to resolve type error from non-standard JSX namespace.
 //   // FIX: Specified generic type for React.ReactElement to allow passing 'isActive' prop.
-//   const mainNavItems: { name: Exclude<NavItem, 'Profile' | 'TribeDetail' | 'Chuk'>; icon: React.ReactElement<IconProps>; unreadCount: number; }[] = [
+//   const mainNavItems: { name: Exclude<NavItem, 'Profile' | 'TribeDetail' | 'Chuk' | 'Settings'>; icon: React.ReactElement<IconProps>; unreadCount: number; }[] = [
 //     { name: 'Home', icon: <HomeIcon />, unreadCount: 0 },
 //     { name: 'Discover', icon: <DiscoverIcon />, unreadCount: 0 },
 //     { name: 'Messages', icon: <MessagesIcon />, unreadCount: 0 },
@@ -193,6 +193,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeItem, onSelectItem, currentUser
     { name: 'Messages', icon: <MessagesIcon />, unreadCount: unreadMessageCount },
     { name: 'Notifications', icon: <HeartIcon />, unreadCount: unreadNotificationCount },
     { name: 'Tribes', icon: <TribesIcon />, unreadCount: unreadTribeCount },
+    { name: 'Admin', icon: <ShieldIcon />, unreadCount: 0 },
   ];
 
   const mobileNavItems = mainNavItems;
@@ -202,8 +203,8 @@ const Sidebar: React.FC<SidebarProps> = ({ activeItem, onSelectItem, currentUser
       key={item.name}
       onClick={() => onSelectItem(item.name)}
       className={`relative px-4 py-2 rounded-lg text-sm font-semibold transition-colors ${activeItem === item.name
-          ? 'text-primary bg-surface shadow-sm'
-          : 'text-accent-text/80 hover:bg-black/10'
+        ? 'text-primary bg-surface shadow-sm'
+        : 'text-accent-text/80 hover:bg-black/10'
         }`}
     >
       {item.name}
@@ -216,8 +217,8 @@ const Sidebar: React.FC<SidebarProps> = ({ activeItem, onSelectItem, currentUser
       key={item.name}
       onClick={() => onSelectItem(item.name)}
       className={`relative flex flex-col items-center justify-center p-2 rounded-lg flex-1 transition-colors ${activeItem === item.name
-          ? 'text-accent'
-          : 'text-secondary hover:bg-background hover:text-primary'
+        ? 'text-accent'
+        : 'text-secondary hover:bg-background hover:text-primary'
         }`}
     >
       {React.cloneElement(item.icon, { isActive: activeItem === item.name })}
@@ -299,5 +300,7 @@ const HeartIcon: React.FC<IconProps> = () => <IconWrapper><svg xmlns="http://www
 const ChukIcon = () => <IconWrapper><img src="/chuk.gif" alt="Chuk AI" className="w-full h-full p-0.5" /></IconWrapper>;
 const SunIcon = () => <IconWrapper><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" /></svg></IconWrapper>;
 const MoonIcon = () => <IconWrapper><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" /></svg></IconWrapper>;
+
+const ShieldIcon = () => <IconWrapper><svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg></IconWrapper>;
 
 export default Sidebar;

@@ -1,4 +1,5 @@
 import React, { useState, useRef } from 'react';
+import ModalWrapper from '../common/ModalWrapper';
 
 interface CreateTribeModalProps {
     onClose: () => void;
@@ -42,68 +43,61 @@ const CreateTribeModal: React.FC<CreateTribeModalProps> = ({ onClose, onCreate }
     };
 
     return (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" onClick={onClose}>
-            <div className="bg-surface rounded-2xl shadow-xl w-full max-w-md border border-border" onClick={e => e.stopPropagation()}>
-                <div className="p-4 flex justify-between items-center border-b border-border">
-                    <h2 className="text-xl font-bold text-primary">Create a New Tribe</h2>
-                    <button onClick={onClose} className="text-secondary hover:text-primary text-2xl leading-none">&times;</button>
+        <ModalWrapper onClose={onClose} title="Create a New Tribe" showCloseButton>
+            <form onSubmit={handleSubmit} className="p-6">
+                <div className="flex flex-col items-center mb-6">
+                    <div className="w-24 h-24 rounded-full bg-background border border-border flex items-center justify-center relative group">
+                        {avatarPreview ? (
+                            <img
+                                src={avatarPreview}
+                                alt="Tribe avatar preview"
+                                className="w-full h-full rounded-full object-cover"
+                            />
+                        ) : (
+                            <TribePlaceholderIcon />
+                        )}
+                        <button type="button" onClick={() => avatarInputRef.current?.click()} className="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity" aria-label="Upload tribe avatar">
+                            <CameraIcon />
+                        </button>
+                    </div>
+                    <input type="file" ref={avatarInputRef} onChange={handleFileChange} accept="image/*" className="hidden" />
                 </div>
-                
-                <form onSubmit={handleSubmit} className="p-6">
-                    <div className="flex flex-col items-center mb-6">
-                        <div className="w-24 h-24 rounded-full bg-background border border-border flex items-center justify-center relative group">
-                           {avatarPreview ? (
-                                <img 
-                                    src={avatarPreview} 
-                                    alt="Tribe avatar preview" 
-                                    className="w-full h-full rounded-full object-cover"
-                                />
-                            ) : (
-                                <TribePlaceholderIcon />
-                           )}
-                            <button type="button" onClick={() => avatarInputRef.current?.click()} className="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity" aria-label="Upload tribe avatar">
-                                <CameraIcon />
-                            </button>
-                        </div>
-                        <input type="file" ref={avatarInputRef} onChange={handleFileChange} accept="image/*" className="hidden" />
-                    </div>
 
-                    <div className="space-y-4">
-                        <div>
-                            <label htmlFor="tribe-name" className="text-sm font-semibold text-secondary">Tribe Name</label>
-                            <input
-                                id="tribe-name"
-                                type="text"
-                                value={name}
-                                onChange={(e) => setName(e.target.value)}
-                                className="w-full mt-1 p-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-accent text-primary"
-                                placeholder="e.g., React Enthusiasts"
-                                maxLength={50}
-                                required
-                            />
-                        </div>
-                        <div>
-                            <label htmlFor="tribe-description" className="text-sm font-semibold text-secondary">Description</label>
-                            <textarea
-                                id="tribe-description"
-                                value={description}
-                                onChange={(e) => setDescription(e.target.value)}
-                                rows={3}
-                                className="w-full mt-1 p-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-accent text-primary resize-none"
-                                placeholder="What is this tribe about?"
-                                maxLength={200}
-                                required
-                            />
-                        </div>
+                <div className="space-y-4">
+                    <div>
+                        <label htmlFor="tribe-name" className="text-sm font-semibold text-secondary">Tribe Name</label>
+                        <input
+                            id="tribe-name"
+                            type="text"
+                            value={name}
+                            onChange={(e) => setName(e.target.value)}
+                            className="w-full mt-1 p-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-accent text-primary"
+                            placeholder="e.g., React Enthusiasts"
+                            maxLength={50}
+                            required
+                        />
                     </div>
+                    <div>
+                        <label htmlFor="tribe-description" className="text-sm font-semibold text-secondary">Description</label>
+                        <textarea
+                            id="tribe-description"
+                            value={description}
+                            onChange={(e) => setDescription(e.target.value)}
+                            rows={3}
+                            className="w-full mt-1 p-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-accent text-primary resize-none"
+                            placeholder="What is this tribe about?"
+                            maxLength={200}
+                            required
+                        />
+                    </div>
+                </div>
 
-                    <div className="flex justify-end items-center pt-6">
-                        <button type="button" onClick={onClose} className="text-secondary font-semibold px-4 py-2 rounded-lg hover:bg-background">Cancel</button>
-                        <button type="submit" className="bg-accent text-accent-text font-semibold px-6 py-2 rounded-lg hover:bg-accent-hover transition-colors disabled:opacity-50" disabled={!name.trim() || !description.trim()}>Create</button>
-                    </div>
-                </form>
-            </div>
-        </div>
+                <div className="flex justify-end items-center pt-6">
+                    <button type="button" onClick={onClose} className="text-secondary font-semibold px-4 py-2 rounded-lg hover:bg-background">Cancel</button>
+                    <button type="submit" className="bg-accent text-accent-text font-semibold px-6 py-2 rounded-lg hover:bg-accent-hover transition-colors disabled:opacity-50" disabled={!name.trim() || !description.trim()}>Create</button>
+                </div>
+            </form>
+        </ModalWrapper>
     );
 };
 

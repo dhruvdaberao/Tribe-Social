@@ -13,10 +13,11 @@ interface FeedPageProps {
   onDeleteComment: (postId: string, commentId: string) => void;
   onViewProfile: (user: User) => void;
   onSharePost: (post: Post, destination: { type: 'tribe' | 'user', id: string }) => void;
+  onReport: (targetId: string, targetType: 'post' | 'user' | 'tribe' | 'comment' | 'story', targetName: string) => void;
 }
 
 const FeedPage: React.FC<FeedPageProps> = (props) => {
-  const { posts, currentUser, allUsers, allTribes, onLikePost, onCommentPost, onDeletePost, onDeleteComment, onViewProfile, onSharePost } = props;
+  const { posts, currentUser, allUsers, allTribes, onLikePost, onCommentPost, onDeletePost, onDeleteComment, onViewProfile, onSharePost, onReport } = props;
   return (
     <div>
       <h1 className="text-2xl font-bold text-primary mb-6 font-display">Home Feed</h1>
@@ -34,6 +35,7 @@ const FeedPage: React.FC<FeedPageProps> = (props) => {
             onDeleteComment={onDeleteComment}
             onViewProfile={onViewProfile}
             onSharePost={onSharePost}
+            onReport={onReport}
           />
         ))}
       </div>

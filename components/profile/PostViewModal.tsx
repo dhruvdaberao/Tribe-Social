@@ -65,6 +65,7 @@
 import React from 'react';
 import { Post, User, Tribe } from '../../types';
 import PostCard from '../feed/PostCard';
+import ModalWrapper from '../common/ModalWrapper';
 
 interface PostViewModalProps {
   post: Post;
@@ -78,35 +79,29 @@ interface PostViewModalProps {
   onViewProfile: (user: User) => void;
   onSharePost: (post: Post, destination: { type: 'tribe' | 'user', id: string }) => void;
   onClose: () => void;
+  onReport: (targetId: string, targetType: 'post' | 'user' | 'tribe' | 'comment' | 'story', targetName: string) => void;
 }
 
 const PostViewModal: React.FC<PostViewModalProps> = (props) => {
   const { post, onClose } = props;
 
   return (
-    <div
-      className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4"
-      onClick={onClose}
-    >
-      <div
-        className="bg-transparent w-full max-w-2xl max-h-[90vh] overflow-y-auto hide-scrollbar"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <PostCard
-          post={post}
-          currentUser={props.currentUser}
-          allUsers={props.allUsers}
-          allTribes={props.allTribes}
-          onLike={props.onLike}
-          onComment={props.onComment}
-          onDeletePost={(postId) => { props.onDeletePost(postId); onClose(); }}
-          onDeleteComment={props.onDeleteComment}
-          onViewProfile={props.onViewProfile}
-          onSharePost={props.onSharePost}
-          onModalClose={onClose}
-        />
-      </div>
-    </div>
+    <ModalWrapper onClose={onClose} className="bg-transparent shadow-none border-none max-w-2xl">
+      <PostCard
+        post={post}
+        currentUser={props.currentUser}
+        allUsers={props.allUsers}
+        allTribes={props.allTribes}
+        onLike={props.onLike}
+        onComment={props.onComment}
+        onDeletePost={(postId) => { props.onDeletePost(postId); onClose(); }}
+        onDeleteComment={props.onDeleteComment}
+        onViewProfile={props.onViewProfile}
+        onSharePost={props.onSharePost}
+        onModalClose={onClose}
+        onReport={props.onReport}
+      />
+    </ModalWrapper>
   );
 };
 

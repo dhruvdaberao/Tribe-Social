@@ -3,6 +3,8 @@ import { Tribe, User } from '../../types';
 
 import { useSocket } from '../../contexts/SocketContext';
 
+import ModalWrapper from '../common/ModalWrapper';
+
 interface TribeCardProps {
     tribe: Tribe;
     isMember: boolean;
@@ -10,6 +12,8 @@ interface TribeCardProps {
     onJoinToggle: (tribeId: string) => void;
     onViewTribe: (tribe: Tribe) => void;
     onEditTribe: (tribe: Tribe) => void;
+    onUpdateTribe: (tribeId: string, name: string, description: string, avatarUrl?: string | null) => void;
+    onReport: (targetId: string, targetType: 'post' | 'user' | 'tribe' | 'comment' | 'story', targetName: string) => void;
 }
 
 const TribePlaceholderIcon = () => (
@@ -24,104 +28,205 @@ const TribePlaceholderIcon = () => (
 );
 
 
-const TribeCard: React.FC<TribeCardProps> = ({ tribe, isMember, currentUser, onJoinToggle, onViewTribe, onEditTribe }) => {
+const TribeCard: React.FC<TribeCardProps> = ({ tribe, isMember, currentUser, onJoinToggle, onViewTribe, onEditTribe, onUpdateTribe, onReport }) => {
     const { unreadCounts } = useSocket();
     const unreadCount = unreadCounts.tribes[tribe.id] || 0;
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const isOwner = currentUser.id === tribe.owner;
 
+    const [isEditing, setIsEditing] = useState(false);
+    const [editName, setEditName] = useState(tribe.name);
+    const [editDescription, setEditDescription] = useState(tribe.description);
+    // For file upload, we'd need more logic, but for now let's stick to name/desc or basic URL input if needed.
+    // The requirement says "Inline Edit mode".
+
+    // Confirmation for Leave
+    const [isLeaveModalOpen, setIsLeaveModalOpen] = useState(false);
+
+    const handleSave = () => {
+        // Optimistic/API call
+        onUpdateTribe(tribe.id, editName, editDescription, tribe.avatarUrl); // Avatar update not inline for now unless requested
+        setIsEditing(false);
+    };
+
+    const handleCancel = () => {
+        setEditName(tribe.name);
+        setEditDescription(tribe.description);
+        setIsEditing(false);
+    };
+
     return (
-        <div className="bg-surface rounded-2xl shadow-md border border-border flex flex-col text-center items-center transition-transform transform hover:-translate-y-1 relative group">
-            {/* Menu Button - Visible for everyone */}
-            <div className="absolute top-2 right-2 z-20">
-                <button
-                    onClick={(e) => {
-                        e.stopPropagation();
-                        setIsMenuOpen(!isMenuOpen);
-                    }}
-                    onBlur={() => setTimeout(() => setIsMenuOpen(false), 200)}
-                    className="p-1.5 bg-surface/80 backdrop-blur-sm rounded-full text-secondary hover:text-primary hover:bg-background transition-colors border border-transparent hover:border-border"
-                    aria-label="Tribe Options"
-                >
-                    <OptionsIcon />
-                </button>
-                {isMenuOpen && (
-                    <div className="absolute right-0 mt-2 w-48 bg-surface rounded-lg shadow-xl border border-border z-30 overflow-hidden text-left">
-                        {isOwner && (
+        <>
+            <div className="bg-surface rounded-2xl shadow-md border border-border flex flex-col text-center items-center transition-transform transform hover:-translate-y-1 relative group h-full">
+                {/* Menu Button - Visible for everyone */}
+                <div className="absolute top-2 right-2 z-20">
+                    <button
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            setIsMenuOpen(!isMenuOpen);
+                        }}
+                        onBlur={() => setTimeout(() => setIsMenuOpen(false), 200)}
+                        className="p-1.5 bg-surface/80 backdrop-blur-sm rounded-full text-secondary hover:text-primary hover:bg-background transition-colors border border-transparent hover:border-border"
+                        aria-label="Tribe Options"
+                    >
+                        <OptionsIcon />
+                    </button>
+                    {isMenuOpen && (
+                        <div className="absolute right-0 mt-2 w-48 bg-surface rounded-lg shadow-xl border border-border z-30 overflow-hidden text-left" onClick={e => e.stopPropagation()}>
+                            {isOwner && (
+                                <button
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        setIsEditing(true);
+                                        setIsMenuOpen(false);
+                                    }}
+                                    className="w-full px-4 py-3 text-sm text-primary hover:bg-background flex items-center gap-2 border-b border-border/50 transition-colors"
+                                >
+                                    <EditIcon /> Edit Tribe
+                                </button>
+                            )}
+                            {isMember && !isOwner && (
+                                <button
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        setIsLeaveModalOpen(true);
+                                        setIsMenuOpen(false);
+                                    }}
+                                    className="w-full px-4 py-3 text-sm text-red-500 hover:bg-red-500/10 flex items-center gap-2 transition-colors border-b border-border/50"
+                                >
+                                    <LogOutIcon /> Leave Tribe
+                                </button>
+                            )}
                             <button
                                 onClick={(e) => {
                                     e.stopPropagation();
-                                    onEditTribe(tribe);
+                                    onReport(tribe.id, 'tribe', tribe.name);
                                     setIsMenuOpen(false);
                                 }}
-                                className="w-full px-4 py-3 text-sm text-primary hover:bg-background flex items-center gap-2 border-b border-border/50 transition-colors"
+                                className="w-full px-4 py-3 text-sm text-red-500 hover:bg-red-500/10 flex items-center gap-2 transition-colors"
                             >
-                                <EditIcon /> Edit Tribe
+                                <FlagIcon /> Report Tribe
                             </button>
-                        )}
-                        <button
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                alert('Report feature coming soon!'); // Placeholder
-                                setIsMenuOpen(false);
-                            }}
-                            className="w-full px-4 py-3 text-sm text-red-500 hover:bg-red-500/10 flex items-center gap-2 transition-colors"
-                        >
-                            <FlagIcon /> Report Tribe
-                        </button>
-                    </div>
-                )}
-            </div>
-
-            <div className="w-full p-4 flex flex-col items-center text-center flex-grow cursor-pointer" onClick={() => onViewTribe(tribe)}>
-                <div className="relative">
-                    {tribe.avatarUrl ? (
-                        <img
-                            src={tribe.avatarUrl}
-                            alt={tribe.name}
-                            className="w-20 h-20 rounded-full mb-4 object-cover"
-                        />
-                    ) : (
-                        <TribePlaceholderIcon />
-                    )}
-                    {unreadCount > 0 && (
-                        <span className="absolute top-0 right-0 block h-4 w-4 rounded-full bg-red-500 ring-2 ring-surface text-white text-xs flex items-center justify-center">
-                            {unreadCount}
-                        </span>
+                        </div>
                     )}
                 </div>
-                <h3 className="font-bold text-lg text-primary">{tribe.name}</h3>
-                <p className="text-sm text-secondary mb-2">{tribe.members.length.toLocaleString()} members</p>
-                <p className="text-sm text-primary flex-grow mb-4 px-2 line-clamp-2">{tribe.description}</p>
+
+                <div className="w-full p-4 flex flex-col items-center text-center flex-grow cursor-pointer" onClick={() => !isEditing && onViewTribe(tribe)}>
+                    <div className="relative">
+                        {tribe.avatarUrl ? (
+                            <img
+                                src={tribe.avatarUrl}
+                                alt={tribe.name}
+                                className="w-20 h-20 rounded-full mb-4 object-cover"
+                            />
+                        ) : (
+                            <TribePlaceholderIcon />
+                        )}
+                        {unreadCount > 0 && (
+                            <span className="absolute top-0 right-0 block h-4 w-4 rounded-full bg-red-500 ring-2 ring-surface text-white text-xs flex items-center justify-center">
+                                {unreadCount}
+                            </span>
+                        )}
+                    </div>
+
+                    {isEditing ? (
+                        <div className="w-full space-y-2 mb-2" onClick={e => e.stopPropagation()}>
+                            <input
+                                value={editName}
+                                onChange={e => setEditName(e.target.value)}
+                                className="w-full p-2 bg-background border border-border rounded text-center font-bold"
+                                placeholder="Tribe Name"
+                            />
+                            <textarea
+                                value={editDescription}
+                                onChange={e => setEditDescription(e.target.value)}
+                                className="w-full p-2 bg-background border border-border rounded text-sm resize-none"
+                                rows={2}
+                                placeholder="Description"
+                            />
+                        </div>
+                    ) : (
+                        <>
+                            <h3 className="font-bold text-lg text-primary">{tribe.name}</h3>
+                            <p className="text-sm text-secondary mb-2">{tribe.members.length.toLocaleString()} members</p>
+                            <p className="text-sm text-primary flex-grow mb-4 px-2 line-clamp-2">{tribe.description}</p>
+                        </>
+                    )}
+                </div>
+
+                <div className="p-4 pt-0 w-full flex items-center space-x-2">
+                    {isEditing ? (
+                        <>
+                            <button
+                                onClick={(e) => { e.stopPropagation(); handleCancel(); }}
+                                className="w-full font-semibold px-4 py-2 rounded-lg transition-colors text-sm bg-surface text-secondary border border-border hover:bg-background"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={(e) => { e.stopPropagation(); handleSave(); }}
+                                className="w-full font-semibold px-4 py-2 rounded-lg transition-colors text-sm bg-accent text-accent-text hover:bg-accent-hover"
+                            >
+                                Save
+                            </button>
+                        </>
+                    ) : (
+                        <>
+                            {isMember && (
+                                <button
+                                    onClick={() => onViewTribe(tribe)}
+                                    className={`w-full font-semibold px-4 py-2 rounded-lg transition-colors text-sm bg-surface text-primary border border-border hover:bg-background`}
+                                >
+                                    Chat
+                                </button>
+                            )}
+                            <button
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    if (isMember) {
+                                        setIsLeaveModalOpen(true);
+                                    } else {
+                                        onJoinToggle(tribe.id);
+                                    }
+                                }}
+                                className={`w-full font-semibold px-4 py-2 rounded-lg transition-colors text-sm ${isMember
+                                    ? 'bg-surface text-red-500 border border-border hover:bg-red-500/10'
+                                    : 'bg-accent text-accent-text hover:bg-accent-hover'
+                                    }`}
+                            >
+                                {isMember ? 'Leave' : 'Join'}
+                            </button>
+                        </>
+                    )}
+                </div>
             </div>
-            <div className="p-4 pt-0 w-full flex items-center space-x-2">
-                {isMember && (
-                    <button
-                        onClick={() => onViewTribe(tribe)}
-                        className={`w-full font-semibold px-4 py-2 rounded-lg transition-colors text-sm bg-surface text-primary border border-border hover:bg-background`}
-                    >
-                        Chat
-                    </button>
-                )}
-                <button
-                    onClick={(e) => {
-                        e.stopPropagation();
-                        onJoinToggle(tribe.id);
-                    }}
-                    className={`w-full font-semibold px-4 py-2 rounded-lg transition-colors text-sm ${isMember
-                        ? 'bg-surface text-red-500 border border-border hover:bg-red-500/10'
-                        : 'bg-accent text-accent-text hover:bg-accent-hover'
-                        }`}
-                >
-                    {isMember ? 'Leave' : 'Join'}
-                </button>
-            </div>
-        </div>
+
+            {isLeaveModalOpen && (
+                <ModalWrapper onClose={() => setIsLeaveModalOpen(false)} title="Leave Tribe?" showCloseButton className="max-w-xs">
+                    <div className="p-4 text-center">
+                        <p className="text-secondary mb-6">Are you sure you want to leave <strong>{tribe.name}</strong>?</p>
+                        <div className="flex space-x-3 justify-center">
+                            <button onClick={() => setIsLeaveModalOpen(false)} className="px-4 py-2 rounded-lg bg-surface border border-border text-primary hover:bg-background">Cancel</button>
+                            <button
+                                onClick={() => {
+                                    onJoinToggle(tribe.id);
+                                    setIsLeaveModalOpen(false);
+                                }}
+                                className="px-4 py-2 rounded-lg bg-red-500 text-white hover:bg-red-600"
+                            >
+                                Leave
+                            </button>
+                        </div>
+                    </div>
+                </ModalWrapper>
+            )}
+        </>
     );
 };
 
 const EditIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.536l12.232-12.232z" /></svg>;
 const OptionsIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" /></svg>;
-const FlagIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 21v-8a2 2 0 012-2h10a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2zM9 9h6v6H9V9z" /></svg>; // Approximate flag
+const FlagIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 21v-8a2 2 0 012-2h10a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2zM9 9h6v6H9V9z" /></svg>;
+const LogOutIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>;
 
 export default TribeCard;

@@ -137,6 +137,7 @@ export const generateAiChat = (promptData: { prompt: string }) => API.post('/ai/
 // Notifications
 export const fetchNotifications = () => API.get('/notifications');
 export const markNotificationsRead = () => API.put('/notifications/read');
+export const createReport = (reportData: { targetId: string; targetType: string; reason: string; description?: string }) => API.post('/reports', reportData);
 
 // Stories
 export const createStory = (storyData: any) => API.post('/stories', storyData);
@@ -144,3 +145,6 @@ export const fetchMyStories = () => API.get('/stories/my-stories');
 export const fetchFollowingStories = () => API.get('/stories/feed');
 export const deleteStory = (id: string) => API.delete(`/stories/${id}`);
 export const likeStory = (id: string) => API.put(`/stories/${id}/like`);
+// Admin / Moderation
+export const fetchReports = () => API.get('/reports');
+export const resolveReport = (id: string, action: 'dismiss' | 'ban' | 'delete_content') => API.put(`/reports/${id}/resolve`, { action });

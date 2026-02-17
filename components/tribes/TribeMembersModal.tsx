@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
-import { createPortal } from 'react-dom';
 import { User } from '../../types';
+import ModalWrapper from '../common/ModalWrapper';
 import UserAvatar from '../common/UserAvatar';
 
 interface TribeMembersModalProps {
@@ -33,61 +33,56 @@ const TribeMembersModal: React.FC<TribeMembersModalProps> = ({ isOpen, onClose, 
 
   if (!isOpen) return null;
 
-  return createPortal(
-    <div className="fixed inset-0 bg-black bg-opacity-60 backdrop-blur-sm flex items-center justify-center z-[70] p-4" onClick={onClose}>
-      <div className="bg-surface rounded-2xl shadow-xl w-full max-w-md h-[70vh] flex flex-col border border-border animate-in fade-in zoom-in duration-200" onClick={e => e.stopPropagation()}>
-        <div className="p-4 border-b border-border flex-shrink-0">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-xl font-bold text-primary">Tribe Members ({members.length})</h2>
-            <button onClick={onClose} className="text-secondary hover:text-primary text-2xl leading-none">&times;</button>
-          </div>
-          <input
-            type="text"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="Search members..."
-            className="w-full bg-background border border-border rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-accent text-primary"
-            autoFocus
-          />
-        </div>
+  if (!isOpen) return null;
 
-        <div className="overflow-y-auto flex-1">
-          {filteredMembers.length > 0 ? (
-            <div className="divide-y divide-border">
-              {filteredMembers.map(user => (
-                <div
-                  key={user.id}
-                  onClick={() => onViewProfile(user)}
-                  className="p-4 flex items-center cursor-pointer hover:bg-background transition-colors"
-                >
-                  <UserAvatar user={user} className="w-10 h-10 flex-shrink-0" />
-                  <div className="ml-3 overflow-hidden">
-                    <p className="font-semibold text-primary truncate">{user.name}</p>
-                    <p className="text-sm text-secondary truncate">@{user.username}</p>
-                  </div>
-                  {isOwner && user.id !== tribeOwnerId && (
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        if (window.confirm(`Are you sure you want to kick @${user.username}?`)) {
-                          onKickMember(user.id);
-                        }
-                      }}
-                      className="ml-auto text-red-500 hover:text-red-700 hover:bg-red-500/10 px-3 py-1 rounded-full text-sm font-medium transition-colors"
-                    >
-                      Kick
-                    </button>
-                  )}
-                </div>
-              ))}
-            </div>
-          ) : (
-            <p className="text-secondary text-center p-8">No members found.</p>
-          )}
-        </div>
+  return (
+    <ModalWrapper onClose={onClose} title={`Tribe Members (${members.length})`} showCloseButton className="h-[70vh] flex flex-col">
+      <div className="p-4 border-b border-border flex-shrink-0">
+        <input
+          type="text"
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          placeholder="Search members..."
+          className="w-full bg-background border border-border rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-accent text-primary"
+          autoFocus
+        />
       </div>
-    </div>,
-    document.body
+
+      <div className="overflow-y-auto flex-1">
+        {filteredMembers.length > 0 ? (
+          <div className="divide-y divide-border">
+            {filteredMembers.map(user => (
+              <div
+                key={user.id}
+                onClick={() => onViewProfile(user)}
+                className="p-4 flex items-center cursor-pointer hover:bg-background transition-colors"
+              >
+                <UserAvatar user={user} className="w-10 h-10 flex-shrink-0" />
+                <div className="ml-3 overflow-hidden">
+                  <p className="font-semibold text-primary truncate">{user.name}</p>
+                  <p className="text-sm text-secondary truncate">@{user.username}</p>
+                </div>
+                {isOwner && user.id !== tribeOwnerId && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (window.confirm(`Are you sure you want to kick @${user.username}?`)) {
+                        onKickMember(user.id);
+                      }
+                    }}
+                    className="ml-auto text-red-500 hover:text-red-700 hover:bg-red-500/10 px-3 py-1 rounded-full text-sm font-medium transition-colors"
+                  >
+                    Kick
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-secondary text-center p-8">No members found.</p>
+        )}
+      </div>
+    </ModalWrapper>
   );
 };
 

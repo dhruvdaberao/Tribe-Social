@@ -21,13 +21,15 @@ import EditTribeModal from './components/tribes/EditTribeModal';
 import CreatePost from './components/feed/CreatePost';
 import NotificationsPage from './components/notifications/NotificationsPage';
 import SettingsPage from './components/settings/SettingsPage';
+import AdminReportsPage from './components/admin/AdminReportsPage';
 import StoryCreator from './components/stories/StoryCreator';
 import StoryViewer from './components/stories/StoryViewer';
 import StoryFeed from './components/stories/StoryFeed';
 import { Toaster, toast } from './components/common/Toast';
 import PostViewModal from './components/profile/PostViewModal';
+import ReportModal from './components/common/ReportModal';
 
-export type NavItem = 'Home' | 'Discover' | 'Messages' | 'Tribes' | 'Notifications' | 'Profile' | 'Chuk' | 'TribeDetail' | 'Settings';
+export type NavItem = 'Home' | 'Discover' | 'Messages' | 'Tribes' | 'Notifications' | 'Profile' | 'Chuk' | 'TribeDetail' | 'Settings' | 'Admin';
 
 const CHUK_AI_USER: User = {
     id: 'chuk-ai',
@@ -98,6 +100,9 @@ const App: React.FC = () => {
     const [chatTarget, setChatTarget] = useState<User | null>(null);
     const [isCreatingStory, setIsCreatingStory] = useState(false);
     const [viewingUserStories, setViewingUserStories] = useState<{ user: User, stories: Story[] } | null>(null);
+
+    // Report System State
+    const [reportTarget, setReportTarget] = useState<{ id: string, type: 'post' | 'user' | 'tribe' | 'comment' | 'story', name: string } | null>(null);
 
     // Initialize from SessionStorage for instant load
     useEffect(() => {
@@ -745,6 +750,27 @@ const App: React.FC = () => {
         return users.filter(u => !(currentUser.blockedUsers || []).includes(u.id) && !(u.blockedUsers || []).includes(currentUser.id));
     }, [users, currentUser]);
 
+    const handleReportSubmit = async (reason: string, description: string) => {
+        if (!reportTarget) return;
+        try {
+            await api.createReport({
+                targetId: reportTarget.id,
+                targetType: reportTarget.type,
+                reason,
+                description
+            });
+            toast.success("Report submitted. Thank you for helping keep our community safe.");
+            setReportTarget(null);
+        } catch (error) {
+            console.error("Failed to submit report:", error);
+            toast.error("Failed to submit report. Please try again.");
+        }
+    };
+
+    const handleReport = (targetId: string, targetType: 'post' | 'user' | 'tribe' | 'comment' | 'story', targetName: string) => {
+        setReportTarget({ id: targetId, type: targetType, name: targetName });
+    };
+
     if (isAuthLoading) {
         return <div className="min-h-screen bg-background flex flex-col items-center justify-center"><img src="/duckload.gif" alt="Loading..." className="w-24 h-24" /><h1 className="mt-4 text-xl font-semibold text-primary">Loading...</h1></div>;
     }
@@ -766,7 +792,7 @@ const App: React.FC = () => {
                     <>
                         <CreatePost currentUser={currentUser} allUsers={visibleUsers} myStories={myStories} onAddPost={handleAddPost} isPosting={isCreatingPost} onOpenStoryCreator={() => setIsCreatingStory(true)} onViewUserStories={handleViewUserStories} />
                         <StoryFeed myStories={myStories} followingUserStories={followingUserStories} currentUser={currentUser} seenStoryAuthors={seenStoryAuthors} onViewUserStories={handleViewUserStories} />
-                        <FeedPage posts={feedPosts} currentUser={currentUser} allUsers={visibleUsers} allTribes={tribes} onLikePost={handleLikePost} onCommentPost={handleCommentPost} onDeletePost={handleDeletePost} onDeleteComment={handleDeleteComment} onViewProfile={handleViewProfile} onSharePost={handleSharePost} />
+                        <FeedPage posts={feedPosts} currentUser={currentUser} allUsers={visibleUsers} allTribes={tribes} onLikePost={handleLikePost} onCommentPost={handleCommentPost} onDeletePost={handleDeletePost} onDeleteComment={handleDeleteComment} onViewProfile={handleViewProfile} onSharePost={handleSharePost} onReport={handleReport} />
                     </>
                 );
             case 'Discover':
@@ -774,7 +800,7 @@ const App: React.FC = () => {
             case 'Messages':
                 return <ChatPage currentUser={currentUser} allUsers={visibleUsers} chukUser={CHUK_AI_USER} initialTargetUser={chatTarget} onViewProfile={handleViewProfile} onSharePost={handleSharePost} onToggleBlock={handleToggleBlock} />;
             case 'Tribes':
-                return <TribesPage tribes={tribes} currentUser={currentUser} onJoinToggle={handleJoinToggle} onCreateTribe={handleCreateTribe} onViewTribe={handleViewTribe} onEditTribe={(tribe) => setEditingTribe(tribe)} />;
+                return <TribesPage tribes={tribes} currentUser={currentUser} onJoinToggle={handleJoinToggle} onCreateTribe={handleCreateTribe} onViewTribe={handleViewTribe} onEditTribe={(tribe) => setEditingTribe(tribe)} onUpdateTribe={handleEditTribe} onReport={handleReport} />;
             case 'TribeDetail':
                 if (!viewedTribe) return <div className="text-center p-8">Tribe not found. Go back to discover more tribes.</div>;
                 return <TribeDetailPage tribe={viewedTribe} currentUser={currentUser} userMap={userMap} onSendMessage={handleSendTribeMessage} onDeleteMessage={handleDeleteTribeMessage} onDeleteMessageForMe={handleDeleteTribeMessageForMe} onDeleteTribe={handleDeleteTribe} onBack={() => setActiveNavItem('Tribes')} onViewProfile={handleViewProfile} onEditTribe={(tribe) => setEditingTribe(tribe)} onJoinToggle={handleJoinToggle} onKickMember={handleKickMember} />;
@@ -786,9 +812,11 @@ const App: React.FC = () => {
                 }
                 const userPosts = visiblePosts.filter(p => p.author.id === viewedUser.id);
                 const userHasStory = myStories.some(s => s.user === viewedUser.id) || followingUserStories.some(us => us.user.id === viewedUser.id);
-                return <ProfilePage user={viewedUser} allUsers={users} visibleUsers={visibleUsers} allTribes={tribes} posts={userPosts} currentUser={currentUser} hasStory={userHasStory} onLikePost={handleLikePost} onCommentPost={handleCommentPost} onDeletePost={handleDeletePost} onDeleteComment={handleDeleteComment} onViewProfile={handleViewProfile} onUpdateUser={handleUpdateUser} onAddPost={handleAddPost} isPosting={isCreatingPost} onToggleFollow={handleToggleFollow} onStartConversation={handleStartConversation} onNavigate={handleSelectItem} onSharePost={handleSharePost} onOpenStoryCreator={() => setIsCreatingStory(true)} myStories={myStories} onViewUserStories={handleViewUserStories} />;
+                return <ProfilePage user={viewedUser} allUsers={users} visibleUsers={visibleUsers} allTribes={tribes} posts={userPosts} currentUser={currentUser} hasStory={userHasStory} onLikePost={handleLikePost} onCommentPost={handleCommentPost} onDeletePost={handleDeletePost} onDeleteComment={handleDeleteComment} onViewProfile={handleViewProfile} onUpdateUser={handleUpdateUser} onAddPost={handleAddPost} isPosting={isCreatingPost} onToggleFollow={handleToggleFollow} onStartConversation={handleStartConversation} onNavigate={handleSelectItem} onSharePost={handleSharePost} onOpenStoryCreator={() => setIsCreatingStory(true)} myStories={myStories} onViewUserStories={handleViewUserStories} onReport={handleReport} />;
             case 'Settings':
                 return <SettingsPage currentUser={currentUser} allUsers={users} onLogout={logout} onDeleteAccount={handleDeleteAccount} onToggleBlock={handleToggleBlock} onBack={() => handleSelectItem('Profile')} />;
+            case 'Admin':
+                return <AdminReportsPage onBack={() => handleSelectItem('Home')} />;
             default:
                 return <div>Page not found</div>;
         }
@@ -839,7 +867,16 @@ const App: React.FC = () => {
             {editingTribe && <EditTribeModal tribe={editingTribe} onClose={() => setEditingTribe(null)} onSave={handleEditTribe} onDelete={handleDeleteTribe} />}
             {isCreatingStory && <StoryCreator onClose={() => setIsCreatingStory(false)} onCreate={handleCreateStory} />}
             {viewingUserStories && <StoryViewer userStories={viewingUserStories} currentUser={currentUser} allUsers={visibleUsers} allTribes={tribes} onClose={() => setViewingUserStories(null)} onDelete={handleDeleteStory} onLike={handleLikeStory} onSharePost={handleSharePost} />}
-            {viewingPost && <PostViewModal post={viewingPost} currentUser={currentUser} allUsers={visibleUsers} allTribes={tribes} onLike={handleLikePost} onComment={handleCommentPost} onDeletePost={handleDeletePost} onDeleteComment={handleDeleteComment} onViewProfile={handleViewProfile} onSharePost={handleSharePost} onClose={() => setViewingPost(null)} />}
+            {viewingPost && <PostViewModal post={viewingPost} currentUser={currentUser} allUsers={visibleUsers} allTribes={tribes} onLike={handleLikePost} onComment={handleCommentPost} onDeletePost={handleDeletePost} onDeleteComment={handleDeleteComment} onViewProfile={handleViewProfile} onSharePost={handleSharePost} onClose={() => setViewingPost(null)} onReport={handleReport} />}
+            {reportTarget && (
+                <ReportModal
+                    isOpen={!!reportTarget}
+                    onClose={() => setReportTarget(null)}
+                    onSubmit={handleReportSubmit}
+                    targetName={reportTarget.name}
+                    targetType={reportTarget.type}
+                />
+            )}
         </div>
     );
 };

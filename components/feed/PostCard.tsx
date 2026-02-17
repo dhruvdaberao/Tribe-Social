@@ -717,10 +717,11 @@ interface PostCardProps {
   onViewProfile: (user: User) => void;
   onSharePost: (post: Post, destination: { type: 'tribe' | 'user', id: string }) => void;
   onModalClose?: () => void;
+  onReport: (targetId: string, targetType: 'post' | 'user' | 'tribe' | 'comment' | 'story', targetName: string) => void;
 }
 
 const PostCard: React.FC<PostCardProps> = (props) => {
-  const { post, currentUser, allUsers, allTribes, onLike, onComment, onDeletePost, onDeleteComment, onViewProfile, onSharePost, onModalClose } = props;
+  const { post, currentUser, allUsers, allTribes, onLike, onComment, onDeletePost, onDeleteComment, onViewProfile, onSharePost, onModalClose, onReport } = props;
   const [commentText, setCommentText] = useState('');
   const [showComments, setShowComments] = useState(false);
   const [optionsOpen, setOptionsOpen] = useState(false);
@@ -849,6 +850,20 @@ const PostCard: React.FC<PostCardProps> = (props) => {
                       <span>Delete Post</span>
                     </button>
                   )}
+                  {!isOwnPost && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onReport(post.id, 'post', `Post by ${post.author.name}`);
+                        setOptionsOpen(false);
+                      }}
+                      className="w-full text-left px-4 py-2 text-red-500 hover:bg-red-500/10 rounded-b-lg transition-colors flex items-center space-x-2"
+                      role="menuitem"
+                    >
+                      <FlagIcon className="h-4 w-4" />
+                      <span>Report Post</span>
+                    </button>
+                  )}
                 </div>
               </>
             )}
@@ -957,9 +972,13 @@ const PostCard: React.FC<PostCardProps> = (props) => {
                       <p className="text-sm text-primary whitespace-pre-wrap mt-1">{comment.text}</p>
                     </div>
                   </div>
-                  {(comment.author.id === currentUser.id || isOwnPost) && (
-                    <button onClick={() => handleDeleteCommentClick(comment.id)} className="text-secondary p-1 rounded-full hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity">
+                  {(comment.author.id === currentUser.id || isOwnPost) ? (
+                    <button onClick={() => handleDeleteCommentClick(comment.id)} className="text-secondary p-1 rounded-full hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity" title="Delete Comment">
                       <TrashIcon className="h-4 w-4" />
+                    </button>
+                  ) : (
+                    <button onClick={() => onReport(comment.id, 'comment', `Comment by ${comment.author.name}`)} className="text-secondary p-1 rounded-full hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity" title="Report Comment">
+                      <FlagIcon className="h-4 w-4" />
                     </button>
                   )}
                 </div>
@@ -1015,6 +1034,11 @@ const ExternalLinkIcon = ({ className = 'h-5 w-5' }: { className?: string }) => 
   </svg>
 );
 const BackIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>;
+const FlagIcon = ({ className = 'h-5 w-5' }: { className?: string }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 21v-8a2 2 0 012-2h10a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2zM9 9h6v6H9V9z" />
+  </svg>
+);
 
 
 export default PostCard;
