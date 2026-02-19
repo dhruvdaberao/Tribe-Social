@@ -935,9 +935,9 @@ const PostCard: React.FC<PostCardProps> = (props) => {
         {/* Post Actions */}
         <div className="flex justify-between items-center px-5 py-2 border-t border-b border-border text-secondary text-sm">
           <div className="flex space-x-2">
-            <span>{post.likes.length} Likes</span>
+            <span>{post.likesCount != null ? post.likesCount : post.likes.length} Likes</span>
             <span>·</span>
-            <span className="cursor-pointer hover:underline" onClick={() => setShowComments(prev => !prev)}>{visibleComments.length} Comments</span>
+            <span className="cursor-pointer hover:underline" onClick={() => setShowComments(prev => !prev)}>{post.commentsCount != null ? post.commentsCount : visibleComments.length} Comments</span>
           </div>
         </div>
         <div className="flex justify-between items-center p-2 text-secondary font-semibold">

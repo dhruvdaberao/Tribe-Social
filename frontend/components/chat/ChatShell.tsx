@@ -22,7 +22,7 @@ const ChatShell: React.FC<ChatShellProps> = ({
 }) => {
   useVisualViewportHeight();
   const composerRef = React.useRef<HTMLDivElement>(null);
-  const [composerOffset, setComposerOffset] = React.useState(0);
+  const [composerOffset, setComposerOffset] = React.useState(72);
 
   React.useEffect(() => {
     // Prevent body scroll while chat is open to avoid double scrollbars

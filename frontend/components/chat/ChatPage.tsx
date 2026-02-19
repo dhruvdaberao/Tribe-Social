@@ -525,7 +525,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ currentUser, allUsers, chukUser, in
   }, [autoDeleteEnabled, messages]);
 
   return (
-    <div className="h-full min-h-0 md:h-[calc(100vh-2rem)] md:border md:border-border md:shadow-lg flex md:overflow-hidden relative bg-surface">
+    <div className="h-full md:h-[calc(100vh-2rem)] md:border md:border-border md:shadow-lg flex md:overflow-hidden relative bg-surface">
 
       {/* 
         CONVERSATION LIST (SIDEBAR)
@@ -533,7 +533,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ currentUser, allUsers, chukUser, in
         Desktop: Fixed width 
       */}
       <div
-        className={`w-full md:w-[320px] lg:w-[380px] flex-shrink-0 flex flex-col h-full min-h-0 bg-surface ${isMessageAreaVisible ? 'hidden md:flex' : 'flex'
+        className={`w-full md:w-[320px] lg:w-[380px] flex-shrink-0 flex flex-col h-full bg-surface ${isMessageAreaVisible ? 'hidden md:flex' : 'flex'
           } md:border-r md:border-border`}
       >
         <ConversationList

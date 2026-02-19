@@ -163,7 +163,7 @@ const ConversationList: React.FC<ConversationListProps> = ({ conversations, isLo
           <PlusIcon />
         </button>
       </div>
-      <div className="overflow-y-auto flex-1 min-h-0 pb-4">
+      <div className="overflow-y-auto flex-1">
         {/* Chuk AI Static Conversation */}
         <ConversationItem
           key={chukConversation.id}
