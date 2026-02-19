@@ -108,7 +108,7 @@
 //         >
 //             <UserAvatar user={otherParticipant} className="w-10 h-10 rounded-full mr-3 flex-shrink-0" isOnline={isOtherUserOnline} />
 //             <div className="min-w-0">
-//                 <h2 className="text-lg font-bold text-primary leading-tight hover:underline truncate">{otherParticipant.name}</h2>
+//                 <h2 className="text-lg font-bold text-primary leading-tight hover:underline truncate">{otherParticipant.name || otherParticipant.username}</h2>
 //                  {isTyping ? (
 //                     <p className="text-sm text-accent leading-tight truncate italic">typing...</p>
 //                  ) : (
@@ -143,7 +143,7 @@
 //                                 {sender?.id === 'chuk-ai' ? (
 //                                     <MarkdownRenderer text={message.text} />
 //                                 ) : (
-//                                     <p className="whitespace-pre-wrap break-words">{message.text}</p>
+//                                     <p className="whitespace-pre-wrap break-words">{sanitizeMessageText(message.text)}</p>
 //                                 )}
 //                             </div>
 //                         </div>
@@ -184,6 +184,12 @@
 // };
 
 // const SendIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="currentColor" viewBox="0 0 20 20"><path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z" /></svg>;
+// const sanitizeMessageText = (text: string) => {
+//   if (!text) return '';
+//   if (text.includes('/post/undefined')) return 'Shared a post';
+//   return text;
+// };
+
 // const BackIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>;
 
 
@@ -322,7 +328,7 @@ export const MessageArea: React.FC<MessageAreaProps> = ({ conversation, messages
             >
               <UserAvatar user={otherParticipant} className="w-10 h-10 rounded-full mr-3 flex-shrink-0" isOnline={isOtherUserOnline} />
               <div className="min-w-0">
-                <h2 className="text-lg font-bold text-primary leading-tight hover:underline truncate">{otherParticipant.name}</h2>
+                <h2 className="text-lg font-bold text-primary leading-tight hover:underline truncate">{otherParticipant.name || otherParticipant.username}</h2>
                 {isTyping ? (
                   <p className="text-sm text-accent leading-tight truncate italic">typing...</p>
                 ) : (
@@ -333,7 +339,7 @@ export const MessageArea: React.FC<MessageAreaProps> = ({ conversation, messages
           </div>
         )}
         composer={(
-          <div className="px-4 pt-3 pb-1">
+          <div className="px-4 py-2">
             <form onSubmit={handleSendMessage} className="flex items-center space-x-3">
               <input
                 type="text"
@@ -349,7 +355,7 @@ export const MessageArea: React.FC<MessageAreaProps> = ({ conversation, messages
             </form>
           </div>
         )}
-        messagesClassName="p-4"
+        messagesClassName="p-4 pb-28"
       >
         {isLoading ? (
           <div className="w-full h-full flex items-center justify-center">
@@ -393,7 +399,7 @@ export const MessageArea: React.FC<MessageAreaProps> = ({ conversation, messages
                         {sender?.id === 'chuk-ai' ? (
                           <MarkdownRenderer text={message.text} />
                         ) : (
-                          <p className="whitespace-pre-wrap break-words">{message.text}</p>
+                          <p className="whitespace-pre-wrap break-words">{sanitizeMessageText(message.text)}</p>
                         )}
                       </div>
                     </div>
@@ -464,4 +470,10 @@ export const MessageArea: React.FC<MessageAreaProps> = ({ conversation, messages
 };
 
 const SendIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="currentColor" viewBox="0 0 20 20"><path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z" /></svg>;
+const sanitizeMessageText = (text: string) => {
+  if (!text) return '';
+  if (text.includes('/post/undefined')) return 'Shared a post';
+  return text;
+};
+
 const BackIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>;

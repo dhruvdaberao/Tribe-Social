@@ -125,7 +125,7 @@
 
 
 
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Conversation, User } from '../../types';
 import UserAvatar from '../common/UserAvatar';
 
@@ -147,6 +147,28 @@ interface ConversationListProps {
 
 const ConversationList: React.FC<ConversationListProps> = ({ conversations, isLoading, currentUser, chukUser, userMap, activeConversationId, onSelectConversation, onNewMessage, unreadCounts, onClearConversation, onToggleBlock, onToggleAutoDelete, autoDeleteMap }) => {
 
+  const dedupedConversations = useMemo(() => {
+    const byConversationId = new Map<string, Conversation>();
+
+    conversations.forEach((conversation) => {
+      if (!conversation?.id) return;
+      const existing = byConversationId.get(conversation.id);
+
+      if (!existing) {
+        byConversationId.set(conversation.id, conversation);
+        return;
+      }
+
+      const currentTime = new Date(conversation.timestamp || 0).getTime();
+      const existingTime = new Date(existing.timestamp || 0).getTime();
+      if (currentTime >= existingTime) {
+        byConversationId.set(conversation.id, conversation);
+      }
+    });
+
+    return Array.from(byConversationId.values());
+  }, [conversations]);
+
   const chukConversation: Conversation = {
     id: chukUser.id,
     participants: [{ id: currentUser.id }, { id: chukUser.id }],
@@ -163,7 +185,10 @@ const ConversationList: React.FC<ConversationListProps> = ({ conversations, isLo
             <PlusIcon />
         </button>
       </div>
-      <div className="overflow-y-auto flex-1 min-h-0 overscroll-contain">
+      <div
+        className="overflow-y-auto flex-1 min-h-0 overscroll-contain pb-4"
+        style={{ paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))' }}
+      >
           {/* Chuk AI Static Conversation */}
           <ConversationItem
               key={chukConversation.id}
@@ -184,7 +209,7 @@ const ConversationList: React.FC<ConversationListProps> = ({ conversations, isLo
                 <img src="/busstop.gif" alt="Loading..." className="w-24 h-auto mb-2" />
                 <p>Loading your chats...</p>
             </div>
-        ) : conversations.length === 0 ? (
+        ) : dedupedConversations.length === 0 ? (
             <div className="text-center p-8 text-secondary">
                 <p>No user conversations yet.</p>
                 <button onClick={onNewMessage} className="text-sm text-accent font-semibold hover:underline mt-2">
@@ -192,7 +217,7 @@ const ConversationList: React.FC<ConversationListProps> = ({ conversations, isLo
                 </button>
             </div>
         ) : (
-            conversations.map(conv => {
+            dedupedConversations.map(conv => {
               const otherParticipantId = conv.participants.find(p => p.id !== currentUser.id)?.id;
               if (!otherParticipantId) return null;
 
@@ -259,8 +284,8 @@ const ConversationItem: React.FC<ConversationItemProps> = ({
         <UserAvatar user={otherParticipant} className="w-12 h-12" />
       </div>
       <div className="flex-1 overflow-hidden">
-        <p className="font-semibold text-primary">{otherParticipant.name}</p>
-        <p className="text-sm text-secondary truncate">{conversation.lastMessage}</p>
+        <p className="font-semibold text-primary">{otherParticipant.name || otherParticipant.username}</p>
+        <p className="text-sm text-secondary truncate">{sanitizeConversationSnippet(conversation.lastMessage)}</p>
       </div>
       {unreadCount > 0 && (
         <div className="ml-4 flex-shrink-0 w-6 h-6 bg-accent text-accent-text rounded-full flex items-center justify-center text-xs font-bold">
@@ -321,5 +346,11 @@ const ConversationItem: React.FC<ConversationItemProps> = ({
 
 const PlusIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>;
 const MoreIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 6h.01M12 12h.01M12 18h.01" /></svg>;
+
+const sanitizeConversationSnippet = (text: string) => {
+  if (!text) return 'No messages yet';
+  if (text.includes('/post/undefined')) return 'Shared a post';
+  return text;
+};
 
 export default ConversationList;
