@@ -419,12 +419,25 @@ router.put('/:id/like', protect, async (req, res) => {
 
         await post.save();
 
-        // Return structured response matching new READ structure
-        res.json({
-            id: post._id,
-            likes: userLiked ? [req.user.id] : [],
-            likesCount: post.likesCount
-        });
+        // Construct full post object for socket emit and response
+        const { default: Comment } = await import('../models/commentModel.js');
+        const recentComments = await Comment.find({ post: post._id })
+            .sort({ createdAt: -1 })
+            .limit(3)
+            .populate('user', 'name username avatarUrl');
+
+        const postObj = post.toJSON();
+        postObj.likes = userLiked ? [req.user.id] : [];
+        postObj.likesCount = post.likesCount;
+        postObj.comments = recentComments;
+        postObj.commentsCount = post.commentsCount || 0;
+
+        // Emit to everyone for real-time count updates
+        // Note: The 'likes' array in this emit is personalized for the REQUESTER.
+        // The frontend knows to ignore the 'likes' array from sockets for 'isLiked' status.
+        req.io.emit('postUpdated', postObj);
+
+        res.json(postObj);
 
     } catch (error) {
         console.error(error);

@@ -357,12 +357,12 @@ const ChatPage: React.FC<ChatPageProps> = ({ currentUser, allUsers, chukUser, in
         const upserted: Conversation = existingConversation
           ? { ...existingConversation, lastMessage: message.text, timestamp: message.timestamp }
           : {
-              id: `conv-${[currentUser.id, otherUserId].sort().join('-')}`,
-              participants: [{ id: currentUser.id }, { id: otherUserId }],
-              lastMessage: message.text,
-              timestamp: message.timestamp,
-              messages: []
-            };
+            id: `conv-${[currentUser.id, otherUserId].sort().join('-')}`,
+            participants: [{ id: currentUser.id }, { id: otherUserId }],
+            lastMessage: message.text,
+            timestamp: message.timestamp,
+            messages: []
+          };
 
         return normalizeConversations([upserted, ...prev]);
       });
@@ -551,7 +551,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ currentUser, allUsers, chukUser, in
 
   return (
     <div
-      className="h-full min-h-0 w-full bg-background md:bg-surface md:border md:border-border md:shadow-lg flex overflow-hidden relative"
+      className="h-[100dvh] min-h-0 w-full bg-background md:bg-surface md:border md:border-border md:shadow-lg flex overflow-hidden relative"
     >
       <div
         className={`w-full md:w-[320px] lg:w-[380px] flex-shrink-0 flex flex-col min-h-0 transition-transform duration-300 ease-in-out md:static absolute inset-0 z-10 md:border-r md:border-border bg-surface ${isMessageAreaVisible ? '-translate-x-full' : 'translate-x-0'
@@ -575,7 +575,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ currentUser, allUsers, chukUser, in
       </div>
 
       <div
-        className={`w-full md:flex-1 flex flex-col min-h-0 transition-transform duration-300 ease-in-out md:static absolute inset-0 bg-background ${isMessageAreaVisible ? 'translate-x-0' : 'translate-x-full'
+        className={`w-full md:flex-1 flex flex-col min-h-0 transition-transform duration-300 ease-in-out md:static absolute inset-0 bg-background z-[60] md:z-auto ${isMessageAreaVisible ? 'translate-x-0' : 'translate-x-full'
           } md:translate-x-0`}
       >
         {activeConversation ? (

@@ -124,7 +124,9 @@ export interface Post {
   content: string;
   imageUrl?: string;
   timestamp: string;
-  likes: string[]; // Array of user IDs
+  likes: string[]; // Array of user IDs (Optimized: only contains current user if liked)
+  likesCount: number;
+  commentsCount: number;
   comments: Comment[];
 }
 

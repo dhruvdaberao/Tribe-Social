@@ -49,7 +49,7 @@
 //               onSelect={onSelectConversation}
 //               unreadCount={0}
 //           />
-        
+
 //         {isLoading ? (
 //             <div className="text-center p-8 text-secondary flex flex-col items-center">
 //                 <img src="/kiss.gif" alt="Loading..." className="w-16 h-16 mb-2" />
@@ -69,7 +69,7 @@
 
 //               const otherParticipant = userMap.get(otherParticipantId);
 //               if (!otherParticipant) return null;
-              
+
 //               return (
 //                 <ConversationItem
 //                   key={conv.id}
@@ -182,81 +182,81 @@ const ConversationList: React.FC<ConversationListProps> = ({ conversations, isLo
       <div className="sticky top-0 z-10 p-5 border-b border-border bg-surface flex-shrink-0 flex justify-between items-center">
         <h2 className="text-3xl font-bold font-display text-primary">Messages</h2>
         <button onClick={onNewMessage} className="p-2 rounded-full text-primary bg-background border border-border hover:bg-accent hover:text-accent-text transition-colors" aria-label="New Message">
-            <PlusIcon />
+          <PlusIcon />
         </button>
       </div>
       <div
         className="overflow-y-auto flex-1 min-h-0 overscroll-contain pb-4"
-        style={{ paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))' }}
+        style={{ paddingBottom: 'calc(5rem + env(safe-area-inset-bottom))' }}
       >
-          {/* Chuk AI Static Conversation */}
-          <ConversationItem
-              key={chukConversation.id}
-              conversation={chukConversation}
-              otherParticipant={chukUser}
-              isActive={chukConversation.id === activeConversationId}
-              onSelect={onSelectConversation}
-              unreadCount={0}
-              isBlocked={false}
-              isAutoDeleteEnabled={false}
-              onClearConversation={() => {}}
-              onToggleBlock={() => {}}
-              onToggleAutoDelete={() => {}}
-          />
-        
-        {isLoading ? (
-            <div className="text-center p-8 text-secondary flex flex-col items-center">
-                <img src="/busstop.gif" alt="Loading..." className="w-24 h-auto mb-2" />
-                <p>Loading your chats...</p>
-            </div>
-        ) : dedupedConversations.length === 0 ? (
-            <div className="text-center p-8 text-secondary">
-                <p>No user conversations yet.</p>
-                <button onClick={onNewMessage} className="text-sm text-accent font-semibold hover:underline mt-2">
-                    Start a new chat!
-                </button>
-            </div>
-        ) : (
-            dedupedConversations.map(conv => {
-              const otherParticipantId = conv.participants.find(p => p.id !== currentUser.id)?.id;
-              if (!otherParticipantId) return null;
+        {/* Chuk AI Static Conversation */}
+        <ConversationItem
+          key={chukConversation.id}
+          conversation={chukConversation}
+          otherParticipant={chukUser}
+          isActive={chukConversation.id === activeConversationId}
+          onSelect={onSelectConversation}
+          unreadCount={0}
+          isBlocked={false}
+          isAutoDeleteEnabled={false}
+          onClearConversation={() => { }}
+          onToggleBlock={() => { }}
+          onToggleAutoDelete={() => { }}
+        />
 
-              const otherParticipant = userMap.get(otherParticipantId);
-              if (!otherParticipant) return null;
-              
-              return (
-                <ConversationItem
-                  key={conv.id}
-                  conversation={conv}
-                  otherParticipant={otherParticipant}
-                  isActive={conv.id === activeConversationId}
-                  onSelect={onSelectConversation}
-                  unreadCount={unreadCounts[otherParticipantId] || 0}
-                  isBlocked={(currentUser.blockedUsers || []).includes(otherParticipantId)}
-                  isAutoDeleteEnabled={!!autoDeleteMap[otherParticipantId]}
-                  onClearConversation={onClearConversation}
-                  onToggleBlock={onToggleBlock}
-                  onToggleAutoDelete={onToggleAutoDelete}
-                />
-              );
-            })
+        {isLoading ? (
+          <div className="text-center p-8 text-secondary flex flex-col items-center">
+            <img src="/busstop.gif" alt="Loading..." className="w-24 h-auto mb-2" />
+            <p>Loading your chats...</p>
+          </div>
+        ) : dedupedConversations.length === 0 ? (
+          <div className="text-center p-8 text-secondary">
+            <p>No user conversations yet.</p>
+            <button onClick={onNewMessage} className="text-sm text-accent font-semibold hover:underline mt-2">
+              Start a new chat!
+            </button>
+          </div>
+        ) : (
+          dedupedConversations.map(conv => {
+            const otherParticipantId = conv.participants.find(p => p.id !== currentUser.id)?.id;
+            if (!otherParticipantId) return null;
+
+            const otherParticipant = userMap.get(otherParticipantId);
+            if (!otherParticipant) return null;
+
+            return (
+              <ConversationItem
+                key={conv.id}
+                conversation={conv}
+                otherParticipant={otherParticipant}
+                isActive={conv.id === activeConversationId}
+                onSelect={onSelectConversation}
+                unreadCount={unreadCounts[otherParticipantId] || 0}
+                isBlocked={(currentUser.blockedUsers || []).includes(otherParticipantId)}
+                isAutoDeleteEnabled={!!autoDeleteMap[otherParticipantId]}
+                onClearConversation={onClearConversation}
+                onToggleBlock={onToggleBlock}
+                onToggleAutoDelete={onToggleAutoDelete}
+              />
+            );
+          })
         )}
       </div>
-    </div>
+    </div >
   );
 };
 
 interface ConversationItemProps {
-    conversation: Conversation;
-    otherParticipant: User;
-    isActive: boolean;
-    onSelect: (conv: Conversation) => void;
-    unreadCount: number;
-    isBlocked: boolean;
-    isAutoDeleteEnabled: boolean;
-    onClearConversation: (otherUserId: string) => void;
-    onToggleBlock: (otherUserId: string) => void;
-    onToggleAutoDelete: (otherUserId: string) => void;
+  conversation: Conversation;
+  otherParticipant: User;
+  isActive: boolean;
+  onSelect: (conv: Conversation) => void;
+  unreadCount: number;
+  isBlocked: boolean;
+  isAutoDeleteEnabled: boolean;
+  onClearConversation: (otherUserId: string) => void;
+  onToggleBlock: (otherUserId: string) => void;
+  onToggleAutoDelete: (otherUserId: string) => void;
 }
 
 const ConversationItem: React.FC<ConversationItemProps> = ({
@@ -276,9 +276,8 @@ const ConversationItem: React.FC<ConversationItemProps> = ({
   return (
     <div
       onClick={() => onSelect(conversation)}
-      className={`relative flex items-center p-4 cursor-pointer transition-colors border-b border-border ${
-        isActive ? 'bg-background' : 'hover:bg-background'
-      }`}
+      className={`relative flex items-center p-4 cursor-pointer transition-colors border-b border-border ${isActive ? 'bg-background' : 'hover:bg-background'
+        }`}
     >
       <div className="relative mr-4 flex-shrink-0">
         <UserAvatar user={otherParticipant} className="w-12 h-12" />

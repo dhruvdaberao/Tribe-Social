@@ -226,7 +226,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeItem, onSelectItem, currentUser
     </button>
   );
 
-  const shouldHideBottomNav = activeItem === 'TribeDetail' || activeItem === 'Messages';
+  const shouldHideBottomNav = activeItem === 'TribeDetail';
 
   return (
     <>
@@ -276,7 +276,13 @@ const Sidebar: React.FC<SidebarProps> = ({ activeItem, onSelectItem, currentUser
 
       {/* Mobile Bottom Nav */}
       {!shouldHideBottomNav && (
-        <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-surface border-t border-border flex justify-around items-center h-16 z-50">
+        <nav
+          className="md:hidden fixed bottom-0 left-0 right-0 bg-surface border-t border-border flex justify-around items-center z-50 transition-all duration-200"
+          style={{
+            height: 'calc(4rem + env(safe-area-inset-bottom))',
+            paddingBottom: 'env(safe-area-inset-bottom)'
+          }}
+        >
           {mobileNavItems.map(item => (
             <MobileNavButton key={item.name} item={item} />
           ))}

@@ -25,7 +25,10 @@ const ChatShell: React.FC<ChatShellProps> = ({
         ['--chat-vh' as string]: 'var(--vvh, 100dvh)',
       }}
     >
-      <header className="sticky top-0 z-[1000] border-b border-border bg-surface w-full">
+      <header
+        className="sticky top-0 z-[1000] border-b border-border bg-surface w-full"
+        style={{ paddingTop: 'env(safe-area-inset-top)' }}
+      >
         {header}
       </header>
 

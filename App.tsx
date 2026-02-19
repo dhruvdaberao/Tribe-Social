@@ -253,7 +253,7 @@ const App: React.FC = () => {
     }, [socket, viewedTribe?.id]);
 
     useEffect(() => {
-        if (!socket || !userMap.size) return;
+        if (!socket || !userMap.size || !currentUser) return;
         const handleNewPost = (post: any) => {
             const populated = populatePost(post);
             if (populated) {
@@ -271,7 +271,21 @@ const App: React.FC = () => {
         };
         const handlePostUpdated = (updatedPost: any) => {
             const populated = populatePost(updatedPost);
-            if (populated) setPosts(prev => prev.map(p => p.id === populated.id ? populated : p));
+            if (populated) {
+                setPosts(prev => prev.map(p => {
+                    if (p.id === populated.id) {
+                        // Preserve MY like status from local state because socket event 'likes' array is personalized for the sender
+                        const isLikedByMe = p.likes.includes(currentUser.id);
+                        return {
+                            ...populated,
+                            likes: isLikedByMe ? [currentUser.id] : [],
+                            likesCount: populated.likesCount, // Ensure we take the new count
+                            commentsCount: populated.commentsCount
+                        };
+                    }
+                    return p;
+                }));
+            }
         };
         const handlePostDeleted = (postId: string) => setPosts(prev => prev.filter(p => p.id !== postId));
 
@@ -364,6 +378,8 @@ const App: React.FC = () => {
             imageUrl: imageUrl,
             timestamp: new Date().toISOString(),
             likes: [],
+            likesCount: 0,
+            commentsCount: 0,
             comments: [],
         };
         setPosts(prev => [tempPost, ...prev]);
@@ -386,7 +402,9 @@ const App: React.FC = () => {
         setPosts(prev => prev.map(p => {
             if (p.id === postId) {
                 const isLiked = p.likes.includes(currentUser.id);
-                return { ...p, likes: isLiked ? p.likes.filter(id => id !== currentUser.id) : [...p.likes, currentUser.id] };
+                const newLikes = isLiked ? p.likes.filter(id => id !== currentUser.id) : [...p.likes, currentUser.id];
+                const newCount = isLiked ? Math.max(0, p.likesCount - 1) : p.likesCount + 1;
+                return { ...p, likes: newLikes, likesCount: newCount };
             }
             return p;
         }));
@@ -403,7 +421,11 @@ const App: React.FC = () => {
         if (!currentUser) return;
         const tempCommentId = `temp-${Date.now()}`;
         const tempComment: Comment = { id: tempCommentId, author: currentUser, text, timestamp: new Date().toISOString() };
-        setPosts(prev => prev.map(p => p.id === postId ? { ...p, comments: [...p.comments, tempComment] } : p));
+        setPosts(prev => prev.map(p => p.id === postId ? {
+            ...p,
+            comments: [...p.comments, tempComment],
+            commentsCount: (p.commentsCount || 0) + 1
+        } : p));
         try {
             const { data } = await api.commentOnPost(postId, { text });
             const serverComment = data?.comment || data;
@@ -851,7 +873,7 @@ const App: React.FC = () => {
         if (isChatPage) {
             // Mobile specific: NO padding, full viewport.
             // Desktop: keep some padding/max-width structure.
-            containerClass = 'pt-16 h-[var(--vvh,100dvh)] min-h-0 w-full max-w-6xl mx-auto md:pt-20 md:h-[var(--vvh,100dvh)] md:px-4';
+            containerClass = 'pt-0 h-[var(--vvh,100dvh)] min-h-0 w-full max-w-6xl mx-auto md:pt-20 md:h-[var(--vvh,100dvh)] md:px-4';
         } else if (activeNavItem === 'Settings') {
             containerClass = 'h-[calc(100vh-8rem)] md:h-[calc(100vh-4rem)] max-w-2xl mx-auto px-4';
         }
