@@ -1,5 +1,5 @@
 import React from 'react';
-import useChatViewport from '../../hooks/useChatViewport';
+
 
 interface ChatShellProps {
   header: React.ReactNode;
@@ -16,30 +16,24 @@ const ChatShell: React.FC<ChatShellProps> = ({
   className = '',
   messagesClassName = ''
 }) => {
-  useChatViewport();
-
   return (
     <section
-      className={`chat-shell grid grid-rows-[auto_minmax(0,1fr)_auto] h-[var(--chat-vh,100dvh)] min-h-0 w-full overflow-hidden bg-background ${className}`}
-      style={{
-        ['--chat-vh' as string]: 'var(--vvh, 100dvh)',
-      }}
+      className={`chat-shell flex flex-col h-full min-h-0 w-full overflow-hidden bg-background ${className}`}
     >
       <header
-        className="sticky top-0 z-[1000] border-b border-border bg-surface w-full"
+        className="flex-shrink-0 z-[1000] border-b border-border bg-surface w-full"
         style={{ paddingTop: 'env(safe-area-inset-top)' }}
       >
         {header}
       </header>
 
-      <div className={`min-h-0 overflow-y-auto overscroll-contain ${messagesClassName}`}>
+      <div className={`flex-1 min-h-0 overflow-y-auto overscroll-contain ${messagesClassName}`}>
         {children}
       </div>
 
       <footer
-        className="sticky bottom-0 z-40 border-t border-border bg-surface"
+        className="flex-shrink-0 z-40 border-t border-border bg-surface"
         style={{
-          transform: 'translateY(calc(-1 * var(--keyboardOffset, 0px)))',
           paddingBottom: 'env(safe-area-inset-bottom)',
         }}
       >

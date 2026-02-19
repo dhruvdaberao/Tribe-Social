@@ -355,7 +355,7 @@ export const MessageArea: React.FC<MessageAreaProps> = ({ conversation, messages
             </form>
           </div>
         )}
-        messagesClassName="p-4 pb-28"
+        messagesClassName="p-4 pb-4"
       >
         {isLoading ? (
           <div className="w-full h-full flex items-center justify-center">
