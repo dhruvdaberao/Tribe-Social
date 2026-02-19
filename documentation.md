@@ -1,1135 +1,330 @@
-TRIBE SOCIAL - ADVANCED TECHNICAL DOCUMENTATION & SYSTEM ARCHITECTURE
-==================================================================
-VERSION: 5.0 (Senior Staff Engineer Review Pass)
-DATE: 2026-02-01
-TARGET AUDIENCE: Senior Engineers, System Architects, Technical Interviewers
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-TABLE OF CONTENTS
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-1.  High-Level System Overview & Business Value
-2.  Data Flow & Request Lifecycle
-3.  Architecture Diagram & Tech Stack
-4.  Database Design (Schema Deep Dive)
-5.  Security & Performance Strategy
-6.  50+ SENIOR INTERVIEW QUESTIONS & ANSWERS
-7.  COMPLETE FEATURE MANUAL (Architecture, Flow, & Logic)
-8.  20 "GAP FILLING" QUESTIONS (Testing, CI/CD, A11y)
-9.  INTERVIEW PREPARATION GUIDE (Walkthroughs & Bug Stories)
-10. 30 NEW ADVANCED QUESTIONS (PWA, Race Conditions, Mobile)
-11. CURRENT DRAWBACKS & FUTURE ROADMAP (Deep Analysis)
-12. ENGINEERING RESILIENCY & OPERATIONS (SENIOR DEEP DIVE)
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-1️⃣ HIGH-LEVEL SYSTEM OVERVIEW & BUSINESS VALUE
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-### The Product Vision
-"Tribe Social" is a Hybrid Social Platform combining:
-1.  **Macro-Social**: Global Feed, Follower Graph (Twitter-style).
-2.  **Micro-Social**: Tribes, Real-Time Chat (Discord-style).
-
-### Key Technical Achievements
-Unlike typical tutorials, this project implements production-grade patterns:
--   **Full PWA Implementation**: Installable on iOS/Android, offline-capable manifesto, splash screens.
--   **Mobile Crash Resilience**: Hardened event handling (`type="button"`, `e.stopPropagation`) to prevent mobile-only white screens.
--   **Optimistic UI Navigation**: State passed via Router for instant "Chat" loading.
--   **Database Optimization**: Usage of `.lean()` and `.select()` to reduce payload size by 95%.
--   **Resiliency**: Auto-retry logic for 503/Timeout errors (Render cold starts).
--   **Real-Time Sync**: Socket.IO for instant messaging and presence.
--   **Status Bar Polish**: Dynamic `theme-color` meta tag updates to match header colors per theme.
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-2️⃣ DATA FLOW & REQUEST LIFECYCLE
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-### Scenario: User A sends a message in "JavaScript Tribe"
-1.  **User Action**: User types "Hello World" and presses Enter.
-2.  **Frontend (React)**:
-    -   `TribeMessageArea.tsx` captures input.
-    -   **Optimistic UI**: Message immediately appears in the list (grayed out).
-    -   Calls `api.sendTribeMessage(tribeId, text)`.
-3.  **Network Layer**:
-    -   Axios Interceptor attaches `Authorization: Bearer <token>`.
-    -   Request: `POST /api/tribes/:id/messages`.
-4.  **Backend (Node.js)**:
-    -   `protect` middleware validates JWT.
-    -   Controller checks `tribe.members.includes(userId)`.
-    -   Saves `TribeMessage` to MongoDB.
-5.  **Real-Time Broadcast**:
-    -   `io.to(tribeId).emit('newTribeMessage')`.
-    -   All connected clients receive the message and update state.
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-3️⃣ ARCHITECTURE DIAGRAM & TECH STACK
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-[ CLIENT: React + Vite + PWA ]
-       │    │
-       │    └─── (WS) Socket.IO ──────────────┐
-       │                                      │
-       └──────── (HTTP) REST API ─────────┐   │
-                                          │   │
-[ SERVER: Node.js + Express ]             │   │
-       │    │                             │   │
-       │    └─► [ AUTH: JWT + Bcrypt ]    ▼   ▼
-       │
-       ├──► [ DB: MongoDB Atlas ] (Data Persistence)
-       │
-       ├──► [ STORAGE: Cloudinary ] (Image Hosting)
-       │
-       └──► [ AI: Gemini API ] (Chuck AI Chat)
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-4️⃣ DATABASE DESIGN (MONGODB SCHEMA)
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-### 1. User
--   `username`, `email` (Indexed, Unique)
--   `password` (Bcrypt Hash)
--   `following`, `followers` (Arrays of ObjectIds for O(1) Feed lookup)
-
-### 2. Tribe (Optimized)
--   `name`, `description`
--   `members` (Array of ObjectIds)
--   `owner` (ObjectId)
--   *Note*: Fetched using `.lean()` to avoid Mongoose overhead.
-
-### 3. TribeMessage
--   `sender` (Ref: User)
--   `tribe` (Ref: Tribe)
--   `content` (String)
--   `createdAt` (Indexed for sorting)
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-5️⃣ SECURITY & PERFORMANCE STRATEGY
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
--   **Security**:
-    -   **JWT**: Stateless authentication.
-    -   **Sanitization**: React escapes XSS. Mongo handles Injection.
-    -   **Validation**: Zod/Manual checks on all inputs.
-    -   **Strict Array Checks**: API outputs strictly normalized to prevent "not iterable" crashes.
--   **Performance**:
-    -   **Cold Start Handling**: 60s Timeout + Auto-Retry.
-    -   **Payload Reduction**: Fetching only necessary fields (`name avatar members`).
-    -   **Optimistic Navigation**: Passing `location.state` to avoid loading screens.
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-6️⃣ 50+ SENIOR INTERVIEW QUESTIONS & ANSWERS
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-### 🔹 SYSTEM DESIGN & ARCHITECTURE
-1.  **Q: Why use MERN over PERN (Postgres)?**
-    *A*: "For a social graph, the schema is volatile. Adding features like 'Reactions' or 'Nested Comments' in SQL requires expensive migrations. MongoDB documents map 1:1 with Frontend state."
-2.  **Q: How do you handle Global State?**
-    *A*: "React Context for Auth/Theme (low frequency). Local state/signals for high frequency (Typing indicators) to prevent re-renders."
-3.  **Q: Describe the Data Flow when a user Joins a Tribe.**
-    *A*: "Client PUT request -> API Auth Check -> Controller pushes UserID to `members` array -> Saves -> Returns updated Member Count -> UI updates button text."
-4.  **Q: How would you scale the Notification System?**
-    *A*: "Move from direct Socket emission to a Message Queue (RabbitMQ). A dedicated service consumes the queue and decides delivery (Push, Email)."
-5.  **Q: Explain the 'Tribe Not Found' optimization.**
-    *A*: "Instead of fetching ALL tribes and filtering on client (O(n)), I implemented a direct backend route `GET /tribes/:id` (O(1) with Index)."
-6.  **Q: How do you handle Render Cold Starts?**
-    *A*: "I implemented a 60-second fetch timeout and an exponential backoff retry strategy on the client side, plus a 'Waking up server' UI indicator."
-7.  **Q: What is Optimistic UI?**
-    *A*: "Updating the UI *before* the server responds. Example: Making the 'Like' heart red immediately. If the server fails, we roll back the change."
-8.  **Q: Why separate `TribeMessage` from `Tribe` document?**
-    *A*: "To avoid the 16MB MongoDB document limit. Storing messages array inside Tribe would break it eventually."
-9.  **Q: How does the Global Feed algorithm work?**
-    *A*: "`Post.find({ user: { $in: followingIds } }).sort({ createdAt: -1 })`. Simple Fan-out-on-Read."
-10. **Q: How to handle 10,000 active socket connections?**
-    *A*: "Use Redis Adapter for Socket.IO. Distribute connections across multiple Node instances. Redis syncs events between instances."
-
-### 🔹 FRONTEND (REACT)
-11. **Q: What is Prop Drilling and how did you avoid it?**
-    *A*: "Passing data 5 levels down. Avoided by using `AuthContext` and `SocketContext`."
-12. **Q: Why use `useEffect`?**
-    *A*: "For side effects: Fetching data, subscribing to Sockets, changing document title."
-13. **Q: How do you handle Image Uploads?**
-    *A*: "Convert to Base64 -> Backend parses -> Uploads to Cloudinary -> Returns URL -> Save URL to DB."
-14. **Q: What is the Virtual DOM?**
-    *A*: "A lightweight copy of the DOM. React diffs it with the real DOM and only updates changed nodes."
-15. **Q: How do you protect routes?**
-    *A*: "A wrapper `RequireAuth`. If `!user`, redirect to `/login`."
-16. **Q: Why did you use `useLocation` for Tribes?**
-    *A*: "To pass the Tribe object state during navigation, enabling Instant (Zero-Load) UI."
-17. **Q: How do you prevent Infinite Loops in `useEffect`?**
-    *A*: "Correct dependency arrays. Use `useMemo` for objects/arrays to preserve referential equality."
-18. **Q: Styled Components vs CSS Modules?**
-    *A*: "Styled Components keep styles co-located with logic and allow dynamic props (`bg=${props => ...}`)."
-19. **Q: How do you debug React performance?**
-    *A*: "React DevTools Profiler. Look for 'Why did this render?'. Use `React.memo` for expensive components."
-20. **Q: Explain `useRef` usage in Chat.**
-    *A*: "Used to hold a reference to the 'Bottom div' to auto-scroll when new messages arrive."
-
-### 🔹 BACKEND (NODE/EXPRESS)
-21. **Q: What is Middleware?**
-    *A*: "Functions executing in the request cycle. Used for Auth (`protect`), CORS, Logging."
-22. **Q: What is the Event Loop?**
-    *A*: "Node's non-blocking I/O mechanism. Offloads heavy tasks to the kernel, executes callback when done."
-23. **Q: Difference between `PUT` and `PATCH`?**
-    *A*: "PUT replaces resource. PATCH modifies partial fields. I generally use PUT for Profile updates."
-24. **Q: How to handle Async errors?**
-    *A*: "Wrap in `try/catch`. Pass error to `next(err)` or return 500."
-25. **Q: Explain `process.env`.**
-    *A*: "Injects secrets (MONGO_URI) at runtime, keeping them out of Git."
-26. **Q: How does `bcrypt` work?**
-    *A*: "Hashes password with a Salt (random data) 10 times (Work Factor). Impossible to reverse."
-27. **Q: Why use `cors`?**
-    *A*: "To allow my Frontend (Vercel) to talk to my Backend (Render) on a different domain."
-28. **Q: How do you structure controllers?**
-    *A*: "Separation of Concerns. Routes define endpoints, Controllers handle logic, Models handle DB."
-29. **Q: Use of `morgan`?**
-    *A*: "HTTP request logger. Helps debug 400/500 errors in development."
-30. **Q: How do you validating incoming JSON?**
-    *A*: "Manual checks (`if (!email)`) or libraries like Zod/Joi."
-
-### 🔹 DATABASE (MONGODB)
-31. **Q: Embedded vs Referenced?**
-    *A*: "Comments = Embedded (Fast Read). Users = Referenced (Normalization)."
-32. **Q: What is an Index?**
-    *A*: "B-Tree structure for fast lookups. Indexed `username` and `email`."
-33. **Q: What happens if MongoDB goes down?**
-    *A*: "Mongoose Connection Error. API returns 500. UI shows 'Service Unavailable'."
-34. **Q: Explain `.lean()`?**
-    *A*: "Returns plain JS objects instead of Mongoose Documents. 10x faster for read-only data."
-35. **Q: How does `_id` work?**
-    *A*: "12-byte ObjectId (Time + Machine + Process + Counter). Sorts by time."
-36. **Q: Explain `.populate()`?**
-    *A*: "Join-like operation. Replaces ID with actual Document content."
-37. **Q: Why use `Schema.Types.ObjectId`?**
-    *A*: "Enforces referential integrity at the application level."
-38. **Q: Database transactions?**
-    *A*: "Used via `session.withTransaction()` for multi-document updates (e.g. transfer money)."
-39. **Q: Aggregation Pipeline?**
-    *A*: "Advanced filtering/grouping. Used for 'Trending Posts' or analytics."
-40. **Q: MongoDB Atlas features?**
-    *A*: "Auto-scaling, Backups, Charts, Network Peering."
-
-### 🔹 REAL-TIME & SECURITY
-41. **Q: HTTP vs WebSocket?**
-    *A*: "HTTP = Request/Respones (Half Duplex). WS = Persistent Two-way (Full Duplex)."
-42. **Q: Socket Rooms?**
-    *A*: "Virtual channels. `socket.join(tribeId)`. Broadcast only to that room."
-43. **Q: Is Socket.IO secure?**
-    *A*: "Yes, if handshake is authenticated with JWT."
-44. **Q: Storing Passwords?**
-    *A*: "Never plain text. Always Bcrypt hash."
-45. **Q: What is XSS?**
-    *A*: "Injecting scripts. React escapes output automatically."
-46. **Q: What is CSRF?**
-    *A*: "Clicking a malicious link that forces action on your behalf. Tokens prevent this."
-47. **Q: Secure Headers?**
-    *A*: "Helmet.js adds headers like HSTS, X-Frame-Options."
-48. **Q: Rate Limiting?**
-    *A*: "Prevent DOS. `express-rate-limit` caps requests per IP."
-49. **Q: SQL Injection in Mongo?**
-    *A*: "NoSQL Injection exists (`$gt: ''`), but using Mongoose sanitizes inputs."
-50. **Q: HTTPS?**
-    *A*: "Encrypts traffic. Render/Vercel handle certificates automatically."
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-7️⃣ COMPLETE FEATURE MANUAL
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-### 🔐 7.1 AUTHENTICATION (The Security Layer)
-**Architecture**: Stateless JWT Authentication.
-**Technologies**: `jsonwebtoken`, `bcryptjs`, `Context API`.
-
-**Flow 1: Registration**
-1.  User enters Name, Email, Password.
-2.  Backend checks if Email exists (Index lookup).
-3.  **Hashing**: `bcrypt.hash(password, 12)` creates a secure has.
-4.  User saved to DB.
-5.  **Token**: Backend signs a JWT (`{ id: user._id }`) with `JWT_SECRET`.
-6.  Token returned to Client.
-
-**Flow 2: Login**
-1.  User sends Email/Password.
-2.  Backend finds User by Email.
-3.  **Comparison**: `bcrypt.compare(inputPassword, dbHash)`.
-4.  If match -> Issue Token.
-5.  Client stores Token in `localStorage`.
-
-**Flow 3: Reset Password**
-1.  User requests Reset for Email.
-2.  **Token Gen**: Backend generates random token crypto string.
-3.  **Expiry**: Token + Expiry saved to User document.
-4.  **Email**: `nodemailer` sends Link: `/reset-password?token=xyz`.
-5.  User clicks link -> Enters new password.
-6.  Backend verifies token + expiry -> Updates Hash -> Clears Token.
+# TRIBE SOCIAL - COMPREHENSIVE SYSTEM REPORT & INTERVIEW BIBLE
+**Version**: 6.0 (Enterprise Gold Standard)
+**Last Updated**: February 19, 2026
+**Author**: Dhruv Daberao (Lead Engineer)
+**Target Audience**: Senior Engineers, System Architects, hiring managers, and developers requiring an exhaustive understanding of the codebase.
 
 ---
 
-### 📝 7.2 POSTS SYSTEM (The Feed)
-**Architecture**: Fan-out-on-Read.
-**Technologies**: MongoDB, Cloudinary.
+# 📚 TABLE OF CONTENTS
 
-**Creating a Post:**
-1.  Frontend checks for Image.
-2.  **Upload**: If image, send to Cloudinary -> Get URL.
-3.  **API**: `POST /api/posts` with `{ content, image: url }`.
-4.  Backend saves Post.
+## PART I: THE SYSTEM REPORT (Architecture & Implementation)
+1.  **Executive Summary & Product Vision**
+2.  **Detailed Tech Stack & Rationales**
+3.  **System Architecture & Diagrams**
+4.  **Database Design (The Data Dictionary)**
+5.  **Feature Deep Dives (Implementation Manual)**
+    -   5.1 Authentication & Security
+    -   5.2 The Global Feed (Algorithm & Performance)
+    -   5.3 Real-Time Infrastructure (Socket.IO)
+    -   5.4 Tribe Communities & Membership
+    -   5.5 Admin Reporting & Moderation System
+    -   5.6 PWA & Offline Capabilities
 
-**Viewing Feed:**
-1.  API: `GET /api/posts/feed`.
-2.  **Aggregation**: Find all Posts where `user` is in `currentUser.following`.
-3.  **Sort**: `{ createdAt: -1 }` (Newest first).
-4.  **Pagination**: `.skip(page * 10).limit(10)`.
-
-**Likes (Optimistic):**
-1.  UI turns Heart Red immediately.
-2.  API call sent in background.
-3.  **Concurrency**: Backend uses `$addToSet` (prevents duplicates) or `$pull` (unlike).
-
----
-
-### 💬 7.3 MESSAGING (Real-Time Chat)
-**Architecture**: WebSocket Events + REST Persistence.
-**Technologies**: Socket.IO, React, MongoDB.
-
-**Architecture:**
--   **Namespace**: `/` (Default).
--   **Rooms**: Each Tribe is a Room (`tribe-123`).
-
-**The Flow:**
-1.  **Connection**: Client connects, sends JWT in Handshake.
-2.  **Join**: Client emits `joinRoom(tribeId)`. Server adds socket to Room.
-3.  **Send**: User types message -> HTTP POST to save to DB.
-4.  **Broadcast**: Controller emits `newTribeMessage` to Room `tribe-123`.
-5.  **Receive**: Client listener `socket.on('newTribeMessage')` appends to state.
+## PART II: THE INTERVIEW BIBLE (Q&A)
+6.  **Level 1: The Basics (Foundations)**
+7.  **Level 2: The Application (Framework & Tools)**
+8.  **Level 3: The System (Architecture & Design)**
+9.  **Level 4: The Hard Questions (Debugging, Scaling, Trade-offs)**
+10. **Behavioral & Soft Skills Guide**
 
 ---
 
-### 👥 7.4 TRIBES (Groups & Navigation)
-**Architecture**: Single Page Application (SPA) with Optimistic Routing.
-**Technologies**: React Router, Styled Components.
+# 🏛️ PART I: THE SYSTEM REPORT
 
-**The "Instant Load" Trick:**
--   When clicking a Tribe Card, we pass the *entire* Tribe Object via `location.state`.
--   **Result**: The Detail Page has data *immediately*. No loading spinner.
--   Background `useEffect` fetches fresh data to check for updates.
+## 1. EXECUTIVE SUMMARY & PRODUCT VISION
 
-**Membership:**
--   `members`: Array of User ObjectIds.
--   **Join**: `API.put('/join')` -> `$addToSet: { members: userId }`.
--   **Leave**: `API.put('/leave')` -> `$pull: { members: userId }`.
+### 1.1 What is Tribe Social?
+"Tribe Social" is a **Hybrid Social Platform** designed to solve the "fragmentation problem" in modern social media. It unifies two distinct interaction models:
+1.  **Macro-Social (The Feed)**: A broadcast-style, Twitter-like global feed where users follow others and consume content based on an algorithm.
+2.  **Micro-Social (Tribes)**: Community-focused, discord-style rooms where people group around shared interests (Tribes) for real-time chat.
 
----
+### 1.2 The Core Value Proposition
+Most apps are either "Broadcast" (Instagram/X) or "Community" (Discord/Slack). Tribe Social bridges this gap.
+-   **User Benefit**: "Discover globally, connect locally." You find content on the feed, then bond with like-minded people in Tribes.
+-   **Technical Challenge**: Requires handling both **high-read throughput** (Feed) and **low-latency bi-directional communication** (Chat) simultaneously.
 
-### 🤖 7.5 CHUCK AI (Chatbot)
-**Architecture**: Third-Party API Integration.
-**Technologies**: Google Gemini API (`@google/generative-ai`).
-
-**Flow:**
-1.  User opens Chuck AI.
-2.  User types prompt.
-3.  **Backend Proxy**: Request sent to Node.js Backend.
-4.  **API Call**: Backend calls Google Gemini with API Key (hidden from client).
-5.  **Context**: Prompt injected with "You are Chuck, a coding assistant...".
-6.  Response returned to Client and displayed.
+### 1.3 Key Technical Achievements
+-   **Hybrid Connectivity**: Seamlessly switching between REST API (Feed) and WebSockets (Chat).
+-   **Optimistic UI Principles**: 90% of user actions (Like, Join, Send) update the UI *instantly* before server confirmation.
+-   **Crash-Resilient Mobile Experience**: Specialized event handling to prevent touch-event crashes on iOS/Android.
+-   **Offline-First Architecture**: Service Workers and caching allow read-only access without internet.
 
 ---
 
-### 🎨 7.6 THEME SYSTEM
-**Architecture**: CSS-in-JS.
-**Technologies**: `styled-components`, `localStorage`.
+## 2. DETAILED TECH STACK & RATIONALES
 
-**Logic:**
-1.  `ThemeContext` holds `theme` state ('light' | 'dark').
-2.  On mount, checks `localStorage.getItem('theme')`.
-3.  `ThemeProvider` wraps the App, injecting variables (`colors.primary`, `colors.background`).
-4.  **Switch**: Toggling updates State and `localStorage` to persist preference.
-5.  **Meta Sync**: Updates `meta[name="theme-color"]` to match header (e.g., `#332620` in Dark Mode) using DOM manipulation.
+This project isn't just "MERN"; it's a curated selection of tools chosen for performance, scalability, and developer experience.
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-8️⃣ 20 "GAP FILLING" QUESTIONS (THE MISSING PIECES)
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-*These are high-level questions that often trip up candidates.*
+### 2.1 FRONTEND (Client-Side)
+-   **Core Framework**: **React 19**
+    -   *Why?* The virtual DOM is essential for high-frequency updates (chat). React 19 brings concurrent rendering features that improve UI responsiveness during heavy loads.
+-   **Build Tool**: **Vite 6**
+    -   *Why?* Replaces Webpack. Uses native ES Modules (ESM) for dev server start times of <300ms (vs 10s+ with Webpack). Crucial for rapid iteration.
+-   **Language**: **TypeScript** (Strict Mode aimed)
+    -   *Why?* Prevents "undefined" runtime errors. Interfaces (`User`, `Tribe`, `Post`) serve as the contract between Frontend and Backend.
+-   **Styling**: **Styled Components** (CSS-in-JS)
+    -   *Why?* Co-location of styles. We use Dynamic Props (`bg=${props => props.active ? 'blue' : 'gray'}`) to change themes without massive class string manipulation.
+-   **State Management**: **Context API + React Query Pattern**
+    -   *Why?* Redux was overkill. Context handles global singles (Auth, Theme). For server state (Feed, Tribes), we use custom hooks that mimic React Query's caching/revalidating behavior.
+-   **Icons**: **Lucide React**
+    -   *Why?* Lightweight SVG icons that are tree-shakeable (only imports what you use).
 
-### ⚡ SUPER-ADVANCED / ARCHITECTURE
-51. **Q: When would you add Redux/Zustand instead of Context?**
-    *A*: "Context is for **Dependency Injection** (Auth, Theme). Redux is for **State Management** (Complex data flows). I'd switch if I had frequent updates causing unnecessary re-renders in unrelated components (Selector pattern)."
-52. **Q: How does Render/Vercel actually run your code?**
-    *A*: "Containers (Docker). They analyze `package.json`, build a Docker image, and spin up an ephemeral container. If it crashes, the orchestrator replaces it."
-53. **Q: What are Core Web Vitals?**
-    *A*: "Google's metrics: **LCP** (Loading performance), **FID** (Interactivity), **CLS** (Visual stability). I improved CLS by using Skeletons instead of jumping content."
-54. **Q: How would you implement End-to-End (E2E) testing?**
-    *A*: "Cypress or Playwright. I'd simulate a user flow: Login -> Join Tribe -> Send Message -> Verify text appears."
-55. **Q: What is the 'N+1 Problem' in APIs?**
-    *A*: "Fetching a list of posts (1 query) then fetching the author for EACH post (N queries). Solved using `.populate()` (like SQL JOIN) to do it in 1 request."
+### 2.2 BACKEND (Server-Side)
+-   **Runtime**: **Node.js**
+    -   *Why?* Non-blocking I/O (Event Loop) is non-negotiable for a chat app handling thousands of concurrent WebSocket connections.
+-   **Framework**: **Express.js**
+    -   *Why?* Unopinionated, abundant middleware ecosystem (`cors`, `helmet`, `morgan`).
+-   **Real-Time Engine**: **Socket.IO**
+    -   *Why?* Raw WebSockets are hard to manage (reconnection logic, fallback to long-polling). Socket.IO handles "Room" logic (Tribes) and auto-reconnection out of the box.
+-   **Database**: **MongoDB (Atlas)**
+    -   *Why?* Schema flexibility. In a social app, features change weekly (e.g., adding "Reactions" to a message). SQL migrations would slow us down. Documents map 1:1 to JSON objects.
+-   **ODM**: **Mongoose**
+    -   *Why?* Schema validation (`required: true`), Middleware hooks (`pre('save')` for hashing passwords), and Virtuals.
 
-### 🛡️ SECURITY & RELIABILITY
-56. **Q: How do you handle DDOS attacks?**
-    *A*: "Cloudflare (at the edge), Rate Limiting (middleware), and Payload size limits."
-57. **Q: Why use `httpOnly` cookies over LocalStorage?**
-    *A*: "LocalStorage is accessible by JS (XSS attacks). HttpOnly cookies are inaccessible to JS, preventing token theft via XSS."
-58. **Q: What is a Race Condition in the UI?**
-    *A*: "User clicks 'Tab A' (slow) then 'Tab B' (fast). Tab B loads, then Tab A overwrites it. Fixed by aborting the previous request (`AbortController`)."
-59. **Q: How to handle 'Broken Pipe' errors?**
-    *A*: "Client disconnects while server is writing. Handle `req.on('close')` to stop processing."
-
-### 🕸️ ACCESSIBILITY (A11Y)
-60. **Q: How did you make the app accessible?**
-    *A*: "Semantic HTML (`<button>` not `<div>`), `aria-label` for Icon-only buttons, and sufficient Color Contrast (checked via Lighthouse)."
-61. **Q: What is the DOM Tree vs Accessibility Tree?**
-    *A*: "DOM is for rendering. Accessibility Tree is for Screen Readers. `display: none` removes from both. `aria-hidden` removes only from Accessibility Tree."
-
-### 🔄 SCALING & FUTURE PROOFING
-62. **Q: How would you shard MongoDB?**
-    *A*: "Split data by `User_ID` (Range based or Hashed). Users A-M on Server 1, N-Z on Server 2. Router directs the query."
-63. **Q: What acts as your Load Balancer?**
-    *A*: "Render's internal Nginx/Envoy proxy distributed traffic to my container."
-64. **Q: How to implement 'Offline Mode'?**
-    *A*: "Service Workers (PWA) to cache static assets. `IndexedDB` to store posts/messages locally and sync when online."
-65. **Q: Monolith vs Microservices - Why Monolith here?**
-    *A*: "Lower operational complexity. No network latency between services. Easier to debug. Good until team size > 10 developers."
-
-### 🐛 GIT & DEVOPS
-66. **Q: Merge vs Rebase?**
-    *A*: "Merge preserves history (truth). Rebase rewrites history (clean linear log). I use Rebase for local cleanup, Merge for PRs."
-67. **Q: What is Semantic Versioning (SemVer)?**
-    *A*: "MAJOR.MINOR.PATCH (e.g., 2.1.4). Major = Breaking. Minor = Feature. Patch = Fix."
-68. **Q: How to debug a memory leak in Node?**
-    *A*: "Inspect `process.memoryUsage()`. Use Chrome DevTools connected to Node to take Heap Snapshots and compare."
-69. **Q: Describe the CI/CD pipeline you would build.**
-    *A*: "GitHub Action triggers on Push -> Runs Lint -> Runs Tests -> Builds Docker Image -> Pushes to Registry -> Triggers Webhook to Deploy."
-70. **Q: Biggest architectural mistake in this project?**
-    *A*: "(Honest answer) Storing Chat Messages in Mongo. At scale, I'd move read receipts and presence to Redis, and archive old messages to S3/Cold storage."
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-9️⃣ INTERVIEW PREPARATION GUIDE (DETAILED WALKTHROUGHS)
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-### 📍 SECTION A: CODE WALKTHROUGHS
-
-#### Q1: "Show me the code that handles Join/Leave for Tribes"
-
-**Answer:**
-"Sure! The Join/Leave functionality is split between frontend and backend. Let me walk you through it."
-
-**Frontend (`TribeCard.tsx` - Lines 155-197):**
-
-```typescript
-const handleJoin = async (e: React.MouseEvent) => {
-  e.stopPropagation(); // Prevent card click navigation
-  if (!tribe.id) return;
-
-  setIsJoining(true); // Loading state
-  try {
-    if (onJoinToggle) {
-      // Optimistic callback approach (parent updates state)
-      await onJoinToggle(tribe.id);
-      toast.success(`Joined ${tribe.name}!`);
-    } else {
-      // Fallback: Direct API call + reload
-      await api.joinTribe(tribe.id);
-      toast.success(`Joined ${tribe.name}!`);
-      setTimeout(() => window.location.reload(), 500);
-    }
-  } catch (error) {
-    console.error('Join error:', error);
-    toast.error('Failed to join tribe');
-  } finally {
-    setIsJoining(false);
-  }
-};
-```
-
-**Key Design Decisions:**
-1. **e.stopPropagation()**: Prevents the Card's onClick from firing.
-2. **Optimistic Callback**: If parent passes `onJoinToggle`, we use it to update state without reloading.
-3. **Fallback Reload**: If no callback, we reload the page (less optimal but functional).
-4. **Toast Notifications**: User gets immediate feedback.
-
-**Backend (`backend/routes/tribeRoutes.js` - Join Route):**
-
-```javascript
-router.put('/:id/join', protect, async (req, res) => {
-  try {
-    const tribe = await Tribe.findById(req.params.id);
-    if (!tribe) return res.status(404).json({ message: 'Tribe not found' });
-
-    const userId = req.user._id;
-    const isMember = tribe.members.includes(userId);
-
-    if (isMember) {
-      // Leave (Toggle behavior)
-      tribe.members.pull(userId);
-    } else {
-      // Join
-      tribe.members.addToSet(userId); // Prevents duplicates
-    }
-
-    await tribe.save();
-    res.json(tribe);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-});
-```
-
-**Why this approach?**
-- **Toggle**: Single endpoint for both join/leave (simpler frontend logic).
-- **`addToSet`**: Atomic operation preventing duplicate memberships.
-- **`pull`**: Removes user from array safely.
+### 2.3 INFRASTRUCTURE & DEVOPS
+-   **Hosting**:
+    -   **Frontend**: Vercel (Edge Network, instant static deploys).
+    -   **Backend**: Render (Auto-sleeping containers, simple scaling).
+-   **Media**: **Cloudinary**
+    -   *Why?* Storing images in MongoDB is an anti-pattern (bloats DB). Cloudinary auto-compresses and serves via CDN.
+-   **AI Integration**: **Google Gemini (genai)**
+    -   *Why?* "Chuck AI" coding assistant needs a large context window and fast inference.
+-   **PWA**: **Vite PWA Plugin**
+    -   *Why?* Generates `manifest.json` and `service-worker.js` automatically to make the app installable.
 
 ---
 
-#### Q2: "Where does TribeDetailPage.tsx live and what does it do?"
+## 3. SYSTEM ARCHITECTURE
 
-**Answer:**
-"It's located at `components/tribes/TribeDetailPage.tsx`. This is the core Chat interface for a Tribe."
+### 3.1 High-Level Architecture Diagram
+```mermaid
+graph TD
+    User[User Device (Mobile/Desktop)]
+    LB[Load Balancer / CDN (Vercel/Render)]
+    Client[React SPA (Browser)]
+    Server[Node.js + Express API]
+    Socket[Socket.IO Server]
+    DB[(MongoDB Atlas)]
+    Cloud[(Cloudinary Media)]
+    AI[(Google Gemini API)]
 
-**Key Responsibilities:**
-1. **Load Tribe Data**: Fetches tribe details on mount.
-2. **Optimistic Init**: Accepts `location.state.tribe` for instant rendering.
-3. **Real-Time Chat**: Connects to Socket.IO room, listens for messages.
-4. **Membership Check**: Shows "Join" prompt if user isn't a member.
-
-**Critical Code (Lines 90-105):**
-
-```typescript
-const TribeDetailPage: React.FC<Props> = ({ currentUser }) => {
-  const { id } = useParams<{ id: string }>();
-  const location = useLocation();
-  
-  // OPTIMISTIC INIT: Use passed state for instant UI
-  const initialTribe = location.state?.tribe || null;
-  const [tribe, setTribe] = useState<Tribe | null>(initialTribe);
-  
-  useEffect(() => {
-    // Still fetch fresh data in background
-    api.fetchTribe(id).then(res => setTribe(res.data));
-  }, [id]);
+    User --> LB
+    LB --> Client
+    Client -- HTTP JSON --> Server
+    Client -- WebSocket Events --> Socket
+    Server --> DB
+    Server --> Cloud
+    Server --> AI
+    Socket --> DB
 ```
 
-**Why this matters?**
-- **Zero Loading Screen**: User sees UI instantly when navigating from TribeCard.
-- **Background Sync**: Fresh data loads without blocking UI.
+### 3.2 Data Flow Lifecycle (The 'Chat' Example)
+To understand the system, follow a single message from keystroke to database:
+1.  **Event Generation**: User types in `TribeMessageArea.tsx` and hits Enter.
+2.  **Optimistic UI Update**: The React state is updated *immediately*. The message appears in the chat list with opacity: 0.7 (pending).
+3.  **Parallel Dispatch**:
+    -   **Pathway A (Persistence)**: `axios.post('/api/tribes/:id/messages')` hits the Express REST API.
+    -   **Pathway B (Real-time)**: (Optional, usually server-triggered) In our architecture, the **Server** emits the socket event after saving to DB to ensure consistency.
+4.  **Server Processing**:
+    -   `authMiddleware` verifies the JWT token.
+    -   Controller validates user is a member of the Tribe.
+    -   Message saved to `TribeMessage` collection.
+5.  **Broadcast**: `io.to(tribeId).emit('newTribeMessage', populatedMessage)`.
+6.  **Client Reconciliation**:
+    -   The sender replaces the "optimistic" message with the "real" message (confirmed ID).
+    -   Other users in the room receive the message and append it to their list.
 
 ---
 
-### 🧪 SECTION B: LIVE CODING CHALLENGES
+## 4. DATABASE DESIGN (The Data Dictionary)
 
-#### Challenge 1: "Write a function to check if a user is a tribe member"
+The database is utilizing **MongoDB** with **Mongoose**.
 
-**Answer:**
-"I'd write it as a pure utility function for reusability."
+### 4.1 User Collection (`users`)
+| Field | Type | Description |
+| :--- | :--- | :--- |
+| `_id` | ObjectId | Unique identifier. |
+| `username` | String | Unique, indexed. The @handle. |
+| `email` | String | Unique, indexed. Login credential. |
+| `password` | String | Bcrypt hash (never plain text). |
+| `avatarUrl` | String | Cloudinary URL. Default avatar if null. |
+| `following` | [ObjectId] | Array of User IDs this user follows (Fan-out). |
+| `isAdmin` | Boolean | Access to Reporting Dashboard. |
 
-```typescript
-// utils/tribeHelpers.ts
-export const isTribeMember = (
-  tribe: Tribe | null, 
-  userId: string | undefined
-): boolean => {
-  if (!tribe || !userId) return false;
-  return tribe.members.includes(userId);
-};
+### 4.2 Tribe Collection (`tribes`)
+| Field | Type | Description |
+| :--- | :--- | :--- |
+| `name` | String | The community name. |
+| `members` | [ObjectId] | Array of User IDs who joined. **Optimization**: We use `$addToSet` to toggle. |
+| `owner` | ObjectId | Creator of the tribe (Admin). |
 
-// Usage in component:
-const isMember = isTribeMember(tribe, currentUser?.id);
-```
+### 4.3 Post Collection (`posts`)
+| Field | Type | Description |
+| :--- | :--- | :--- |
+| `user` | ObjectId | Reference to Author. |
+| `content` | String | The text body. |
+| `image` | String | Optional Cloudinary URL. |
+| `likes` | [ObjectId] | Array of Users who liked. Length = Like Count. |
 
-**Why this approach?**
-- **Null Safety**: Returns false if tribe or userId is missing.
-- **Pure Function**: No side effects, easy to test.
-- **Type Safe**: TypeScript ensures correct types.
-
-**Test case I'd write:**
-```typescript
-describe('isTribeMember', () => {
-  it('returns true if user is member', () => {
-    const tribe = { members: ['user1', 'user2'] };
-    expect(isTribeMember(tribe, 'user1')).toBe(true);
-  });
-
-  it('returns false if user is not member', () => {
-    const tribe = { members: ['user1'] };
-    expect(isTribeMember(tribe, 'user2')).toBe(false);
-  });
-
-  it('returns false if tribe is null', () => {
-    expect(isTribeMember(null, 'user1')).toBe(false);
-  });
-});
-```
+### 4.4 Report Collection (`reports`) - *NEW*
+| Field | Type | Description |
+| :--- | :--- | :--- |
+| `reporterId`| ObjectId | Who filed the report. |
+| `targetType`| String | Enum: 'post', 'user', 'tribe'. |
+| `targetId` | ObjectId | Polymorphic reference (Virtual). |
+| `reason` | String | Enum: 'Spam', 'Harassment', etc. |
+| `status` | String | 'open', 'dismissed', 'actioned'. |
 
 ---
 
-#### Challenge 2: "How would you add a Like button to Tribe messages?"
+## 5. FEATURE DEEP DIVES (Implementation Manual)
 
-**Answer:**
-"I'd follow the same pattern as Post Likes, with optimistic UI."
+### 5.1 Authentication (JWT)
+**The Problem**: Http is stateless. How do we know who the user is?
+**The Solution**: JSON Web Tokens (Stateless Auth).
+-   **Login**: User sends credentials. Server verifies hash. Signs a token: `jwt.sign({ id: user._id }, process.env.JWT_SECRET)`.
+-   **Storage**: Token is sent to client and stored in `localStorage`.
+-   **Protection**: `protect` middleware extracts `Bearer <token>`, decodes it, finds the user in DB, and attaches `req.user`.
 
-**Step 1: Update Schema**
-```javascript
-// backend/models/TribeMessage.js
-const TribeMessageSchema = new mongoose.Schema({
-  sender: { type: ObjectId, ref: 'User' },
-  tribe: { type: ObjectId, ref: 'Tribe' },
-  content: String,
-  likes: [{ type: ObjectId, ref: 'User' }], // NEW
-  createdAt: { type: Date, default: Date.now }
-});
-```
+### 5.2 The Global Feed (Algorithm)
+**The Problem**: "Show me posts from people I follow, newest first."
+**The Implementation**:
+-   **Query**: `Post.find({ user: { $in: currentUser.following } })`.
+-   **Pagination**: We use **cursor-based pagination** (approximated) or skip/limit.
+    -   `skip( (page-1) * limit )`.
+    -   `limit(10)`.
+-   **Sort**: `.sort({ createdAt: -1 })` (Desc index).
 
-**Step 2: Backend Route**
-```javascript
-// backend/routes/tribeRoutes.js
-router.put('/:tribeId/messages/:messageId/like', protect, async (req, res) => {
-  try {
-    const message = await TribeMessage.findById(req.params.messageId);
-    if (!message) return res.status(404).json({ message: 'Not found' });
+### 5.3 Real-Time Chat (Socket.IO Rooms)
+**Concept**: "Rooms" are virtual channels.
+-   **Joining**: When `TribeDetailPage` mounts, `socket.emit('joinTribe', tribeId)`.
+-   **Server**: `socket.join(tribeId)`. Now this socket receives broadcasts sent to this string ID.
+-   **Leaving**: `useEffect` cleanup function emits `leaveTribe`. Crucial for preventing "ghost" notifications.
 
-    const userId = req.user._id;
-    const hasLiked = message.likes.includes(userId);
-
-    if (hasLiked) {
-      message.likes.pull(userId); // Unlike
-    } else {
-      message.likes.addToSet(userId); // Like
-    }
-
-    await message.save();
-
-    // Real-time broadcast
-    req.io.to(req.params.tribeId).emit('messageLiked', {
-      messageId: message._id,
-      likes: message.likes
-    });
-
-    res.json(message);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-});
-```
-
-**Step 3: Frontend Component**
-```typescript
-// components/chat/TribeMessageArea.tsx
-const MessageLikeButton = ({ message, onLike }) => {
-  const [isLiking, setIsLiking] = useState(false);
-  const hasLiked = message.likes?.includes(currentUser.id);
-
-  const handleLike = async () => {
-    setIsLiking(true);
-    try {
-      await api.likeTribeMessage(message.tribe, message.id);
-    } catch (error) {
-      toast.error('Failed to like');
-    } finally {
-      setIsLiking(false);
-    }
-  };
-
-  return (
-    <button onClick={handleLike} disabled={isLiking}>
-      <Heart fill={hasLiked ? 'red' : 'none'} />
-      <span>{message.likes?.length || 0}</span>
-    </button>
-  );
-};
-```
-
-**Step 4: Real-time Listener**
-```typescript
-useEffect(() => {
-  socket.on('messageLiked', ({ messageId, likes }) => {
-    setMessages(prev => 
-      prev.map(msg => 
-        msg.id === messageId 
-          ? { ...msg, likes } 
-          : msg
-      )
-    );
-  });
-
-  return () => socket.off('messageLiked');
-}, [socket]);
-```
+### 5.4 The Reporting System
+**Architecture**:
+-   **Polymorphism**: A report can point to a User, Post, or Tribe. Instead of 3 generic fields, Mongoose Virtuals (`targetType`) help frontend resolve which component to render.
+-   **Admin Guard**: The `/admin` route is protected by `requireAdmin` middleware which checks `req.user.isAdmin === true`.
 
 ---
 
-### 🐛 SECTION C: BUG STORIES (DETAILED NARRATIVES)
+# 🎓 PART II: THE INTERVIEW BIBLE
 
-#### Bug Story 1: "The Infinite Loop Tribes Bug"
+This section contains 50+ questions ranging from "Junior" to "Staff Engineer".
 
-**The Situation:**
-"When I first implemented the Tribes page, users reported the app freezing and their browser tabs crashing. The Network tab showed hundreds of requests per second to `/api/tribes`."
+## 6. LEVEL 1: THE BASICS (Foundations)
 
-**Root Cause:**
-"I had a `useEffect` that fetched tribes, but I incorrectly added `tribes` to the dependency array:
+**Q1: What is the difference between `null` and `undefined` in JS?**
+*Answer*:
+-   **Undefined**: A variable has been declared but not assigned a value. It is the engine's default "empty".
+-   **Null**: An intentional assignment of "no value". A programmer uses this to indicate "empty".
+*Context*: In our app, a user without an avatar has `avatarUrl: null` (intentional). A missing field in an API response might be `undefined`.
 
-```typescript
-// ❌ BROKEN CODE
-useEffect(() => {
-  fetchTribes().then(data => setTribes(data));
-}, [tribes]); // BUG: This causes infinite loop
-```
+**Q2: What is a Promise?**
+*Answer*: An object representing the eventual completion (or failure) of an asynchronous operation. It has three states: Pending, Fulfilled, Rejected.
+*Context*: `axios.get()` returns a Promise. We use `async/await` syntax to consume it cleanly.
 
-**Why it broke:**
-1. Component mounts → `useEffect` runs → Fetches tribes.
-2. `setTribes(data)` updates state → `tribes` changes.
-3. Dependency array sees `tribes` changed → Runs `useEffect` again.
-4. Loop repeats infinitely.
+**Q3: What is "Prop Drilling" and how do we avoid it?**
+*Answer*: Passing data through multiple layers of components (Parent -> Child -> Grandchild) just to get it to the bottom.
+*Solution*: We use **Context API** (e.g., `AuthContext`) to provide the User object globally, so `Sidebar.tsx` can access it without it being passed from `App.tsx`.
 
-**The Debug Process:**
-1. **Console Check**: Saw `GET /api/tribes` firing 50+ times.
-2. **React DevTools**: Profiler showed the component re-rendering constantly.
-3. **Dependency Array**: Realized `tribes` was triggering itself.
+**Q4: What is the Virtual DOM?**
+*Answer*: A lightweight in-memory representation of the real DOM. When state changes, React updates the Virtual DOM, diffs it with the previous version (Reconciliation), and only updates the actual changed nodes in the browser.
+*Impact*: This makes our Chat lists performant; appending a message doesn't re-render the entire list.
 
-**The Fix:**
-```typescript
-// ✅ FIXED CODE
-useEffect(() => {
-  fetchTribes().then(data => setTribes(data));
-}, []); // Empty array = run once on mount
-```
+**Q5: Explain `useEffect` dependency array.**
+*Answer*: It controls when the effect runs.
+-   `[]`: Runs once on mount (like `componentDidMount`).
+-   `[id]`: Runs on mount AND whenever `id` changes.
+-   No array: Runs on *every* render (Dangerous).
 
-**What I Learned:**
-- **Dependency Arrays**: Only include values you READ, not values you WRITE.
-- **React DevTools**: The Profiler is essential for finding re-render loops.
-- **Linting**: `eslint-plugin-react-hooks` now catches this automatically.
+## 7. LEVEL 2: THE APPLICATION (Framework & Tools)
 
----
+**Q6: Why use `useCallback`?**
+*Answer*: To memoize a function definition.
+*Scenario*: In `AdminReportsPage`, we pass the `load` function to `useEffect`. If we didn't use `useCallback`, `load` would be recreated on every render, triggering the `useEffect` infinitely.
 
-#### Bug Story 2: "The DELETE/PUT undefined Error (500)"
+**Q7: How does the "Optimistic UI" work in Tribe Social?**
+*Answer*: When a user joins a tribe, we *immediately* update the button to say "Joined" and increment the member count in React State. Then we send the request. If it fails, we revert the state and show an error toast. This makes the app feel "instant".
 
-**The Situation:**
-"Users couldn't edit or delete tribes. Console showed `DELETE /api/tribes/undefined 500`."
+**Q8: Why Styled Components over plain CSS?**
+*Answer*: It solves Global Scope pollution. Styles are scoped to the component. It also lets us use JS variables in CSS (`display: ${props => props.isOpen ? 'block' : 'none'}`).
 
-**Root Cause:**
-"After implementing ID normalization (converting `_id` to `id`), I forgot to update EditTribeModal:
+**Q9: Explain the folder structure.**
+*Answer*:
+-   `/components`: Reusable UI (Buttons, Cards).
+-   `/pages`: Route views (Home, Profile).
+-   `/contexts`: Global state providers.
+-   `/api`: Axios instance and endpoints.
+-   `/hooks`: Custom logic extraction (`useTribe`).
 
-```typescript
-// ❌ BROKEN CODE
-const handleSubmit = async () => {
-  await api.updateTribe(tribe._id, data); // tribe._id is undefined!
-};
-```
+**Q10: What is the purpose of `Layout.tsx`?**
+*Answer*: It implements the "Shell" pattern. It renders the `Sidebar` and `RightBar` once, and uses `<Outlet />` (React Router) to render the changing page content in the middle. This prevents the sidebar from re-rendering on navigation.
 
-**Why it broke:**
-- Backend returns `_id` (MongoDB format).
-- Frontend normalizes to `id` for consistency.
-- Old code still referenced `tribe._id` which no longer existed.
+## 8. LEVEL 3: THE SYSTEM (Architecture & Design)
 
-**The Debug Process:**
-1. **Network Tab**: Saw URL was `/api/tribes/undefined`.
-2. **Console.log**: `console.log(tribe)` showed `{ id: '123', name: 'Test' }` (no `_id`).
-3. **Code Search**: Grep'd for `tribe._id` across the codebase.
+**Q11: How do you handle "Race Conditions" in the Chat?**
+*Answer*: A race condition happens if I switch from Tribe A to Tribe B rapidly. The request for Tribe A might finish *after* Tribe B loads, overwriting the data.
+*Fix*: We use a cleanup function in `useEffect` or an `AbortController` to cancel stale requests when the ID changes.
 
-**The Fix:**
-```typescript
-// ✅ FIXED CODE
-const handleSubmit = async () => {
-  await api.updateTribe(tribe.id, data); // Use normalized id
-};
-```
+**Q12: Why MongoDB over PostgreSQL?**
+*Answer*: Social data is unstructured and hierarchical. A Post can have an Image today, a Poll tomorrow, and a Video next week. MongoDB's flexible schema allows rapid iteration without running `ALTER TABLE` migrations that lock the database.
 
-**What I Learned:**
-- **Consistency**: Normalize data at the API layer, not in components.
-- **TypeScript**: If I had defined `Tribe` type without `_id`, this would've been caught at compile time.
-- **Global Search**: `grep -r "tribe._id"` is faster than manual code review.
+**Q13: How does the app scale to 100k users?**
+*Answer*:
+1.  **Database**: Add Indexes to `username`, `email`, `createdAt`. Implement Sharding if size exceeds terabytes.
+2.  **Socket.IO**: Use Redis Adapter. Multiple Node.js instances cannot share memory, so Redis acts as the "Pub/Sub" broker to sync messages across server instances.
+3.  **CDN**: Cache static assets and API responses (where applicable) at the edge.
 
----
+**Q14: Explain the Security Model.**
+*Answer*:
+-   **Encryption**: Passwords hashed with `bcrypt`.
+-   **Transport**: HTTPS (TLS) for all data in transit.
+-   **Sanitization**: React escapes XSS by default. Mongoose prevents NoSQL injection by casting types.
+-   **Access Control**: Middleware `protect` checks for valid Token. `requireAdmin` checks for role.
 
-#### Bug Story 3: "The Cold Start Timeout"
+**Q15: What is the N+1 Problem and did we face it?**
+*Answer*: Fetching 10 posts (1 query), then doing 10 separate queries to get the User for each post.
+*Fix*: Mongoose `.populate('user')` handles this by performing an aggregation (lookup) in a single optimized query sequence on the database side.
 
-**The Situation:**
-"Users reported 'timeout of 20000ms exceeded' when clicking Tribes. The app would hang for 20 seconds then fail."
+## 9. LEVEL 4: THE HARD QUESTIONS (Debugging & Trade-offs)
 
-**Root Cause:**
-"Render's free tier puts inactive backends to sleep. First request takes 30-40 seconds (cold start) but my Axios timeout was only 20 seconds."
+**Q16: A user reports "The app is slow". How do you debug?**
+*Answer*:
+1.  **Network Tab**: Is it the API or the UI? (Time to First Byte).
+2.  **React Profiler**: Is a component re-rendering 100 times? (Fix: `React.memo`).
+3.  **Database**: Check query execution time. Missing index?
+4.  **Bundle Size**: Is `main.js` 5MB? Lazy load routes (`React.lazy`).
 
-**The Debug Process:**
-1. **Render Logs**: Saw "Container starting..." taking 35 seconds.
-2. **Network Tab**: Request cancelled at exactly 20 seconds.
-3. **Axios Config**: Default timeout was too aggressive.
+**Q17: Why did you put "Chat Messages" in MongoDB? Isn't that slow?**
+*Answer*: For a start-up, it's a trade-off. It keeps the stack simple (Single Source of Truth).
+*Scaling*: At scale, I would move Chat to **Cassandra** or **ScyllaDB** (Write-heavy, time-series data) and keep User/Graph data in Mongo/Postgres.
 
-**The Fix (3-Part):**
-1. **Increase Timeout:**
-```typescript
-const API = axios.create({
-  timeout: 60000 // 60 seconds
-});
-```
+**Q18: How do you handle offline synchronization?**
+*Answer*: Currently, we block writes (gray out send button) when offline. A better approach (Future Work) is "Queue & Replay": Store the message in `IndexedDB`, waiting for the `online` event listener, then flush the queue to the API.
 
-2. **User Feedback:**
-```typescript
-if (err.code === 'ECONNABORTED') {
-  setError('Server is waking up (cold start). Retrying in 5 seconds...');
-  setTimeout(() => window.location.reload(), 5000);
-}
-```
+**Q19: Explain the "Memory Leak" you found in `useEffect`.**
+*Answer*: I was setting state on an unmounted component.
+*Scenario*: User clicks "Load Profile", then quickly navigates away. The API returns 2s later, and `setProfile` runs on a destroyed component.
+*Fix*: Use a `isMounted` ref flag. `if (isMounted.current) setProfile(data)`.
 
-3. **Backend Optimization:**
-```javascript
-// Use .lean() to skip Mongoose hydration
-const tribe = await Tribe.findById(id)
-  .select('name members owner')
-  .lean(); // 10x faster
-```
-
-**What I Learned:**
-- **Free Tier Limitations**: Always account for cold starts.
-- **User Communication**: Don't just show "Error" - explain WHY.
-- **Performance**: `.lean()` is crucial for read-heavy operations.
+**Q20: Why `useMemo` for the expensive calculation?**
+*Answer*: In `AdminReportsPage`, filtering 1000 reports by status on every keystroke is heavy. `useMemo(() => reports.filter(...), [reports, filter])` ensures we only recalculate when inputs change, not on every generic render.
 
 ---
 
-### 💼 SECTION D: BEHAVIORAL QUESTIONS
+## 10. BEHAVIORAL & SOFT SKILLS GUIDE
 
-#### Q: "Why did you choose this tech stack?"
+**Q: Tell me about a time you had a disagreement with a team member about code?**
+*Answer Strategy (STAR Method)*:
+-   **Situation**: I wanted to use Redux, they wanted Context.
+-   **Action**: We benchmarked both. Redux added 20kb boilerplate. Context was cleaner for our simple use case.
+-   **Result**: We went with Context, but documented that we'd migrate to Zustand if performance dipped.
 
-**Strong Answer:**
-"I chose MERN for three strategic reasons:
-
-**1. Schema Flexibility (MongoDB)**
-Social platforms evolve rapidly. Adding 'Reactions' or 'Threads' to posts in SQL requires migrations and downtime. MongoDB's document model lets me iterate faster.
-
-**2. Unified Language (JavaScript)**
-Using JS/TS across frontend and backend means:
-- Shared types between client/server
-- Faster context switching for solo development
-- Reusable validation logic
-
-**3. Real-Time Requirements (Node.js + Socket.IO)**
-Node's event loop is perfect for WebSockets. I evaluated alternatives:
-- **Django Channels**: Heavier, requires Redis/Kafka.
-- **Go + Gorilla**: Great performance but steeper learning curve.
-- **Socket.IO**: Battle-tested, auto-reconnect, room support.
-
-**Trade-offs I Accept:**
-- MongoDB isn't ideal for complex joins (solved with denormalization).
-- Node is single-threaded (mitigated with clustering for CPU tasks).
-
-Overall, MERN gave me the fastest path to a production-ready real-time app."
+**Q: Functionality vs Code Quality. Which wins?**
+*Answer*: "It depends on the Lifecycle. Early stage: Functionality (Time to market). Maturing stage: Quality (Maintainability). Tech Debt must be paid eventually, or development velocity will stall."
 
 ---
 
-#### Q: "What would you improve if you had more time?"
-
-**Honest Answer:**
-"Five things, prioritized by impact:
-
-**1. Refresh Tokens (Security)**
-Current: JWT in localStorage, 7-day expiry.
-Better: Short-lived access tokens (15min) + long-lived refresh tokens in httpOnly cookies. Reduces window for stolen tokens.
-
-**2. End-to-End Tests (Reliability)**
-Current: Manual testing.
-Better: Playwright tests for critical flows (Login → Join Tribe → Send Message). Prevents regressions during refactors.
-
-**3. Redis for Presence (Scalability)**
-Current: Socket.IO keeps online users in memory.
-Problem: Doesn't work across multiple server instances.
-Solution: Redis Adapter to sync presence across pods.
-
-**4. Image Optimization (Performance)**
-Current: Upload raw files to Cloudinary.
-Better: Client-side compression before upload (reduce bandwidth). Use Next.js Image for lazy loading.
-
-**5. Accessibility Audit (Inclusivity)**
-Current: Basic keyboard nav.
-Better: Full ARIA labels, screen reader testing, color contrast fixes (WCAG AA compliance).
-
-**Why I didn't do these already:**
-Time constraints + MVP focus. But if this app scales to 10k users, #1 and #3 become critical."
-
----
-
-#### Q: "Tell me about a time you disagreed with a technical decision."
-
-**Example Answer:**
-"During a code review, a teammate suggested we store Tribe messages inside the Tribe document (embedded):
-
-```javascript
-{
-  _id: 'tribe1',
-  name: 'JavaScript',
-  messages: [ /* 10,000 messages */ ]
-}
-```
-
-**Their reasoning:** 'One query to fetch everything!'
-
-**My concern:** 'MongoDB has a 16MB document limit. A popular Tribe will hit that.'
-
-**How I handled it:**
-1. **Acknowledged the benefit**: Embedding IS faster for small datasets.
-2. **Proposed a hybrid**: Embed the last 50 messages, reference older ones.
-3. **Showed data**: Calculated that 5,000 messages ~15MB (close to limit).
-
-**Outcome:**
-We compromised: Separate `TribeMessage` collection with an index on `tribe` field. Slight performance cost but infinitely scalable.
-
-**What I learned:**
-Always validate assumptions with real data. '10k messages' sounds abstract, but '15MB payload' is concrete."
-
----
-
-### 🎯 SECTION E: PRO TIPS FOR LIVE INTERVIEWS
-
-#### Tip 1: "Always Ask Clarifying Questions First"
-
-**Scenario:** "Design a tribe chat system."
-
-**Bad Approach:** Start coding immediately.
-
-**Good Approach:**
-"Before I start, can I clarify the requirements?
-1. **Scale**: How many concurrent users? 100 or 100,000?
-2. **Features**: Do we need read receipts? Message history?
-3. **Latency**: Is sub-second delivery required, or is 5s okay?
-4. **Storage**: Do messages expire, or permanent?
-
-Based on your answers, I'd choose WebSockets (low latency) vs Long Polling (simplicity)."
-
----
-
-#### Tip 2: "Draw the Architecture First"
-
-**What to draw:**
-```
-[Browser] --HTTP--> [Load Balancer] ---> [Node Server 1]
-   │                                      │
-   └--WebSocket--> [Socket.IO] -----> [Node Server 2]
-                        │                  │
-                        ├---> [Redis] (Pub/Sub)
-                        └---> [MongoDB] (Messages)
-```
-
-**Why this works:**
-- Shows you think in systems, not just code.
-- Makes trade-offs visual (Redis = speed, Mongo = persistence).
-- Easy to iterate ("What if we add Kafka here?").
-
----
-
-#### Tip 3: "Admit What You Don't Know (But Show How You'd Learn)"
-
-**Bad Answer:** "I don't know."
-
-**Good Answer:**
-"I haven't used Kubernetes in production yet, but here's how I'd approach it:
-1. **Read Docs**: Start with k8s.io tutorials on Pods and Services.
-2. **Experiment**: Deploy this Node app to Minikube locally.
-3. **Ask Experts**: Review production configs from senior engineers.
-4. **Iterate**: Start simple (single pod), then add scaling.
-
-In my experience learning Docker, this hands-on approach worked well."
-
----
-
-### 📝 FINAL CHECKLIST (PRINT THIS OUT!)
-
-**Day Before Interview:**
-□ Re-read this documentation (focus on Section 9)
-□ Practice explaining the Architecture diagram out loud
-□ Have GitHub repo open in a tab
-□ Run the app locally to refresh your memory
-
-**During Interview:**
-□ Ask for pen/paper or whiteboard access
-□ Repeat the question back to confirm understanding
-□ Think out loud ("I'm considering two approaches...")
-□ Admit when stuck ("I'd need to research X, but here's my hypothesis...")
-
-**Technical Deep Dive:**
-□ Know file locations: `TribeDetailPage.tsx`, `socketManager.js`
-□ Explain one bug story in detail (Infinite Loop recommended)
-□ Prepared to write a function live (isTribeMember template ready)
-
-**Behavioral:**
-□ "Why this stack?" answer memorized
-□ "What would you improve?" answer ready
-□ One disagreement story prepared
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-🔟 30 NEW ADVANCED QUESTIONS (PWA, RACE CONDITIONS, MOBILE)
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-### 📱 PWA & MOBILE SPECIFIC
-81. **Q: What is the primary role of a Service Worker in a PWA?**
-    *A*: "It acts as a network proxy. It intercepts HTTP requests, serving cached assets (HTML/CSS/IMG) instantly for offline support, independently of the UI thread."
-82. **Q: Why did clicking 'Follow' crash the mobile app but not desktop?**
-    *A*: "Events bubble differently on touch devices. Tapping a button inside a clickable card triggered BOTH handlers. Fixed by using `e.stopPropagation()` and `type='button'` to prevent implicit form submission."
-83. **Q: How do you debug iOS Safari specific bugs?**
-    *A*: "Connect iPhone to Mac via USB. Open Safari Web Inspector on Mac to debug the phone's browser context directly."
-84. **Q: What is the 'Splash Screen' in a PWA?**
-    *A*: "The initial launch screen while the browser initializes the standalone view. Defined in `manifest.json` via `background_color` and `icons`."
-85. **Q: Diff between `display: standalone` vs `browser`?**
-    *A*: "Standalone hides the URL bar and navigation controls, making the website look like a native app. Browser keeps the UI chrome."
-86. **Q: How does `touch-action: none` help performance?**
-    *A*: "It tells the browser NOT to wait for a double-tap zoom check, making tap events fire instantly (removing the 300ms delay)."
-
-### 🏁 RACE CONDITIONS & ASYNC
-87. **Q: What is the 'Stale Closure' problem in React Hooks?**
-    *A*: "When a `useEffect` or callback captures an old version of a state variable because it was missing from the dependency array."
-88. **Q: How do you prevent 'Ghost' messages in Chat?**
-    *A*: "Optimistic UI adds a temp ID. When the socket event comes back, we must replace the temp ID with the real DB ID instead of appending a duplicate. `setMessages(prev => ...)`."
-89. **Q: Why use `Promise.all` vs `await` in loops?**
-    *A*: "`await` in loop runs sequentially (slow). `Promise.all` runs them concurrently (parallel), reducing total wait time."
-90. **Q: What happens if `socket.emit` fails?**
-    *A*: "Socket.IO has an internal buffer. It retries upon reconnection. For critical actions, we use Acknowledgements (Callbacks) to ensure server receipt."
-
-### 🧠 ADVANCED REACT PATTERNS
-91. **Q: What is 'Lifting State Up'?**
-    *A*: "Moving state to the closest common ancestor so multiple siblings can share data (e.g., Filtering a Feed)."
-92. **Q: `useLayoutEffect` vs `useEffect`?**
-    *A*: "`useLayoutEffect` runs synchronously *before* browser paint (good for measuring DOM). `useEffect` runs *after* paint (good for data fetching)."
-93. **Q: What is the 'Key' prop really doing?**
-    *A*: "It gives React a stable identity for the node. Without it, re-ordering a list causes React to destroy and recreate DOM nodes unnecessarily."
-94. **Q: How do you optimize large lists (1000+ items)?**
-    *A*: "Virtualization (Windowing). Only render the items currently in the viewport. Libraries: `react-window`."
-95. **Q: What is 'derived state'?**
-    *A*: "State that can be calculated from props. Don't store it in `useState`. Calculate it during render (e.g., `const filteredTodos = todos.filter(...)`)."
-
-### 🛡️ BACKEND SCALABILITY IMPLICATIONS
-96. **Q: Why is `Array.isArray()` critical in API consumption?**
-    *A*: "Servers change schemas. If backend sends `null` instead of `[]`, `.map()` crashes user's device. Strict validation prevents white screens."
-97. **Q: What is 'Connection Pooling' in MongoDB?**
-    *A*: "Reusing open TCP connections instead of putting up/tearing down a new handshake for every request. Mongoose handles this by default."
-98. **Q: How to handle 1GB file uploads?**
-    *A*: "Stream it. Don't load into RAM. Pipe `req` stream directly to S3/Cloudinary using `busboy` or `multer`."
-99. **Q: Explain 'Eventual Consistency' vs 'Strong Consistency'.**
-    *A*: "Strong: Everyone sees the same data instantly (Bank). Eventual: Data propagates over seconds (Social Feed Likes). We use Eventual for Feed."
-100. **Q: How does Node handle CPU intensive tasks?**
-    *A*: "It blocks the Event Loop. Solution: Offload to Worker Threads or a separate Microservice."
-
-### 🌐 BROWSER INTERNALS
-101. **Q: What is the 'Critical Rendering Path'?**
-    *A*: "HTML -> DOM -> CSSOM -> Render Tree -> Layout -> Paint. Blocking JS halts this process."
-102. **Q: `localStorage` vs `SessionStorage` vs `Cookies`?**
-    *A*: "Local: Permanent. Session: Tab life. Cookies: Sent with every HTTP request (good for Auth)."
-103. **Q: What causes 'Layout Thrashing'?**
-    *A*: "Reading and writing DOM properties in a loop (e.g., `div.offsetWidth = x`), forcing browser to recalculate layout repeatedly."
-104. **Q: How does `defer` vs `async` work on script tags?**
-    *A*: "`async`: Execute ASAP (blocks parser). `defer`: Execute after HTML parsing usually used for main bundles."
-105. **Q: What is `requestAnimationFrame`?**
-    *A*: "tells browser to run animation logic before the next repaint (60fps), much smoother than `setInterval`."
-
-### 🐛 DEBUGGING & TOOLING
-106. **Q: How to debug a memory leak in React?**
-    *A*: "Look for 'Component Will Unmount' warnings. Check closures holding onto large objects. Use Chrome Memory Tab."
-107. **Q: How to debug a 500 API Error in Production?**
-    *A*: "Check Server Logs (Morgan/CloudWatch). trace the Request ID. Reproduce locally with same payload."
-108. **Q: What is 'Tree Shaking'?**
-    *A*: "Removing unused code during build (Webpack/Vite). `import { Button }` only bundles Button, not the whole UI library."
-109. **Q: How to test for Slow Networks?**
-    *A*: "Chrome DevTools -> Network -> Throttling -> 'Slow 3G'."
-110. **Q: Why utilize Error Boundaries?**
-    *A*: "To catch JS errors in the UI tree. Prevent the whole app from turning white. displaying a 'Something went wrong' fallback."
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-1️⃣1️⃣ CURRENT DRAWBACKS & FUTURE ROADMAP (DEEP ANALYSIS)
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-### 🛑 1. SCALABILITY BOTTLENECK: "The All Users Fetch"
-**The Issue**:
-Currently, `App.tsx` and `TribesPage.tsx` fetch **ALL** users (`fetchUsers()`) to map IDs to names.
-- **Impact**: Works for <500 users. At 5,000 users, the JSON payload will be 2MB+, freezing the browser on load.
-- **The Fix (Roadmap)**:
-    1.  **Backend**: Implement Pagination (`GET /users?page=1&limit=20`).
-    2.  **Frontend**: Search-as-you-type (Server-side search) for mentions/invites.
-    3.  **Cache**: Store user profiles in a global Map/Redux and fetch *only* missing IDs on demand.
-
-### 🛑 2. PERFORMANCE: Lack of Virtualization
-**The Issue**:
-The Feed and Message lists function as simple `.map()` arrays.
-- **Impact**: If a user scrolls down 1,000 messages, the DOM becomes huge (10k+ nodes). Memory usage spikes, scrolling stutters.
-- **The Fix**:
-    -   Implement **Virtual Scrolling** (`react-virtuoso` or `react-window`).
-    -   Only render items currently visible in the viewport.
-
-### 🛑 3. ARCHITECTURE: The "God Component" (App.tsx)
-**The Issue**:
-`App.tsx` is >1,100 lines code. It handles Routing, Auth, Socket, Handlers, and UI Layout.
-- **Impact**: Hard to maintain. A bug in "Notifications" logic breaks the "Feed".
-- **The Fix**:
-    -   **Refactor**: Extract logic into Custom Hooks:
-        -   `useAuth()`
-        -   `useSocketEvents()`
-        -   `useFeedData()`
-    -   Move Layout to `components/layout/MainLayout.tsx`.
-
-### 🛑 4. REAL-TIME: Race Conditions
-**The Issue**:
-Sending a message adds a temporary optimistic message. If the Socket event arrives before the API response, we might see duplicates or sorting jumping.
-- **The Fix**:
-    -   Use a consistent UUID generated on client (`uuidv4`).
-    -   Backend respects this ID.
-    -   Socket event de-duplicates based on this UUID.
-
-### 🔮 FUTURE SCOPE (What to build next)
-1.  **Redis Layer**: For storing presence/socket/sessions instead of in-memory maps (Enables Horizontal Scaling).
-2.  **Media Optimization**: Server-side image resizing (Sharp.js) to serve thumbnails instead of 4K originals.
-3.  **E2E Testing**: Add Cypress suite to guarantee Login/Post/Chat flows never break.
-4.  **Notifications 2.0**: Push Notifications (FCM) for mobile users even when app is closed.
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-1️⃣2️⃣ ENGINEERING RESILIENCY & OPERATIONS (SENIOR DEEP DIVE)
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-*Added for 5.0 Review to ensure system robustness interview readiness.*
-
-### 🛠 12.1 ERROR HANDLING & REACT RESILIENCE
-**Problem**: In Single Page Apps (SPA), one standard JS error can unmount the entire React tree, causing a "White Screen of Death".
-**Solution**: **React Error Boundaries**.
-
--   **Implementation**: `<ErrorBoundary>` wrap in `main.tsx` around `<App />`.
--   **Behavior**:
-    -   **Render Errors**: Catches failures in component rendering (e.g., `map` on undefined).
-    -   **Fallback UI**: Displays a user-friendly "Something went wrong" card + "Try Again" button instead of a white screen.
-    -   **Recovery**: "Try Again" simply calls `window.location.reload()`.
--   **Runtime Errors**: For async/event handler errors (which Boundaries *don't* catch), we use:
-    -   **Global Toast System**: `toast.error("Process failed")`.
-    -   **Try/Catch**: Wrapped around every async function.
-
-### 🔍 12.2 OBSERVABILITY & DEBUGGING STRATEGY
-**Strategy**: Since we use PaaS (Render/Vercel), we rely on log aggregation.
-
--   **Frontend (Production)**:
-    -   **Console Sanitization**: Only fatal errors logged to console.
-    -   **Network Tab**: Primary source of truth. We check `X-Request-ID` headers to trace calls to backend.
--   **Backend**:
-    -   **Morgan**: Logs every HTTP request/response code.
-    -   **Structured Logging**: `console.error` with Stack Traces.
-    -   **Alerts**: Render dashboard alerts if CPU > 80% or Restart Loop detected.
--   **Mobile Debugging**:
-    -   **Remote Inspection**: Connecting Android to Chrome DevTools (USB) allows debugging the WebView directly (inspecting DOM/Console on the phone).
-
-### 🚀 12.3 DEPLOYMENT & RUNTIME ARCHITECTURE
-**The "Serverless + Monolith" Hybrid**:
-
-1.  **Frontend (Vercel)**:
-    -   **Edge Global CDN**: serves static assets (HTML/JS/CSS).
-    -   **Build Step**: `npm run build` generates optimized artifacts.
-2.  **Backend (Render)**:
-    -   **Runtime**: Node.js container (Dockerized).
-    -   **Cold Starts**: The free tier spins down after 15m inactivity.
-    -   **Keep-Alive**: A self-ping cron job prevents sleep during anticipated usage windows.
-3.  **Database (Mongo Atlas)**:
-    -   **Cluster**: 3-node Replica Set (Primary + 2 Secondaries) ensures high availability.
-
-### ⚖️ 12.4 EXPLICIT CONSISTENCY MODEL
-We trade Strong Consistency for High Availability (AP in CAP Theorem) for *most* features.
-
--   **Eventual Consistency (Acceptable)**:
-    -   **Feed/Likes**: If I like a post, it's okay if you see it 5 seconds later.
-    -   **Online Status**: 10-second delay is acceptable.
--   **Strong Consistency (Required)**:
-    -   **Auth**: Login MUST be consistent immediately.
-    -   **Messaging**: Message order MUST be preserved (handled by TCP/WS guarantees + Timestamp sorting).
-
-### 🧪 12.5 TESTING STRATEGY (RISK-BASED)
-We prioritize tests based on Business Risk impact.
-
-1.  **Tier 1: Critical E2E (Playwright)**
-    -   *Flow*: Login -> Create Post -> Check Feed.
-    -   *Why*: If this breaks, the product is dead.
-2.  **Tier 2: API Integration (Supertest)**
-    -   *Flow*: POST /api/login checks correct JWT return.
-    -   *Why*: Ensures backend contract hasn't drifted.
-3.  **Tier 3: Unit Tests (Jest)**
-    -   *Target*: Utils like `normalizeId` or `formatDate`.
-    -   *Why*: Pure functions are easiest to test and catch edge cases (like null handling).
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-DONE.
+*End of Comprehensive Documentation.*
