@@ -8,7 +8,6 @@
 // import NewMessageModal from './NewMessageModal';
 // import * as api from '../../api.ts';
 // import { useSocket } from '../../contexts/SocketContext';
-
 // interface ChatPageProps {
 //   currentUser: User;
 //   allUsers: User[];
@@ -47,7 +46,7 @@
 //       setIsLoadingConversations(true);
 //       try {
 //         const { data } = await api.fetchConversations();
-//         setConversations(data);
+//         setConversations(normalizeConversations(data));
 //         return data;
 //       } catch (error) {
 //         console.error("Failed to fetch conversations", error);
@@ -249,6 +248,29 @@ import { MessageArea } from './MessageArea';
 import NewMessageModal from './NewMessageModal';
 import * as api from '../../api';
 import { useSocket } from '../../contexts/SocketContext';
+import { toast } from '../common/Toast';
+
+
+
+const normalizeConversations = (conversationList: Conversation[]) => {
+  const byId = new Map<string, Conversation>();
+
+  conversationList.forEach((conversation) => {
+    if (!conversation?.id) return;
+    const existing = byId.get(conversation.id);
+
+    if (!existing) {
+      byId.set(conversation.id, conversation);
+      return;
+    }
+
+    const existingTime = new Date(existing.timestamp || 0).getTime();
+    const currentTime = new Date(conversation.timestamp || 0).getTime();
+    if (currentTime >= existingTime) byId.set(conversation.id, conversation);
+  });
+
+  return Array.from(byId.values()).sort((a, b) => new Date(b.timestamp || 0).getTime() - new Date(a.timestamp || 0).getTime());
+};
 
 interface ChatPageProps {
   currentUser: User;
@@ -303,7 +325,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ currentUser, allUsers, chukUser, in
     setIsLoadingConversations(true);
     try {
       const { data } = await api.fetchConversations();
-      setConversations(data);
+      setConversations(normalizeConversations(data));
       return data;
     } catch (error) {
       console.error("Failed to fetch conversations", error);
@@ -330,16 +352,19 @@ const ChatPage: React.FC<ChatPageProps> = ({ currentUser, allUsers, chukUser, in
 
       setConversations(prev => {
         const otherUserId = message.senderId === currentUser.id ? message.receiverId : message.senderId;
-        const convoIndex = prev.findIndex(c => c.participants.some(p => p.id === otherUserId));
+        const existingConversation = prev.find(c => c.participants.some(p => p.id === otherUserId));
 
-        if (convoIndex > -1) {
-          const updatedConvo = { ...prev[convoIndex], lastMessage: message.text, timestamp: message.timestamp };
-          const restConvos = [...prev.slice(0, convoIndex), ...prev.slice(convoIndex + 1)];
-          return [updatedConvo, ...restConvos];
-        } else {
-          const newConvo = { id: `conv-${otherUserId}`, participants: [{ id: currentUser.id }, { id: otherUserId }], lastMessage: message.text, timestamp: message.timestamp, messages: [] };
-          return [newConvo, ...prev];
-        }
+        const upserted: Conversation = existingConversation
+          ? { ...existingConversation, lastMessage: message.text, timestamp: message.timestamp }
+          : {
+              id: `conv-${[currentUser.id, otherUserId].sort().join('-')}`,
+              participants: [{ id: currentUser.id }, { id: otherUserId }],
+              lastMessage: message.text,
+              timestamp: message.timestamp,
+              messages: []
+            };
+
+        return normalizeConversations([upserted, ...prev]);
       });
     };
 
@@ -391,6 +416,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ currentUser, allUsers, chukUser, in
       setMessageAreaVisible(true);
     } catch (error) {
       console.error("Failed to fetch messages", error);
+      toast.error('Failed to load messages. Please try again.');
       setMessages([]);
     } finally {
       setIsLoadingMessages(false);
@@ -466,6 +492,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ currentUser, allUsers, chukUser, in
       }
     } catch (error) {
       console.error("Failed to send message", error);
+      toast.error('Action failed, try again');
       setMessages(prev => prev.filter(m => m.id !== tempMessage.id));
     } finally {
       setIsSending(false);
@@ -479,6 +506,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ currentUser, allUsers, chukUser, in
       await api.deleteMessage(messageId);
     } catch (error) {
       console.error('Failed to delete message', error);
+      toast.error('Action failed, try again');
     }
   };
 
@@ -488,6 +516,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ currentUser, allUsers, chukUser, in
       await api.deleteMessageForMe(messageId);
     } catch (error) {
       console.error('Failed to delete message for me', error);
+      toast.error('Action failed, try again');
     }
   };
 
@@ -504,6 +533,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ currentUser, allUsers, chukUser, in
       await api.clearConversation(otherUserId);
     } catch (error) {
       console.error('Failed to clear conversation', error);
+      toast.error('Action failed, try again');
     }
   };
 

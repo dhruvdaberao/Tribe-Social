@@ -382,7 +382,7 @@ const App: React.FC = () => {
 
     const handleLikePost = async (postId: string) => {
         if (!currentUser) return;
-        const originalPosts = [...posts];
+        const originalPosts = posts;
         setPosts(prev => prev.map(p => {
             if (p.id === postId) {
                 const isLiked = p.likes.includes(currentUser.id);
@@ -394,7 +394,7 @@ const App: React.FC = () => {
             await api.likePost(postId);
         } catch (error) {
             console.error("Failed to like post:", error);
-            toast.error("Like failed. Reverting.");
+            toast.error("Action failed, try again");
             setPosts(originalPosts);
         }
     };
@@ -405,10 +405,27 @@ const App: React.FC = () => {
         const tempComment: Comment = { id: tempCommentId, author: currentUser, text, timestamp: new Date().toISOString() };
         setPosts(prev => prev.map(p => p.id === postId ? { ...p, comments: [...p.comments, tempComment] } : p));
         try {
-            await api.commentOnPost(postId, { text });
+            const { data } = await api.commentOnPost(postId, { text });
+            const serverComment = data?.comment || data;
+            if (serverComment?.id) {
+                setPosts(prev => prev.map(p => p.id === postId
+                    ? {
+                        ...p,
+                        comments: p.comments.map(comment => comment.id === tempCommentId
+                            ? {
+                                ...comment,
+                                id: serverComment.id,
+                                timestamp: serverComment.timestamp || comment.timestamp,
+                                text: serverComment.text || comment.text,
+                                author: serverComment.author || comment.author,
+                            }
+                            : comment)
+                    }
+                    : p));
+            }
         } catch (error) {
             console.error("Failed to comment:", error);
-            toast.error("Failed to post comment.");
+            toast.error("Action failed, try again");
             setPosts(prev => prev.map(p => p.id === postId ? { ...p, comments: p.comments.filter(c => c.id !== tempCommentId) } : p));
         }
     };
@@ -424,7 +441,7 @@ const App: React.FC = () => {
             toast.success("Post deleted.");
         } catch (error) {
             console.error("Failed to delete post:", error);
-            toast.error("Could not delete post.");
+            toast.error("Action failed, try again");
             setPosts(originalPosts);
         }
     };
@@ -437,7 +454,7 @@ const App: React.FC = () => {
             await api.deleteComment(postId, commentId);
         } catch (error) {
             console.error("Failed to delete comment:", error);
-            toast.error("Could not delete comment.");
+            toast.error("Action failed, try again");
             setPosts(originalPosts);
         }
     };
@@ -714,7 +731,7 @@ const App: React.FC = () => {
             await api.likeStory(storyId);
         } catch (error) {
             console.error("Failed to like story:", error);
-            toast.error("Like failed. Reverting.");
+            toast.error("Action failed, try again");
             setFollowingUserStories(originalFollowingStories);
         }
     };
@@ -834,7 +851,7 @@ const App: React.FC = () => {
         if (isChatPage) {
             // Mobile specific: NO padding, full viewport.
             // Desktop: keep some padding/max-width structure.
-            containerClass = 'mt-16 h-[calc(var(--vvh,100dvh)-4rem)] min-h-0 w-full max-w-6xl mx-auto md:h-[calc(var(--vvh,100dvh)-6rem)] md:my-4';
+            containerClass = 'pt-16 h-[var(--vvh,100dvh)] min-h-0 w-full max-w-6xl mx-auto md:pt-20 md:h-[var(--vvh,100dvh)] md:px-4';
         } else if (activeNavItem === 'Settings') {
             containerClass = 'h-[calc(100vh-8rem)] md:h-[calc(100vh-4rem)] max-w-2xl mx-auto px-4';
         }

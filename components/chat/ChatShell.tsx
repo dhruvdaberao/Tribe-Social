@@ -20,12 +20,12 @@ const ChatShell: React.FC<ChatShellProps> = ({
 
   return (
     <section
-      className={`chat-shell grid grid-rows-[auto_minmax(0,1fr)_auto] h-[var(--chat-vh,100vh)] supports-[height:100dvh]:h-[var(--chat-vh,100dvh)] min-h-0 w-full overflow-hidden bg-background ${className}`}
+      className={`chat-shell grid grid-rows-[auto_minmax(0,1fr)_auto] h-[var(--chat-vh,100dvh)] min-h-0 w-full overflow-hidden bg-background ${className}`}
       style={{
         ['--chat-vh' as string]: 'var(--vvh, 100dvh)',
       }}
     >
-      <header className="z-30 border-b border-border bg-surface w-full relative">
+      <header className="sticky top-0 z-[1000] border-b border-border bg-surface w-full">
         {header}
       </header>
 
@@ -34,7 +34,7 @@ const ChatShell: React.FC<ChatShellProps> = ({
       </div>
 
       <footer
-        className="z-30 border-t border-border bg-surface"
+        className="sticky bottom-0 z-40 border-t border-border bg-surface"
         style={{
           transform: 'translateY(calc(-1 * var(--keyboardOffset, 0px)))',
           paddingBottom: 'env(safe-area-inset-bottom)',
