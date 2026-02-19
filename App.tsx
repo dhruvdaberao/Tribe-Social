@@ -271,7 +271,12 @@ const App: React.FC = () => {
         };
         const handlePostUpdated = (updatedPost: any) => {
             const populated = populatePost(updatedPost);
-            if (populated) setPosts(prev => prev.map(p => p.id === populated.id ? populated : p));
+            if (populated) setPosts(prev => prev.map(p => {
+                if (p.id !== populated.id) return p;
+                // Merge: keep local likes/comments arrays (optimistic) 
+                // but accept other updates (content edits, media, etc.)
+                return { ...populated, likes: p.likes, comments: p.comments };
+            }));
         };
         const handlePostDeleted = (postId: string) => setPosts(prev => prev.filter(p => p.id !== postId));
 
