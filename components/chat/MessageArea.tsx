@@ -339,7 +339,7 @@ export const MessageArea: React.FC<MessageAreaProps> = ({ conversation, messages
           </div>
         )}
         composer={(
-          <div className="px-4 py-2">
+          <div className="px-4 pt-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))]">
             <form onSubmit={handleSendMessage} className="flex items-center space-x-3">
               <input
                 type="text"

@@ -21,8 +21,7 @@ router.get('/', protect, async (req, res) => {
         }
         const users = await User.find(query)
             .select('name username avatarUrl bio')
-            .sort({ createdAt: -1 })
-            .limit(20);
+            .sort({ createdAt: -1 });
         res.json(users);
     } catch (error) {
         console.error("Fetch users error:", error);

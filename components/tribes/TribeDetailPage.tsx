@@ -200,7 +200,7 @@ const TribeDetailPage: React.FC<TribeDetailPageProps> = (props) => {
   return (
     <>
       <ChatShell
-        className="md:bg-surface md:border md:border-border md:shadow-md h-[100dvh] pb-[calc(4rem+env(safe-area-inset-bottom))] md:pb-0"
+        className="md:bg-surface md:border md:border-border md:shadow-md h-full"
         header={(
           <div className="flex items-center p-3 bg-surface border-b border-border">
             <button onClick={onBack} className="p-2 mr-2 text-primary">
@@ -240,7 +240,7 @@ const TribeDetailPage: React.FC<TribeDetailPageProps> = (props) => {
           </div>
         )}
         composer={(
-          <div className="px-4 pt-3 pb-1 bg-surface">
+          <div className="px-4 pt-3 pb-[calc(0.25rem+env(safe-area-inset-bottom))] bg-surface">
             <form onSubmit={handleSendMessage} className="flex items-center space-x-3">
               <input
                 type="text"
