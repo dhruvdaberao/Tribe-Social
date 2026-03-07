@@ -9,12 +9,11 @@ interface TribesPageProps {
     onJoinToggle: (tribeId: string) => void;
     onCreateTribe: (name: string, description: string, avatarUrl?: string) => void;
     onViewTribe: (tribe: Tribe) => void;
-    onEditTribe: (tribe: Tribe) => void;
     onUpdateTribe: (tribeId: string, name: string, description: string, avatarUrl?: string | null) => void;
     onReport: (targetId: string, targetType: 'post' | 'user' | 'tribe' | 'comment' | 'story', targetName: string) => void;
 }
 
-const TribesPage: React.FC<TribesPageProps> = ({ tribes, currentUser, onJoinToggle, onCreateTribe, onViewTribe, onEditTribe, onUpdateTribe, onReport }) => {
+const TribesPage: React.FC<TribesPageProps> = ({ tribes, currentUser, onJoinToggle, onCreateTribe, onViewTribe, onUpdateTribe, onReport }) => {
     const [isCreateModalOpen, setCreateModalOpen] = useState(false);
 
     const myTribes = tribes.filter(c => c.members.includes(currentUser.id));
@@ -58,7 +57,6 @@ const TribesPage: React.FC<TribesPageProps> = ({ tribes, currentUser, onJoinTogg
                                 isMember={true}
                                 onJoinToggle={onJoinToggle}
                                 onViewTribe={onViewTribe}
-                                onEditTribe={onEditTribe}
                                 onUpdateTribe={onUpdateTribe}
                                 onReport={onReport}
                             />
@@ -78,7 +76,6 @@ const TribesPage: React.FC<TribesPageProps> = ({ tribes, currentUser, onJoinTogg
                             isMember={false}
                             onJoinToggle={onJoinToggle}
                             onViewTribe={onViewTribe}
-                            onEditTribe={onEditTribe}
                             onUpdateTribe={onUpdateTribe}
                             onReport={onReport}
                         />

@@ -24,7 +24,6 @@ interface AdminReportsPageProps {
 const AdminReportsPage: React.FC<AdminReportsPageProps> = ({ onBack }) => {
     const [reports, setReports] = useState<Report[]>([]);
     const [isLoading, setIsLoading] = useState(false);
-    const [error, setError] = useState('');
 
     useEffect(() => {
         fetchReports();
@@ -37,7 +36,6 @@ const AdminReportsPage: React.FC<AdminReportsPageProps> = ({ onBack }) => {
             setReports(data || []); // Assuming API returns array directly or inside data
         } catch (err) {
             console.error('Failed to fetch reports:', err);
-            // setError('Failed to load reports. Backend might not be ready.');
             // Mock data for demonstration if API fails
             setReports([
                 {

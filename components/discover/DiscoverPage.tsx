@@ -17,13 +17,12 @@
 // //   onViewProfile: (user: User) => void;
 // //   onViewTribe: (tribe: Tribe) => void;
 // //   onJoinToggle: (tribeId: string) => void;
-// //   onEditTribe: (tribe: Tribe) => void;
 // //   onSharePost: (post: Post, destination: { type: 'tribe' | 'user', id: string }) => void;
 // //   onLoadMore: () => void;
 // // }
 
 // // const DiscoverPage: React.FC<DiscoverPageProps> = (props) => {
-// //     const { posts, users, tribes, currentUser, onToggleFollow, onViewProfile, onLikePost, onCommentPost, onDeletePost, onDeleteComment, onViewTribe, onJoinToggle, onEditTribe, onSharePost, onLoadMore } = props;
+// //     const { posts, users, tribes, currentUser, onToggleFollow, onViewProfile, onLikePost, onCommentPost, onDeletePost, onDeleteComment, onViewTribe, onJoinToggle, onUpdateTribe, onSharePost, onLoadMore, onReport } = props;
 // //     const [searchTerm, setSearchTerm] = useState('');
 // //     const [activeTab, setActiveTab] = useState<'users' | 'posts' | 'tribes'>('users');
 
@@ -130,7 +129,7 @@
 // //                         filteredResults.tribes.length > 0 ? (
 // //                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
 // //                                 {filteredResults.tribes.map(tribe => (
-// //                                     <TribeCard key={tribe.id} tribe={tribe} currentUser={currentUser} isMember={tribe.members.includes(currentUser.id)} onJoinToggle={onJoinToggle} onViewTribe={onViewTribe} onEditTribe={onEditTribe} />
+// //                                     <TribeCard key={tribe.id} tribe={tribe} currentUser={currentUser} isMember={tribe.members.includes(currentUser.id)} onJoinToggle={onJoinToggle} onViewTribe={onViewTribe} onUpdateTribe={onUpdateTribe} onReport={onReport} />
 // //                                 ))}
 // //                             </div>
 // //                         ) : <p className="text-secondary text-center p-8">No tribes found for '{searchTerm}'.</p>
@@ -203,13 +202,12 @@
 //   onViewProfile: (user: User) => void;
 //   onViewTribe: (tribe: Tribe) => void;
 //   onJoinToggle: (tribeId: string) => void;
-//   onEditTribe: (tribe: Tribe) => void;
-//   onSharePost: (post: Post, destination: { type: 'tribe' | 'user', id: string }) => void;
+// //   onSharePost: (post: Post, destination: { type: 'tribe' | 'user', id: string }) => void;
 //   onLoadMore: () => void;
 // }
 
 // const DiscoverPage: React.FC<DiscoverPageProps> = (props) => {
-//     const { posts, users, tribes, currentUser, onToggleFollow, onViewProfile, onLikePost, onCommentPost, onDeletePost, onDeleteComment, onViewTribe, onJoinToggle, onEditTribe, onSharePost, onLoadMore } = props;
+//     const { posts, users, tribes, currentUser, onToggleFollow, onViewProfile, onLikePost, onCommentPost, onDeletePost, onDeleteComment, onViewTribe, onJoinToggle, onUpdateTribe, onSharePost, onLoadMore, onReport } = props;
 //     const [searchTerm, setSearchTerm] = useState('');
 //     const [activeTab, setActiveTab] = useState<'users' | 'posts' | 'tribes'>('users');
 
@@ -317,7 +315,7 @@
 //                         filteredResults.tribes.length > 0 ? (
 //                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
 //                                 {filteredResults.tribes.map(tribe => (
-//                                     <TribeCard key={tribe.id} tribe={tribe} currentUser={currentUser} isMember={tribe.members.includes(currentUser.id)} onJoinToggle={onJoinToggle} onViewTribe={onViewTribe} onEditTribe={onEditTribe} />
+//                                     <TribeCard key={tribe.id} tribe={tribe} currentUser={currentUser} isMember={tribe.members.includes(currentUser.id)} onJoinToggle={onJoinToggle} onViewTribe={onViewTribe} onUpdateTribe={onUpdateTribe} onReport={onReport} />
 //                                 ))}
 //                             </div>
 //                         ) : <p className="text-secondary text-center p-8">No tribes found for '{searchTerm}'.</p>
@@ -392,13 +390,14 @@ interface DiscoverPageProps {
   onViewProfile: (user: User) => void;
   onViewTribe: (tribe: Tribe) => void;
   onJoinToggle: (tribeId: string) => void;
-  onEditTribe: (tribe: Tribe) => void;
+  onUpdateTribe: (tribeId: string, name: string, description: string, avatarUrl?: string | null) => void;
   onSharePost: (post: Post, destination: { type: 'tribe' | 'user', id: string }) => void;
   onLoadMore: () => void;
+  onReport: (targetId: string, targetType: 'post' | 'user' | 'tribe' | 'comment' | 'story', targetName: string) => void;
 }
 
 const DiscoverPage: React.FC<DiscoverPageProps> = (props) => {
-    const { posts, users, tribes, currentUser, onToggleFollow, onViewProfile, onLikePost, onCommentPost, onDeletePost, onDeleteComment, onViewTribe, onJoinToggle, onEditTribe, onSharePost, onLoadMore } = props;
+    const { posts, users, tribes, currentUser, onToggleFollow, onViewProfile, onLikePost, onCommentPost, onDeletePost, onDeleteComment, onViewTribe, onJoinToggle, onUpdateTribe, onSharePost, onLoadMore, onReport } = props;
     const [searchTerm, setSearchTerm] = useState('');
     const [activeTab, setActiveTab] = useState<'users' | 'posts' | 'tribes'>('users');
 
@@ -512,7 +511,7 @@ const DiscoverPage: React.FC<DiscoverPageProps> = (props) => {
                         filteredResults.tribes.length > 0 ? (
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                                 {filteredResults.tribes.map(tribe => (
-                                    <TribeCard key={tribe.id} tribe={tribe} currentUser={currentUser} isMember={tribe.members.includes(currentUser.id)} onJoinToggle={onJoinToggle} onViewTribe={onViewTribe} onEditTribe={onEditTribe} />
+                                    <TribeCard key={tribe.id} tribe={tribe} currentUser={currentUser} isMember={tribe.members.includes(currentUser.id)} onJoinToggle={onJoinToggle} onViewTribe={onViewTribe} onUpdateTribe={onUpdateTribe} onReport={onReport} />
                                 ))}
                             </div>
                         ) : <p className="text-secondary text-center p-8">No tribes found for '{searchTerm}'.</p>
@@ -533,6 +532,7 @@ const DiscoverPage: React.FC<DiscoverPageProps> = (props) => {
                                         onDeleteComment={onDeleteComment} 
                                         onViewProfile={onViewProfile} 
                                         onSharePost={onSharePost}
+                                        onReport={onReport}
                                     />
                                 ))}
                             </div>
