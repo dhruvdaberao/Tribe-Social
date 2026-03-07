@@ -18,11 +18,10 @@ const ChatShell: React.FC<ChatShellProps> = ({
 }) => {
   return (
     <section
-      className={`chat-shell flex flex-col h-full min-h-0 w-full overflow-hidden bg-background ${className}`}
+      className={`chat-shell flex flex-col h-full w-full overflow-hidden bg-background ${className}`}
     >
       <header
         className="flex-shrink-0 z-[1000] border-b border-border bg-surface w-full"
-        style={{ paddingTop: 'env(safe-area-inset-top)' }}
       >
         {header}
       </header>
@@ -33,9 +32,6 @@ const ChatShell: React.FC<ChatShellProps> = ({
 
       <footer
         className="flex-shrink-0 z-40 border-t border-border bg-surface"
-        style={{
-          paddingBottom: 'env(safe-area-inset-bottom)',
-        }}
       >
         {composer}
       </footer>

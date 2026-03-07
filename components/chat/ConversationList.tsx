@@ -187,7 +187,6 @@ const ConversationList: React.FC<ConversationListProps> = ({ conversations, isLo
       </div>
       <div
         className="overflow-y-auto flex-1 min-h-0 overscroll-contain pb-32"
-        style={{ paddingBottom: 'calc(8rem + env(safe-area-inset-bottom))' }}
       >
         {/* Chuk AI Static Conversation */}
         <ConversationItem

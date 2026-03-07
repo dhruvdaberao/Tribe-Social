@@ -200,9 +200,9 @@ const TribeDetailPage: React.FC<TribeDetailPageProps> = (props) => {
   return (
     <>
       <ChatShell
-        className="md:bg-surface md:border md:border-border md:shadow-md"
+        className="md:bg-surface md:border md:border-border md:shadow-md h-[100dvh] pb-[calc(4rem+env(safe-area-inset-bottom))] md:pb-0"
         header={(
-          <div className="flex items-center p-3 bg-surface">
+          <div className="flex items-center p-3 bg-surface border-b border-border">
             <button onClick={onBack} className="p-2 mr-2 text-primary">
               <BackIcon />
             </button>
