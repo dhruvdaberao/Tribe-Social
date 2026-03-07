@@ -11,7 +11,6 @@ interface TribeCardProps {
     currentUser: User;
     onJoinToggle: (tribeId: string) => void;
     onViewTribe: (tribe: Tribe) => void;
-    onEditTribe: (tribe: Tribe) => void;
     onUpdateTribe: (tribeId: string, name: string, description: string, avatarUrl?: string | null) => void;
     onReport: (targetId: string, targetType: 'post' | 'user' | 'tribe' | 'comment' | 'story', targetName: string) => void;
 }
@@ -28,7 +27,7 @@ const TribePlaceholderIcon = () => (
 );
 
 
-const TribeCard: React.FC<TribeCardProps> = ({ tribe, isMember, currentUser, onJoinToggle, onViewTribe, onEditTribe, onUpdateTribe, onReport }) => {
+const TribeCard: React.FC<TribeCardProps> = ({ tribe, isMember, currentUser, onJoinToggle, onViewTribe, onUpdateTribe, onReport }) => {
     const { unreadCounts } = useSocket();
     const unreadCount = unreadCounts.tribes[tribe.id] || 0;
     const [isMenuOpen, setIsMenuOpen] = useState(false);
