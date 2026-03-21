@@ -4,6 +4,7 @@ import UserAvatar from '../common/UserAvatar';
 import { Image as ImageIcon } from 'lucide-react';
 import ChatInput from './ChatInput';
 import ChatShell from './ChatShell';
+import Skeleton from '../common/Skeleton';
 
 interface TribeMessageAreaProps {
   tribe: Tribe;
@@ -148,9 +149,9 @@ const TribeMessageArea: React.FC<TribeMessageAreaProps> = ({
         header={header} // Pass header to ChatShell
         messagesRef={scrollContainerRef}
         onMessagesScroll={handleScroll}
-        messagesClassName="w-full px-4 py-3 space-y-4"
+        messagesClassName="w-full px-4 py-3 sm:px-5 space-y-4"
         composer={(
-          <div className="px-4 py-3 bg-background/95 backdrop-blur-sm border-t border-border z-20">
+          <div className="px-3 py-3 sm:px-4 bg-background/95 backdrop-blur-sm">
             {replyToMessage && (
               <div className="mb-3 flex items-center justify-between rounded-2xl border border-border bg-surface px-4 py-2 text-xs text-secondary shadow-sm">
                 <div className="min-w-0 border-l-2 border-accent pl-2">
@@ -184,9 +185,15 @@ const TribeMessageArea: React.FC<TribeMessageAreaProps> = ({
         )}
       >
         {isLoading && messages.length === 0 && (
-          <div className="h-full flex flex-col items-center justify-center opacity-70">
-            <div className="w-10 h-10 border-2 border-accent border-t-transparent rounded-full animate-spin mb-3" />
-            <p className="text-sm text-secondary">Loading conversation…</p>
+          <div className="space-y-4 py-2">
+            {Array.from({ length: 6 }).map((_, index) => (
+              <div key={index} className={`flex ${index % 2 === 0 ? 'justify-start' : 'justify-end'}`}>
+                <div className="max-w-[78%] space-y-2">
+                  <Skeleton className="h-3 w-24 rounded-full" />
+                  <Skeleton className="h-16 w-full rounded-3xl" />
+                </div>
+              </div>
+            ))}
           </div>
         )}
         {isLoadingMore && (
@@ -255,7 +262,7 @@ const TribeMessageArea: React.FC<TribeMessageAreaProps> = ({
 
                 {/* MESSAGE BUBBLE */}
                 <div
-                  className={`max-w-[75%] flex flex-col ${isCurrentUser ? 'items-end' : 'items-start'
+                  className={`max-w-[85%] sm:max-w-[75%] flex flex-col ${isCurrentUser ? 'items-end' : 'items-start'
                     }`}
                 >
                   {!isCurrentUser && showAvatar && (
