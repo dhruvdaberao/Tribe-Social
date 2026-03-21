@@ -551,7 +551,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ currentUser, allUsers, chukUser, in
 
   return (
     <div
-      className="h-full min-h-0 w-full bg-background md:flex md:overflow-hidden md:rounded-[2rem] md:border md:border-border md:bg-surface md:shadow-lg relative"
+      className="h-full min-h-0 w-full bg-background md:bg-surface md:border md:border-border md:shadow-lg flex overflow-hidden relative"
     >
       <div
         className={`w-full md:w-[320px] lg:w-[380px] flex-shrink-0 flex flex-col min-h-0 transition-transform duration-300 ease-in-out md:static absolute inset-0 z-10 md:border-r md:border-border bg-surface ${isMessageAreaVisible ? '-translate-x-full' : 'translate-x-0'

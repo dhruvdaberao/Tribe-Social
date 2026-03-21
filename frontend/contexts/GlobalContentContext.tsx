@@ -4,7 +4,6 @@ import * as api from '../api';
 import { useAuth } from './AuthContext';
 import { useSocket } from './SocketContext';
 import { toast } from '../components/common/Toast';
-import { readCachedResource, writeCachedResource } from '../utils/cache';
 
 const PSYDUCK_USER: User = {
     id: 'chuk-ai',
@@ -101,20 +100,21 @@ export const GlobalContentProvider: React.FC<{ children: React.ReactNode }> = ({
     const { socket, setNotifications, clearUnreadTribe } = useSocket();
 
     // --- Global State ---
-    const [users, setUsers] = useState<User[]>(() => readCachedResource<User[]>('tribe_cache_users')?.data || []);
-    const [posts, setPosts] = useState<Post[]>(() => readCachedResource<Post[]>('tribe_cache_feed')?.data || []);
-    const [tribes, setTribes] = useState<Tribe[]>(() => readCachedResource<Tribe[]>('tribe_cache_tribes')?.data || []);
+    const [users, setUsers] = useState<User[]>([]);
+    const [posts, setPosts] = useState<Post[]>([]);
+
+    // 🔥 Cache Tribes for Instant Load
+    const [tribes, setTribes] = useState<Tribe[]>(() => {
+        try {
+            const cached = localStorage.getItem('tribe_storage_tribes');
+            return cached ? JSON.parse(cached) : [];
+        } catch { return []; }
+    });
 
     useEffect(() => {
-        if (users.length > 0) writeCachedResource('tribe_cache_users', users);
-    }, [users]);
-
-    useEffect(() => {
-        if (posts.length > 0) writeCachedResource('tribe_cache_feed', posts);
-    }, [posts]);
-
-    useEffect(() => {
-        if (tribes.length > 0) writeCachedResource('tribe_cache_tribes', tribes);
+        if (tribes.length > 0) {
+            localStorage.setItem('tribe_storage_tribes', JSON.stringify(tribes));
+        }
     }, [tribes]);
     const [myStories, setMyStories] = useState<Story[]>([]);
     const [followingUserStories, setFollowingUserStories] = useState<{ user: User, stories: Story[] }[]>([]);
@@ -196,14 +196,11 @@ export const GlobalContentProvider: React.FC<{ children: React.ReactNode }> = ({
     const fetchGlobalEssential = useCallback(async () => {
         if (!currentUser) return;
         try {
-            setIsDataLoaded(true);
-            api.fetchUsers()
-                .then(({ data }) => {
-                    setUsers(data);
-                    writeCachedResource('tribe_cache_users', data);
-                })
-                .catch(console.error);
+            // Fetch users (top 20) in background for search/avatars
+            api.fetchUsers().then(({ data }) => setUsers(data)).catch(console.error);
+            // Fetch notifications
             api.fetchNotifications().then(({ data }) => setNotifications(data)).catch(console.error);
+            setIsDataLoaded(true);
         } catch (error) {
             console.error("Global fetch error:", error);
         }
@@ -211,16 +208,16 @@ export const GlobalContentProvider: React.FC<{ children: React.ReactNode }> = ({
 
     // 2. Feed & Stories (Home Page)
     const fetchFeed = useCallback(async () => {
-        if (!currentUser) return;
-        setIsFetching(posts.length === 0);
+        if (!currentUser || posts.length > 0) return; // Dedupe if already loaded (or add forceRefresh arg later)
+        setIsFetching(true);
         try {
             const { data } = await api.fetchFeedPosts(1, 10);
-            const populatedPosts = data.map((post: any) => populatePost(post, new Map())).filter(Boolean) as Post[];
-            setPosts(prev => populatedPosts.length > 0 ? populatedPosts : prev);
-            writeCachedResource('tribe_cache_feed', populatedPosts);
+            const populatedPosts = data.map((post: any) => populatePost(post, new Map())).filter(Boolean);
+            setPosts(populatedPosts as Post[]);
             setFeedPage(1);
             setFeedHasMore(data.length === 10);
 
+            // Stories often go with Feed
             api.fetchMyStories().then(({ data }) => setMyStories(data)).catch(console.error);
             api.fetchFollowingStories().then(({ data }) => setFollowingUserStories(data)).catch(console.error);
         } catch (error) {
@@ -228,21 +225,21 @@ export const GlobalContentProvider: React.FC<{ children: React.ReactNode }> = ({
         } finally {
             setIsFetching(false);
         }
-    }, [currentUser, populatePost, posts.length]);
+    }, [currentUser, posts.length, populatePost]);
 
     // 3. Tribes (Tribes Page)
     const fetchTribes = useCallback(async () => {
         if (!currentUser) return;
+        // Even if we have cached tribes, we refresh in background
         try {
             const { data } = await api.fetchTribes();
+            // Preserve messages if they exist in state but not in basic fetch
             setTribes(prev => {
                 const prevMap = new Map(prev.map(t => [t.id, t]));
-                const merged = data.map((t: any) => {
+                return data.map((t: any) => {
                     const existing = prevMap.get(t.id);
                     return { ...t, messages: existing ? existing.messages : [] };
                 });
-                writeCachedResource('tribe_cache_tribes', merged);
-                return merged;
             });
         } catch (error) {
             console.error("Tribes fetch error:", error);

@@ -5,10 +5,10 @@ interface ChatShellProps {
   header?: React.ReactNode;
   composer?: React.ReactNode;
   children: React.ReactNode;
-  messagesRef?: React.RefObject<HTMLDivElement | null>;
+  messagesRef?: React.RefObject<HTMLDivElement>;
   onMessagesScroll?: (event: React.UIEvent<HTMLDivElement>) => void;
-  className?: string;
-  messagesClassName?: string;
+  className?: string; // Additional classes for the outer container
+  messagesClassName?: string; // Additional classes for the messages area
 }
 
 const ChatShell: React.FC<ChatShellProps> = ({
@@ -22,45 +22,54 @@ const ChatShell: React.FC<ChatShellProps> = ({
 }) => {
   useVisualViewportHeight();
   const composerRef = React.useRef<HTMLDivElement>(null);
-  const [composerHeight, setComposerHeight] = React.useState(84);
+  const [composerOffset, setComposerOffset] = React.useState(72);
 
   React.useEffect(() => {
+    // Prevent body scroll while chat is open to avoid double scrollbars
     const previousBodyOverflow = document.body.style.overflow;
     const previousDocumentOverflow = document.documentElement.style.overflow;
-    const previousBodyOverscroll = document.body.style.overscrollBehaviorY;
 
     document.body.style.overflow = 'hidden';
     document.documentElement.style.overflow = 'hidden';
+
+    // Also try to prevent overscroll behavior on body
     document.body.style.overscrollBehaviorY = 'none';
 
     return () => {
       document.body.style.overflow = previousBodyOverflow;
       document.documentElement.style.overflow = previousDocumentOverflow;
-      document.body.style.overscrollBehaviorY = previousBodyOverscroll;
+      document.body.style.overscrollBehaviorY = '';
     };
   }, []);
 
   React.useEffect(() => {
-    const updateComposerHeight = () => setComposerHeight((composerRef.current?.offsetHeight ?? 72) + 12);
-    updateComposerHeight();
-    if (!composerRef.current) return;
+    if (!composerRef.current) {
+      setComposerOffset(16);
+      return;
+    }
 
-    const observer = new ResizeObserver(updateComposerHeight);
+    const updateComposerOffset = () => {
+      const composerHeight = composerRef.current?.offsetHeight ?? 0;
+      setComposerOffset(composerHeight + 10);
+    };
+
+    updateComposerOffset();
+    const observer = new ResizeObserver(updateComposerOffset);
     observer.observe(composerRef.current);
-    window.visualViewport?.addEventListener('resize', updateComposerHeight);
+    window.visualViewport?.addEventListener('resize', updateComposerOffset);
+
     return () => {
       observer.disconnect();
-      window.visualViewport?.removeEventListener('resize', updateComposerHeight);
+      window.visualViewport?.removeEventListener('resize', updateComposerOffset);
     };
   }, [composer]);
 
   return (
     <div
-      className={`flex min-h-0 flex-1 flex-col overflow-hidden bg-background md:relative ${className}`}
-      style={{ height: 'var(--vvh, 100dvh)' }}
+      className={`fixed inset-0 z-[100] flex flex-col bg-background overflow-hidden h-[var(--vvh,100dvh)] md:relative md:inset-auto md:z-0 md:h-full ${className}`}
     >
       {header ? (
-        <div className="sticky top-0 z-40 flex-none bg-background/95 backdrop-blur-md">
+        <div className="flex-none border-b border-border z-50">
           {header}
         </div>
       ) : null}
@@ -68,8 +77,8 @@ const ChatShell: React.FC<ChatShellProps> = ({
       <div
         ref={messagesRef}
         onScroll={onMessagesScroll}
-        className={`min-h-0 flex-1 overflow-y-auto overscroll-contain [scrollbar-gutter:stable] ${messagesClassName}`}
-        style={{ paddingBottom: composer ? `${composerHeight}px` : undefined }}
+        className={`flex-1 min-h-0 overflow-y-auto overscroll-contain ${messagesClassName}`}
+        style={{ paddingBottom: `${composerOffset}px` }}
       >
         {children}
       </div>
@@ -77,8 +86,7 @@ const ChatShell: React.FC<ChatShellProps> = ({
       {composer ? (
         <div
           ref={composerRef}
-          className="sticky bottom-0 z-40 flex-none border-t border-border bg-background/95 backdrop-blur-xl"
-          style={{ paddingBottom: 'max(env(safe-area-inset-bottom, 0px), var(--keyboard-inset, 0px))' }}
+          className="flex-none bg-background border-t border-border z-50 pb-[max(env(safe-area-inset-bottom,0px),8px)] md:pb-0"
         >
           {composer}
         </div>

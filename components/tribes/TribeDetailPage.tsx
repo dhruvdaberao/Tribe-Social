@@ -200,10 +200,10 @@ const TribeDetailPage: React.FC<TribeDetailPageProps> = (props) => {
   return (
     <>
       <ChatShell
-        className="h-full min-h-0 md:rounded-[1.75rem] md:border md:border-border md:bg-surface md:shadow-lg"
+        className="md:bg-surface md:border md:border-border md:shadow-md h-full"
         header={(
-          <div className="flex items-center gap-2 px-3 py-3 sm:px-4 bg-surface">
-            <button onClick={onBack} className="p-2 text-primary rounded-full hover:bg-background">
+          <div className="flex items-center p-3 bg-surface border-b border-border">
+            <button onClick={onBack} className="p-2 mr-2 text-primary">
               <BackIcon />
             </button>
             {tribe.avatarUrl ? (
@@ -240,27 +240,24 @@ const TribeDetailPage: React.FC<TribeDetailPageProps> = (props) => {
           </div>
         )}
         composer={(
-          <div
-            className="px-3 pt-2 sm:px-4 bg-surface"
-            style={{ paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom))' }}
-          >
-            <form onSubmit={handleSendMessage} className="flex items-end gap-3">
+          <div className="px-4 pt-3 pb-[calc(0.25rem+env(safe-area-inset-bottom))] bg-surface">
+            <form onSubmit={handleSendMessage} className="flex items-center space-x-3">
               <input
                 type="text"
                 value={inputText}
                 onChange={handleInputChange}
                 placeholder={isMember ? `Message #${tribe.name}` : "You must be a member to chat"}
-                className="flex-1 bg-background border border-border rounded-2xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-accent text-primary min-w-0"
+                className="flex-1 bg-background border border-border rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-accent text-primary min-w-0"
                 disabled={!isMember || isLoading}
                 ref={inputRef}
               />
-              <button type="submit" className="bg-accent text-accent-text rounded-2xl w-12 h-12 flex-shrink-0 flex items-center justify-center hover:bg-accent-hover transition-colors disabled:opacity-50 shadow-sm" disabled={!inputText.trim() || !isMember || isLoading}>
+              <button type="submit" className="bg-accent text-accent-text rounded-lg w-12 h-11 flex-shrink-0 flex items-center justify-center hover:bg-accent-hover transition-colors disabled:opacity-50" disabled={!inputText.trim() || !isMember || isLoading}>
                 <SendIcon />
               </button>
             </form>
           </div>
         )}
-        messagesClassName="px-3 py-4 sm:px-4 bg-background"
+        messagesClassName="p-4 bg-background"
       >
 
         {isLoading ? (
@@ -269,7 +266,7 @@ const TribeDetailPage: React.FC<TribeDetailPageProps> = (props) => {
             <p className="text-secondary text-sm">Loading conversations...</p>
           </div>
         ) : (
-          <div className="flex min-h-full flex-col justify-end space-y-2">
+          <div className="flex flex-col space-y-2">
             {localMessages.map(message => {
               // Ensure we check ID robustly (handle object vs string)
               const msgSenderId = typeof message.senderId === 'string' ? message.senderId : message.sender?.id;

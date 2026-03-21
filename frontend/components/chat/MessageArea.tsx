@@ -196,7 +196,6 @@ import UserAvatar from '../common/UserAvatar';
 import { useSocket } from '../../contexts/SocketContext';
 import MarkdownRenderer from '../common/MarkdownRenderer';
 import ChatShell from './ChatShell';
-import Skeleton from '../common/Skeleton';
 
 interface MessageAreaProps {
   conversation: Conversation;
@@ -429,9 +428,9 @@ export const MessageArea: React.FC<MessageAreaProps> = ({
         )}
         messagesRef={scrollContainerRef}
         onMessagesScroll={handleScroll}
-        messagesClassName="px-4 py-3 sm:px-5"
+        messagesClassName="p-4"
         composer={(
-          <div className="px-3 py-3 sm:px-4 bg-background/95 backdrop-blur-sm">
+          <div className="px-4 py-3 bg-background/95 backdrop-blur-sm border-t border-border z-20">
             {replyToMessage && (
               <div className="mb-3 flex items-center justify-between rounded-2xl border border-border bg-surface px-4 py-2 text-xs text-secondary shadow-sm">
                 <div className="min-w-0 border-l-2 border-accent pl-2">
@@ -466,18 +465,11 @@ export const MessageArea: React.FC<MessageAreaProps> = ({
       >
 
         {isLoading && messages.length === 0 ? (
-          <div className="space-y-4 py-2">
-            {Array.from({ length: 6 }).map((_, index) => (
-              <div key={index} className={`flex ${index % 2 === 0 ? 'justify-start' : 'justify-end'}`}>
-                <div className="max-w-[78%] space-y-2">
-                  <Skeleton className="h-3 w-20 rounded-full" />
-                  <Skeleton className="h-16 w-full rounded-3xl" />
-                </div>
-              </div>
-            ))}
+          <div className="w-full h-full flex items-center justify-center">
+            <div className="w-10 h-10 border-2 border-accent border-t-transparent rounded-full animate-spin" />
           </div>
         ) : (
-          <div className="flex flex-col space-y-3">
+          <div className="flex flex-col space-y-2">
             {isLoadingMore && (
               <div className="flex justify-center py-2">
                 <div className="w-6 h-6 border-2 border-accent border-t-transparent rounded-full animate-spin" />
@@ -510,7 +502,7 @@ export const MessageArea: React.FC<MessageAreaProps> = ({
                       )}
                     </div>
                   )}
-                  <div className={`flex max-w-[85%] flex-col sm:max-w-xs md:max-w-sm lg:max-w-md ${isCurrentUser ? 'items-end' : 'items-start'}`}>
+                  <div className={`flex flex-col max-w-xs md:max-w-sm lg:max-w-md ${isCurrentUser ? 'items-end' : 'items-start'}`}>
                     {/* Modified rounded classes for proper chat bubble look */}
                     <div className={`px-4 py-2.5 break-words overflow-hidden w-full ${isCurrentUser ? 'bg-accent text-accent-text rounded-2xl rounded-tr-none' : 'bg-surface text-primary shadow-sm rounded-2xl rounded-tl-none'}`}>
                       {replyMessage && (

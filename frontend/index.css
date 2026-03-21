@@ -1,8 +1,6 @@
 :root {
   --vh: 1vh;
   --dvh: 1vh;
-  --vvh: 100dvh;
-  --keyboard-inset: 0px;
 }
 
 html,
@@ -34,8 +32,3 @@ body,
 ::-webkit-scrollbar-thumb:hover {
   background-color: hsl(var(--secondary));
 }
-
-body { overscroll-behavior-y: contain; }
-
-.no-scrollbar { scrollbar-width: none; -ms-overflow-style: none; }
-.no-scrollbar::-webkit-scrollbar { display: none; }

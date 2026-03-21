@@ -12,7 +12,6 @@ import TribeMembersModal from './TribeMembersModal';
 import EditTribeModal from './EditTribeModal';
 import { Users, ArrowLeft, Edit2, LogIn, LogOut, Flame, X } from 'lucide-react';
 import { toast } from '../common/Toast';
-import { readCachedResource, writeCachedResource } from '../../utils/cache';
 import ConfirmationModal from '../common/ConfirmationModal';
 
 /* ───────────── STYLES ───────────── */
@@ -218,7 +217,7 @@ const TribeDetailPage: React.FC<Props> = ({ currentUser, tribeId: propTribeId })
   const { tribes: allTribes } = useGlobalContent();
 
   // Optimistic init from navigation state
-  const cachedTribe = useMemo(() => allTribes.find(t => t.id === id) || readCachedResource<Tribe>(`tribe_cache_detail_${id}`)?.data || null, [allTribes, id]);
+  const cachedTribe = useMemo(() => allTribes.find(t => t.id === id), [allTribes, id]);
 
   const [tribe, setTribe] = useState<Tribe | null>(() => cachedTribe || null);
 
@@ -262,7 +261,6 @@ const TribeDetailPage: React.FC<Props> = ({ currentUser, tribeId: propTribeId })
         // 🔥 CRITICAL: Fetch tribe FIRST (don't block on users)
         const tribeRes = await api.fetchTribe(id);
         setTribe(tribeRes.data);
-        writeCachedResource(`tribe_cache_detail_${id}`, tribeRes.data);
 
         // Then fetch users in background (non-blocking)
         api.fetchUsers()
@@ -321,12 +319,12 @@ const TribeDetailPage: React.FC<Props> = ({ currentUser, tribeId: propTribeId })
   useEffect(() => {
     if (!id || !isMember) return;
 
-    const cachedEntry = messageCache.current.get(id) || readCachedResource<{ messages: TribeMessage[]; hasMore: boolean; oldestTimestamp?: string }>(`tribe_cache_messages_${id}`)?.data;
+    const cachedEntry = messageCache.current.get(id);
     if (cachedEntry?.messages?.length) {
-      messageCache.current.set(id, cachedEntry);
       setMessages(cachedEntry.messages);
       setHasMoreMessages(cachedEntry.hasMore);
       clearUnreadTribe(id);
+      return;
     }
 
     const loadMessages = async () => {
@@ -336,7 +334,6 @@ const TribeDetailPage: React.FC<Props> = ({ currentUser, tribeId: propTribeId })
         const hasMore = res.data.length === 50;
         const oldestTimestamp = res.data[0]?.timestamp;
         messageCache.current.set(id, { messages: res.data, hasMore, oldestTimestamp });
-        writeCachedResource(`tribe_cache_messages_${id}`, { messages: res.data, hasMore, oldestTimestamp });
         setMessages(res.data);
         setHasMoreMessages(hasMore);
         clearUnreadTribe(id);
@@ -350,7 +347,7 @@ const TribeDetailPage: React.FC<Props> = ({ currentUser, tribeId: propTribeId })
 
   const handleLoadMoreMessages = async () => {
     if (!id || isLoadingMore || !hasMoreMessages) return;
-    const cachedEntry = messageCache.current.get(id) || readCachedResource<{ messages: TribeMessage[]; hasMore: boolean; oldestTimestamp?: string }>(`tribe_cache_messages_${id}`)?.data;
+    const cachedEntry = messageCache.current.get(id);
     const before = cachedEntry?.oldestTimestamp;
     if (!before) return;
 
@@ -361,7 +358,6 @@ const TribeDetailPage: React.FC<Props> = ({ currentUser, tribeId: propTribeId })
       const nextHasMore = res.data.length === 50;
       const oldestTimestamp = res.data[0]?.timestamp || cachedEntry?.oldestTimestamp;
       messageCache.current.set(id, { messages: nextMessages, hasMore: nextHasMore, oldestTimestamp });
-      writeCachedResource(`tribe_cache_messages_${id}`, { messages: nextMessages, hasMore: nextHasMore, oldestTimestamp });
       setMessages(nextMessages);
       setHasMoreMessages(nextHasMore);
     } finally {
@@ -434,13 +430,11 @@ const TribeDetailPage: React.FC<Props> = ({ currentUser, tribeId: propTribeId })
         }
 
         const cacheEntry = messageCache.current.get(id);
-        const nextEntry = {
+        messageCache.current.set(id, {
           messages: nextMessages,
           hasMore: cacheEntry?.hasMore ?? false,
           oldestTimestamp: cacheEntry?.oldestTimestamp,
-        };
-        messageCache.current.set(id, nextEntry);
-        writeCachedResource(`tribe_cache_messages_${id}`, nextEntry);
+        });
 
         return nextMessages;
       });
@@ -520,14 +514,12 @@ const TribeDetailPage: React.FC<Props> = ({ currentUser, tribeId: propTribeId })
     };
 
     setMessages(prev => [...prev, optimistic]);
-    const cachedEntry = messageCache.current.get(id) || readCachedResource<{ messages: TribeMessage[]; hasMore: boolean; oldestTimestamp?: string }>(`tribe_cache_messages_${id}`)?.data;
-    const optimisticEntry = {
+    const cachedEntry = messageCache.current.get(id);
+    messageCache.current.set(id, {
       messages: [...(cachedEntry?.messages || []), optimistic],
       hasMore: cachedEntry?.hasMore ?? false,
       oldestTimestamp: cachedEntry?.oldestTimestamp,
-    };
-    messageCache.current.set(id, optimisticEntry);
-    writeCachedResource(`tribe_cache_messages_${id}`, optimisticEntry);
+    });
     setIsSending(true);
 
     try {
@@ -577,24 +569,20 @@ const TribeDetailPage: React.FC<Props> = ({ currentUser, tribeId: propTribeId })
       setMessages(prev => prev.map(m => (m.id === optimistic.id ? { ...responseMessage, status: undefined } : m)));
       const updatedEntry = messageCache.current.get(id);
       if (updatedEntry) {
-        const nextEntry = {
+        messageCache.current.set(id, {
           ...updatedEntry,
           messages: updatedEntry.messages.map(m => (m.id === optimistic.id ? { ...responseMessage, status: undefined } : m)),
-        };
-        messageCache.current.set(id, nextEntry);
-        writeCachedResource(`tribe_cache_messages_${id}`, nextEntry);
+        });
       }
     } catch (error) {
       console.error('Failed to send message:', error);
       setMessages(prev => prev.map(m => (m.id === optimistic.id ? { ...m, status: 'failed' } : m)));
       const updatedEntry = messageCache.current.get(id);
       if (updatedEntry) {
-        const nextEntry = {
+        messageCache.current.set(id, {
           ...updatedEntry,
           messages: updatedEntry.messages.map(m => (m.id === optimistic.id ? { ...m, status: 'failed' } : m)),
-        };
-        messageCache.current.set(id, nextEntry);
-        writeCachedResource(`tribe_cache_messages_${id}`, nextEntry);
+        });
       }
       toast.error('Failed to send message');
     } finally {
@@ -607,7 +595,7 @@ const TribeDetailPage: React.FC<Props> = ({ currentUser, tribeId: propTribeId })
   const handleDeleteMessage = async (messageId: string) => {
     if (!id) return;
     setMessages(prev => prev.filter(m => m.id !== messageId));
-    const cachedEntry = messageCache.current.get(id) || readCachedResource<{ messages: TribeMessage[]; hasMore: boolean; oldestTimestamp?: string }>(`tribe_cache_messages_${id}`)?.data;
+    const cachedEntry = messageCache.current.get(id);
     if (cachedEntry) {
       messageCache.current.set(id, { ...cachedEntry, messages: cachedEntry.messages.filter(m => m.id !== messageId) });
     }
@@ -622,7 +610,7 @@ const TribeDetailPage: React.FC<Props> = ({ currentUser, tribeId: propTribeId })
   const handleDeleteMessageForMe = async (messageId: string) => {
     if (!id) return;
     setMessages(prev => prev.filter(m => m.id !== messageId));
-    const cachedEntry = messageCache.current.get(id) || readCachedResource<{ messages: TribeMessage[]; hasMore: boolean; oldestTimestamp?: string }>(`tribe_cache_messages_${id}`)?.data;
+    const cachedEntry = messageCache.current.get(id);
     if (cachedEntry) {
       messageCache.current.set(id, { ...cachedEntry, messages: cachedEntry.messages.filter(m => m.id !== messageId) });
     }
@@ -767,13 +755,9 @@ const TribeDetailPage: React.FC<Props> = ({ currentUser, tribeId: propTribeId })
             </Header>
           }
         >
-          <div className="flex-1 px-4 py-6">
-            <div className="mx-auto max-w-2xl space-y-4">
-              {Array.from({ length: 7 }).map((_, index) => (
-                <div key={index} className={`flex ${index % 2 === 0 ? 'justify-start' : 'justify-end'}`}>
-                  <div className="h-16 w-[78%] rounded-3xl bg-border/40 animate-pulse" />
-                </div>
-              ))}
+          <div className="flex-1 flex items-center justify-center">
+            <div className="text-center">
+              <div className="w-16 h-16 border-4 border-accent border-t-transparent rounded-full animate-spin mx-auto mb-4" />
               <p className="text-secondary">Loading tribe...</p>
             </div>
           </div>

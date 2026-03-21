@@ -317,14 +317,13 @@ export const MessageArea: React.FC<MessageAreaProps> = ({ conversation, messages
   return (
     <>
       <ChatShell
-        className="h-full min-h-0 md:rounded-[1.75rem] md:border md:border-border md:bg-surface md:shadow-lg"
         header={(
-          <div className="flex items-center gap-2 px-3 py-3 sm:px-4 bg-surface">
-            <button onClick={onBack} className="md:hidden p-2 text-primary rounded-full hover:bg-background">
+          <div className="flex items-center p-3 bg-surface">
+            <button onClick={onBack} className="md:hidden p-2 mr-2 text-primary">
               <BackIcon />
             </button>
             <div
-              className="flex min-w-0 items-center cursor-pointer overflow-hidden"
+              className="flex items-center cursor-pointer overflow-hidden"
               onClick={() => onViewProfile(otherParticipant)}
             >
               <UserAvatar user={otherParticipant} className="w-10 h-10 rounded-full mr-3 flex-shrink-0" isOnline={isOtherUserOnline} />
@@ -340,33 +339,30 @@ export const MessageArea: React.FC<MessageAreaProps> = ({ conversation, messages
           </div>
         )}
         composer={(
-          <div
-            className="px-3 pt-2 sm:px-4"
-            style={{ paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom))' }}
-          >
-            <form onSubmit={handleSendMessage} className="flex items-end gap-3">
+          <div className="px-4 pt-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))]">
+            <form onSubmit={handleSendMessage} className="flex items-center space-x-3">
               <input
                 type="text"
                 value={inputText}
                 onChange={handleInputChange}
                 placeholder="Type a message..."
-                className="flex-1 bg-background border border-border rounded-2xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-accent text-primary min-w-0"
+                className="flex-1 bg-surface border border-border rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-accent text-primary min-w-0"
                 ref={inputRef}
               />
-              <button type="submit" className="bg-accent text-accent-text rounded-2xl w-12 h-12 flex-shrink-0 flex items-center justify-center hover:bg-accent-hover transition-colors disabled:opacity-50 shadow-sm" disabled={!inputText.trim() || isSending}>
+              <button type="submit" className="bg-accent text-accent-text rounded-lg w-12 h-11 flex-shrink-0 flex items-center justify-center hover:bg-accent-hover transition-colors disabled:opacity-50" disabled={!inputText.trim() || isSending}>
                 {isSending ? <div className="w-5 h-5 border-2 border-accent-text border-t-transparent rounded-full animate-spin"></div> : <SendIcon />}
               </button>
             </form>
           </div>
         )}
-        messagesClassName="px-3 py-4 sm:px-4"
+        messagesClassName="p-4 pb-4"
       >
         {isLoading ? (
           <div className="w-full h-full flex items-center justify-center">
             <img src="/duckload.gif" alt="Loading messages..." className="w-16 h-16" />
           </div>
         ) : (
-          <div className="flex min-h-full flex-col justify-end space-y-2">
+          <div className="flex flex-col space-y-2">
             {messages.map(message => {
               const isCurrentUser = message.senderId === currentUser.id;
               const sender = isCurrentUser ? currentUser : userMap.get(message.senderId);

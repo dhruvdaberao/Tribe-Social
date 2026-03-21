@@ -226,7 +226,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeItem, onSelectItem, currentUser
     </button>
   );
 
-  const shouldHideBottomNav = activeItem === 'TribeDetail' || activeItem === 'Messages';
+  const shouldHideBottomNav = activeItem === 'TribeDetail';
 
   return (
     <>

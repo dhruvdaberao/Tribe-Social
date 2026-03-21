@@ -179,14 +179,14 @@ const ConversationList: React.FC<ConversationListProps> = ({ conversations, isLo
 
   return (
     <div className="h-full min-h-0 flex flex-col bg-surface">
-      <div className="sticky top-0 z-20 p-4 sm:p-5 border-b border-border bg-surface/95 backdrop-blur supports-[backdrop-filter]:bg-surface/85 flex-shrink-0 flex justify-between items-center">
+      <div className="sticky top-0 z-10 p-5 border-b border-border bg-surface flex-shrink-0 flex justify-between items-center">
         <h2 className="text-3xl font-bold font-display text-primary">Messages</h2>
         <button onClick={onNewMessage} className="p-2 rounded-full text-primary bg-background border border-border hover:bg-accent hover:text-accent-text transition-colors" aria-label="New Message">
           <PlusIcon />
         </button>
       </div>
       <div
-        className="overflow-y-auto flex-1 min-h-0 overscroll-contain pb-[calc(1rem+env(safe-area-inset-bottom))] md:pb-4"
+        className="overflow-y-auto flex-1 min-h-0 overscroll-contain pb-32"
       >
         {/* Chuk AI Static Conversation */}
         <ConversationItem
@@ -281,7 +281,7 @@ const ConversationItem: React.FC<ConversationItemProps> = ({
       <div className="relative mr-4 flex-shrink-0">
         <UserAvatar user={otherParticipant} className="w-12 h-12" />
       </div>
-      <div className="flex-1 min-w-0 overflow-hidden">
+      <div className="flex-1 overflow-hidden">
         <p className="font-semibold text-primary">{otherParticipant.name || otherParticipant.username}</p>
         <p className="text-sm text-secondary truncate">{sanitizeConversationSnippet(conversation.lastMessage)}</p>
       </div>

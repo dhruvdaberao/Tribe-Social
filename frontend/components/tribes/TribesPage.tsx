@@ -108,10 +108,6 @@ const TribesPage: React.FC<TribesPageProps> = ({ currentUser, unreadTribeCount }
         </CreateButton>
       </Header>
 
-      {isLoading && tribes.length > 0 && (
-        <div style={{ marginBottom: 16, color: 'var(--color-secondary)', fontSize: 14 }}>Refreshing tribes…</div>
-      )}
-
       {isLoading && tribes.length === 0 && (
         <LoadingMessage>
           <img src="/busstop.gif" width={100} alt="Loading..." />

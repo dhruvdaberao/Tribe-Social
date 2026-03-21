@@ -26,15 +26,14 @@ const ChatInput: React.FC<ChatInputProps> = ({
     inputRef
 }) => {
     const fileInputRef = React.useRef<HTMLInputElement>(null);
-    const canSend = value.trim().length > 0 && !disabled && !isSending && !isUploading;
 
     return (
-        <form onSubmit={onSend} className="flex w-full items-end gap-2 sm:gap-3">
-            <div className="relative shrink-0">
+        <form onSubmit={onSend} className="flex items-center space-x-3 w-full">
+            <div className="relative">
                 <button
                     type="button"
                     onClick={() => fileInputRef.current?.click()}
-                    className="flex h-11 w-11 items-center justify-center rounded-full border border-border/80 bg-surface text-secondary shadow-sm transition hover:-translate-y-0.5 hover:text-primary disabled:opacity-50"
+                    className="h-10 w-10 rounded-full text-secondary flex items-center justify-center hover:bg-surface hover:text-primary transition-all duration-200"
                     aria-label="Attach media"
                     disabled={isUploading}
                 >
@@ -47,41 +46,44 @@ const ChatInput: React.FC<ChatInputProps> = ({
                     className="hidden"
                     onChange={(event) => {
                         const file = event.target.files?.[0];
-                        if (file && onAttachFile) onAttachFile(file);
+                        if (file && onAttachFile) {
+                            onAttachFile(file);
+                        }
                         if (event.target.value) event.target.value = '';
                     }}
                 />
             </div>
-            <div className="relative min-w-0 flex-1">
-                <input
-                    ref={inputRef}
-                    type="text"
-                    value={value}
-                    onChange={onChange}
-                    placeholder={placeholder}
-                    className="min-w-0 w-full rounded-[26px] border border-border/80 bg-surface px-4 py-3 pr-12 text-primary shadow-sm transition focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/30"
-                    style={{ fontSize: '16px' }}
-                />
-                {isUploading && (
-                    <div className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-[11px] font-medium text-secondary">
-                        {typeof uploadProgress === 'number' ? `${uploadProgress}%` : 'Uploading'}
-                    </div>
-                )}
-            </div>
+            <input
+                ref={inputRef}
+                type="text"
+                value={value}
+                onChange={onChange}
+                placeholder={placeholder}
+                className="flex-1 bg-surface border-none ring-1 ring-border rounded-full px-5 py-2.5 focus:outline-none focus:ring-2 focus:ring-accent text-primary min-w-0 shadow-sm transition-shadow duration-200"
+                style={{ fontSize: '16px' }} // iOS zoom prevention (from TribeMessageArea, good to keep)
+            />
             <button
                 type="submit"
-                className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full transition-all duration-200 ${canSend ? 'bg-accent text-accent-text shadow-lg shadow-accent/25 hover:-translate-y-0.5 hover:bg-accent/90' : 'bg-surface text-secondary ring-1 ring-border'}`}
-                disabled={!canSend}
-                aria-label="Send message"
+                className={`rounded-full w-10 h-10 flex-shrink-0 flex items-center justify-center transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed ${!value.trim() ? 'bg-surface text-secondary' : 'bg-accent text-accent-text hover:bg-accent/90 shadow-md hover:shadow-lg hover:scale-105 active:scale-95'}`}
+                disabled={disabled || isSending || isUploading}
             >
-                {isSending ? <div className="h-5 w-5 rounded-full border-2 border-current border-t-transparent animate-spin" /> : <SendIcon />}
+                {isSending ? (
+                    <div className="w-5 h-5 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
+                ) : (
+                    <SendIcon />
+                )}
             </button>
+            {isUploading && (
+                <div className="ml-2 text-xs text-secondary min-w-[60px] text-right">
+                    {typeof uploadProgress === 'number' ? `${uploadProgress}%` : 'Uploading'}
+                </div>
+            )}
         </form>
     );
 };
 
 const SendIcon = () => (
-    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
+    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="currentColor" viewBox="0 0 20 20">
         <path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z" />
     </svg>
 );

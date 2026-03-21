@@ -1,7 +1,133 @@
+
+
+
+
+
+
+
+// import React from 'react';
+// import { Conversation, User } from '../../types';
+// import UserAvatar from '../common/UserAvatar';
+
+// interface ConversationListProps {
+//   conversations: Conversation[];
+//   isLoading: boolean;
+//   currentUser: User;
+//   chukUser: User;
+//   userMap: Map<string, User>;
+//   activeConversationId?: string;
+//   onSelectConversation: (conversation: Conversation) => void;
+//   onNewMessage: () => void;
+//   unreadCounts: { [key: string]: number };
+// }
+
+// const ConversationList: React.FC<ConversationListProps> = ({ conversations, isLoading, currentUser, chukUser, userMap, activeConversationId, onSelectConversation, onNewMessage, unreadCounts }) => {
+
+//   const chukConversation: Conversation = {
+//     id: chukUser.id,
+//     participants: [{ id: currentUser.id }, { id: chukUser.id }],
+//     lastMessage: "Your personal guide & friend",
+//     timestamp: new Date().toISOString(), // This will not be displayed but good to have
+//     messages: []
+//   };
+
+//   return (
+//     <div className="h-full flex flex-col bg-surface">
+//       <div className="p-5 border-b border-border flex-shrink-0 flex justify-between items-center">
+//         <h2 className="text-[28px] font-bold font-display text-primary leading-[1.2]">Messages</h2>
+//         <button onClick={onNewMessage} className="p-2 rounded-full text-primary bg-background border border-border hover:bg-accent hover:text-accent-text transition-colors" aria-label="New Message">
+//             <PlusIcon />
+//         </button>
+//       </div>
+//       <div className="overflow-y-auto flex-1">
+//           {/* Chuk AI Static Conversation */}
+//           <ConversationItem
+//               key={chukConversation.id}
+//               conversation={chukConversation}
+//               otherParticipant={chukUser}
+//               isActive={chukConversation.id === activeConversationId}
+//               onSelect={onSelectConversation}
+//               unreadCount={0}
+//           />
+
+//         {isLoading ? (
+//             <div className="text-center p-8 text-secondary flex flex-col items-center">
+//                 <img src="/kiss.gif" alt="Loading..." className="w-16 h-16 mb-2" />
+//                 <p>Loading your chats...</p>
+//             </div>
+//         ) : conversations.length === 0 ? (
+//             <div className="text-center p-8 text-secondary">
+//                 <p>No user conversations yet.</p>
+//                 <button onClick={onNewMessage} className="text-sm text-accent font-semibold hover:underline mt-2">
+//                     Start a new chat!
+//                 </button>
+//             </div>
+//         ) : (
+//             conversations.map(conv => {
+//               const otherParticipantId = conv.participants.find(p => p.id !== currentUser.id)?.id;
+//               if (!otherParticipantId) return null;
+
+//               const otherParticipant = userMap.get(otherParticipantId);
+//               if (!otherParticipant) return null;
+
+//               return (
+//                 <ConversationItem
+//                   key={conv.id}
+//                   conversation={conv}
+//                   otherParticipant={otherParticipant}
+//                   isActive={conv.id === activeConversationId}
+//                   onSelect={onSelectConversation}
+//                   unreadCount={unreadCounts[otherParticipantId] || 0}
+//                 />
+//               );
+//             })
+//         )}
+//       </div>
+//     </div>
+//   );
+// };
+
+// interface ConversationItemProps {
+//     conversation: Conversation;
+//     otherParticipant: User;
+//     isActive: boolean;
+//     onSelect: (conv: Conversation) => void;
+//     unreadCount: number;
+// }
+
+// const ConversationItem: React.FC<ConversationItemProps> = ({ conversation, otherParticipant, isActive, onSelect, unreadCount }) => (
+//     <div
+//       onClick={() => onSelect(conversation)}
+//       className={`flex items-center p-4 cursor-pointer transition-colors border-b border-border ${
+//         isActive ? 'bg-background' : 'hover:bg-background'
+//       }`}
+//     >
+//         <div className="relative mr-4 flex-shrink-0">
+//             <UserAvatar user={otherParticipant} className="w-12 h-12" />
+//         </div>
+//       <div className="flex-1 overflow-hidden">
+//         <p className={`font-semibold text-primary`}>{otherParticipant.name}</p>
+//         <p className="text-sm text-secondary truncate">{conversation.lastMessage}</p>
+//       </div>
+//       {unreadCount > 0 && (
+//         <div className="ml-4 flex-shrink-0 w-6 h-6 bg-accent text-accent-text rounded-full flex items-center justify-center text-xs font-bold">
+//             {unreadCount}
+//         </div>
+//       )}
+//     </div>
+// )
+
+// const PlusIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>;
+
+// export default ConversationList;
+
+
+
+
+
 import React, { useState } from 'react';
 import { Conversation, User } from '../../types';
 import UserAvatar from '../common/UserAvatar';
-import Skeleton from '../common/Skeleton';
 
 interface ConversationListProps {
   conversations: Conversation[];
@@ -20,63 +146,59 @@ interface ConversationListProps {
 }
 
 const ConversationList: React.FC<ConversationListProps> = ({ conversations, isLoading, currentUser, chukUser, userMap, activeConversationId, onSelectConversation, onNewMessage, unreadCounts, onClearConversation, onToggleBlock, onToggleAutoDelete, autoDeleteMap }) => {
+
   const chukConversation: Conversation = {
     id: chukUser.id,
     participants: [{ id: currentUser.id }, { id: chukUser.id }],
-    lastMessage: 'Your personal guide & friend',
-    timestamp: new Date().toISOString(),
+    lastMessage: "Your personal guide & friend",
+    timestamp: new Date().toISOString(), // This will not be displayed but good to have
     messages: []
   };
 
   return (
-    <div className="flex h-full min-h-0 flex-col bg-surface">
-      <div className="sticky top-0 z-10 flex items-center justify-between border-b border-border bg-surface/95 px-4 py-4 backdrop-blur-md md:px-5">
-        <div>
-          <h2 className="text-[28px] font-bold font-display text-primary leading-[1.1]">Messages</h2>
-          <p className="mt-1 text-sm text-secondary">Recent chats stay cached for quicker switching.</p>
-        </div>
-        <button onClick={onNewMessage} className="flex h-11 w-11 items-center justify-center rounded-full border border-border bg-background text-primary shadow-sm transition hover:-translate-y-0.5 hover:border-accent hover:text-accent" aria-label="New Message">
+    <div className="h-full flex flex-col bg-surface">
+      <div className="p-5 border-b border-border flex-shrink-0 flex justify-between items-center">
+        <h2 className="text-3xl font-bold font-display text-primary">Messages</h2>
+        <button onClick={onNewMessage} className="p-2 rounded-full text-primary bg-background border border-border hover:bg-accent hover:text-accent-text transition-colors" aria-label="New Message">
           <PlusIcon />
         </button>
       </div>
-      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain pb-24 md:pb-4">
+      <div className="overflow-y-auto flex-1">
+        {/* Chuk AI Static Conversation */}
         <ConversationItem
+          key={chukConversation.id}
           conversation={chukConversation}
           otherParticipant={chukUser}
           isActive={chukConversation.id === activeConversationId}
           onSelect={onSelectConversation}
           unreadCount={0}
-          isBlocked={false}
+          isBlocked={(currentUser.blockedUsers || []).includes(chukUser.id)}
           isAutoDeleteEnabled={!!autoDeleteMap[chukUser.id]}
           onClearConversation={onClearConversation}
           onToggleBlock={onToggleBlock}
           onToggleAutoDelete={onToggleAutoDelete}
         />
 
-        {isLoading && conversations.length === 0 ? (
-          <div className="space-y-3 p-4">
-            {Array.from({ length: 5 }).map((_, index) => (
-              <div key={index} className="flex items-center gap-3 rounded-2xl border border-border/60 bg-background/50 p-3">
-                <Skeleton className="h-12 w-12 rounded-full" />
-                <div className="min-w-0 flex-1 space-y-2">
-                  <Skeleton className="h-4 w-32 rounded-full" />
-                  <Skeleton className="h-3 w-40 rounded-full" />
-                </div>
-              </div>
-            ))}
+        {isLoading ? (
+          <div className="text-center p-8 text-secondary flex flex-col items-center">
+            <div className="w-10 h-10 border-2 border-accent border-t-transparent rounded-full animate-spin mb-3" />
+            <p>Loading your chats...</p>
           </div>
         ) : conversations.length === 0 ? (
-          <div className="px-4 py-10 text-center text-secondary">
-            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-background">✉️</div>
+          <div className="text-center p-8 text-secondary">
             <p>No user conversations yet.</p>
-            <button onClick={onNewMessage} className="mt-3 text-sm font-semibold text-accent hover:underline">Start a new chat</button>
+            <button onClick={onNewMessage} className="text-sm text-accent font-semibold hover:underline mt-2">
+              Start a new chat!
+            </button>
           </div>
         ) : (
           conversations.map(conv => {
             const otherParticipantId = conv.participants.find(p => p.id !== currentUser.id)?.id;
             if (!otherParticipantId) return null;
+
             const otherParticipant = userMap.get(otherParticipantId);
             if (!otherParticipant) return null;
+
             return (
               <ConversationItem
                 key={conv.id}
@@ -112,44 +234,90 @@ interface ConversationItemProps {
   onToggleAutoDelete: (otherUserId: string) => void;
 }
 
-const ConversationItem: React.FC<ConversationItemProps> = ({ conversation, otherParticipant, isActive, onSelect, unreadCount, isBlocked, isAutoDeleteEnabled, onClearConversation, onToggleBlock, onToggleAutoDelete }) => {
+const ConversationItem: React.FC<ConversationItemProps> = ({
+  conversation,
+  otherParticipant,
+  isActive,
+  onSelect,
+  unreadCount,
+  isBlocked,
+  isAutoDeleteEnabled,
+  onClearConversation,
+  onToggleBlock,
+  onToggleAutoDelete
+}) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   return (
-    <div className={`relative border-b border-border/70 px-3 py-2 sm:px-4 ${isActive ? 'bg-background/95' : 'hover:bg-background/70'}`}>
-      <button onClick={() => onSelect(conversation)} className="flex w-full items-center gap-3 rounded-2xl px-2 py-2 text-left transition">
-        <div className="relative flex-shrink-0">
-          {otherParticipant.id === 'chuk-ai' ? (
-            <div className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-full bg-background">
-              <img src="/chuk-ai.png" alt="Psyduck AI" className="h-full w-full object-contain" />
-            </div>
-          ) : (
-            <UserAvatar user={otherParticipant} className="h-12 w-12" />
-          )}
-          {unreadCount > 0 && <span className="absolute -right-1 -top-1 flex h-5 min-w-[20px] items-center justify-center rounded-full bg-accent px-1 text-[11px] font-bold text-accent-text">{Math.min(unreadCount, 99)}</span>}
-        </div>
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center justify-between gap-2">
-            <p className="truncate font-semibold text-primary">{otherParticipant.name}</p>
-            <span className="shrink-0 text-[11px] text-secondary">{new Date(conversation.timestamp).toLocaleDateString([], { month: 'short', day: 'numeric' })}</span>
+    <div
+      onClick={() => onSelect(conversation)}
+      className={`relative flex items-center p-4 cursor-pointer transition-colors border-b border-border ${isActive ? 'bg-background' : 'hover:bg-background'
+        }`}
+    >
+      <div className="relative mr-4 flex-shrink-0">
+        {otherParticipant.id === 'chuk-ai' ? (
+          <div className="w-12 h-12 flex items-center justify-center bg-transparent rounded-full flex-shrink-0">
+            <img src="/chuk-ai.png" alt="Psyduck AI" className="w-full h-full object-contain" />
           </div>
-          <p className="truncate text-sm text-secondary">{conversation.lastMessage || 'Say hello 👋'}</p>
-          <div className="mt-1 flex flex-wrap gap-2 text-[11px] text-secondary">
-            {isBlocked && <span className="rounded-full bg-red-500/10 px-2 py-0.5 text-red-400">Blocked</span>}
-            {isAutoDeleteEnabled && <span className="rounded-full bg-accent/10 px-2 py-0.5 text-accent">24h auto-delete</span>}
-          </div>
+        ) : (
+          <UserAvatar user={otherParticipant} className="w-12 h-12" />
+        )}
+      </div>
+      <div className="flex-1 overflow-hidden">
+        <p className="font-semibold text-primary">{otherParticipant.name}</p>
+        <p className="text-sm text-secondary truncate">{conversation.lastMessage || 'Sent an attachment'}</p>
+      </div>
+      {unreadCount > 0 && (
+        <div className="ml-4 flex-shrink-0 w-6 h-6 bg-accent text-accent-text rounded-full flex items-center justify-center text-xs font-bold">
+          {unreadCount}
         </div>
+      )}
+      <button
+        type="button"
+        aria-label="Conversation actions"
+        onClick={(event) => {
+          event.stopPropagation();
+          setIsMenuOpen(prev => !prev);
+        }}
+        className="ml-3 p-2 text-secondary hover:text-primary rounded-full hover:bg-background"
+      >
+        <MoreIcon />
       </button>
-      {otherParticipant.id !== 'chuk-ai' && (
-        <div className="absolute right-4 top-4">
-          <button type="button" onClick={() => setIsMenuOpen(open => !open)} className="rounded-full p-2 text-secondary transition hover:bg-background hover:text-primary" aria-label="Conversation options">⋯</button>
-          {isMenuOpen && (
-            <div className="absolute right-0 z-20 mt-2 w-48 overflow-hidden rounded-2xl border border-border bg-surface shadow-xl">
-              <button type="button" onClick={() => { onToggleAutoDelete(otherParticipant.id); setIsMenuOpen(false); }} className="block w-full px-4 py-3 text-left text-sm text-primary hover:bg-background">{isAutoDeleteEnabled ? 'Disable' : 'Enable'} auto-delete</button>
-              <button type="button" onClick={() => { onClearConversation(otherParticipant.id); setIsMenuOpen(false); }} className="block w-full px-4 py-3 text-left text-sm text-primary hover:bg-background">Clear conversation</button>
-              <button type="button" onClick={() => { onToggleBlock(otherParticipant.id); setIsMenuOpen(false); }} className="block w-full px-4 py-3 text-left text-sm text-red-400 hover:bg-red-500/10">{isBlocked ? 'Unblock user' : 'Block user'}</button>
-            </div>
-          )}
+      {isMenuOpen && (
+        <div
+          className="absolute right-3 top-14 z-20 w-48 rounded-lg border border-border bg-surface shadow-lg overflow-hidden"
+          onClick={(event) => event.stopPropagation()}
+        >
+          <button
+            type="button"
+            className="w-full px-4 py-2 text-left text-sm text-primary hover:bg-background"
+            onClick={() => {
+              setIsMenuOpen(false);
+              onClearConversation(otherParticipant.id);
+            }}
+          >
+            Clear chat
+          </button>
+          <button
+            type="button"
+            className="w-full px-4 py-2 text-left text-sm text-primary hover:bg-background"
+            onClick={() => {
+              setIsMenuOpen(false);
+              onToggleAutoDelete(otherParticipant.id);
+            }}
+          >
+            {isAutoDeleteEnabled ? 'Disable 24h auto delete' : 'Enable 24h auto delete'}
+          </button>
+          <button
+            type="button"
+            className="w-full px-4 py-2 text-left text-sm text-red-500 hover:bg-red-500/10"
+            onClick={() => {
+              setIsMenuOpen(false);
+              onToggleBlock(otherParticipant.id);
+            }}
+          >
+            {isBlocked ? 'Unblock user' : 'Block user'}
+          </button>
         </div>
       )}
     </div>
@@ -157,5 +325,6 @@ const ConversationItem: React.FC<ConversationItemProps> = ({ conversation, other
 };
 
 const PlusIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>;
+const MoreIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 6h.01M12 12h.01M12 18h.01" /></svg>;
 
 export default ConversationList;
