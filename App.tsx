@@ -28,6 +28,7 @@ import StoryFeed from './components/stories/StoryFeed';
 import { Toaster, toast } from './components/common/Toast';
 import PostViewModal from './components/profile/PostViewModal';
 import ReportModal from './components/common/ReportModal';
+import { useVisualViewport } from './hooks/useVisualViewport';
 
 export type NavItem = 'Home' | 'Discover' | 'Messages' | 'Tribes' | 'Notifications' | 'Profile' | 'Chuk' | 'TribeDetail' | 'Settings' | 'Admin';
 
@@ -103,6 +104,12 @@ const App: React.FC = () => {
 
     // Report System State
     const [reportTarget, setReportTarget] = useState<{ id: string, type: 'post' | 'user' | 'tribe' | 'comment' | 'story', name: string } | null>(null);
+    const viewportHeight = useVisualViewport();
+
+    useEffect(() => {
+        if (typeof document === 'undefined' || !viewportHeight) return;
+        document.documentElement.style.setProperty('--vvh', `${viewportHeight}px`);
+    }, [viewportHeight]);
 
     // Initialize from SessionStorage for instant load
     useEffect(() => {
@@ -861,7 +868,7 @@ const App: React.FC = () => {
         }
     };
 
-    let containerClass = 'max-w-2xl mx-auto px-4 md:px-6 pt-6 pb-24 md:pb-8'; // Default with bottom nav padding
+    let containerClass = 'w-full max-w-2xl mx-auto px-4 md:px-6 pt-6 pb-24 md:pb-8'; // Default with bottom nav padding
     const isChatPage = ['Messages', 'TribeDetail'].includes(activeNavItem);
 
     if (isFullHeightPage) {
@@ -871,9 +878,7 @@ const App: React.FC = () => {
         // 3. We use h-screen or 100dvh for the specific chat layout.
         containerClass = 'h-full min-h-0 w-full max-w-5xl mx-auto md:px-4 md:pb-4';
         if (isChatPage) {
-            // Mobile specific: NO padding, full viewport.
-            // Desktop: keep some padding/max-width structure.
-            containerClass = 'pt-0 h-[var(--vvh,100dvh)] min-h-0 w-full max-w-6xl mx-auto md:pt-20 md:h-[var(--vvh,100dvh)] md:px-4';
+            containerClass = 'h-full min-h-0 w-full max-w-6xl mx-auto md:px-4 md:pb-4';
         } else if (activeNavItem === 'Settings') {
             containerClass = 'h-[calc(100vh-8rem)] md:h-[calc(100vh-4rem)] max-w-2xl mx-auto px-4';
         }
@@ -882,7 +887,7 @@ const App: React.FC = () => {
     }
 
     return (
-        <div className="bg-background h-[var(--vvh,100dvh)] text-primary overflow-hidden flex flex-col">
+        <div className="bg-background h-[var(--vvh,100dvh)] min-h-[100dvh] text-primary flex flex-col">
             <Toaster />
             {/* Pass a prop or logic to hide bottom nav on chat pages if possible, 
                 OR we ensure the ChatPage covers it with z-index. 
@@ -898,7 +903,7 @@ const App: React.FC = () => {
               - We remove pb-16 (bottom nav padding) effectively by not having it on the container.
               - We use fixed inset-0 z-40 to go OVER the bottom nav and top bar if needed.
             */}
-            <main className={`flex-1 min-h-0 overflow-hidden ${isChatPage ? 'pt-0 pb-0' : 'pt-16 pb-16 md:pb-0'}`}>
+            <main className={`flex-1 min-h-0 ${isChatPage ? 'overflow-hidden pt-16 md:pt-20' : 'overflow-y-auto overscroll-y-contain pt-16 pb-16 md:pb-0'}`}>
                 <div className={`${containerClass} min-h-0`}>
                     {renderContent()}
                 </div>
