@@ -1,45 +1,31 @@
 import { useEffect } from 'react';
 
+const setViewportCssVars = () => {
+  if (typeof window === 'undefined') return;
+  const vv = window.visualViewport;
+  const height = vv?.height ?? window.innerHeight;
+  const offsetTop = vv?.offsetTop ?? 0;
+  const keyboardInset = Math.max(0, window.innerHeight - height - offsetTop);
+  document.documentElement.style.setProperty('--vvh', `${height}px`);
+  document.documentElement.style.setProperty('--keyboard-inset', `${keyboardInset}px`);
+};
+
 export const useVisualViewportHeight = () => {
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
-    const setViewportHeight = () => {
-      // Use visualViewport height if available, falling back to innerHeight
-      // visualViewport.height handles the on-screen keyboard correctly
-      const height = window.visualViewport?.height ?? window.innerHeight;
-      document.documentElement.style.setProperty('--vvh', `${height}px`);
-    };
+    setViewportCssVars();
+    window.addEventListener('resize', setViewportCssVars);
+    window.visualViewport?.addEventListener('resize', setViewportCssVars);
+    window.visualViewport?.addEventListener('scroll', setViewportCssVars);
 
-    setViewportHeight();
-
-    // Listen to both window resize and visualViewport resize
-    window.addEventListener('resize', setViewportHeight);
-    window.visualViewport?.addEventListener('resize', setViewportHeight);
-    window.visualViewport?.addEventListener('scroll', setViewportHeight);
+    const timers = [50, 150, 300, 600].map(delay => window.setTimeout(setViewportCssVars, delay));
 
     return () => {
-      window.removeEventListener('resize', setViewportHeight);
-      window.visualViewport?.removeEventListener('resize', setViewportHeight);
-      window.visualViewport?.removeEventListener('scroll', setViewportHeight);
+      window.removeEventListener('resize', setViewportCssVars);
+      window.visualViewport?.removeEventListener('resize', setViewportCssVars);
+      window.visualViewport?.removeEventListener('scroll', setViewportCssVars);
+      timers.forEach(window.clearTimeout);
     };
-  }, []);
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-
-    const updateHeight = () => {
-      const height = window.visualViewport?.height ?? window.innerHeight;
-      document.documentElement.style.setProperty('--vvh', `${height}px`);
-    };
-
-    // Force update immediately
-    updateHeight();
-
-    // Poll for a short duration to ensure stability on mobile mount
-    const intervals = [100, 300, 500, 1000];
-    const timers = intervals.map(t => setTimeout(updateHeight, t));
-
-    return () => timers.forEach(clearTimeout);
   }, []);
 };

@@ -49,7 +49,13 @@ const FeedPage: React.FC<FeedPageProps> = (props) => {
   }, [observerTarget, hasMore, onLoadMore]);
   return (
     <div>
-      <h1 className="text-[28px] font-bold text-primary mb-6 font-display leading-[1.2]">Home Feed</h1>
+      <div className="mb-6 flex items-end justify-between gap-4">
+        <div>
+          <h1 className="text-[28px] font-bold text-primary font-display leading-[1.2]">Home Feed</h1>
+          <p className="mt-1 text-sm text-secondary">Fresh posts load in the background without blanking your feed.</p>
+        </div>
+        {isLoading && posts.length > 0 && <span className="rounded-full bg-surface px-3 py-1 text-xs font-medium text-secondary">Refreshing…</span>}
+      </div>
       {isLoading && posts.length === 0 ? (
         <div className="space-y-6">
           <PostSkeleton />
@@ -80,7 +86,7 @@ const FeedPage: React.FC<FeedPageProps> = (props) => {
 
       {hasMore ? (
         <div ref={observerTarget} className="py-8 flex justify-center w-full">
-          <PostSkeleton />
+          <div className="w-full max-w-xl"><PostSkeleton /></div>
         </div>
       ) : posts.length > 0 ? (
         <div className="py-12 flex flex-col items-center justify-center text-center">
