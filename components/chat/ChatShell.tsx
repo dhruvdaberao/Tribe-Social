@@ -18,10 +18,10 @@ const ChatShell: React.FC<ChatShellProps> = ({
 }) => {
   return (
     <section
-      className={`chat-shell flex flex-col h-full w-full overflow-hidden bg-background ${className}`}
+      className={`chat-shell flex h-full min-h-0 w-full flex-col overflow-hidden bg-background ${className}`}
     >
       <header
-        className="flex-shrink-0 z-[1000] border-b border-border bg-surface w-full"
+        className="sticky top-0 z-30 w-full flex-shrink-0 border-b border-border bg-surface/95 backdrop-blur supports-[backdrop-filter]:bg-surface/85"
       >
         {header}
       </header>
@@ -31,7 +31,7 @@ const ChatShell: React.FC<ChatShellProps> = ({
       </div>
 
       <footer
-        className="flex-shrink-0 z-40 border-t border-border bg-surface"
+        className="sticky bottom-0 z-30 flex-shrink-0 border-t border-border bg-surface/95 backdrop-blur supports-[backdrop-filter]:bg-surface/85"
       >
         {composer}
       </footer>

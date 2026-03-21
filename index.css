@@ -1,5 +1,15 @@
-/* FIX: Added styles to ensure full-height layout and prevent horizontal scrolling. */
-html, body, #root {
+html,
+body,
+#root {
+  min-height: 100%;
   height: 100%;
   overflow-x: hidden;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
 }
