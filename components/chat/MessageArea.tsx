@@ -318,7 +318,7 @@ export const MessageArea: React.FC<MessageAreaProps> = ({ conversation, messages
     <>
       <ChatShell
         header={(
-          <div className="flex items-center p-3 bg-surface">
+          <div className="flex items-center px-3 py-3 md:px-4 bg-surface">
             <button onClick={onBack} className="md:hidden p-2 mr-2 text-primary">
               <BackIcon />
             </button>
@@ -339,17 +339,28 @@ export const MessageArea: React.FC<MessageAreaProps> = ({ conversation, messages
           </div>
         )}
         composer={(
-          <div className="px-4 pt-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))]">
-            <form onSubmit={handleSendMessage} className="flex items-center space-x-3">
+          <div className="px-3 pt-3 pb-3 md:px-4">
+            {replyToMessage && (
+              <div className="mb-3 flex items-start justify-between gap-3 rounded-2xl border border-border bg-background px-3 py-2">
+                <div className="min-w-0">
+                  <p className="text-xs font-semibold text-secondary">Replying to {replyToMessage.senderId === currentUser.id ? 'yourself' : otherParticipant.name}</p>
+                  <p className="text-sm text-primary truncate">{replyToMessage.text}</p>
+                </div>
+                <button type="button" className="text-secondary hover:text-primary" onClick={() => setReplyToMessage(null)} aria-label="Cancel reply">
+                  <CloseIcon />
+                </button>
+              </div>
+            )}
+            <form onSubmit={handleSendMessage} className="flex items-end space-x-3">
               <input
                 type="text"
                 value={inputText}
                 onChange={handleInputChange}
                 placeholder="Type a message..."
-                className="flex-1 bg-surface border border-border rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-accent text-primary min-w-0"
+                className="flex-1 bg-surface border border-border rounded-2xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-accent text-primary min-w-0"
                 ref={inputRef}
               />
-              <button type="submit" className="bg-accent text-accent-text rounded-lg w-12 h-11 flex-shrink-0 flex items-center justify-center hover:bg-accent-hover transition-colors disabled:opacity-50" disabled={!inputText.trim() || isSending}>
+              <button type="submit" className="bg-accent text-accent-text rounded-2xl w-12 h-12 flex-shrink-0 flex items-center justify-center hover:bg-accent-hover transition-colors disabled:opacity-50" disabled={!inputText.trim() || isSending}>
                 {isSending ? <div className="w-5 h-5 border-2 border-accent-text border-t-transparent rounded-full animate-spin"></div> : <SendIcon />}
               </button>
             </form>
@@ -477,3 +488,5 @@ const sanitizeMessageText = (text: string) => {
 };
 
 const BackIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>;
+
+const CloseIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>;

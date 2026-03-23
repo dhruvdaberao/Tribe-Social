@@ -200,9 +200,9 @@ const TribeDetailPage: React.FC<TribeDetailPageProps> = (props) => {
   return (
     <>
       <ChatShell
-        className="md:bg-surface md:border md:border-border md:shadow-md h-full"
+        className="h-full md:bg-surface md:border md:border-border md:shadow-md"
         header={(
-          <div className="flex items-center p-3 bg-surface border-b border-border">
+          <div className="flex items-center px-3 py-3 md:px-4 bg-surface border-b border-border">
             <button onClick={onBack} className="p-2 mr-2 text-primary">
               <BackIcon />
             </button>
@@ -240,18 +240,29 @@ const TribeDetailPage: React.FC<TribeDetailPageProps> = (props) => {
           </div>
         )}
         composer={(
-          <div className="px-4 pt-3 pb-[calc(0.25rem+env(safe-area-inset-bottom))] bg-surface">
-            <form onSubmit={handleSendMessage} className="flex items-center space-x-3">
+          <div className="px-3 pt-3 pb-3 md:px-4 bg-surface">
+            {replyToMessage && (
+              <div className="mb-3 flex items-start justify-between gap-3 rounded-2xl border border-border bg-background px-3 py-2">
+                <div className="min-w-0">
+                  <p className="text-xs font-semibold text-secondary">Replying to {replyToMessage.senderId === currentUser.id ? 'yourself' : (replyToMessage.sender?.name || 'member')}</p>
+                  <p className="text-sm text-primary truncate">{replyToMessage.text}</p>
+                </div>
+                <button type="button" className="text-secondary hover:text-primary" onClick={() => setReplyToMessage(null)} aria-label="Cancel reply">
+                  <CloseIcon />
+                </button>
+              </div>
+            )}
+            <form onSubmit={handleSendMessage} className="flex items-end space-x-3">
               <input
                 type="text"
                 value={inputText}
                 onChange={handleInputChange}
                 placeholder={isMember ? `Message #${tribe.name}` : "You must be a member to chat"}
-                className="flex-1 bg-background border border-border rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-accent text-primary min-w-0"
+                className="flex-1 bg-background border border-border rounded-2xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-accent text-primary min-w-0"
                 disabled={!isMember || isLoading}
                 ref={inputRef}
               />
-              <button type="submit" className="bg-accent text-accent-text rounded-lg w-12 h-11 flex-shrink-0 flex items-center justify-center hover:bg-accent-hover transition-colors disabled:opacity-50" disabled={!inputText.trim() || !isMember || isLoading}>
+              <button type="submit" className="bg-accent text-accent-text rounded-2xl w-12 h-12 flex-shrink-0 flex items-center justify-center hover:bg-accent-hover transition-colors disabled:opacity-50" disabled={!inputText.trim() || !isMember || isLoading}>
                 <SendIcon />
               </button>
             </form>
@@ -403,6 +414,8 @@ const TribeDetailPage: React.FC<TribeDetailPageProps> = (props) => {
 };
 
 const SendIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="currentColor" viewBox="0 0 20 20"><path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z" /></svg>;
+const CloseIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>;
+
 const BackIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>;
 const EditIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.536l12.232-12.232z" /></svg>;
 const TrashIcon = ({ className = 'h-5 w-5' }: { className?: string; }) => <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>;

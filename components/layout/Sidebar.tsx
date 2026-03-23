@@ -77,7 +77,7 @@
 //   return (
 //     <>
 //       {/* Top Header */}
-//       <header className="fixed top-0 left-0 right-0 h-16 bg-accent shadow-md z-50 flex items-center justify-between px-4 md:px-6">
+//       <header className={`fixed top-0 left-0 right-0 h-16 bg-accent shadow-md z-50 items-center justify-between px-4 md:px-6 ${isMobileMessagingShell ? 'hidden md:flex' : 'flex'}`}>
 //         {/* Left Side: Logo & Desktop Nav */}
 //         <div className="flex items-center space-x-6">
 //             <div 
@@ -226,12 +226,13 @@ const Sidebar: React.FC<SidebarProps> = ({ activeItem, onSelectItem, currentUser
     </button>
   );
 
-  const shouldHideBottomNav = activeItem === 'TribeDetail';
+  const isMobileMessagingShell = activeItem === 'Messages' || activeItem === 'TribeDetail';
+  const shouldHideBottomNav = isMobileMessagingShell;
 
   return (
     <>
       {/* Top Header */}
-      <header className="fixed top-0 left-0 right-0 h-16 bg-accent shadow-md z-50 flex items-center justify-between px-4 md:px-6">
+      <header className={`fixed top-0 left-0 right-0 h-16 bg-accent shadow-md z-50 items-center justify-between px-4 md:px-6 ${isMobileMessagingShell ? 'hidden md:flex' : 'flex'}`}>
         {/* Left Side: Logo & Desktop Nav */}
         <div className="flex items-center space-x-6">
           <div
