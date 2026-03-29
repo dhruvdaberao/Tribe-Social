@@ -27,20 +27,20 @@ const ChatShell: React.FC<ChatShellProps> = ({
 
   return (
     <section
-      className={`chat-shell relative flex min-h-0 h-full w-full flex-col overflow-hidden bg-background ${className}`}
+      className={`chat-shell relative grid min-h-0 h-full w-full grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden bg-background ${className}`}
     >
       <header
-        className="flex-shrink-0 z-20 border-b border-border bg-surface/95 backdrop-blur-sm w-full"
+        className="sticky top-0 z-30 border-b border-border bg-surface/95 backdrop-blur-sm w-full"
       >
         {header}
       </header>
 
-      <div className={`flex-1 min-h-0 overflow-y-auto overscroll-contain touch-pan-y ${messagesClassName}`}>
+      <div className={`min-h-0 overflow-y-auto overscroll-contain touch-pan-y ${messagesClassName}`}>
         {children}
       </div>
 
       <footer
-        className="flex-shrink-0 z-20 border-t border-border bg-surface/95 backdrop-blur-sm pb-[max(env(safe-area-inset-bottom),0px)] md:pb-0"
+        className="sticky bottom-0 z-30 border-t border-border bg-surface/95 backdrop-blur-sm pb-[max(env(safe-area-inset-bottom),0px)] md:pb-0"
       >
         {composer}
       </footer>
