@@ -1,11 +1,11 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import styled from 'styled-components';
 import { useSocket } from '../../contexts/SocketContext';
 import { WifiOff } from 'lucide-react';
 
 const StatusBanner = styled.div`
   position: fixed;
-  bottom: 80px; /* Above bottom nav */
+  bottom: calc(80px + env(safe-area-inset-bottom, 0px));
   left: 50%;
   transform: translateX(-50%);
   background-color: ${({ theme }) => theme.cardBackground};
@@ -29,26 +29,7 @@ const StatusBanner = styled.div`
 `;
 
 const ConnectionStatus: React.FC = () => {
-    const { socket } = useSocket();
-    const [isConnected, setIsConnected] = useState(socket?.connected || false);
-
-    useEffect(() => {
-        if (!socket) return;
-
-        const onConnect = () => setIsConnected(true);
-        const onDisconnect = () => setIsConnected(false);
-
-        socket.on('connect', onConnect);
-        socket.on('disconnect', onDisconnect);
-
-        // Initial check
-        setIsConnected(socket.connected);
-
-        return () => {
-            socket.off('connect', onConnect);
-            socket.off('disconnect', onDisconnect);
-        };
-    }, [socket]);
+    const { isConnected } = useSocket();
 
     if (isConnected) return null; // Don't show anything if connected
 

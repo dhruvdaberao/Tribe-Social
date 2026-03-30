@@ -1,15 +1,73 @@
 :root {
-  --vh: 1vh;
-  --dvh: 1vh;
+  --app-height: 100dvh;
+  --keyboard-inset-height: 0px;
+  --vvh: 100dvh;
+}
+
+@supports not (height: 100dvh) {
+  :root {
+    --app-height: 100vh;
+    --vvh: 100vh;
+  }
 }
 
 html,
-body,
-#root {
+body {
+  height: 100%;
   min-height: 100%;
+  margin: 0;
   overflow-x: hidden;
+  overscroll-behavior-y: none;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  background-color: #1e1512;
+  padding: 0;
+}
+
+#root {
+  height: 100%;
+  min-height: 100%;
+  overflow-x: hidden;
+}
+
+.chat-container {
+  display: flex;
+  flex-direction: column;
+  height: var(--app-height);
+  min-height: 0;
+  overflow: hidden;
+}
+
+@media (min-width: 768px) {
+  .chat-container {
+    height: 100%;
+  }
+}
+
+.chat-header {
+  flex: 0 0 auto;
+  position: sticky;
+  top: 0;
+  z-index: 20;
+}
+
+.chat-messages {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
+}
+
+.chat-input {
+  flex: 0 0 auto;
+  position: sticky;
+  bottom: 0;
+  z-index: 20;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
 /* Custom Scrollbar for Webkit (Chrome, Safari, Edge) */

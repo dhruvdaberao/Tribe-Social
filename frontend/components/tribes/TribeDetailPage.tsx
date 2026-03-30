@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 // import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useParams, useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
@@ -13,10 +13,11 @@ import EditTribeModal from './EditTribeModal';
 import { Users, ArrowLeft, Edit2, LogIn, LogOut, Flame, X } from 'lucide-react';
 import { toast } from '../common/Toast';
 import ConfirmationModal from '../common/ConfirmationModal';
+import { useVisualViewportHeight } from '../../hooks/useVisualViewportHeight';
 
 /* ───────────── STYLES ───────────── */
 const PageContainer = styled.div`
-  height: calc(var(--vvh, 100dvh));
+  height: var(--app-height);
   display: flex;
   flex-direction: column;
   background: ${({ theme }) => theme.background};
@@ -184,32 +185,7 @@ const TribeDetailPage: React.FC<Props> = ({ currentUser, tribeId: propTribeId })
   const params = useParams<{ tribeId: string }>();
   const navigate = useNavigate();
   const MAX_ATTACHMENT_BYTES = 20 * 1024 * 1024;
-
-  // Hook for dynamic viewport height
-  // Note: We might want to move this to App level if used globally, but safe to call here.
-  // Actually, ChatShell handles this, but TribeDetailPage uses PageContainer which relies on --vvh too.
-  // Let's import the hook to be safe if PageContainer is the one setting height.
-  // Wait, PageContainer uses --vvh. ChatShell calls the hook.
-  // If we are in loading state using ChatShell, hook is called.
-  // If we are in error state using PageContainer directly... hook might NOT be called if we don't call it here.
-  // Let's add the import and call it.
-
-  // But wait, ChatShell import is already there. Let's check imports.
-  // ... imports check ...
-  // useVisualViewportHeight is likely needed if we use PageContainer directly.
-
-  // Let's just rely on ChatShell being rendered most of the time, or adding the hook call:
-  // import { useVisualViewportHeight } from '../../hooks/useVisualViewportHeight';
-
-  // Re-reading file... I don't see the hook imported.
-  // Let's skip adding the hook call and assume ChatShell handles it, 
-  // OR if PageContainer is used for errors, it might fallback to 100dvh which is CSS supported.
-  // The styled-component uses `calc(var(--vvh, 100dvh))` so it has a fallback.
-
-  // The main layout issue was `1vh * 100` vs `100dvh`.
-  // My previous edit to PageContainer fixed that: `height: calc(var(--vvh, 100dvh));`
-
-  // Proceeding with next steps.
+  useVisualViewportHeight();
 
   const id = propTribeId || params.tribeId;
 
@@ -302,6 +278,41 @@ const TribeDetailPage: React.FC<Props> = ({ currentUser, tribeId: propTribeId })
     () => new Map(allUsers.map(u => [u.id, u])),
     [allUsers]
   );
+
+  const sortMessages = useCallback((items: TribeMessage[]) => {
+    return [...items].sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+  }, []);
+
+  const mergeResolvedMessage = useCallback((existing: TribeMessage[], incoming: TribeMessage) => {
+    const hydratedMessage = { ...incoming };
+    if (!hydratedMessage.sender || typeof hydratedMessage.sender === 'string' || !hydratedMessage.sender.name) {
+      const foundUser = userMap.get(incoming.senderId);
+      if (foundUser) {
+        hydratedMessage.sender = foundUser;
+      }
+    }
+
+    const tempId = hydratedMessage.tempId ?? hydratedMessage.clientTempId;
+    const next = existing.filter(message => {
+      if (message.id === hydratedMessage.id) return false;
+      if (!tempId) return true;
+      return message.id !== `temp-${tempId}` && message.clientTempId !== tempId;
+    });
+
+    return sortMessages([...next, { ...hydratedMessage, status: undefined }]);
+  }, [sortMessages, userMap]);
+
+  const updateCachedMessages = useCallback((updater: (existing: TribeMessage[]) => TribeMessage[]) => {
+    if (!id) return;
+    const cachedEntry = messageCache.current.get(id);
+    const nextMessages = updater(cachedEntry?.messages || []);
+
+    messageCache.current.set(id, {
+      messages: nextMessages,
+      hasMore: cachedEntry?.hasMore ?? false,
+      oldestTimestamp: cachedEntry?.oldestTimestamp,
+    });
+  }, [id]);
 
   /* ───────────── DELETE HANDLER ───────────── */
   const handleDeleteTribe = async (tribeId: string) => {
@@ -396,48 +407,10 @@ const TribeDetailPage: React.FC<Props> = ({ currentUser, tribeId: propTribeId })
     }
 
     const handleIncoming = (message: TribeMessage) => {
-      // 1. Verify it belongs to this tribe
       if (message.tribeId !== id) return;
 
-      setMessages(prev => {
-        // 2. Prevent processing if message with same ID already exists
-        const exists = prev.some(m => m.id === message.id || (m as any)._id === message.id);
-        if (exists) return prev;
-
-        // 3. Ensure sender is populated (fallback to cached user map)
-        const fullMessage = { ...message };
-        if (!fullMessage.sender || typeof fullMessage.sender === 'string' || !fullMessage.sender.name) {
-          const foundUser = userMap.get(message.senderId);
-          if (foundUser) {
-            fullMessage.sender = foundUser;
-          }
-        }
-
-        // 4. Handle Optimistic Replacement
-        // If we have a temp message that matches this new real message (by tempId content), replace it.
-        // The server response usually handles the replacement, but the socket event might arrive first.
-        const tempMatchIndex = prev.findIndex(m => (m as any).id === `temp-${(fullMessage as any).tempId}`);
-
-        let nextMessages = prev;
-        if (tempMatchIndex !== -1) {
-          const newMessages = [...prev];
-          newMessages[tempMatchIndex] = fullMessage;
-          nextMessages = newMessages;
-        } else {
-          nextMessages = [...prev, fullMessage].sort((a, b) =>
-            new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
-          );
-        }
-
-        const cacheEntry = messageCache.current.get(id);
-        messageCache.current.set(id, {
-          messages: nextMessages,
-          hasMore: cacheEntry?.hasMore ?? false,
-          oldestTimestamp: cacheEntry?.oldestTimestamp,
-        });
-
-        return nextMessages;
-      });
+      setMessages(prev => mergeResolvedMessage(prev, message));
+      updateCachedMessages(cachedMessages => mergeResolvedMessage(cachedMessages, message));
 
       // Clear unread count immediately since we are viewing it
       if (document.visibilityState === 'visible') {
@@ -450,7 +423,7 @@ const TribeDetailPage: React.FC<Props> = ({ currentUser, tribeId: propTribeId })
     return () => {
       socket.off('newTribeMessage', handleIncoming);
     };
-  }, [socket, id, isMember, userMap, clearUnreadTribe]);
+  }, [socket, id, isMember, clearUnreadTribe, mergeResolvedMessage, updateCachedMessages]);
 
   /* ───────────── REMOVED LEGACY SCROLL ───────────── */
   // useEffect(() => {
@@ -499,6 +472,7 @@ const TribeDetailPage: React.FC<Props> = ({ currentUser, tribeId: propTribeId })
     const tempId = `${Date.now()}`;
     const optimistic: TribeMessage = {
       id: `temp-${tempId}`,
+      tempId,
       tribeId: id,
       sender: currentUser,
       senderId: currentUser.id,
@@ -513,13 +487,8 @@ const TribeDetailPage: React.FC<Props> = ({ currentUser, tribeId: propTribeId })
       attachmentSize: attachmentFile?.size,
     };
 
-    setMessages(prev => [...prev, optimistic]);
-    const cachedEntry = messageCache.current.get(id);
-    messageCache.current.set(id, {
-      messages: [...(cachedEntry?.messages || []), optimistic],
-      hasMore: cachedEntry?.hasMore ?? false,
-      oldestTimestamp: cachedEntry?.oldestTimestamp,
-    });
+    setMessages(prev => sortMessages([...prev, optimistic]));
+    updateCachedMessages(cachedMessages => sortMessages([...cachedMessages, optimistic]));
     setIsSending(true);
 
     try {
@@ -566,24 +535,12 @@ const TribeDetailPage: React.FC<Props> = ({ currentUser, tribeId: propTribeId })
         responseMessage = data;
       }
 
-      setMessages(prev => prev.map(m => (m.id === optimistic.id ? { ...responseMessage, status: undefined } : m)));
-      const updatedEntry = messageCache.current.get(id);
-      if (updatedEntry) {
-        messageCache.current.set(id, {
-          ...updatedEntry,
-          messages: updatedEntry.messages.map(m => (m.id === optimistic.id ? { ...responseMessage, status: undefined } : m)),
-        });
-      }
+      setMessages(prev => mergeResolvedMessage(prev, { ...responseMessage, status: undefined }));
+      updateCachedMessages(cachedMessages => mergeResolvedMessage(cachedMessages, { ...responseMessage, status: undefined }));
     } catch (error) {
       console.error('Failed to send message:', error);
       setMessages(prev => prev.map(m => (m.id === optimistic.id ? { ...m, status: 'failed' } : m)));
-      const updatedEntry = messageCache.current.get(id);
-      if (updatedEntry) {
-        messageCache.current.set(id, {
-          ...updatedEntry,
-          messages: updatedEntry.messages.map(m => (m.id === optimistic.id ? { ...m, status: 'failed' } : m)),
-        });
-      }
+      updateCachedMessages(cachedMessages => cachedMessages.map(message => (message.id === optimistic.id ? { ...message, status: 'failed' } : message)));
       toast.error('Failed to send message');
     } finally {
       setIsSending(false);

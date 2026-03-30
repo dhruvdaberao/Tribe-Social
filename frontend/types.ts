@@ -74,6 +74,7 @@ export interface Post {
 /* ===================== DIRECT MESSAGES ===================== */
 export interface Message {
   id: string;
+  tempId?: string;
   senderId: string;
   receiverId: string;
   text: string;
@@ -127,6 +128,7 @@ export interface Tribe {
 export interface TribeMessage {
   id: string;          // 🔥 FRONTEND ID (normalized from _id)
   tribeId: string;
+  tempId?: string;
   sender: User;
   senderId: string;
   text: string;

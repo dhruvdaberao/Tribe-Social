@@ -5,21 +5,26 @@ export const useVisualViewportHeight = () => {
     if (typeof window === 'undefined') return;
 
     const setViewportHeight = () => {
-      // Use visualViewport height if available, falling back to innerHeight
-      // visualViewport.height handles the on-screen keyboard correctly
-      const height = window.visualViewport?.height ?? window.innerHeight;
+      const viewport = window.visualViewport;
+      const height = viewport?.height ?? window.innerHeight;
+      const offsetTop = viewport?.offsetTop ?? 0;
+      const keyboardInset = Math.max(0, window.innerHeight - height - offsetTop);
+
+      document.documentElement.style.setProperty('--app-height', `${height}px`);
       document.documentElement.style.setProperty('--vvh', `${height}px`);
+      document.documentElement.style.setProperty('--keyboard-inset-height', `${keyboardInset}px`);
     };
 
     setViewportHeight();
 
-    // Listen to both window resize and visualViewport resize
     window.addEventListener('resize', setViewportHeight);
+    window.addEventListener('orientationchange', setViewportHeight);
     window.visualViewport?.addEventListener('resize', setViewportHeight);
     window.visualViewport?.addEventListener('scroll', setViewportHeight);
 
     return () => {
       window.removeEventListener('resize', setViewportHeight);
+      window.removeEventListener('orientationchange', setViewportHeight);
       window.visualViewport?.removeEventListener('resize', setViewportHeight);
       window.visualViewport?.removeEventListener('scroll', setViewportHeight);
     };
@@ -29,14 +34,18 @@ export const useVisualViewportHeight = () => {
     if (typeof window === 'undefined') return;
 
     const updateHeight = () => {
-      const height = window.visualViewport?.height ?? window.innerHeight;
+      const viewport = window.visualViewport;
+      const height = viewport?.height ?? window.innerHeight;
+      const offsetTop = viewport?.offsetTop ?? 0;
+      const keyboardInset = Math.max(0, window.innerHeight - height - offsetTop);
+
+      document.documentElement.style.setProperty('--app-height', `${height}px`);
       document.documentElement.style.setProperty('--vvh', `${height}px`);
+      document.documentElement.style.setProperty('--keyboard-inset-height', `${keyboardInset}px`);
     };
 
-    // Force update immediately
     updateHeight();
 
-    // Poll for a short duration to ensure stability on mobile mount
     const intervals = [100, 300, 500, 1000];
     const timers = intervals.map(t => setTimeout(updateHeight, t));
 

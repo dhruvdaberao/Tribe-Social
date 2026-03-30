@@ -176,8 +176,8 @@ const MainLayout: React.FC = () => {
     // Render Helpers
     const containerClass = isFullHeightPage
         ? `${isChatPage
-            ? 'h-[calc(var(--vvh,var(--dvh,1vh)*100))] overflow-hidden'
-            : `h-[calc(var(--dvh,1vh)*100-${(activeNavItem === 'Messages' && !isChatOpen ? '8rem' : '4rem')})] md:h-[calc(var(--dvh,1vh)*100-4rem)] overflow-y-auto no-scrollbar`
+            ? 'h-full overflow-hidden'
+            : `h-[calc(var(--app-height)-${activeNavItem === 'Messages' && !isChatOpen ? '8rem' : '4rem'})] md:h-[calc(var(--app-height)-4rem)] overflow-y-auto no-scrollbar`
         }`
         : isWidePage ? 'max-w-5xl mx-auto px-4 md:px-6 pt-6 pb-24 md:pb-8'
             : 'max-w-2xl mx-auto px-4 md:px-6 pt-6 pb-24 md:pb-8';
@@ -271,9 +271,13 @@ const MainLayout: React.FC = () => {
 
     useEffect(() => {
         const setViewportHeight = () => {
-            // Root cause: 100vh + page scroll let the keyboard resize push the header; use visualViewport-driven height to lock chat to the visible viewport.
-            const viewportHeight = window.visualViewport?.height ?? window.innerHeight;
+            const viewport = window.visualViewport;
+            const viewportHeight = viewport?.height ?? window.innerHeight;
+            const offsetTop = viewport?.offsetTop ?? 0;
+            const keyboardInset = Math.max(0, window.innerHeight - viewportHeight - offsetTop);
             const vh = viewportHeight * 0.01;
+            document.documentElement.style.setProperty('--app-height', `${viewportHeight}px`);
+            document.documentElement.style.setProperty('--keyboard-inset-height', `${keyboardInset}px`);
             document.documentElement.style.setProperty('--dvh', `${vh}px`);
             document.documentElement.style.setProperty('--vh', `${vh}px`);
         };
@@ -289,7 +293,7 @@ const MainLayout: React.FC = () => {
     }, []);
 
     return (
-        <div className={`bg-background min-h-screen text-primary touch-pan-y ${isFullHeightPage ? 'h-[calc(var(--dvh,1vh)*100)] overflow-hidden' : ''}`}>
+        <div className={`bg-background min-h-[var(--app-height)] text-primary touch-pan-y ${isFullHeightPage ? 'h-[var(--app-height)] overflow-hidden' : ''}`}>
             <Toaster />
             <Sidebar
                 activeItem={activeNavItem}
@@ -302,7 +306,7 @@ const MainLayout: React.FC = () => {
             />
 
             <main
-                className={`${shouldHideHeader ? 'pt-0 md:pt-16' : 'pt-16'} pb-16 md:pb-0 transition-all duration-300 ${isFullHeightPage ? 'h-[calc(var(--dvh,1vh)*100)]' : 'min-h-screen'} ${isChatPage ? 'overflow-hidden' : ''}`}
+                className={`${shouldHideHeader ? 'pt-0 md:pt-16' : 'pt-16'} ${isChatPage ? 'pb-0' : 'pb-16 md:pb-0'} box-border transition-all duration-300 ${isFullHeightPage ? 'h-[var(--app-height)]' : 'min-h-[var(--app-height)]'} ${isChatPage ? 'overflow-hidden' : ''}`}
                 onTouchStart={handleTouchStart}
                 onTouchEnd={handleTouchEnd}
             >
@@ -704,7 +708,7 @@ const App: React.FC = () => {
     }, []);
 
     if (isAuthLoading) {
-        return <div className="min-h-screen bg-background flex flex-col items-center justify-center"><img src="/duckload.gif" alt="Loading..." className="w-24 h-24" /><h1 className="mt-4 text-xl font-semibold text-primary">Loading...</h1></div>;
+        return <div className="min-h-[var(--app-height)] bg-background flex flex-col items-center justify-center"><img src="/duckload.gif" alt="Loading..." className="w-24 h-24" /><h1 className="mt-4 text-xl font-semibold text-primary">Loading...</h1></div>;
     }
 
     if (!currentUser) return <LoginPage />;

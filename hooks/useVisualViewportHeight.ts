@@ -5,8 +5,15 @@ export const useVisualViewportHeight = () => {
     if (typeof window === 'undefined') return;
 
     const setViewportHeight = () => {
-      const height = window.visualViewport?.height ?? window.innerHeight;
+      const viewport = window.visualViewport;
+      const height = viewport?.height ?? window.innerHeight;
       document.documentElement.style.setProperty('--vvh', `${height}px`);
+      document.documentElement.style.setProperty('--app-height', `${height}px`);
+
+      const keyboardInset = viewport
+        ? Math.max(0, window.innerHeight - (viewport.height + viewport.offsetTop))
+        : 0;
+      document.documentElement.style.setProperty('--keyboard-inset-height', `${keyboardInset}px`);
     };
 
     setViewportHeight();

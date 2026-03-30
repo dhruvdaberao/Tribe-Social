@@ -885,7 +885,7 @@ const App: React.FC = () => {
     }
 
     return (
-        <div className="bg-background h-[var(--vvh,100dvh)] text-primary overflow-hidden flex flex-col">
+        <div className="bg-background h-[var(--app-height)] text-primary overflow-hidden flex flex-col">
             <Toaster />
             {/* Pass a prop or logic to hide bottom nav on chat pages if possible, 
                 OR we ensure the ChatPage covers it with z-index. 

@@ -399,7 +399,7 @@ export const MessageArea: React.FC<MessageAreaProps> = ({
       <ChatShell
         className="flex-1"
         header={(
-          <div className="flex items-center px-4 py-3 border-b border-border flex-shrink-0 bg-surface/95 backdrop-blur-md z-50 w-full shadow-sm">
+          <div className="flex items-center border-b border-border bg-surface/95 px-4 pb-3 pt-[max(env(safe-area-inset-top,0px),0.75rem)] shadow-sm backdrop-blur-md">
             <button onClick={onBack} className="md:hidden p-2 -ml-2 mr-2 text-primary hover:bg-background rounded-full transition-colors">
               <BackIcon />
             </button>
@@ -428,7 +428,7 @@ export const MessageArea: React.FC<MessageAreaProps> = ({
         )}
         messagesRef={scrollContainerRef}
         onMessagesScroll={handleScroll}
-        messagesClassName="p-4"
+        messagesClassName="px-4 py-3"
         composer={(
           <div className="px-4 py-3 bg-background/95 backdrop-blur-sm border-t border-border z-20">
             {replyToMessage && (
@@ -614,9 +614,6 @@ export const MessageArea: React.FC<MessageAreaProps> = ({
               <div className="text-center text-secondary p-8">
                 <p>This is the beginning of your conversation with {otherParticipant.name}.</p>
               </div>
-            )}
-            {isSending && otherParticipant.id !== 'chuk-ai' && (
-              <div className="flex justify-end"><p className="text-xs text-secondary mt-1.5 px-1 italic">Sending...</p></div>
             )}
             <div ref={messagesEndRef} />
           </div>

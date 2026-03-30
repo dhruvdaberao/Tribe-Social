@@ -21,55 +21,13 @@ const ChatShell: React.FC<ChatShellProps> = ({
   messagesClassName = ''
 }) => {
   useVisualViewportHeight();
-  const composerRef = React.useRef<HTMLDivElement>(null);
-  const [composerOffset, setComposerOffset] = React.useState(72);
-
-  React.useEffect(() => {
-    // Prevent body scroll while chat is open to avoid double scrollbars
-    const previousBodyOverflow = document.body.style.overflow;
-    const previousDocumentOverflow = document.documentElement.style.overflow;
-
-    document.body.style.overflow = 'hidden';
-    document.documentElement.style.overflow = 'hidden';
-
-    // Also try to prevent overscroll behavior on body
-    document.body.style.overscrollBehaviorY = 'none';
-
-    return () => {
-      document.body.style.overflow = previousBodyOverflow;
-      document.documentElement.style.overflow = previousDocumentOverflow;
-      document.body.style.overscrollBehaviorY = '';
-    };
-  }, []);
-
-  React.useEffect(() => {
-    if (!composerRef.current) {
-      setComposerOffset(16);
-      return;
-    }
-
-    const updateComposerOffset = () => {
-      const composerHeight = composerRef.current?.offsetHeight ?? 0;
-      setComposerOffset(composerHeight + 10);
-    };
-
-    updateComposerOffset();
-    const observer = new ResizeObserver(updateComposerOffset);
-    observer.observe(composerRef.current);
-    window.visualViewport?.addEventListener('resize', updateComposerOffset);
-
-    return () => {
-      observer.disconnect();
-      window.visualViewport?.removeEventListener('resize', updateComposerOffset);
-    };
-  }, [composer]);
 
   return (
     <div
-      className={`fixed inset-0 z-[100] flex flex-col bg-background overflow-hidden h-[var(--vvh,100dvh)] md:relative md:inset-auto md:z-0 md:h-full ${className}`}
+      className={`chat-container relative min-h-0 w-full bg-background md:h-full ${className}`}
     >
       {header ? (
-        <div className="flex-none border-b border-border z-50">
+        <div className="chat-header flex-none border-b border-border bg-background">
           {header}
         </div>
       ) : null}
@@ -77,16 +35,14 @@ const ChatShell: React.FC<ChatShellProps> = ({
       <div
         ref={messagesRef}
         onScroll={onMessagesScroll}
-        className={`flex-1 min-h-0 overflow-y-auto overscroll-contain ${messagesClassName}`}
-        style={{ paddingBottom: `${composerOffset}px` }}
+        className={`chat-messages min-h-0 flex-1 overflow-y-auto overscroll-contain ${messagesClassName}`}
       >
         {children}
       </div>
 
       {composer ? (
         <div
-          ref={composerRef}
-          className="flex-none bg-background border-t border-border z-50 pb-[max(env(safe-area-inset-bottom,0px),8px)] md:pb-0"
+          className="chat-input flex-none border-t border-border bg-background"
         >
           {composer}
         </div>

@@ -56,20 +56,8 @@ const ChatPage: React.FC<ChatPageProps> = ({ currentUser, allUsers, chukUser, in
   const [isNewMessageModalOpen, setNewMessageModalOpen] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const [isInitializing, setIsInitializing] = useState(!!initialTargetUser);
-  // Cache for messages
   const messageCache = React.useRef<Map<string, { messages: Message[]; hasMore: boolean; oldestTimestamp?: string }>>(new Map());
   const { socket, onlineUsers, clearUnreadMessages, unreadCounts, setActiveChatPartnerId } = useSocket();
-
-  // Viewport for mobile chat
-  const [viewportHeight, setViewportHeight] = useState<number | null>(null);
-  useEffect(() => {
-    if (typeof window !== 'undefined' && window.visualViewport) {
-      const handleResize = () => setViewportHeight(window.visualViewport!.height);
-      window.visualViewport.addEventListener('resize', handleResize);
-      setViewportHeight(window.visualViewport.height);
-      return () => window.visualViewport!.removeEventListener('resize', handleResize);
-    }
-  }, []);
 
   useEffect(() => {
     return () => {
@@ -91,6 +79,32 @@ const ChatPage: React.FC<ChatPageProps> = ({ currentUser, allUsers, chukUser, in
     map.set(chukUser.id, chukUser);
     return map;
   }, [allUsers, chukUser]);
+
+  const sortMessages = useCallback((items: Message[]) => {
+    return [...items].sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+  }, []);
+
+  const mergeResolvedMessage = useCallback((existing: Message[], incoming: Message) => {
+    const tempId = incoming.tempId ?? incoming.clientTempId;
+    const next = existing.filter(message => {
+      if (message.id === incoming.id) return false;
+      if (!tempId) return true;
+      return message.id !== `temp-${tempId}` && message.clientTempId !== tempId;
+    });
+
+    return sortMessages([...next, { ...incoming, status: undefined }]);
+  }, [sortMessages]);
+
+  const updateCachedMessages = useCallback((partnerId: string, updater: (existing: Message[]) => Message[]) => {
+    const cachedEntry = messageCache.current.get(partnerId);
+    const nextMessages = updater(cachedEntry?.messages || []);
+
+    messageCache.current.set(partnerId, {
+      messages: nextMessages,
+      hasMore: cachedEntry?.hasMore ?? false,
+      oldestTimestamp: cachedEntry?.oldestTimestamp,
+    });
+  }, []);
 
   const fetchConversations = useCallback(async () => {
     setIsLoadingConversations(true);
@@ -126,30 +140,10 @@ const ChatPage: React.FC<ChatPageProps> = ({ currentUser, allUsers, chukUser, in
       const receiverId = message.receiverId;
       const otherUserId = senderId === currentUser.id ? receiverId : senderId;
 
-      const cachedEntry = messageCache.current.get(otherUserId);
-      const cachedMessages = cachedEntry?.messages || [];
-      if (!cachedMessages.some(m => m.id === message.id)) {
-        messageCache.current.set(otherUserId, {
-          messages: [...cachedMessages, message],
-          hasMore: cachedEntry?.hasMore ?? false,
-          oldestTimestamp: cachedEntry?.oldestTimestamp,
-        });
-      }
+      updateCachedMessages(otherUserId, cachedMessages => mergeResolvedMessage(cachedMessages, message));
 
       if (isActiveConversation) {
-        setMessages(prev => {
-          const messageMap = new Map();
-          prev.forEach(m => messageMap.set(m.id, m));
-          messageMap.set(message.id, message);
-          if ((message as any).tempId) {
-            const tempKey = `temp-${(message as any).tempId}`;
-            if (messageMap.has(tempKey)) {
-              messageMap.delete(tempKey);
-              messageMap.set(message.id, message);
-            }
-          }
-          return Array.from(messageMap.values()).sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
-        });
+        setMessages(prev => mergeResolvedMessage(prev, message));
       }
 
       setConversations(prev => {
@@ -183,7 +177,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ currentUser, allUsers, chukUser, in
       socket.off('newMessage', handleNewMessage);
       socket.off('messageDeleted', handleMessageDeleted);
     };
-  }, [socket, activeConversation, currentUser.id]);
+  }, [socket, activeConversation, currentUser.id, mergeResolvedMessage, updateCachedMessages]);
 
 
   const handleSelectConversation = useCallback(async (conv: Conversation) => {
@@ -346,6 +340,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ currentUser, allUsers, chukUser, in
     const tempId = `${Date.now()}`;
     const tempMessage: Message = {
       id: `temp-${tempId}`,
+      tempId,
       senderId: currentUser.id,
       receiverId: otherUserId,
       text,
@@ -358,23 +353,22 @@ const ChatPage: React.FC<ChatPageProps> = ({ currentUser, allUsers, chukUser, in
       attachmentName: attachmentFile?.name,
       attachmentSize: attachmentFile?.size,
     };
-    setMessages(prev => [...prev, tempMessage]);
-    const cachedEntry = messageCache.current.get(otherUserId);
-    messageCache.current.set(otherUserId, {
-      messages: [...(cachedEntry?.messages || []), tempMessage],
-      hasMore: cachedEntry?.hasMore ?? false,
-      oldestTimestamp: cachedEntry?.oldestTimestamp,
-    });
+    setMessages(prev => sortMessages([...prev, tempMessage]));
+    updateCachedMessages(otherUserId, cachedMessages => sortMessages([...cachedMessages, tempMessage]));
 
     if (otherUserId === chukUser.id) {
       try {
         const { data } = await api.generateAiChat({ prompt: text });
         const chukResponse: Message = { id: `chuk-${Date.now()}`, senderId: chukUser.id, receiverId: currentUser.id, text: data.text, timestamp: new Date().toISOString() };
-        setMessages(prev => [...prev.filter(m => m.id !== tempMessage.id), tempMessage, chukResponse]);
+        const sentMessage: Message = { ...tempMessage, status: undefined };
+        setMessages(prev => sortMessages([...prev.filter(message => message.id !== tempMessage.id), sentMessage, chukResponse]));
+        updateCachedMessages(otherUserId, cachedMessages => sortMessages([...cachedMessages.filter(message => message.id !== tempMessage.id), sentMessage, chukResponse]));
       } catch (error) {
         console.error("Chuk AI Error:", error);
         const errorMessage: Message = { id: `chuk-err-${Date.now()}`, senderId: chukUser.id, receiverId: currentUser.id, text: "Psy... yi... yi... headache... I can't think right now... Psy! 🌀", timestamp: new Date().toISOString() };
-        setMessages(prev => [...prev.filter(m => m.id !== tempMessage.id), tempMessage, errorMessage]);
+        const sentMessage: Message = { ...tempMessage, status: undefined };
+        setMessages(prev => sortMessages([...prev.filter(message => message.id !== tempMessage.id), sentMessage, errorMessage]));
+        updateCachedMessages(otherUserId, cachedMessages => sortMessages([...cachedMessages.filter(message => message.id !== tempMessage.id), sentMessage, errorMessage]));
       } finally {
         setIsSending(false);
       }
@@ -429,16 +423,8 @@ const ChatPage: React.FC<ChatPageProps> = ({ currentUser, allUsers, chukUser, in
         responseMessage = data;
       }
 
-      setMessages(prev =>
-        prev.map((msg) => (msg.id === tempMessage.id ? { ...responseMessage, status: undefined } : msg))
-      );
-      messageCache.current.set(otherUserId, {
-        messages: (messageCache.current.get(otherUserId)?.messages || []).map((msg) =>
-          msg.id === tempMessage.id ? { ...responseMessage, status: undefined } : msg
-        ),
-        hasMore: messageCache.current.get(otherUserId)?.hasMore ?? false,
-        oldestTimestamp: messageCache.current.get(otherUserId)?.oldestTimestamp,
-      });
+      setMessages(prev => mergeResolvedMessage(prev, { ...responseMessage, status: undefined }));
+      updateCachedMessages(otherUserId, cachedMessages => mergeResolvedMessage(cachedMessages, { ...responseMessage, status: undefined }));
 
       if (activeConversation.id.startsWith('temp-')) {
         const newConversations = await fetchConversations();
@@ -452,6 +438,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ currentUser, allUsers, chukUser, in
       const serverMsg = error.response?.data?.message || error.message || "Connection failed";
       toast.error(`Send Failed: ${serverMsg}`);
       setMessages(prev => prev.map(m => (m.id === tempMessage.id ? { ...m, status: 'failed' } : m)));
+      updateCachedMessages(otherUserId, cachedMessages => cachedMessages.map(message => (message.id === tempMessage.id ? { ...message, status: 'failed' } : message)));
     } finally {
       setIsSending(false);
       setIsUploading(false);
@@ -525,7 +512,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ currentUser, allUsers, chukUser, in
   }, [autoDeleteEnabled, messages]);
 
   return (
-    <div className="h-full md:h-[calc(100vh-2rem)] md:border md:border-border md:shadow-lg flex md:overflow-hidden relative bg-surface">
+    <div className="flex h-full min-h-0 overflow-hidden bg-surface md:rounded-3xl md:border md:border-border md:shadow-lg">
 
       {/* 
         CONVERSATION LIST (SIDEBAR)
@@ -533,7 +520,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ currentUser, allUsers, chukUser, in
         Desktop: Fixed width 
       */}
       <div
-        className={`w-full md:w-[320px] lg:w-[380px] flex-shrink-0 flex flex-col h-full bg-surface ${isMessageAreaVisible ? 'hidden md:flex' : 'flex'
+        className={`w-full md:w-[320px] lg:w-[380px] flex-shrink-0 flex min-h-0 flex-col bg-surface ${isMessageAreaVisible ? 'hidden md:flex' : 'flex'
           } md:border-r md:border-border`}
       >
         <ConversationList
@@ -559,14 +546,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ currentUser, allUsers, chukUser, in
         Desktop: Flex-1, static
       */}
       <div
-        className={`
-          md:flex-1 md:flex md:flex-col md:relative md:bg-background
-          ${isMessageAreaVisible
-            ? 'fixed inset-0 z-[60] flex flex-col bg-background' // Mobile active state
-            : 'hidden md:flex' // Mobile inactive state
-          }
-        `}
-        style={isMessageAreaVisible && typeof window !== 'undefined' && window.innerWidth < 768 && viewportHeight ? { height: `${viewportHeight}px` } : {}}
+        className={`min-h-0 flex-1 bg-background ${isMessageAreaVisible ? 'flex flex-col' : 'hidden md:flex md:flex-col'}`}
       >
         {activeConversation ? (
           <MessageArea
@@ -591,7 +571,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ currentUser, allUsers, chukUser, in
         ) : isInitializing ? (
           <ChatShell
             header={(
-              <div className="flex items-center px-4 py-3 border-b border-border flex-shrink-0 bg-surface/95 backdrop-blur-md z-50 w-full shadow-sm">
+              <div className="flex items-center border-b border-border bg-surface/95 px-4 pb-3 pt-[max(env(safe-area-inset-top,0px),0.75rem)] shadow-sm">
                 <div className="w-8 h-8 rounded-full bg-border opacity-50 animate-pulse mr-3" />
                 <div className="h-4 w-32 bg-border opacity-50 rounded animate-pulse" />
               </div>
