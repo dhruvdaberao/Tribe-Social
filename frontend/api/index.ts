@@ -15,6 +15,19 @@ const API = axios.create({
   timeout: API_TIMEOUT_MS,
 });
 
+const isPublicEndpoint = (url?: string) => {
+  if (!url) return false;
+  return url.includes('/auth/login') || url.includes('/auth/register') || url.includes('/auth/forgot-password') || url.includes('/auth/verify-otp');
+};
+
+const handleUnauthorizedSession = () => {
+  localStorage.removeItem('token');
+  localStorage.removeItem('currentUser');
+  if (typeof window !== 'undefined' && window.location.pathname !== '/') {
+    window.location.href = '/';
+  }
+};
+
 // Retry failed requests 3 times with exponential delay
 axiosRetry(API, {
   retries: 3,
@@ -30,7 +43,14 @@ API.interceptors.request.use(req => {
   if (rawToken) {
     const token = rawToken.replace(/"/g, '').trim(); // Sanitized
     req.headers.Authorization = `Bearer ${token}`;
+    return req;
   }
+
+  if (!isPublicEndpoint(req.url)) {
+    handleUnauthorizedSession();
+    return Promise.reject(new Error('Missing auth token'));
+  }
+
   return req;
 });
 
@@ -55,13 +75,8 @@ API.interceptors.response.use(
       }
     }
 
-    if (error.response && error.response.status === 401 && !isLoginRequest) {
-      localStorage.removeItem('token');
-      localStorage.removeItem('currentUser');
-      // Prevent aggressive redirects. Let the UI handle the "logged out" state naturally (e.g., via App.tsx)
-      // if (window.location.pathname !== '/' && window.location.pathname !== '/login') {
-      //   window.location.href = '/';
-      // }
+    if (error.response && error.response.status === 401 && !isLoginRequest && !isPublicEndpoint(error.config?.url)) {
+      handleUnauthorizedSession();
     }
     return Promise.reject(error);
   }
