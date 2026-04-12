@@ -189,7 +189,7 @@ const TribeDetailPage: React.FC<Props> = ({ currentUser, tribeId: propTribeId })
 
   const id = propTribeId || params.tribeId;
 
-  const { socket, joinRoom, leaveRoom, clearUnreadTribe } = useSocket();
+  const { socket, joinRoom, leaveRoom, clearUnreadTribe, onlineUsers } = useSocket();
   const { tribes: allTribes } = useGlobalContent();
 
   // Optimistic init from navigation state
@@ -786,16 +786,70 @@ const TribeDetailPage: React.FC<Props> = ({ currentUser, tribeId: propTribeId })
         />
       )}
 
-      {isCampfireOpen && (
+      {isCampfireOpen && tribe && (
         <CampfireOverlay onClick={() => setIsCampfireOpen(false)}>
           <CampfireModal onClick={(event) => event.stopPropagation()}>
             <CampfireHeader>
-              <h3>Campfire</h3>
+              <h3>🔥 Campfire</h3>
               <CampfireClose onClick={() => setIsCampfireOpen(false)} aria-label="Close Campfire">
                 <X size={18} />
               </CampfireClose>
             </CampfireHeader>
-            <CampfireBody>Coming soon.</CampfireBody>
+            <p style={{ fontSize: '0.8rem', opacity: 0.6, margin: '0 0 12px' }}>
+              {tribe.members.filter(mId => onlineUsers.includes(mId)).length} online now
+            </p>
+            <div style={{ maxHeight: '50vh', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 2 }}>
+              {(() => {
+                const onlineMembers = tribe.members
+                  .map(mId => userMap.get(mId))
+                  .filter((u): u is User => !!u)
+                  .sort((a, b) => {
+                    const aOnline = onlineUsers.includes(a.id) ? 0 : 1;
+                    const bOnline = onlineUsers.includes(b.id) ? 0 : 1;
+                    return aOnline - bOnline;
+                  });
+                return onlineMembers.map(user => {
+                  const isOnline = onlineUsers.includes(user.id);
+                  return (
+                    <div
+                      key={user.id}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 10,
+                        padding: '8px 4px',
+                        borderRadius: 8,
+                        opacity: isOnline ? 1 : 0.5,
+                      }}
+                    >
+                      <div style={{ position: 'relative', flexShrink: 0 }}>
+                        <div style={{
+                          width: 36, height: 36, borderRadius: '50%',
+                          background: user.avatarUrl ? `url(${user.avatarUrl}) center/cover` : 'var(--color-secondary)',
+                          border: '2px solid ' + (isOnline ? '#22c55e' : 'transparent'),
+                        }} />
+                        {isOnline && (
+                          <div style={{
+                            position: 'absolute', bottom: 0, right: 0,
+                            width: 10, height: 10, borderRadius: '50%',
+                            background: '#22c55e',
+                            border: '2px solid var(--color-card-bg)',
+                          }} />
+                        )}
+                      </div>
+                      <div style={{ overflow: 'hidden' }}>
+                        <div style={{ fontWeight: 600, fontSize: '0.9rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          {user.name}
+                        </div>
+                        <div style={{ fontSize: '0.75rem', opacity: 0.6, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          @{user.username} · {isOnline ? <span style={{ color: '#22c55e' }}>Online</span> : 'Offline'}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                });
+              })()}
+            </div>
           </CampfireModal>
         </CampfireOverlay>
       )}
