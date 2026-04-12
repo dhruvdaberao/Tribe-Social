@@ -303,14 +303,14 @@ export const MessageArea: React.FC<MessageAreaProps> = ({
       >
 
         {isLoading && messages.length === 0 ? (
-          <div className="relative w-full min-h-full">
-            <div className="loader w-10 h-10 border-2 border-accent border-t-transparent rounded-full animate-spin" />
+          <div className="relative w-full min-h-full flex items-center justify-center">
+            <img src="/busstop.gif" width={80} alt="Loading..." className="mb-4" />
           </div>
         ) : (
           <div className="flex flex-col space-y-3">
             {isLoadingMore && (
               <div className="flex justify-center py-2">
-                <div className="w-6 h-6 border-2 border-accent border-t-transparent rounded-full animate-spin" />
+                <img src="/busstop.gif" width={40} alt="Loading..." />
               </div>
             )}
             {messages.map(message => {

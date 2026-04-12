@@ -101,7 +101,7 @@ const ConversationList: React.FC<ConversationListProps> = ({
 
         {isLoading ? (
           <div className="flex flex-col items-center p-8 text-center text-secondary">
-            <div className="mb-3 h-10 w-10 animate-spin rounded-full border-2 border-accent border-t-transparent" />
+            <img src="/busstop.gif" width={80} alt="Loading..." className="mb-3" />
             <p>Loading your chats...</p>
           </div>
         ) : filteredConversations.length === 0 ? (

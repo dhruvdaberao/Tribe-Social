@@ -129,6 +129,9 @@ const AccountInfoModal: React.FC<{ user: User; onClose: () => void }> = ({ user,
                             value={formData.password}
                             onChange={e => setFormData({ ...formData, password: e.target.value })}
                             className="w-full mt-1 p-2 bg-background border border-border rounded-lg text-primary focus:outline-none focus:ring-2 focus:ring-accent"
+                            autoComplete="new-password"
+                            name="new-password-field"
+                            data-lpignore="true"
                         />
                     </div>
                     <div className="flex justify-end pt-4">

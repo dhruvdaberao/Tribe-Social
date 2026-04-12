@@ -583,7 +583,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ currentUser, allUsers, chukUser, in
           >
             <div className="flex-1 flex items-center justify-center">
               <div className="flex flex-col items-center">
-                <div className="w-10 h-10 border-2 border-accent border-t-transparent rounded-full animate-spin mb-4" />
+                <img src="/busstop.gif" width={80} alt="Loading..." className="mb-4" />
                 <p className="text-secondary text-lg">Loading conversation...</p>
               </div>
             </div>
