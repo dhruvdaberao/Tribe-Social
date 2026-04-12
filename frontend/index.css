@@ -50,7 +50,22 @@ body {
   min-height: 0;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
-  overscroll-behavior-y: contain;
+}
+
+.messages-header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: inherit;
+}
+
+.messages-container {
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.chat-item {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .chat-input {
@@ -61,6 +76,22 @@ body {
   right: 0;
   z-index: 20;
   padding-bottom: max(8px, env(safe-area-inset-bottom, 0px));
+}
+
+.chat-input-container {
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: none;
+  position: sticky;
+  bottom: 0;
+  z-index: 10;
+  background: inherit;
+}
+
+.loader {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
 }
 
 /* Custom Scrollbar for Webkit (Chrome, Safari, Edge) */
