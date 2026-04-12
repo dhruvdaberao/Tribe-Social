@@ -24,7 +24,7 @@ const ChatShell: React.FC<ChatShellProps> = ({
 
   return (
     <div
-      className={`chat-container relative min-h-0 w-full bg-background md:h-full ${className}`}
+      className={`chat-container relative flex h-[var(--app-height)] min-h-0 w-full flex-col bg-background md:h-full ${className}`}
     >
       {header ? (
         <div className="chat-header flex-none border-b border-border bg-background">
@@ -42,7 +42,7 @@ const ChatShell: React.FC<ChatShellProps> = ({
 
       {composer ? (
         <div
-          className="chat-input flex-none border-t border-border bg-background"
+          className="chat-input flex-none border-t border-border bg-background/95 backdrop-blur-sm"
         >
           {composer}
         </div>
