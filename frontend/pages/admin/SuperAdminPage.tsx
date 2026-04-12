@@ -40,7 +40,7 @@ const SuperAdminPage: React.FC = () => {
   const isReportedView = view === 'reported';
 
   return (
-    <div className="max-w-5xl mx-auto px-4 py-8">
+    <div className="max-w-5xl mx-auto px-4 py-8 pb-32">
       <div className="bg-surface rounded-2xl shadow-sm border border-border p-6">
         <div className="flex items-center justify-between">
           <div>

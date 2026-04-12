@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { toast } from '../../components/common/Toast';
 import * as api from '../../api';
 import { Report } from '../../types';
@@ -8,6 +9,7 @@ type Tab = 'post' | 'user' | 'tribe';
 
 const AdminReportsPage: React.FC = () => {
   const { currentUser } = useAuth();
+  const navigate = useNavigate();
   const [tab, setTab] = useState<Tab>('post');
   const [reports, setReports] = useState<Report[]>([]);
   const [loading, setLoading] = useState(false);
@@ -54,10 +56,17 @@ const AdminReportsPage: React.FC = () => {
   const tabs: Tab[] = ['post', 'user', 'tribe'];
 
   return (
-    <div className="max-w-5xl mx-auto px-4 py-8">
+    <div className="max-w-5xl mx-auto px-4 py-8 pb-24 md:pb-12">
       <div className="rounded-2xl border border-border bg-surface p-6">
-        <h1 className="text-2xl font-bold text-primary">Reports</h1>
-        <p className="text-sm text-secondary mt-1">Newest first. Review and action posts, users, and tribes.</p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-primary">Reports</h1>
+            <p className="text-sm text-secondary mt-1">Newest first. Review and action posts, users, and tribes.</p>
+          </div>
+          <button onClick={() => navigate(-1)} className="text-sm font-semibold text-secondary hover:text-primary">
+            Go Back
+          </button>
+        </div>
         <div className="mt-4 flex gap-2">
           {tabs.map((item) => (
             <button key={item} onClick={() => setTab(item)} className={`rounded-lg px-4 py-2 text-sm font-semibold ${tab === item ? 'bg-accent text-accent-text' : 'bg-background text-secondary'}`}>
