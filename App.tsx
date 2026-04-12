@@ -864,7 +864,7 @@ const App: React.FC = () => {
 
     useVisualViewportHeight();
 
-    let containerClass = 'page-container max-w-2xl mx-auto px-4 md:px-6 pt-6'; // Default with bottom nav padding
+    let containerClass = 'max-w-2xl mx-auto px-4 md:px-6 pt-6 pb-24 md:pb-8'; // Default with bottom nav padding
     const isChatPage = ['Messages', 'TribeDetail'].includes(activeNavItem);
 
     if (isFullHeightPage) {
@@ -881,11 +881,11 @@ const App: React.FC = () => {
             containerClass = 'h-[calc(100vh-8rem)] md:h-[calc(100vh-4rem)] max-w-2xl mx-auto px-4';
         }
     } else if (isWidePage) {
-        containerClass = 'page-container max-w-5xl mx-auto px-4 md:px-6 pt-6';
+        containerClass = 'max-w-5xl mx-auto px-4 md:px-6 pt-6 pb-24 md:pb-8';
     }
 
     return (
-        <div className="bg-background min-h-screen text-primary flex flex-col">
+        <div className="bg-background h-[var(--app-height)] text-primary overflow-hidden flex flex-col">
             <Toaster />
             {/* Pass a prop or logic to hide bottom nav on chat pages if possible, 
                 OR we ensure the ChatPage covers it with z-index. 
@@ -901,7 +901,7 @@ const App: React.FC = () => {
               - We remove pb-16 (bottom nav padding) effectively by not having it on the container.
               - We use fixed inset-0 z-40 to go OVER the bottom nav and top bar if needed.
             */}
-            <main className={`flex-1 min-h-0 ${isChatPage ? 'overflow-hidden pt-0 pb-0 md:pt-16 md:pb-4' : 'overflow-visible pt-16 pb-0'}`}>
+            <main className={`flex-1 min-h-0 overflow-hidden ${isChatPage ? 'pt-0 pb-0 md:pt-16 md:pb-4' : 'pt-16 pb-16 md:pb-0'}`}>
                 <div className={`${containerClass} min-h-0`}>
                     {renderContent()}
                 </div>

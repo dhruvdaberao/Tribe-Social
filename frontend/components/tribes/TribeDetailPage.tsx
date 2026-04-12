@@ -13,6 +13,7 @@ import EditTribeModal from './EditTribeModal';
 import { Users, ArrowLeft, Edit2, LogIn, LogOut, Flame, X } from 'lucide-react';
 import { toast } from '../common/Toast';
 import ConfirmationModal from '../common/ConfirmationModal';
+import { useVisualViewportHeight } from '../../hooks/useVisualViewportHeight';
 
 /* ───────────── STYLES ───────────── */
 const PageContainer = styled.div`
@@ -184,6 +185,7 @@ const TribeDetailPage: React.FC<Props> = ({ currentUser, tribeId: propTribeId })
   const params = useParams<{ tribeId: string }>();
   const navigate = useNavigate();
   const MAX_ATTACHMENT_BYTES = 20 * 1024 * 1024;
+  useVisualViewportHeight();
 
   const id = propTribeId || params.tribeId;
 

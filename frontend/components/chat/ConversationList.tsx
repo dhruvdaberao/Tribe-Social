@@ -43,7 +43,7 @@ const ConversationList: React.FC<ConversationListProps> = ({
 
   return (
     <div className="flex h-full min-h-0 flex-col bg-surface">
-      <div className="sticky top-0 z-10 flex flex-shrink-0 items-center justify-between border-b border-border bg-surface px-4 py-4 md:px-5">
+      <div className="flex flex-shrink-0 items-center justify-between border-b border-border px-4 py-4 md:px-5">
         <h2 className="text-2xl font-bold font-display text-primary md:text-3xl">Messages</h2>
         <button onClick={onNewMessage} className="rounded-full border border-border bg-background p-2 text-primary transition-colors hover:bg-accent hover:text-accent-text" aria-label="New Message">
           <PlusIcon />
@@ -102,7 +102,6 @@ const ConversationList: React.FC<ConversationListProps> = ({
             );
           })
         )}
-        <div className="px-4 py-3 text-center text-xs text-secondary">End of chats</div>
       </div>
     </div>
   );
@@ -138,7 +137,7 @@ const ConversationItem: React.FC<ConversationItemProps> = ({
   return (
     <div
       onClick={() => onSelect(conversation)}
-      className={`relative mx-3 my-2 flex cursor-pointer items-center gap-3 rounded-[12px] p-3 transition-colors ${isActive ? 'bg-background' : 'bg-background/60 hover:bg-background'}`}
+      className={`relative mx-3 my-2 flex cursor-pointer items-center gap-3 rounded-xl p-3 transition-colors ${isActive ? 'bg-background' : 'bg-background/60 hover:bg-background'}`}
     >
       <div className="relative flex-shrink-0">
         {otherParticipant.id === 'chuk-ai' ? (

@@ -179,7 +179,7 @@ const ConversationList: React.FC<ConversationListProps> = ({ conversations, isLo
 
   return (
     <div className="h-full min-h-0 flex flex-col bg-surface">
-      <div className="messages-header sticky top-0 z-20 px-4 py-4 md:p-5 border-b border-border bg-surface/95 backdrop-blur-sm flex-shrink-0 flex justify-between items-center">
+      <div className="sticky top-0 z-20 px-4 py-4 md:p-5 border-b border-border bg-surface/95 backdrop-blur-sm flex-shrink-0 flex justify-between items-center">
         <h2 className="text-3xl font-bold font-display text-primary">Messages</h2>
         <button onClick={onNewMessage} className="p-2 rounded-full text-primary bg-background border border-border hover:bg-accent hover:text-accent-text transition-colors" aria-label="New Message">
           <PlusIcon />
@@ -275,7 +275,7 @@ const ConversationItem: React.FC<ConversationItemProps> = ({
   return (
     <div
       onClick={() => onSelect(conversation)}
-      className={`chat-item relative flex items-center cursor-pointer transition-colors ${isActive ? 'bg-background' : 'hover:bg-background'
+      className={`relative flex items-center p-4 cursor-pointer transition-colors border-b border-border ${isActive ? 'bg-background' : 'hover:bg-background'
         }`}
     >
       <div className="relative mr-4 flex-shrink-0">
