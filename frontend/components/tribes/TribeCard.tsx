@@ -627,7 +627,7 @@ const TribeCard: React.FC<TribeCardProps> = ({
         onClose={() => setIsMembersModalOpen(false)}
         memberIds={localTribe.members}
         userMap={userMap}
-        ownerId={localTribe.owner}
+        ownerId={typeof localTribe.owner === 'string' ? localTribe.owner : (localTribe.owner as any)?.id}
         onViewProfile={(user) => {
           setIsMembersModalOpen(false);
           if (onViewProfile) onViewProfile(user);

@@ -51,7 +51,7 @@ const Input = styled.input`
   width: 100%;
   padding: 12px 16px;
   border-radius: 8px;
-  border: 1px solid ${({ theme }) => theme.borderColor};
+  border: 1px solid ${({ theme }) => theme.border};
   background: ${({ theme }) => theme.background};
   color: ${({ theme }) => theme.text};
   font-size: 1rem;
@@ -64,7 +64,7 @@ const TextArea = styled.textarea`
   width: 100%;
   padding: 12px 16px;
   border-radius: 8px;
-  border: 1px solid ${({ theme }) => theme.borderColor};
+  border: 1px solid ${({ theme }) => theme.border};
   background: ${({ theme }) => theme.background};
   color: ${({ theme }) => theme.text};
   min-height: 100px;
