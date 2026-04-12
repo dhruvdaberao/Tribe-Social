@@ -1,6 +1,6 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import styled, { useTheme } from 'styled-components';
-import { X, Camera, Trash2 } from 'lucide-react';
+import { X, Camera, Trash2, Lock } from 'lucide-react';
 import * as api from '../../api';
 import { toast } from '../common/Toast';
 import MediaSelectionModal from '../common/MediaSelectionModal';
@@ -83,15 +83,18 @@ const Form = styled.form`
 
 const TextArea = styled.textarea`
   width: 100%;
-  padding: 0.75rem;
+  padding: 0.625rem 0.75rem;
   border-radius: 8px;
   border: 1px solid ${props => props.theme.border};
   background: ${props => props.theme.background};
   color: ${props => props.theme.text};
   font-family: 'Outfit', sans-serif;
-  resize: vertical;
-  min-height: 60px;
+  resize: none;
+  min-height: 84px;
+  max-height: 104px;
   font-size: 0.9rem; // Smaller font
+  line-height: 1.35;
+  text-align-vertical: top;
 
   &:focus {
     outline: none;
@@ -180,6 +183,7 @@ const EditTribeModal: React.FC<EditTribeModalProps> = ({ tribe, onClose, onSucce
   const [isPrivate, setIsPrivate] = useState(tribe.isPrivate || false);
   const [vibe, setVibe] = useState(tribe.vibe || 'General');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isReadingImage, setIsReadingImage] = useState(false);
   const [error, setError] = useState('');
   const [isMediaModalOpen, setIsMediaModalOpen] = useState(false);
   const [confirmModal, setConfirmModal] = useState({ isOpen: false, type: 'delete' as 'delete' | 'transfer' });
@@ -192,6 +196,17 @@ const EditTribeModal: React.FC<EditTribeModalProps> = ({ tribe, onClose, onSucce
     return allUsers.filter(u => tribe.members.includes(u.id));
   }, [allUsers, tribe.members]);
 
+  useEffect(() => {
+    setName(tribe.name);
+    setDescription(tribe.description);
+    setAvatarUrl(tribe.avatarUrl || '');
+    setOwnerId(tribe.owner);
+    setMemberLimit(tribe.memberLimit || 50);
+    setIsPrivate(Boolean(tribe.isPrivate));
+    setVibe(tribe.vibe || 'General');
+    setError('');
+  }, [tribe]);
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -199,10 +214,16 @@ const EditTribeModal: React.FC<EditTribeModalProps> = ({ tribe, onClose, onSucce
         toast.error('Image size must be less than 5MB');
         return;
       }
+      setIsReadingImage(true);
       const reader = new FileReader();
       reader.onloadend = () => {
         setAvatarUrl(reader.result as string);
         setIsMediaModalOpen(false);
+        setIsReadingImage(false);
+      };
+      reader.onerror = () => {
+        setIsReadingImage(false);
+        toast.error('Unable to read selected image.');
       };
       reader.readAsDataURL(file);
       e.target.value = '';
@@ -222,7 +243,14 @@ const EditTribeModal: React.FC<EditTribeModalProps> = ({ tribe, onClose, onSucce
     setIsSubmitting(true);
     setError('');
     try {
-      const updatedData: any = { name, description, avatarUrl, memberLimit, isPrivate, vibe };
+      const updatedData: any = {
+        name: name.trim(),
+        description: description.trim(),
+        avatarUrl,
+        memberLimit,
+        isPrivate,
+        vibe,
+      };
       if (ownerId !== tribe.owner) updatedData.owner = ownerId;
 
       const updatedTribe = await api.updateTribe(tribe.id, updatedData);
@@ -311,7 +339,7 @@ const EditTribeModal: React.FC<EditTribeModalProps> = ({ tribe, onClose, onSucce
 
         <div style={{ display: 'flex', flexDirection: 'column' }}>
           <Label>Vibe of the Tribe</Label>
-          <Select value={vibe} onChange={(e: any) => setVibe(e.target.value)}>
+          <Select value={vibe} onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setVibe(e.target.value)}>
             {['General', 'Educational', 'Art', 'Music', 'Anime', 'Pop Culture', 'Tech', 'Gaming', 'Fitness', 'Sports', 'Travel', 'Food', 'Photography', 'Memes', 'Others'].map(v => (
               <option key={v} value={v}>{v}</option>
             ))}
@@ -322,24 +350,31 @@ const EditTribeModal: React.FC<EditTribeModalProps> = ({ tribe, onClose, onSucce
           <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', color: theme.text, fontSize: '0.9rem', fontWeight: 500 }}>
             <div
               onClick={() => setIsPrivate(!isPrivate)}
+              role="switch"
+              aria-checked={isPrivate}
               style={{
-                width: 44, height: 24, borderRadius: 12,
+                width: 48, height: 28, borderRadius: 999,
                 background: isPrivate ? theme.primary : theme.border,
                 position: 'relative', transition: 'background 0.2s', cursor: 'pointer',
+                padding: 2,
               }}
             >
               <div style={{
-                width: 20, height: 20, borderRadius: '50%',
+                width: 24, height: 24, borderRadius: '50%',
                 background: 'white', position: 'absolute', top: 2,
-                left: isPrivate ? 22 : 2, transition: 'left 0.2s',
-                boxShadow: '0 1px 3px rgba(0,0,0,0.3)',
+                left: isPrivate ? 22 : 2, transition: 'left 0.2s ease',
+                boxShadow: '0 1px 2px rgba(0,0,0,0.22)',
               }} />
             </div>
-            Private Tribe {isPrivate ? '🔒' : ''}
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+              Private Tribe {isPrivate && <Lock size={14} color={theme.primary} />}
+            </span>
           </label>
         </div>
 
-        <Button type="submit" disabled={isSubmitting}>{isSubmitting ? 'Saving...' : 'Save Changes'}</Button>
+        <Button type="submit" disabled={isSubmitting || isReadingImage}>
+          {isReadingImage ? 'Processing image...' : isSubmitting ? 'Saving...' : 'Save Changes'}
+        </Button>
       </Form>
 
       {onDelete && (

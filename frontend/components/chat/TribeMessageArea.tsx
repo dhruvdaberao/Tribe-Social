@@ -46,6 +46,7 @@ const TribeMessageArea: React.FC<TribeMessageAreaProps> = ({
   const [replyToMessage, setReplyToMessage] = useState<TribeMessage | null>(null);
   const [actionMessage, setActionMessage] = useState<TribeMessage | null>(null);
   const [acceptingUserId, setAcceptingUserId] = useState<string | null>(null);
+  const [acceptedUserIds, setAcceptedUserIds] = useState<Set<string>>(new Set());
   const bottomRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -54,10 +55,16 @@ const TribeMessageArea: React.FC<TribeMessageAreaProps> = ({
 
   const isChief = typeof tribe.owner === 'string' ? tribe.owner === currentUser.id : (tribe.owner as any)?.id === currentUser.id;
 
+  useEffect(() => {
+    setAcceptedUserIds(new Set());
+  }, [tribe.id]);
+
   const handleAcceptRequest = async (targetUserId: string) => {
+    if (acceptingUserId === targetUserId || acceptedUserIds.has(targetUserId)) return;
     setAcceptingUserId(targetUserId);
     try {
       await api.acceptTribeRequest(tribe.id, targetUserId);
+      setAcceptedUserIds(prev => new Set(prev).add(targetUserId));
       toast.success('Member accepted!');
     } catch (err: any) {
       console.error('Accept request failed:', err);
@@ -244,7 +251,7 @@ const TribeMessageArea: React.FC<TribeMessageAreaProps> = ({
               const isJoinRequest = message.systemAction === 'join_request';
               const isJoined = message.systemAction === 'joined';
               const targetId = message.actionTargetId;
-              const alreadyAccepted = targetId && tribe.members.includes(targetId);
+              const alreadyAccepted = Boolean(targetId && (tribe.members.includes(targetId) || acceptedUserIds.has(targetId)));
 
               return (
                 <div
@@ -265,7 +272,13 @@ const TribeMessageArea: React.FC<TribeMessageAreaProps> = ({
                       </button>
                     )}
                     {isJoinRequest && isChief && alreadyAccepted && (
-                      <span className="mt-2 inline-block text-xs text-green-500 font-semibold">✓ Accepted</span>
+                      <button
+                        type="button"
+                        disabled
+                        className="mt-2 px-4 py-1.5 bg-green-600 text-white text-xs font-bold rounded-full opacity-50 cursor-not-allowed pointer-events-none"
+                      >
+                        Accepted
+                      </button>
                     )}
                     {isJoined && (
                       <span className="mt-1 inline-block text-xs text-green-500 font-semibold">🎉 Welcome!</span>
