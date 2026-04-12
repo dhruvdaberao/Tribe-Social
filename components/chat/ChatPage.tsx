@@ -550,10 +550,9 @@ const ChatPage: React.FC<ChatPageProps> = ({ currentUser, allUsers, chukUser, in
   }, [autoDeleteEnabled, messages]);
 
   return (
-    <div className="h-full min-h-0 w-full bg-background md:bg-surface md:border md:border-border md:shadow-lg flex flex-col md:flex-row relative">
+    <div className="chat-page flex h-[100dvh] w-full min-h-0 flex-col bg-[#1f1410] md:h-full md:flex-row md:rounded-2xl md:border md:border-border md:shadow-lg">
       <div
-        className={`w-full md:w-[320px] lg:w-[380px] flex-shrink-0 flex flex-col min-h-0 transition-transform duration-300 ease-in-out md:static absolute inset-0 z-10 md:border-r md:border-border bg-surface ${isMessageAreaVisible ? '-translate-x-full' : 'translate-x-0'
-          } md:translate-x-0`}
+        className={`w-full shrink-0 flex-col min-h-0 bg-[#1f1410] md:flex md:w-[320px] md:border-r md:border-border lg:w-[380px] ${isMessageAreaVisible ? 'hidden md:flex' : 'flex'}`}
       >
         <ConversationList
           conversations={conversations}
@@ -573,8 +572,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ currentUser, allUsers, chukUser, in
       </div>
 
       <div
-        className={`w-full md:flex-1 flex flex-col min-h-0 transition-transform duration-300 ease-in-out md:static absolute inset-0 bg-background z-[60] md:z-auto ${isMessageAreaVisible ? 'translate-x-0' : 'translate-x-full'
-          } md:translate-x-0`}
+        className={`w-full min-h-0 flex-col bg-[#1f1410] md:flex md:flex-1 ${isMessageAreaVisible ? 'flex' : 'hidden md:flex'}`}
       >
         {activeConversation ? (
           <MessageArea

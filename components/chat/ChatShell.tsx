@@ -16,31 +16,22 @@ const ChatShell: React.FC<ChatShellProps> = ({
   className = '',
   messagesClassName = ''
 }) => {
-  React.useEffect(() => {
-    const previousBodyOverscroll = document.body.style.overscrollBehaviorY;
-    document.body.style.overscrollBehaviorY = 'none';
-
-    return () => {
-      document.body.style.overscrollBehaviorY = previousBodyOverscroll;
-    };
-  }, []);
-
   return (
     <section
-      className={`chat-shell messages-page relative flex h-full min-h-0 w-full flex-col bg-background ${className}`}
+      className={`chat-shell chat-page messages-page relative flex h-full min-h-0 w-full flex-col bg-[#1f1410] ${className}`}
     >
       <header
-        className="messages-header sticky top-0 z-30 border-b border-border bg-surface/95 backdrop-blur-sm w-full"
+        className="chat-header messages-header sticky top-0 z-50 flex w-full items-center gap-2.5 border-b border-white/10 bg-[#1f1410] px-4 py-3 pt-[calc(12px+env(safe-area-inset-top,0px))] box-border"
       >
         {header}
       </header>
 
-      <div className={`messages-container min-h-0 flex-1 overscroll-contain touch-pan-y p-3 pb-20 ${messagesClassName}`}>
+      <div className={`chat-body chat-body-wrapper messages-container min-h-0 flex-1 overflow-y-auto p-3 pb-[90px] bg-[#1f1410] [webkit-overflow-scrolling:touch] ${messagesClassName}`}>
         {children}
       </div>
 
       <footer
-        className="chat-input-container sticky bottom-0 z-30 w-full border-t border-border bg-surface/95 backdrop-blur-sm pb-[max(env(safe-area-inset-bottom),0px)] md:pb-0"
+        className="chat-input-container sticky bottom-0 z-[60] w-full box-border border-t border-white/10 bg-[#1f1410] px-3 pt-2.5 pb-[calc(10px+env(safe-area-inset-bottom,0px))]"
       >
         {composer}
       </footer>
