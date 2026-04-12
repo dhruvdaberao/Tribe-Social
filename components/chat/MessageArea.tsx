@@ -300,7 +300,7 @@ export const MessageArea: React.FC<MessageAreaProps> = ({ conversation, messages
 
   if (!otherParticipant) {
     return (
-      <div className="flex h-full flex-col bg-[#1f1410]">
+      <div className="flex h-full flex-col bg-background">
         <div className="flex items-center p-3 border-b border-border flex-shrink-0">
           <button onClick={onBack} className="md:hidden p-2 mr-2 text-primary">
             <BackIcon />

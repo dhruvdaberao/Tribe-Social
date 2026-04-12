@@ -548,11 +548,10 @@ const ChatPage: React.FC<ChatPageProps> = ({ currentUser, allUsers, chukUser, in
     const cutoff = Date.now() - 24 * 60 * 60 * 1000;
     return messages.filter(message => new Date(message.timestamp).getTime() >= cutoff);
   }, [autoDeleteEnabled, messages]);
-
   return (
-    <div className="chat-page flex h-[100dvh] w-full min-h-0 max-w-full flex-col !bg-[#1f1410] md:h-full md:flex-row">
+    <div className="chat-page flex h-full w-full min-h-0 max-w-full flex-col bg-background md:flex-row">
       <div
-        className={`w-full shrink-0 flex-col min-h-0 bg-[#1f1410] md:flex md:w-[320px] md:border-r md:border-border lg:w-[380px] ${isMessageAreaVisible ? 'hidden md:flex' : 'flex'}`}
+        className={`w-full shrink-0 flex-col min-h-0 bg-background md:flex md:w-[320px] md:border-r md:border-border lg:w-[380px] ${isMessageAreaVisible ? 'hidden md:flex' : 'flex'}`}
       >
         <ConversationList
           conversations={conversations}
@@ -572,7 +571,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ currentUser, allUsers, chukUser, in
       </div>
 
       <div
-        className={`w-full min-h-0 flex-col bg-[#1f1410] md:flex md:flex-1 ${isMessageAreaVisible ? 'flex' : 'hidden md:flex'}`}
+        className={`w-full min-h-0 flex-col bg-background md:flex md:flex-1 ${isMessageAreaVisible ? 'flex' : 'hidden md:flex'}`}
       >
         {activeConversation ? (
           <MessageArea

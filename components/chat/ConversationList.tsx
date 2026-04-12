@@ -178,14 +178,14 @@ const ConversationList: React.FC<ConversationListProps> = ({ conversations, isLo
   };
 
   return (
-    <div className="messages-page flex h-[100dvh] min-h-0 w-full max-w-full flex-col !bg-[#1f1410] md:h-full">
-      <div className="messages-header sticky top-0 z-[100] mt-0 flex w-full shrink-0 items-center justify-between border-b border-t-0 border-white/10 !bg-[#1f1410] px-4 py-[14px] font-semibold shadow-none box-border">
+    <div className="messages-page flex h-full min-h-0 w-full max-w-full flex-col bg-background">
+      <div className="messages-header sticky top-0 z-[100] pt-[env(safe-area-inset-top,0px)] mt-16 md:mt-0 flex w-full shrink-0 items-center justify-between border-b border-border bg-background px-4 py-[14px] font-semibold shadow-none box-border">
         <h2 className="text-[20px] font-semibold font-display text-primary">Messages</h2>
         <button onClick={onNewMessage} className="p-2 rounded-full text-primary bg-background border border-border hover:bg-accent hover:text-accent-text transition-colors" aria-label="New Message">
           <PlusIcon />
         </button>
       </div>
-      <div className="messages-list messages-container flex-1 min-h-0 w-full max-w-full overflow-y-auto !bg-[#1f1410] p-[12px] pb-[calc(90px+env(safe-area-inset-bottom,0px))] box-border">
+      <div className="messages-list messages-container flex-1 min-h-0 w-full max-w-full overflow-y-auto bg-background p-[12px] pb-[calc(90px+env(safe-area-inset-bottom,0px))] box-border">
         {/* Chuk AI Static Conversation */}
         <ConversationItem
           key={chukConversation.id}
@@ -273,7 +273,7 @@ const ConversationItem: React.FC<ConversationItemProps> = ({
   return (
     <div
       onClick={() => onSelect(conversation)}
-      className={`chat-item relative mb-2 flex w-full cursor-pointer items-center rounded-[14px] border border-white/10 bg-white/[0.03] p-3 transition-colors ${isActive ? 'ring-1 ring-accent/40' : 'hover:bg-white/[0.05]'}`}
+      className={`chat-item relative mb-2 flex w-full cursor-pointer items-center rounded-[14px] border border-border bg-surface p-3 transition-colors ${isActive ? 'ring-1 ring-accent' : 'hover:bg-background shadow-sm'}`}
     >
       <div className="relative mr-4 flex-shrink-0">
         <UserAvatar user={otherParticipant} className="w-12 h-12" />
