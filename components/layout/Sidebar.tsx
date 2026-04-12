@@ -232,7 +232,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeItem, onSelectItem, currentUser
   return (
     <>
       {/* Top Header */}
-      <header className={`fixed top-0 left-0 right-0 h-16 bg-accent shadow-md z-50 items-center justify-between px-4 md:px-6 ${isMobileMessagingShell ? 'hidden md:flex' : 'flex'}`}>
+      <header className={`header fixed top-0 left-0 right-0 h-16 bg-accent shadow-md z-50 items-center justify-between px-4 md:px-6 ${isMobileMessagingShell ? 'hidden md:flex' : 'flex'}`}>
         {/* Left Side: Logo & Desktop Nav */}
         <div className="flex items-center space-x-6">
           <div
@@ -278,7 +278,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeItem, onSelectItem, currentUser
       {/* Mobile Bottom Nav */}
       {!shouldHideBottomNav && (
         <nav
-          className="md:hidden fixed bottom-0 left-0 right-0 bg-surface border-t border-border flex justify-around items-center z-50 transition-all duration-200"
+          className="bottom-nav md:hidden fixed bottom-0 left-0 right-0 bg-surface border-t border-border flex justify-around items-center z-50 transition-all duration-200"
           style={{
             height: 'calc(4rem + env(safe-area-inset-bottom))',
             paddingBottom: 'env(safe-area-inset-bottom)'

@@ -27,7 +27,7 @@ const ChatShell: React.FC<ChatShellProps> = ({
 
   return (
     <section
-      className={`chat-shell relative flex h-screen min-h-0 w-full flex-col bg-background ${className}`}
+      className={`chat-shell chat-wrapper relative flex min-h-0 w-full flex-col bg-background ${className}`}
     >
       <header
         className="sticky top-0 z-30 border-b border-border bg-surface/95 backdrop-blur-sm w-full"
@@ -35,7 +35,7 @@ const ChatShell: React.FC<ChatShellProps> = ({
         {header}
       </header>
 
-      <div className={`min-h-0 flex-1 overflow-y-auto overscroll-contain touch-pan-y p-3 pb-20 ${messagesClassName}`}>
+      <div className={`messages min-h-0 flex-1 overflow-y-auto overscroll-contain touch-pan-y p-3 pb-20 ${messagesClassName}`}>
         {children}
       </div>
 
