@@ -78,13 +78,43 @@ import axios from 'axios';
 const API_URL = 'https://tribe-social-backend.onrender.com';
 const API = axios.create({ baseURL: `${API_URL}/api`, timeout: 20000 });
 
+const isPublicEndpoint = (url?: string) => {
+  if (!url) return false;
+  return url.includes('/auth/login') || url.includes('/auth/register') || url.includes('/auth/forgot-password') || url.includes('/auth/verify-otp');
+};
+
+const handleUnauthorizedSession = () => {
+  localStorage.removeItem('token');
+  localStorage.removeItem('currentUser');
+  if (typeof window !== 'undefined' && window.location.pathname !== '/') {
+    window.location.href = '/';
+  }
+};
+
 API.interceptors.request.use((req) => {
   const token = localStorage.getItem('token');
   if (token) {
     req.headers.Authorization = `Bearer ${token}`;
+    return req;
   }
+
+  if (!isPublicEndpoint(req.url)) {
+    handleUnauthorizedSession();
+    return Promise.reject(new Error('Missing auth token'));
+  }
+
   return req;
 });
+
+API.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error?.response?.status === 401 && !isPublicEndpoint(error?.config?.url)) {
+      handleUnauthorizedSession();
+    }
+    return Promise.reject(error);
+  }
+);
 
 // Auth
 export const login = (formData: any) => API.post('/auth/login', formData);

@@ -4,6 +4,7 @@ import UserAvatar from '../common/UserAvatar';
 import { useSocket } from '../../contexts/SocketContext';
 import MarkdownRenderer from '../common/MarkdownRenderer';
 import ChatShell from './ChatShell';
+import ChatInput from './ChatInput';
 
 interface MessageAreaProps {
   conversation: Conversation;
@@ -238,7 +239,7 @@ export const MessageArea: React.FC<MessageAreaProps> = ({
         )}
         messagesRef={scrollContainerRef}
         onMessagesScroll={handleScroll}
-        messagesClassName="mx-auto w-full max-w-3xl px-4 py-4"
+        messagesClassName="mx-auto w-full max-w-3xl px-4 pt-4"
         composer={(
           <div className="mx-auto w-full max-w-3xl border-t border-border bg-background/95 px-4 pb-[max(12px,env(safe-area-inset-bottom,0px))] pt-3 backdrop-blur-sm">
             {replyToMessage && (
