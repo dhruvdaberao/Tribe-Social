@@ -618,7 +618,7 @@ const TribeCard: React.FC<TribeCardProps> = ({
                 {hasPendingRequest ? 'Requested' : isJoining ? 'Joining...' : localTribe.isPrivate ? 'Request to Join' : 'Join'}
               </Button>
             );
-          })()}}
+          })()}
         </ButtonGroup>
       </Card>
 
