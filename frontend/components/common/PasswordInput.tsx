@@ -11,7 +11,8 @@ const PasswordInput: React.FC<PasswordInputProps> = ({ className, containerClass
     return (
         <div className={`relative ${containerClassName || ''}`}>
             <input
-                type={showPassword ? 'text' : 'password'}
+                type="text"
+                style={{ WebkitTextSecurity: showPassword ? 'none' : 'disc' }}
                 className={`${className} pr-10`} // Add padding right to prevent text overlap with icon
                 {...props}
             />

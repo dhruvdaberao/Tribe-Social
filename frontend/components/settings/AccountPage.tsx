@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { User } from '../../types';
 import BlockedListModal from '../profile/BlockedListModal';
 import { toast } from '../common/Toast';
+import PasswordInput from '../common/PasswordInput';
 import * as api from '../../api';
 import { User as UserIconLucide, Ban, LogOut, Trash2, ArrowLeft, ChevronRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -75,7 +76,8 @@ const AccountInfoModal: React.FC<{ user: User; onClose: () => void }> = ({ user,
     const [formData, setFormData] = useState({
         name: user.name,
         username: user.username,
-        email: ''
+        email: '',
+        password: ''
     });
     const [isLoading, setIsLoading] = useState(false);
 
@@ -85,6 +87,7 @@ const AccountInfoModal: React.FC<{ user: User; onClose: () => void }> = ({ user,
         try {
             const updateData: any = { name: formData.name, username: formData.username };
             if (formData.email) updateData.email = formData.email;
+            if (formData.password) updateData.password = formData.password;
 
             await api.updateProfile(updateData);
             toast.success("Account updated successfully!");
@@ -118,6 +121,18 @@ const AccountInfoModal: React.FC<{ user: User; onClose: () => void }> = ({ user,
                     <div>
                         <label className="text-sm font-semibold text-secondary">New Email (Optional)</label>
                         <input type="email" placeholder="Enter new email" value={formData.email} onChange={e => setFormData({ ...formData, email: e.target.value })} className="w-full mt-1 p-2 bg-background border border-border rounded-lg text-primary focus:outline-none focus:ring-2 focus:ring-accent" />
+                    </div>
+                    <div>
+                        <label className="text-sm font-semibold text-secondary">New Password (Optional)</label>
+                        <PasswordInput
+                            placeholder="Enter new password"
+                            value={formData.password}
+                            onChange={e => setFormData({ ...formData, password: e.target.value })}
+                            className="w-full mt-1 p-2 bg-background border border-border rounded-lg text-primary focus:outline-none focus:ring-2 focus:ring-accent"
+                            autoComplete="new-password"
+                            name="new-password-field"
+                            data-lpignore="true"
+                        />
                     </div>
                     <div className="flex justify-end pt-4">
                         <button type="button" onClick={onClose} className="text-secondary font-semibold px-4 py-2 rounded-lg hover:bg-background mr-2">Cancel</button>
