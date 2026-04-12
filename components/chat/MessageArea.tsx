@@ -300,7 +300,7 @@ export const MessageArea: React.FC<MessageAreaProps> = ({ conversation, messages
 
   if (!otherParticipant) {
     return (
-      <div className="flex flex-col h-full bg-surface">
+      <div className="flex h-full flex-col bg-[#1f1410]">
         <div className="flex items-center p-3 border-b border-border flex-shrink-0">
           <button onClick={onBack} className="md:hidden p-2 mr-2 text-primary">
             <BackIcon />
@@ -318,7 +318,7 @@ export const MessageArea: React.FC<MessageAreaProps> = ({ conversation, messages
     <>
       <ChatShell
         header={(
-          <div className="flex items-center px-3 py-3 md:px-4 bg-surface">
+          <div className="flex items-center">
             <button onClick={onBack} className="md:hidden p-2 mr-2 text-primary">
               <BackIcon />
             </button>
@@ -339,7 +339,7 @@ export const MessageArea: React.FC<MessageAreaProps> = ({ conversation, messages
           </div>
         )}
         composer={(
-          <div className="px-3 pt-3 pb-3 md:px-4">
+          <div>
             {replyToMessage && (
               <div className="mb-3 flex items-start justify-between gap-3 rounded-2xl border border-border bg-background px-3 py-2">
                 <div className="min-w-0">
@@ -368,7 +368,7 @@ export const MessageArea: React.FC<MessageAreaProps> = ({ conversation, messages
         )}
         messagesClassName="px-1"
       >
-        <div className="messages-wrapper relative min-h-full">
+        <div className="messages-wrapper chat-body-wrapper relative min-h-full">
           <div className="flex flex-col space-y-2">
             {messages.map(message => {
               const isCurrentUser = message.senderId === currentUser.id;
@@ -426,7 +426,7 @@ export const MessageArea: React.FC<MessageAreaProps> = ({ conversation, messages
             <div ref={messagesEndRef} />
           </div>
           {isLoading && (
-            <div className="loader pointer-events-none z-20">
+            <div className="loader pointer-events-none absolute left-1/2 top-1/2 z-20 -translate-x-1/2 -translate-y-1/2">
               <img src="/duckload.gif" alt="Loading messages..." className="w-16 h-16" />
             </div>
           )}

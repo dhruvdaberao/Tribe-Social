@@ -178,14 +178,14 @@ const ConversationList: React.FC<ConversationListProps> = ({ conversations, isLo
   };
 
   return (
-    <div className="messages-page h-full min-h-0 flex flex-col bg-surface">
-      <div className="messages-header sticky top-0 z-20 px-4 py-4 md:p-5 border-b border-border bg-surface/95 backdrop-blur-sm flex-shrink-0 flex justify-between items-center">
+    <div className="messages-page h-full min-h-0 flex flex-col bg-[#1f1410]">
+      <div className="messages-header sticky top-0 z-40 mt-0 flex shrink-0 items-center justify-between border-b border-white/10 bg-[#1f1410] px-4 py-3 font-semibold">
         <h2 className="text-3xl font-bold font-display text-primary">Messages</h2>
         <button onClick={onNewMessage} className="p-2 rounded-full text-primary bg-background border border-border hover:bg-accent hover:text-accent-text transition-colors" aria-label="New Message">
           <PlusIcon />
         </button>
       </div>
-      <div className="messages-container flex-1 min-h-0 overscroll-contain pb-[max(env(safe-area-inset-bottom),1rem)] md:pb-6">
+      <div className="messages-container flex-1 min-h-0 overflow-y-auto bg-[#1f1410] pb-[calc(10px+env(safe-area-inset-bottom,0px))]">
         {/* Chuk AI Static Conversation */}
         <ConversationItem
           key={chukConversation.id}
@@ -273,7 +273,7 @@ const ConversationItem: React.FC<ConversationItemProps> = ({
   return (
     <div
       onClick={() => onSelect(conversation)}
-      className={`chat-item relative flex items-center cursor-pointer transition-colors ${isActive ? 'bg-background/70' : 'hover:bg-background/80'}`}
+      className={`chat-item relative mx-3 mb-2 flex cursor-pointer items-center rounded-[14px] border border-white/10 bg-white/[0.03] p-3 transition-colors ${isActive ? 'ring-1 ring-accent/40' : 'hover:bg-white/[0.05]'}`}
     >
       <div className="relative mr-4 flex-shrink-0">
         <UserAvatar user={otherParticipant} className="w-12 h-12" />
