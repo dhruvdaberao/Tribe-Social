@@ -177,6 +177,8 @@ const EditTribeModal: React.FC<EditTribeModalProps> = ({ tribe, onClose, onSucce
   const [avatarUrl, setAvatarUrl] = useState(tribe.avatarUrl || '');
   const [ownerId, setOwnerId] = useState(tribe.owner);
   const [memberLimit, setMemberLimit] = useState<number>(tribe.memberLimit || 50);
+  const [isPrivate, setIsPrivate] = useState(tribe.isPrivate || false);
+  const [vibe, setVibe] = useState(tribe.vibe || 'General');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [isMediaModalOpen, setIsMediaModalOpen] = useState(false);
@@ -220,7 +222,7 @@ const EditTribeModal: React.FC<EditTribeModalProps> = ({ tribe, onClose, onSucce
     setIsSubmitting(true);
     setError('');
     try {
-      const updatedData: any = { name, description, avatarUrl, memberLimit };
+      const updatedData: any = { name, description, avatarUrl, memberLimit, isPrivate, vibe };
       if (ownerId !== tribe.owner) updatedData.owner = ownerId;
 
       const updatedTribe = await api.updateTribe(tribe.id, updatedData);
@@ -305,6 +307,36 @@ const EditTribeModal: React.FC<EditTribeModalProps> = ({ tribe, onClose, onSucce
               </option>
             ))}
           </Select>
+        </div>
+
+        <div style={{ display: 'flex', flexDirection: 'column' }}>
+          <Label>Vibe of the Tribe</Label>
+          <Select value={vibe} onChange={(e: any) => setVibe(e.target.value)}>
+            {['General', 'Educational', 'Art', 'Music', 'Anime', 'Pop Culture', 'Tech', 'Gaming', 'Fitness', 'Sports', 'Travel', 'Food', 'Photography', 'Memes', 'Others'].map(v => (
+              <option key={v} value={v}>{v}</option>
+            ))}
+          </Select>
+        </div>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '4px 0' }}>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', color: theme.text, fontSize: '0.9rem', fontWeight: 500 }}>
+            <div
+              onClick={() => setIsPrivate(!isPrivate)}
+              style={{
+                width: 44, height: 24, borderRadius: 12,
+                background: isPrivate ? theme.primary : theme.border,
+                position: 'relative', transition: 'background 0.2s', cursor: 'pointer',
+              }}
+            >
+              <div style={{
+                width: 20, height: 20, borderRadius: '50%',
+                background: 'white', position: 'absolute', top: 2,
+                left: isPrivate ? 22 : 2, transition: 'left 0.2s',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.3)',
+              }} />
+            </div>
+            Private Tribe {isPrivate ? '🔒' : ''}
+          </label>
         </div>
 
         <Button type="submit" disabled={isSubmitting}>{isSubmitting ? 'Saving...' : 'Save Changes'}</Button>

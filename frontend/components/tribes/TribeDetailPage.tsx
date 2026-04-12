@@ -747,14 +747,27 @@ const TribeDetailPage: React.FC<Props> = ({ currentUser, tribeId: propTribeId })
             <div className="w-24 h-24 bg-surface rounded-full flex items-center justify-center mb-2">
               <Users size={48} className="text-secondary opacity-50" />
             </div>
-            <h2 className="text-xl font-bold">Join {tribe?.name || 'Tribe'}</h2>
-            <p className="text-secondary max-w-sm">Join this tribe to start chatting with members and share your thoughts.</p>
-            <button
-              onClick={handleJoinToggle}
-              className="mt-4 px-8 py-3 bg-accent text-accent-text font-bold rounded-full hover:bg-accent-hover transition-colors shadow-lg shadow-accent/20"
-            >
-              Join Tribe
-            </button>
+            <h2 className="text-xl font-bold">{tribe?.isPrivate ? '🔒 ' : ''}Join {tribe?.name || 'Tribe'}</h2>
+            <p className="text-secondary max-w-sm">
+              {tribe?.isPrivate
+                ? 'This is a private tribe. Send a request and the Chief will review it.'
+                : 'Join this tribe to start chatting with members and share your thoughts.'}
+            </p>
+            {tribe?.vibe && tribe.vibe !== 'General' && (
+              <span style={{ fontSize: '0.8rem', padding: '3px 12px', borderRadius: 20, background: 'rgba(214, 185, 160, 0.15)', color: '#D6B9A0', fontWeight: 600 }}>{tribe.vibe}</span>
+            )}
+            {(() => {
+              const hasPendingRequest = tribe?.isPrivate && currentUser && tribe.joinRequests?.includes(currentUser.id);
+              return (
+                <button
+                  onClick={handleJoinToggle}
+                  disabled={!!hasPendingRequest}
+                  className="mt-4 px-8 py-3 bg-accent text-accent-text font-bold rounded-full hover:bg-accent-hover transition-colors shadow-lg shadow-accent/20 disabled:opacity-60 disabled:cursor-not-allowed"
+                >
+                  {hasPendingRequest ? 'Requested (Pending)' : tribe?.isPrivate ? 'Request to Join' : 'Join Tribe'}
+                </button>
+              );
+            })()}
           </div>
         </ChatShell>
       )}

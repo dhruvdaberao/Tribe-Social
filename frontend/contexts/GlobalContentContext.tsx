@@ -595,13 +595,29 @@ export const GlobalContentProvider: React.FC<{ children: React.ReactNode }> = ({
     // Tribes
     const handleJoinToggle = async (tribeId: string, viewedTribe?: Tribe | null, setViewedTribe?: React.Dispatch<React.SetStateAction<Tribe | null>>) => {
         try {
-            const { data: updatedTribe } = await api.joinTribe(tribeId);
-            setTribes(prev => prev.map(t => t.id === tribeId ? { ...t, members: updatedTribe.members } : t));
-            if (viewedTribe && setViewedTribe && viewedTribe.id === tribeId) {
-                setViewedTribe(prev => prev ? { ...prev, members: updatedTribe.members } : null);
+            // Check if this is a private tribe and user is trying to join (not leave)
+            const tribe = tribes.find(t => t.id === tribeId) || viewedTribe;
+            const isCurrentlyMember = tribe && currentUser && tribe.members.includes(currentUser.id);
+
+            if (tribe?.isPrivate && !isCurrentlyMember) {
+                // Request to join instead of direct join
+                const { data: updatedTribe } = await api.requestJoinTribe(tribeId);
+                setTribes(prev => prev.map(t => t.id === tribeId ? { ...t, joinRequests: updatedTribe.joinRequests } : t));
+                if (viewedTribe && setViewedTribe && viewedTribe.id === tribeId) {
+                    setViewedTribe(prev => prev ? { ...prev, joinRequests: updatedTribe.joinRequests } : null);
+                }
+                toast.success('Join request sent! Waiting for Chief approval.');
+            } else {
+                // Normal join/leave
+                const { data: updatedTribe } = await api.joinTribe(tribeId);
+                setTribes(prev => prev.map(t => t.id === tribeId ? { ...t, members: updatedTribe.members } : t));
+                if (viewedTribe && setViewedTribe && viewedTribe.id === tribeId) {
+                    setViewedTribe(prev => prev ? { ...prev, members: updatedTribe.members } : null);
+                }
             }
-        } catch (error) {
+        } catch (error: any) {
             console.error("Failed to join/leave tribe:", error);
+            toast.error(error.response?.data?.message || 'Failed to process request.');
         }
     };
 

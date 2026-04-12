@@ -2,7 +2,7 @@ import React from 'react';
 import styled from 'styled-components';
 import { Tribe, User } from '../../types';
 import { useNavigate } from 'react-router-dom';
-import { Edit3, EyeOff, Flag, LogOut, MoreVertical, Trash2, Users } from 'lucide-react';
+import { Edit3, EyeOff, Flag, Lock, LogOut, MoreVertical, Trash2, Users } from 'lucide-react';
 import { toast } from '../common/Toast';
 import TribeMembersModal from './TribeMembersModal';
 import ConfirmationModal from '../common/ConfirmationModal';
@@ -556,8 +556,20 @@ const TribeCard: React.FC<TribeCardProps> = ({
           )}
         </TribeName>
         <MemberCount onClick={handleMembersClick} style={{ cursor: 'pointer', textDecoration: 'underline' }}>
-          {localTribe.members.length} members
+          {localTribe.members.length} members {localTribe.isPrivate && <Lock size={12} style={{ display: 'inline', verticalAlign: 'middle', marginLeft: 4 }} />}
         </MemberCount>
+        {localTribe.vibe && localTribe.vibe !== 'General' && (
+          <div style={{
+            fontSize: '0.75rem', fontWeight: 600,
+            padding: '3px 10px', borderRadius: 20,
+            background: 'rgba(214, 185, 160, 0.15)',
+            color: '#D6B9A0',
+            marginBottom: 10,
+            display: 'inline-block',
+          }}>
+            {localTribe.vibe}
+          </div>
+        )}
 
         {isEditing ? (
           <InlineTextArea
@@ -595,15 +607,18 @@ const TribeCard: React.FC<TribeCardProps> = ({
                 {isJoining ? 'Leaving...' : 'Leave'}
               </Button>
             </>
-          ) : (
-            <Button
-              $variant="primary"
-              onClick={handleJoin}
-              disabled={isJoining}
-            >
-              {isJoining ? 'Joining...' : 'Join'}
-            </Button>
-          )}
+          ) : (() => {
+            const hasPendingRequest = localTribe.isPrivate && localTribe.joinRequests?.includes(currentUser?.id || '');
+            return (
+              <Button
+                $variant="primary"
+                onClick={handleJoin}
+                disabled={isJoining || hasPendingRequest}
+              >
+                {hasPendingRequest ? 'Requested' : isJoining ? 'Joining...' : localTribe.isPrivate ? 'Request to Join' : 'Join'}
+              </Button>
+            );
+          })()}}
         </ButtonGroup>
       </Card>
 

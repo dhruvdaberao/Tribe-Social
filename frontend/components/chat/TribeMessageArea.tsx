@@ -1,9 +1,11 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Tribe, User, TribeMessage } from '../../types';
 import UserAvatar from '../common/UserAvatar';
-import { Image as ImageIcon } from 'lucide-react';
+import { Image as ImageIcon, Check } from 'lucide-react';
 import ChatInput from './ChatInput';
 import ChatShell from './ChatShell';
+import * as api from '../../api';
+import { toast } from '../common/Toast';
 
 interface TribeMessageAreaProps {
   tribe: Tribe;
@@ -43,11 +45,27 @@ const TribeMessageArea: React.FC<TribeMessageAreaProps> = ({
   const [inputText, setInputText] = useState('');
   const [replyToMessage, setReplyToMessage] = useState<TribeMessage | null>(null);
   const [actionMessage, setActionMessage] = useState<TribeMessage | null>(null);
+  const [acceptingUserId, setAcceptingUserId] = useState<string | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const shouldAutoScrollRef = useRef(true);
+
+  const isChief = typeof tribe.owner === 'string' ? tribe.owner === currentUser.id : (tribe.owner as any)?.id === currentUser.id;
+
+  const handleAcceptRequest = async (targetUserId: string) => {
+    setAcceptingUserId(targetUserId);
+    try {
+      await api.acceptTribeRequest(tribe.id, targetUserId);
+      toast.success('Member accepted!');
+    } catch (err: any) {
+      console.error('Accept request failed:', err);
+      toast.error(err.response?.data?.message || 'Failed to accept request.');
+    } finally {
+      setAcceptingUserId(null);
+    }
+  };
 
   /* ───────────── SCROLL TO BOTTOM SAFELY ───────────── */
   useEffect(() => {
@@ -220,6 +238,42 @@ const TribeMessageArea: React.FC<TribeMessageAreaProps> = ({
             const replySenderName = replyMessage
               ? (replyMessage.senderId === currentUserId ? 'You' : replyMessage.sender?.name || 'User')
               : '';
+
+            // ─── SYSTEM MESSAGE (join_request / joined) ───
+            if (message.isSystem) {
+              const isJoinRequest = message.systemAction === 'join_request';
+              const isJoined = message.systemAction === 'joined';
+              const targetId = message.actionTargetId;
+              const alreadyAccepted = targetId && tribe.members.includes(targetId);
+
+              return (
+                <div
+                  key={message.id || index}
+                  className="flex justify-center my-2"
+                >
+                  <div className="bg-surface border border-border rounded-xl px-4 py-3 max-w-[90%] text-center shadow-sm">
+                    <p className="text-xs text-secondary">
+                      {message.text}
+                    </p>
+                    {isJoinRequest && isChief && targetId && !alreadyAccepted && (
+                      <button
+                        onClick={() => handleAcceptRequest(targetId)}
+                        disabled={acceptingUserId === targetId}
+                        className="mt-2 px-4 py-1.5 bg-accent text-accent-text text-xs font-bold rounded-full hover:opacity-90 transition-opacity disabled:opacity-50"
+                      >
+                        {acceptingUserId === targetId ? 'Accepting...' : <><Check size={12} className="inline mr-1" />Accept</>}
+                      </button>
+                    )}
+                    {isJoinRequest && isChief && alreadyAccepted && (
+                      <span className="mt-2 inline-block text-xs text-green-500 font-semibold">✓ Accepted</span>
+                    )}
+                    {isJoined && (
+                      <span className="mt-1 inline-block text-xs text-green-500 font-semibold">🎉 Welcome!</span>
+                    )}
+                  </div>
+                </div>
+              );
+            }
 
             return (
               <div
