@@ -306,7 +306,7 @@ const MainLayout: React.FC = () => {
             />
 
             <main
-                className={`${shouldHideHeader ? 'pt-0 md:pt-16' : 'pt-16'} ${isChatPage ? 'pb-0' : 'pb-16 md:pb-0'} box-border transition-all duration-300 ${isFullHeightPage ? 'h-[var(--app-height)]' : 'min-h-[var(--app-height)]'} ${isChatPage ? 'overflow-hidden' : ''}`}
+                className={`${isChatPage ? 'pt-0 pb-0' : shouldHideHeader ? 'pt-0 md:pt-16' : 'pt-16'} ${isChatPage ? '' : 'pb-16 md:pb-0'} box-border transition-all duration-300 ${isChatPage ? 'h-[100dvh] overflow-hidden' : isFullHeightPage ? 'h-[var(--app-height)]' : 'min-h-[var(--app-height)]'}`}
                 onTouchStart={handleTouchStart}
                 onTouchEnd={handleTouchEnd}
             >

@@ -24,10 +24,10 @@ const ChatShell: React.FC<ChatShellProps> = ({
 
   return (
     <div
-      className={`chat-container relative flex h-screen min-h-0 w-full flex-col bg-background ${className}`}
+      className={`chat-container flex h-[100dvh] min-h-0 w-full flex-col overflow-hidden bg-background ${className}`}
     >
       {header ? (
-        <div className="chat-header flex-none border-b border-border bg-background">
+        <div className="chat-header flex-shrink-0 border-b border-border bg-background">
           {header}
         </div>
       ) : null}
@@ -35,14 +35,14 @@ const ChatShell: React.FC<ChatShellProps> = ({
       <div
         ref={messagesRef}
         onScroll={onMessagesScroll}
-        className={`chat-messages min-h-0 flex-1 overflow-y-auto overscroll-contain p-3 pb-20 ${messagesClassName}`}
+        className={`chat-messages min-h-0 flex-1 overflow-y-auto px-4 py-3 [scroll-behavior:smooth] ${messagesClassName}`}
       >
         {children}
       </div>
 
       {composer ? (
         <div
-          className="chat-input sticky bottom-0 w-full flex-none border-t border-border bg-background/95 backdrop-blur-sm"
+          className="chat-input sticky bottom-0 w-full flex-shrink-0 border-t border-border bg-background p-2.5"
         >
           {composer}
         </div>

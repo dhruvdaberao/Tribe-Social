@@ -512,7 +512,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ currentUser, allUsers, chukUser, in
   }, [autoDeleteEnabled, messages]);
 
   return (
-    <div className="flex h-screen min-h-0 flex-col bg-surface md:flex-row md:rounded-3xl md:border md:border-border md:shadow-lg">
+    <div className="flex h-[100dvh] min-h-0 flex-col overflow-hidden bg-surface md:flex-row md:rounded-3xl md:border md:border-border md:shadow-lg">
 
       {/* 
         CONVERSATION LIST (SIDEBAR)
@@ -520,8 +520,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ currentUser, allUsers, chukUser, in
         Desktop: Fixed width 
       */}
       <div
-        className={`flex h-full min-h-0 w-full flex-shrink-0 flex-col bg-surface md:w-[320px] lg:w-[380px] ${isMessageAreaVisible ? 'hidden md:flex' : 'flex'
-          } md:border-r md:border-border`}
+        className={`min-h-0 w-full flex-1 flex-col bg-surface ${isMessageAreaVisible ? 'hidden md:flex md:w-[320px] md:flex-shrink-0 lg:w-[380px]' : 'flex'} md:border-r md:border-border`}
       >
         <ConversationList
           conversations={conversations}
@@ -546,7 +545,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ currentUser, allUsers, chukUser, in
         Desktop: Flex-1, static
       */}
       <div
-        className={`min-h-0 flex-1 bg-background ${isMessageAreaVisible ? 'flex h-full flex-col' : 'hidden md:flex md:h-full md:flex-col'}`}
+        className={`min-h-0 flex-1 flex-col bg-background ${isMessageAreaVisible ? 'flex' : 'hidden md:flex'}`}
       >
         {activeConversation ? (
           <MessageArea
