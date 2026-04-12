@@ -42,10 +42,10 @@ const ConversationList: React.FC<ConversationListProps> = ({
   };
 
   return (
-    <div className="flex h-full min-h-0 flex-col bg-surface">
-      <div className="messages-header flex flex-shrink-0 items-center justify-between border-b border-border px-4 py-4 md:px-5">
+    <div className="flex h-full min-h-0 flex-col bg-background pt-16 md:pt-0">
+      <div className="messages-header flex flex-shrink-0 items-center justify-between border-b border-border bg-background px-4 py-4 md:px-5">
         <h2 className="text-2xl font-bold font-display text-primary md:text-3xl">Messages</h2>
-        <button onClick={onNewMessage} className="rounded-full border border-border bg-background p-2 text-primary transition-colors hover:bg-accent hover:text-accent-text" aria-label="New Message">
+        <button onClick={onNewMessage} className="rounded-full border border-border bg-surface p-2 text-primary transition-colors hover:bg-accent hover:text-accent-text shadow-sm" aria-label="New Message">
           <PlusIcon />
         </button>
       </div>
@@ -137,7 +137,7 @@ const ConversationItem: React.FC<ConversationItemProps> = ({
   return (
     <div
       onClick={() => onSelect(conversation)}
-      className={`chat-item relative mx-3 my-2 flex cursor-pointer items-center gap-3 rounded-xl p-3 transition-colors ${isActive ? 'bg-background' : 'bg-background/60 hover:bg-background'}`}
+      className={`chat-item relative mx-3 my-2 flex cursor-pointer items-center gap-3 rounded-xl p-3 transition-colors border border-border shadow-sm ${isActive ? 'bg-background ring-1 ring-accent' : 'bg-surface hover:bg-background'}`}
     >
       <div className="relative flex-shrink-0">
         {otherParticipant.id === 'chuk-ai' ? (
