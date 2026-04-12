@@ -550,7 +550,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ currentUser, allUsers, chukUser, in
   }, [autoDeleteEnabled, messages]);
 
   return (
-    <div className="chat-page flex h-[100dvh] w-full min-h-0 flex-col bg-[#1f1410] md:h-full md:flex-row md:rounded-2xl md:border md:border-border md:shadow-lg">
+    <div className="chat-page flex h-[100dvh] w-full min-h-0 max-w-full flex-col !bg-[#1f1410] md:h-full md:flex-row">
       <div
         className={`w-full shrink-0 flex-col min-h-0 bg-[#1f1410] md:flex md:w-[320px] md:border-r md:border-border lg:w-[380px] ${isMessageAreaVisible ? 'hidden md:flex' : 'flex'}`}
       >

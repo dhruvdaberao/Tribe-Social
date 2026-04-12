@@ -178,14 +178,14 @@ const ConversationList: React.FC<ConversationListProps> = ({ conversations, isLo
   };
 
   return (
-    <div className="messages-page h-full min-h-0 flex flex-col bg-[#1f1410]">
-      <div className="messages-header sticky top-0 z-40 mt-0 flex shrink-0 items-center justify-between border-b border-white/10 bg-[#1f1410] px-4 py-3 font-semibold">
-        <h2 className="text-3xl font-bold font-display text-primary">Messages</h2>
+    <div className="messages-page flex h-[100dvh] min-h-0 w-full max-w-full flex-col !bg-[#1f1410] md:h-full">
+      <div className="messages-header sticky top-0 z-[100] mt-0 flex w-full shrink-0 items-center justify-between border-b border-t-0 border-white/10 !bg-[#1f1410] px-4 py-[14px] font-semibold shadow-none box-border">
+        <h2 className="text-[20px] font-semibold font-display text-primary">Messages</h2>
         <button onClick={onNewMessage} className="p-2 rounded-full text-primary bg-background border border-border hover:bg-accent hover:text-accent-text transition-colors" aria-label="New Message">
           <PlusIcon />
         </button>
       </div>
-      <div className="messages-container flex-1 min-h-0 overflow-y-auto bg-[#1f1410] pb-[calc(10px+env(safe-area-inset-bottom,0px))]">
+      <div className="messages-list messages-container flex-1 min-h-0 w-full max-w-full overflow-y-auto !bg-[#1f1410] p-[12px] pb-[calc(90px+env(safe-area-inset-bottom,0px))] box-border">
         {/* Chuk AI Static Conversation */}
         <ConversationItem
           key={chukConversation.id}
@@ -203,7 +203,7 @@ const ConversationList: React.FC<ConversationListProps> = ({ conversations, isLo
 
         {isLoading ? (
           <div className="text-center p-8 text-secondary flex flex-col items-center">
-            <img src="/busstop.gif" alt="Loading..." className="w-24 h-auto mb-2" />
+            <img src="/duckload.gif" alt="loading" className="w-10 h-10 mb-2" />
             <p>Loading your chats...</p>
           </div>
         ) : dedupedConversations.length === 0 ? (
@@ -273,7 +273,7 @@ const ConversationItem: React.FC<ConversationItemProps> = ({
   return (
     <div
       onClick={() => onSelect(conversation)}
-      className={`chat-item relative mx-3 mb-2 flex cursor-pointer items-center rounded-[14px] border border-white/10 bg-white/[0.03] p-3 transition-colors ${isActive ? 'ring-1 ring-accent/40' : 'hover:bg-white/[0.05]'}`}
+      className={`chat-item relative mb-2 flex w-full cursor-pointer items-center rounded-[14px] border border-white/10 bg-white/[0.03] p-3 transition-colors ${isActive ? 'ring-1 ring-accent/40' : 'hover:bg-white/[0.05]'}`}
     >
       <div className="relative mr-4 flex-shrink-0">
         <UserAvatar user={otherParticipant} className="w-12 h-12" />
@@ -294,7 +294,7 @@ const ConversationItem: React.FC<ConversationItemProps> = ({
           event.stopPropagation();
           setIsMenuOpen(prev => !prev);
         }}
-        className="ml-3 p-2 text-secondary hover:text-primary rounded-full hover:bg-background"
+        className="ml-auto p-2 text-secondary hover:text-primary rounded-full hover:bg-background"
       >
         <MoreIcon />
       </button>
