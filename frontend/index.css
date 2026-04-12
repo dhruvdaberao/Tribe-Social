@@ -66,8 +66,10 @@ body {
   flex: 0 0 auto;
   position: sticky;
   bottom: 0;
+  left: 0;
+  right: 0;
   z-index: 20;
-  padding-bottom: env(safe-area-inset-bottom, 0px);
+  padding-bottom: max(8px, env(safe-area-inset-bottom, 0px));
 }
 
 /* Custom Scrollbar for Webkit (Chrome, Safari, Edge) */

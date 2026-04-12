@@ -148,9 +148,9 @@ const TribeMessageArea: React.FC<TribeMessageAreaProps> = ({
         header={header} // Pass header to ChatShell
         messagesRef={scrollContainerRef}
         onMessagesScroll={handleScroll}
-        messagesClassName="w-full px-4 py-3 space-y-4"
+        messagesClassName="mx-auto w-full max-w-3xl px-4 py-4 space-y-4"
         composer={(
-          <div className="px-4 py-3 bg-background/95 backdrop-blur-sm border-t border-border z-20">
+          <div className="mx-auto w-full max-w-3xl border-t border-border bg-background/95 px-4 pb-[max(12px,env(safe-area-inset-bottom,0px))] pt-3 backdrop-blur-sm">
             {replyToMessage && (
               <div className="mb-3 flex items-center justify-between rounded-2xl border border-border bg-surface px-4 py-2 text-xs text-secondary shadow-sm">
                 <div className="min-w-0 border-l-2 border-accent pl-2">
@@ -255,7 +255,7 @@ const TribeMessageArea: React.FC<TribeMessageAreaProps> = ({
 
                 {/* MESSAGE BUBBLE */}
                 <div
-                  className={`max-w-[75%] flex flex-col ${isCurrentUser ? 'items-end' : 'items-start'
+                  className={`max-w-[85%] flex flex-col ${isCurrentUser ? 'items-end' : 'items-start'
                     }`}
                 >
                   {!isCurrentUser && showAvatar && (
