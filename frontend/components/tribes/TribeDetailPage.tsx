@@ -779,9 +779,9 @@ const TribeDetailPage: React.FC<Props> = ({ currentUser, tribeId: propTribeId })
           onClose={() => setIsMembersOpen(false)}
           memberIds={tribe.members}
           userMap={userMap}
-          ownerId={typeof tribe.owner === 'string' ? tribe.owner : tribe.owner.id}
+          ownerId={typeof tribe.owner === 'string' ? tribe.owner : ((tribe.owner as any)?.id || (tribe.owner as any)?._id)}
           currentUserId={currentUser?.id}
-          canKick={currentUser?.id === (typeof tribe.owner === 'string' ? tribe.owner : tribe.owner.id)}
+          canKick={Boolean(currentUser) && (currentUser?.id === (typeof tribe.owner === 'string' ? tribe.owner : ((tribe.owner as any)?.id || (tribe.owner as any)?._id)))}
           onKick={handleKickMember}
         />
       )}

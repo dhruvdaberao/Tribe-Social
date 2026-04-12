@@ -4,17 +4,8 @@ import { X, Camera } from 'lucide-react';
 import * as api from '../../api';
 import { toast } from '../common/Toast';
 import MediaSelectionModal from '../common/MediaSelectionModal';
+import ModalPortal from '../common/ModalPortal';
 
-const Overlay = styled.div`
-  position: fixed;
-  top: 0; left: 0; right: 0; bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-  padding: 1rem;
-`;
 
 const Modal = styled.div`
   background: ${({ theme }) => theme.cardBackground};
@@ -149,8 +140,8 @@ const CreateTribeModal: React.FC<CreateTribeModalProps> = ({ onClose, onSuccess 
   };
 
   return (
-    <Overlay onClick={onClose}>
-      <Modal onClick={e => e.stopPropagation()}>
+    <ModalPortal isOpen={true} onClose={onClose} overlayStyle={{ background: 'rgba(0, 0, 0, 0.5)', zIndex: 1000 }}>
+      <Modal>
         <Header>
           <h2>Create New Tribe</h2>
           <CloseButton onClick={onClose}><X size={24} /></CloseButton>
@@ -234,7 +225,7 @@ const CreateTribeModal: React.FC<CreateTribeModalProps> = ({ onClose, onSuccess 
         onSelectCamera={() => cameraInputRef.current?.click()}
         onSelectGallery={() => fileInputRef.current?.click()}
       />
-    </Overlay>
+    </ModalPortal>
   );
 };
 

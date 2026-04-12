@@ -5,6 +5,7 @@ import * as api from '../../api';
 import { toast } from '../common/Toast';
 import MediaSelectionModal from '../common/MediaSelectionModal';
 import ConfirmationModal from '../common/ConfirmationModal';
+import ModalPortal from '../common/ModalPortal';
 import { Tribe } from '../../types';
 
 interface EditTribeModalProps {
@@ -17,19 +18,7 @@ interface EditTribeModalProps {
   onManageMembers?: () => void;
 }
 
-const Overlay = styled.div`
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.7);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-  padding: 1rem; // Add padding to prevent edge touching
-`;
+
 
 const Modal = styled.div`
   background: ${props => props.theme.cardBackground};
@@ -254,91 +243,99 @@ const EditTribeModal: React.FC<EditTribeModalProps> = ({ tribe, onClose, onSucce
     if (onDelete) onDelete(tribe.id);
   };
 
-  const Wrapper = variant === 'inline' ? InlineWrapper : Overlay;
   const Panel = variant === 'inline' ? InlineModal : Modal;
-  const wrapperProps = variant === 'inline' ? {} : { onClick: onClose };
   const panelProps = variant === 'inline' ? {} : { onClick: (event: React.MouseEvent) => event.stopPropagation() };
+
+  const modalContent = (
+    <Panel {...panelProps}>
+      <Header>
+        <h2>Edit Tribe</h2>
+        <CloseButton onClick={onClose}><X size={24} /></CloseButton>
+      </Header>
+
+      <Form onSubmit={handleSaveClick}>
+        {error && <div style={{ color: 'red', fontSize: '0.9rem' }}>{error}</div>}
+
+        <input type="file" ref={fileInputRef} accept="image/*" style={{ display: 'none' }} onChange={handleFileChange} />
+        <input type="file" ref={cameraInputRef} accept="image/*" capture="environment" style={{ display: 'none' }} onChange={handleFileChange} />
+
+        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 8 }}>
+          <div
+            style={{ position: 'relative', cursor: 'pointer' }}
+            onClick={() => setIsMediaModalOpen(true)}
+          >
+            <div style={{
+              width: 70, height: 70, borderRadius: '50%',
+              background: avatarUrl ? `url(${avatarUrl}) center / cover` : theme.secondary,
+              border: `2px dashed ${theme.textSecondary}`,
+              display: 'flex', alignItems: 'center', justifyContent: 'center'
+            }}>
+              {!avatarUrl && <Camera size={28} color={theme.cardBackground} strokeWidth={1.5} />}
+            </div>
+            <div style={{
+              position: 'absolute', bottom: -2, right: -2,
+              background: theme.primary, borderRadius: '50%',
+              width: 24, height: 24, display: 'flex', alignItems: 'center', justifyContent: 'center',
+              color: 'white', fontSize: 16, border: `1px solid ${theme.primary}`
+            }}>+</div>
+          </div>
+        </div>
+
+        <div style={{ display: 'flex', flexDirection: 'column' }}>
+          <Label>Tribe Name</Label>
+          <Input
+            value={name}
+            onChange={e => setName(e.target.value)}
+            placeholder="Tribe Name"
+            required
+          />
+        </div>
+
+        <TextArea value={description} onChange={e => setDescription(e.target.value)} placeholder="Description" required />
+
+        <div style={{ display: 'flex', flexDirection: 'column' }}>
+          <Label>Chief</Label>
+          <Select
+            value={String(ownerId)}
+            onChange={e => setOwnerId(e.target.value)}
+          >
+            {members.map(member => (
+              <option key={member.id} value={member.id}>
+                {member.name} (@{member.username}) {member.id === tribe.owner ? '(Current)' : ''}
+              </option>
+            ))}
+          </Select>
+        </div>
+
+        <Button type="submit" disabled={isSubmitting}>{isSubmitting ? 'Saving...' : 'Save Changes'}</Button>
+      </Form>
+
+      {onDelete && (
+        <DeleteButton type="button" onClick={handleDeleteClick}>
+          <Trash2 size={16} /> Delete Tribe
+        </DeleteButton>
+      )}
+    </Panel>
+  );
 
   return (
     <>
-      <Wrapper {...wrapperProps}>
-        <Panel {...panelProps}>
-          <Header>
-            <h2>Edit Tribe</h2>
-            <CloseButton onClick={onClose}><X size={24} /></CloseButton>
-          </Header>
+      {variant === 'inline' ? (
+        <InlineWrapper>
+          {modalContent}
+        </InlineWrapper>
+      ) : (
+        <ModalPortal isOpen={true} onClose={onClose} overlayStyle={{ background: 'rgba(0, 0, 0, 0.7)', zIndex: 1000 }}>
+          {modalContent}
+        </ModalPortal>
+      )}
 
-          <Form onSubmit={handleSaveClick}>
-            {error && <div style={{ color: 'red', fontSize: '0.9rem' }}>{error}</div>}
-
-            <input type="file" ref={fileInputRef} accept="image/*" style={{ display: 'none' }} onChange={handleFileChange} />
-            <input type="file" ref={cameraInputRef} accept="image/*" capture="environment" style={{ display: 'none' }} onChange={handleFileChange} />
-
-            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 8 }}>
-              <div
-                style={{ position: 'relative', cursor: 'pointer' }}
-                onClick={() => setIsMediaModalOpen(true)}
-              >
-                <div style={{
-                  width: 70, height: 70, borderRadius: '50%',
-                  background: avatarUrl ? `url(${avatarUrl}) center / cover` : theme.secondary,
-                  border: `2px dashed ${theme.textSecondary}`,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center'
-                }}>
-                  {!avatarUrl && <Camera size={28} color={theme.cardBackground} strokeWidth={1.5} />}
-                </div>
-                <div style={{
-                  position: 'absolute', bottom: -2, right: -2,
-                  background: theme.primary, borderRadius: '50%',
-                  width: 24, height: 24, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  color: 'white', fontSize: 16, border: `1px solid ${theme.primary}`
-                }}>+</div>
-              </div>
-            </div>
-
-            <div style={{ display: 'flex', flexDirection: 'column' }}>
-              <Label>Tribe Name</Label>
-              <Input
-                value={name}
-                onChange={e => setName(e.target.value)}
-                placeholder="Tribe Name"
-                required
-              />
-            </div>
-
-            <TextArea value={description} onChange={e => setDescription(e.target.value)} placeholder="Description" required />
-
-            <div style={{ display: 'flex', flexDirection: 'column' }}>
-              <Label>Chief</Label>
-              <Select
-                value={String(ownerId)}
-                onChange={e => setOwnerId(e.target.value)}
-              >
-                {members.map(member => (
-                  <option key={member.id} value={member.id}>
-                    {member.name} (@{member.username}) {member.id === tribe.owner ? '(Current)' : ''}
-                  </option>
-                ))}
-              </Select>
-            </div>
-
-            <Button type="submit" disabled={isSubmitting}>{isSubmitting ? 'Saving...' : 'Save Changes'}</Button>
-          </Form>
-
-          {onDelete && (
-            <DeleteButton type="button" onClick={handleDeleteClick}>
-              <Trash2 size={16} /> Delete Tribe
-            </DeleteButton>
-          )}
-        </Panel>
-
-        <MediaSelectionModal
-          isOpen={isMediaModalOpen}
-          onClose={() => setIsMediaModalOpen(false)}
-          onSelectCamera={() => cameraInputRef.current?.click()}
-          onSelectGallery={() => fileInputRef.current?.click()}
-        />
-      </Wrapper>
+      <MediaSelectionModal
+        isOpen={isMediaModalOpen}
+        onClose={() => setIsMediaModalOpen(false)}
+        onSelectCamera={() => cameraInputRef.current?.click()}
+        onSelectGallery={() => fileInputRef.current?.click()}
+      />
 
       <ConfirmationModal
         isOpen={confirmModal.isOpen}
