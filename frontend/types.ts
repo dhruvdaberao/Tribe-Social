@@ -112,6 +112,9 @@ export interface Tribe {
   owner: string | User;
   members: string[];
   memberLimit?: 10 | 30 | 50 | 100;
+  isPrivate?: boolean;
+  vibe?: string;
+  joinRequests?: string[];
   createdAt?: string;
   isHidden?: boolean;
   hiddenAt?: string | null;
@@ -126,7 +129,7 @@ export interface Tribe {
  * Tribe messages live ONLY in TribeDetailPage state
  */
 export interface TribeMessage {
-  id: string;          // 🔥 FRONTEND ID (normalized from _id)
+  id: string;
   tribeId: string;
   tempId?: string;
   sender: User;
@@ -141,6 +144,9 @@ export interface TribeMessage {
   status?: 'sending' | 'failed';
   clientTempId?: string;
   replyTo?: string | null;
+  isSystem?: boolean;
+  systemAction?: 'join_request' | 'joined' | 'left' | 'kicked' | null;
+  actionTargetId?: string | null;
 }
 
 /* ===================== NOTIFICATIONS ===================== */

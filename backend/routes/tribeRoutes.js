@@ -35,7 +35,7 @@ router.get('/', protect, async (req, res) => {
         }
         const tribes = await Tribe.find(query)
             .sort({ createdAt: -1 })
-            .select('name description avatarUrl owner members memberLimit createdAt')
+            .select('name description avatarUrl owner members memberLimit isPrivate vibe joinRequests createdAt')
             .lean();
 
         const response = !req.user?.isAdmin ? await filterDisabledMembers(tribes) : tribes;
@@ -50,7 +50,7 @@ router.get('/', protect, async (req, res) => {
 router.get('/:id', protect, async (req, res) => {
     try {
         const tribe = await Tribe.findById(req.params.id)
-            .select('name description avatarUrl owner members memberLimit createdAt isHidden isDeleted')
+            .select('name description avatarUrl owner members memberLimit isPrivate vibe joinRequests createdAt isHidden isDeleted')
             .lean();
 
         if (!tribe) {
@@ -75,7 +75,7 @@ router.get('/:id', protect, async (req, res) => {
 // POST /api/tribes
 router.post('/', protect, async (req, res) => {
     try {
-        const { name, description, avatarUrl, memberLimit = 50 } = req.body;
+        const { name, description, avatarUrl, memberLimit = 50, isPrivate = false, vibe = 'General' } = req.body;
 
         if (!name || !description) {
             return res.status(400).json({ message: 'Name and description are required' });
@@ -104,6 +104,8 @@ router.post('/', protect, async (req, res) => {
             owner: req.user.id,
             members: [req.user.id],
             memberLimit: Number(memberLimit),
+            isPrivate: Boolean(isPrivate),
+            vibe: vibe || 'General',
         });
 
         res.status(201).json(tribe);
@@ -155,6 +157,14 @@ router.put('/:id', protect, async (req, res) => {
             } else if (req.body.avatarUrl === null) {
                 tribe.avatarUrl = null;
             }
+        }
+
+        // Update isPrivate and vibe
+        if (req.body.isPrivate !== undefined) {
+            tribe.isPrivate = Boolean(req.body.isPrivate);
+        }
+        if (req.body.vibe !== undefined) {
+            tribe.vibe = req.body.vibe;
         }
 
         const updated = await tribe.save();
@@ -209,6 +219,10 @@ router.put('/:id/join', protect, async (req, res) => {
             }
             tribe.members = tribe.members.filter(id => id.toString() !== userId);
         } else {
+            // 🔥 PRIVATE TRIBE GUARD: Cannot directly join a private tribe
+            if (tribe.isPrivate) {
+                return res.status(403).json({ message: 'This is a private tribe. Please send a join request.' });
+            }
             const currentLimit = Number(tribe.memberLimit || 50);
             if (tribe.members.length >= currentLimit) {
                 return res.status(400).json({ message: `This tribe is full (limit: ${currentLimit}).` });
@@ -319,6 +333,151 @@ router.put('/:id/kick/:userId', protect, async (req, res) => {
     } catch (error) {
         console.error('❌ PUT /api/tribes/:id/kick/:userId ERROR:', error);
         res.status(500).json({ message: 'Server Error kicking member' });
+    }
+});
+
+/* ======================================================
+   JOIN REQUESTS (PRIVATE TRIBES)
+====================================================== */
+
+// POST /api/tribes/:id/request — Request to join a private tribe
+router.post('/:id/request', protect, async (req, res) => {
+    try {
+        const tribe = await Tribe.findById(req.params.id);
+        if (!tribe) return res.status(404).json({ message: 'Tribe not found' });
+
+        const userId = req.user.id;
+
+        if (tribe.members.some(id => id.toString() === userId)) {
+            return res.status(400).json({ message: 'You are already a member' });
+        }
+        if (tribe.joinRequests.some(id => id.toString() === userId)) {
+            return res.status(400).json({ message: 'You have already requested to join' });
+        }
+
+        const currentLimit = Number(tribe.memberLimit || 50);
+        if (tribe.members.length >= currentLimit) {
+            return res.status(400).json({ message: `This tribe is full (limit: ${currentLimit}).` });
+        }
+
+        tribe.joinRequests.push(userId);
+        await tribe.save();
+
+        // Create a system message in the tribe chat
+        const systemMessage = await TribeMessage.create({
+            tribe: tribe._id,
+            sender: userId,
+            text: `${req.user.name || 'Someone'} requested to join the tribe.`,
+            isSystem: true,
+            systemAction: 'join_request',
+            actionTargetId: userId,
+        });
+
+        const populated = await systemMessage.populate('sender', 'name username avatarUrl');
+
+        // Broadcast to tribe room
+        if (req.io) {
+            const responseMessage = {
+                id: populated._id.toString(),
+                tribeId: tribe._id.toString(),
+                sender: populated.sender,
+                senderId: userId,
+                text: populated.text,
+                isSystem: true,
+                systemAction: 'join_request',
+                actionTargetId: userId,
+                timestamp: populated.createdAt,
+            };
+            req.io.to(tribe._id.toString()).emit('newTribeMessage', responseMessage);
+        }
+
+        // Notify tribe owner
+        const notification = new Notification({
+            recipient: tribe.owner,
+            sender: userId,
+            type: 'tribe_join',
+            tribeId: tribe._id,
+            text: `${req.user.name || 'Someone'} requested to join ${tribe.name}`,
+        });
+        await notification.save();
+
+        res.status(200).json(tribe);
+    } catch (error) {
+        console.error('❌ POST /api/tribes/:id/request ERROR:', error);
+        res.status(500).json({ message: 'Server Error requesting to join' });
+    }
+});
+
+// POST /api/tribes/:id/accept/:userId — Chief accepts a join request
+router.post('/:id/accept/:userId', protect, async (req, res) => {
+    try {
+        const tribe = await Tribe.findById(req.params.id);
+        if (!tribe) return res.status(404).json({ message: 'Tribe not found' });
+
+        if (tribe.owner.toString() !== req.user.id) {
+            return res.status(403).json({ message: 'Only the Chief can accept requests' });
+        }
+
+        const targetUserId = req.params.userId;
+
+        const requestIndex = tribe.joinRequests.findIndex(id => id.toString() === targetUserId);
+        if (requestIndex === -1) {
+            return res.status(404).json({ message: 'No pending request from this user' });
+        }
+
+        const currentLimit = Number(tribe.memberLimit || 50);
+        if (tribe.members.length >= currentLimit) {
+            return res.status(400).json({ message: `Tribe is full (limit: ${currentLimit}).` });
+        }
+
+        // Move from joinRequests to members
+        tribe.joinRequests.splice(requestIndex, 1);
+        tribe.members.push(targetUserId);
+        await tribe.save();
+
+        // Get the accepted user's info for the system message
+        const acceptedUser = await User.findById(targetUserId).select('name username avatarUrl');
+
+        // Create a "joined" system message
+        const systemMessage = await TribeMessage.create({
+            tribe: tribe._id,
+            sender: targetUserId,
+            text: `${acceptedUser?.name || 'A user'} has joined the tribe!`,
+            isSystem: true,
+            systemAction: 'joined',
+            actionTargetId: targetUserId,
+        });
+
+        const populated = await systemMessage.populate('sender', 'name username avatarUrl');
+
+        if (req.io) {
+            const responseMessage = {
+                id: populated._id.toString(),
+                tribeId: tribe._id.toString(),
+                sender: populated.sender,
+                senderId: targetUserId,
+                text: populated.text,
+                isSystem: true,
+                systemAction: 'joined',
+                actionTargetId: targetUserId,
+                timestamp: populated.createdAt,
+            };
+            req.io.to(tribe._id.toString()).emit('newTribeMessage', responseMessage);
+        }
+
+        // Notify the accepted user
+        await Notification.create({
+            recipient: targetUserId,
+            sender: req.user.id,
+            type: 'tribe_join',
+            tribeId: tribe._id,
+            text: `Your request to join ${tribe.name} was accepted!`,
+        });
+
+        res.status(200).json(tribe);
+    } catch (error) {
+        console.error('❌ POST /api/tribes/:id/accept/:userId ERROR:', error);
+        res.status(500).json({ message: 'Server Error accepting request' });
     }
 });
 

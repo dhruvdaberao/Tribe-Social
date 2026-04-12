@@ -133,18 +133,21 @@ const CampfireOverlay = styled.div`
   inset: 0;
   background: rgba(0, 0, 0, 0.55);
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   justify-content: center;
   z-index: 200;
+  padding: 24px;
 `;
 
 const CampfireModal = styled.div`
-  width: min(480px, 100%);
+  width: min(380px, 100%);
+  max-height: 70vh;
   background: ${({ theme }) => theme.cardBackground};
   border: 1px solid ${({ theme }) => theme.border};
-  border-radius: 20px 20px 0 0;
+  border-radius: 16px;
   padding: 20px;
-  box-shadow: 0 -12px 30px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
+  overflow-y: auto;
 `;
 
 const CampfireHeader = styled.div`
@@ -790,66 +793,63 @@ const TribeDetailPage: React.FC<Props> = ({ currentUser, tribeId: propTribeId })
         <CampfireOverlay onClick={() => setIsCampfireOpen(false)}>
           <CampfireModal onClick={(event) => event.stopPropagation()}>
             <CampfireHeader>
-              <h3>🔥 Campfire</h3>
+              <h3 style={{ display: 'flex', alignItems: 'center', gap: 8 }}><Flame size={18} /> Campfire</h3>
               <CampfireClose onClick={() => setIsCampfireOpen(false)} aria-label="Close Campfire">
                 <X size={18} />
               </CampfireClose>
             </CampfireHeader>
-            <p style={{ fontSize: '0.8rem', opacity: 0.6, margin: '0 0 12px' }}>
-              {tribe.members.filter(mId => onlineUsers.includes(mId)).length} online now
-            </p>
-            <div style={{ maxHeight: '50vh', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 2 }}>
-              {(() => {
-                const onlineMembers = tribe.members
-                  .map(mId => userMap.get(mId))
-                  .filter((u): u is User => !!u)
-                  .sort((a, b) => {
-                    const aOnline = onlineUsers.includes(a.id) ? 0 : 1;
-                    const bOnline = onlineUsers.includes(b.id) ? 0 : 1;
-                    return aOnline - bOnline;
-                  });
-                return onlineMembers.map(user => {
-                  const isOnline = onlineUsers.includes(user.id);
-                  return (
-                    <div
-                      key={user.id}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 10,
-                        padding: '8px 4px',
-                        borderRadius: 8,
-                        opacity: isOnline ? 1 : 0.5,
-                      }}
-                    >
-                      <div style={{ position: 'relative', flexShrink: 0 }}>
-                        <div style={{
-                          width: 36, height: 36, borderRadius: '50%',
-                          background: user.avatarUrl ? `url(${user.avatarUrl}) center/cover` : 'var(--color-secondary)',
-                          border: '2px solid ' + (isOnline ? '#22c55e' : 'transparent'),
-                        }} />
-                        {isOnline && (
-                          <div style={{
-                            position: 'absolute', bottom: 0, right: 0,
-                            width: 10, height: 10, borderRadius: '50%',
-                            background: '#22c55e',
-                            border: '2px solid var(--color-card-bg)',
-                          }} />
-                        )}
-                      </div>
-                      <div style={{ overflow: 'hidden' }}>
-                        <div style={{ fontWeight: 600, fontSize: '0.9rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                          {user.name}
+            {(() => {
+              const activeMembers = tribe.members
+                .map(mId => userMap.get(mId))
+                .filter((u): u is User => !!u && onlineUsers.includes(u.id));
+              return (
+                <>
+                  <p style={{ fontSize: '0.8rem', opacity: 0.6, margin: '0 0 12px' }}>
+                    {activeMembers.length} active now
+                  </p>
+                  {activeMembers.length === 0 ? (
+                    <p style={{ textAlign: 'center', opacity: 0.5, padding: '20px 0', fontSize: '0.9rem' }}>No one is online right now</p>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                      {activeMembers.map(user => (
+                        <div
+                          key={user.id}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 10,
+                            padding: '8px 4px',
+                            borderRadius: 8,
+                          }}
+                        >
+                          <div style={{ position: 'relative', flexShrink: 0 }}>
+                            <div style={{
+                              width: 36, height: 36, borderRadius: '50%',
+                              background: user.avatarUrl ? `url(${user.avatarUrl}) center/cover` : 'var(--color-secondary)',
+                              border: '2px solid #22c55e',
+                            }} />
+                            <div style={{
+                              position: 'absolute', bottom: 0, right: 0,
+                              width: 10, height: 10, borderRadius: '50%',
+                              background: '#22c55e',
+                              border: '2px solid var(--color-card-bg)',
+                            }} />
+                          </div>
+                          <div style={{ overflow: 'hidden' }}>
+                            <div style={{ fontWeight: 600, fontSize: '0.9rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                              {user.name}
+                            </div>
+                            <div style={{ fontSize: '0.75rem', opacity: 0.6, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                              @{user.username} · <span style={{ color: '#22c55e' }}>Online</span>
+                            </div>
+                          </div>
                         </div>
-                        <div style={{ fontSize: '0.75rem', opacity: 0.6, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                          @{user.username} · {isOnline ? <span style={{ color: '#22c55e' }}>Online</span> : 'Offline'}
-                        </div>
-                      </div>
+                      ))}
                     </div>
-                  );
-                });
-              })()}
-            </div>
+                  )}
+                </>
+              );
+            })()}
           </CampfireModal>
         </CampfireOverlay>
       )}

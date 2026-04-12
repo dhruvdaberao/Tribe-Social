@@ -47,6 +47,20 @@ const tribeMessageSchema = mongoose.Schema(
       type: [mongoose.Schema.Types.ObjectId],
       ref: 'User',
       default: []
+    },
+    isSystem: {
+      type: Boolean,
+      default: false
+    },
+    systemAction: {
+      type: String,
+      enum: ['join_request', 'joined', 'left', 'kicked', null],
+      default: null
+    },
+    actionTargetId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      default: null
     }
   },
   {
@@ -78,6 +92,14 @@ tribeMessageSchema.set('toJSON', {
     }
 
     returnedObject.timestamp = returnedObject.createdAt;
+
+    // Serialize actionTargetId for system messages
+    if (returnedObject.actionTargetId) {
+      returnedObject.actionTargetId = returnedObject.actionTargetId._id 
+        ? returnedObject.actionTargetId._id.toString() 
+        : returnedObject.actionTargetId.toString();
+    }
+
     delete returnedObject._id;
     delete returnedObject.__v;
     delete returnedObject.tribe;

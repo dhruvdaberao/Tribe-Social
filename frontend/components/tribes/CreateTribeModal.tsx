@@ -99,6 +99,8 @@ const CreateTribeModal: React.FC<CreateTribeModalProps> = ({ onClose, onSuccess 
   const [description, setDescription] = useState('');
   const [memberLimit, setMemberLimit] = useState(50);
   const [avatarUrl, setAvatarUrl] = useState('');
+  const [isPrivate, setIsPrivate] = useState(false);
+  const [vibe, setVibe] = useState('General');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -112,7 +114,7 @@ const CreateTribeModal: React.FC<CreateTribeModalProps> = ({ onClose, onSuccess 
     setIsSubmitting(true);
 
     try {
-      const { data } = await api.createTribe({ name, description, avatarUrl, memberLimit });
+      const { data } = await api.createTribe({ name, description, avatarUrl, memberLimit, isPrivate, vibe });
       toast.success("Tribe created successfully");
       onSuccess(data);
     } catch (err: any) {
@@ -211,6 +213,37 @@ const CreateTribeModal: React.FC<CreateTribeModalProps> = ({ onClose, onSuccess 
               onChange={e => setDescription(e.target.value)}
               required
             />
+          </div>
+
+          <div>
+            <Label>Vibe of the Tribe</Label>
+            <Input as="select" value={vibe} onChange={(e: any) => setVibe(e.target.value)} style={{ cursor: 'pointer' }}>
+              {['General', 'Educational', 'Art', 'Music', 'Anime', 'Pop Culture', 'Tech', 'Gaming', 'Fitness', 'Sports', 'Travel', 'Food', 'Photography', 'Memes', 'Others'].map(v => (
+                <option key={v} value={v}>{v}</option>
+              ))}
+            </Input>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '8px 0' }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', color: theme.text, fontSize: '0.95rem', fontWeight: 500 }}>
+              <div
+                onClick={() => setIsPrivate(!isPrivate)}
+                style={{
+                  width: 44, height: 24, borderRadius: 12,
+                  background: isPrivate ? theme.primary : theme.border,
+                  position: 'relative', transition: 'background 0.2s', cursor: 'pointer',
+                }}
+              >
+                <div style={{
+                  width: 20, height: 20, borderRadius: '50%',
+                  background: 'white', position: 'absolute', top: 2,
+                  left: isPrivate ? 22 : 2, transition: 'left 0.2s',
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.3)',
+                }} />
+              </div>
+              Private Tribe {isPrivate ? '🔒' : ''}
+            </label>
+            {isPrivate && <span style={{ fontSize: '0.75rem', color: theme.textSecondary }}>Members must request to join</span>}
           </div>
 
           <Button type="submit" disabled={isSubmitting}>

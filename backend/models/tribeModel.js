@@ -26,6 +26,16 @@ const tribeSchema = mongoose.Schema(
         ref: 'User' 
     }],
     memberLimit: { type: Number, enum: [10, 30, 50, 100], default: 50 },
+    isPrivate: { type: Boolean, default: false },
+    vibe: { 
+        type: String, 
+        enum: ['General', 'Educational', 'Art', 'Music', 'Anime', 'Pop Culture', 'Tech', 'Gaming', 'Fitness', 'Sports', 'Travel', 'Food', 'Photography', 'Memes', 'Others'], 
+        default: 'General' 
+    },
+    joinRequests: [{ 
+        type: mongoose.Schema.Types.ObjectId, 
+        ref: 'User' 
+    }],
     isHidden: { type: Boolean, default: false },
     hiddenAt: { type: Date },
     hiddenBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },

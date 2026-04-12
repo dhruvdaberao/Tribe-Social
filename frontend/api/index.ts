@@ -278,12 +278,22 @@ export const kickTribeMember = async (tribeId: string, userId: string) => {
   return { data: normalizeId(res.data) };
 };
 
+export const requestJoinTribe = async (id: string) => {
+  const res = await API.post(`/tribes/${id}/request`);
+  return { data: normalizeId(res.data) };
+};
+
+export const acceptTribeRequest = async (tribeId: string, userId: string) => {
+  const res = await API.post(`/tribes/${tribeId}/accept/${userId}`);
+  return { data: normalizeId(res.data) };
+};
+
 
 export const fetchTribeMessages = async (id: string, params?: { limit?: number; before?: string }) => {
   const res = await API.get(`/tribes/${id}/messages`, { params });
   return {
     data: res.data.map((m: any) => ({
-      id: m._id,
+      id: m._id || m.id,
       tribeId: id,
       sender: m.sender,
       senderId: m.sender?._id || m.senderId,
@@ -294,6 +304,9 @@ export const fetchTribeMessages = async (id: string, params?: { limit?: number; 
       attachmentType: m.attachmentType,
       attachmentName: m.attachmentName,
       attachmentSize: m.attachmentSize,
+      isSystem: m.isSystem || false,
+      systemAction: m.systemAction || null,
+      actionTargetId: m.actionTargetId || null,
     })),
   };
 };
@@ -302,7 +315,7 @@ export const sendTribeMessage = async (id: string, messageData: any, config?: { 
   const res = await API.post(`/tribes/${id}/messages`, messageData, config);
   return {
     data: {
-      id: res.data._id,
+      id: res.data._id || res.data.id,
       tribeId: id,
       sender: res.data.sender,
       senderId: res.data.sender?._id,
@@ -313,6 +326,9 @@ export const sendTribeMessage = async (id: string, messageData: any, config?: { 
       attachmentType: res.data.attachmentType,
       attachmentName: res.data.attachmentName,
       attachmentSize: res.data.attachmentSize,
+      isSystem: res.data.isSystem || false,
+      systemAction: res.data.systemAction || null,
+      actionTargetId: res.data.actionTargetId || null,
     },
   };
 };
