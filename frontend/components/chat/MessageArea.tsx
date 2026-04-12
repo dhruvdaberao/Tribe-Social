@@ -47,6 +47,7 @@ export const MessageArea: React.FC<MessageAreaProps> = ({
   const [isTyping, setIsTyping] = useState(false);
   const [replyToMessage, setReplyToMessage] = useState<Message | null>(null);
   const [actionMessage, setActionMessage] = useState<Message | null>(null);
+  const [isHeaderMenuOpen, setIsHeaderMenuOpen] = useState(false);
   const otherParticipantId = conversation.participants.find(p => p.id !== currentUser.id)?.id;
   const otherParticipant = otherParticipantId ? userMap.get(otherParticipantId) : null;
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -234,6 +235,32 @@ export const MessageArea: React.FC<MessageAreaProps> = ({
                 <TinyLoader />
               )}
             </div>
+            
+            <div className="relative">
+              <button 
+                onClick={() => setIsHeaderMenuOpen(!isHeaderMenuOpen)} 
+                className="p-2 ml-2 text-primary hover:bg-background rounded-full transition-colors flex-shrink-0"
+              >
+                <MoreOptionsIcon />
+              </button>
+              
+              {isHeaderMenuOpen && (
+                <div 
+                  className="absolute right-0 top-12 z-50 w-48 rounded-xl border border-border bg-surface shadow-lg overflow-hidden flex flex-col"
+                >
+                  <button
+                    onClick={() => {
+                      setIsHeaderMenuOpen(false);
+                      onViewProfile(otherParticipant);
+                    }}
+                    className="px-4 py-3 text-left text-sm font-medium text-primary hover:bg-background transition-colors"
+                  >
+                    View Profile
+                  </button>
+                </div>
+              )}
+            </div>
+            
             </div>
           </div>
         )}
@@ -480,6 +507,7 @@ export const MessageArea: React.FC<MessageAreaProps> = ({
 };
 
 const BackIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>;
+const MoreOptionsIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" /></svg>;
 const TinyLoader = () => (
   <div className="ml-3 h-2 w-12 rounded-full bg-border opacity-70 animate-pulse" aria-hidden="true" />
 );

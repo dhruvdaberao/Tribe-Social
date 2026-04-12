@@ -27,7 +27,7 @@ const ChatShell: React.FC<ChatShellProps> = ({
       className={`chat-container flex h-full min-h-0 w-full flex-col overflow-hidden bg-background ${className}`}
     >
       {header ? (
-        <div className="chat-header messages-header flex-shrink-0 border-b border-border bg-background">
+        <div className="chat-header messages-header flex-shrink-0 z-10 relative">
           {header}
         </div>
       ) : null}
