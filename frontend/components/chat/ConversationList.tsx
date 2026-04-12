@@ -50,7 +50,7 @@ const ConversationList: React.FC<ConversationListProps> = ({
         </button>
       </div>
 
-      <div className="flex-1 overflow-y-auto overscroll-contain pb-[max(16px,env(safe-area-inset-bottom,0px))]">
+      <div className="flex-1 overflow-y-auto pb-[80px]">
         <ConversationItem
           key={chukConversation.id}
           conversation={chukConversation}
@@ -137,7 +137,7 @@ const ConversationItem: React.FC<ConversationItemProps> = ({
   return (
     <div
       onClick={() => onSelect(conversation)}
-      className={`relative flex cursor-pointer items-center gap-3 border-b border-border px-4 py-3.5 transition-colors md:px-5 ${isActive ? 'bg-background' : 'hover:bg-background'}`}
+      className={`relative mx-3 my-2 flex cursor-pointer items-center gap-3 rounded-xl p-3 transition-colors ${isActive ? 'bg-background' : 'bg-background/60 hover:bg-background'}`}
     >
       <div className="relative flex-shrink-0">
         {otherParticipant.id === 'chuk-ai' ? (

@@ -36,22 +36,13 @@ body {
 .chat-container {
   display: flex;
   flex-direction: column;
-  height: var(--app-height);
+  height: 100dvh;
   min-height: 0;
   overflow: hidden;
 }
 
-@media (min-width: 768px) {
-  .chat-container {
-    height: 100%;
-  }
-}
-
 .chat-header {
   flex: 0 0 auto;
-  position: sticky;
-  top: 0;
-  z-index: 20;
 }
 
 .chat-messages {
@@ -74,8 +65,8 @@ body {
 
 /* Custom Scrollbar for Webkit (Chrome, Safari, Edge) */
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
 }
 
 ::-webkit-scrollbar-track {
@@ -83,10 +74,8 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background-color: hsl(var(--border));
-  border-radius: 9999px;
-  border: 2px solid transparent;
-  background-clip: content-box;
+  background: #888;
+  border-radius: 10px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
