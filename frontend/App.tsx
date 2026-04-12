@@ -108,7 +108,7 @@ const MainLayout: React.FC = () => {
 
     const activeNavItem = getNavItemFromPath(location.pathname);
     const isFullHeightPage = ['Messages', 'TribeDetail', 'Settings', 'Psyduck'].includes(activeNavItem);
-    const isChatPage = ['Messages', 'TribeDetail'].includes(activeNavItem);
+    const isChatPage = ['Messages', 'TribeDetail', 'Psyduck'].includes(activeNavItem);
     const isWidePage = ['Discover', 'Tribes', 'Profile'].includes(activeNavItem);
 
     // Lazy Data Loading Trigger
@@ -183,7 +183,8 @@ const MainLayout: React.FC = () => {
             : 'max-w-2xl mx-auto px-4 md:px-6 pt-6 pb-24 md:pb-8';
 
     const shouldHideHeader = activeNavItem === 'TribeDetail' ||
-        ((activeNavItem === 'Messages' || activeNavItem === 'Psyduck') && isChatOpen);
+        activeNavItem === 'Psyduck' ||
+        (activeNavItem === 'Messages' && isChatOpen);
 
     const swipeTabs: NavItem[] = ['Home', 'Discover', 'Messages', 'Notifications', 'Profile'];
 

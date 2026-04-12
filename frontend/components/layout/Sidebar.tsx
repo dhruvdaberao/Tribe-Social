@@ -203,9 +203,9 @@ const Sidebar: React.FC<SidebarProps> = ({ activeItem, onSelectItem, currentUser
     </button>
   );
 
-  // Hidden on Tribe Chat (TribeDetail) AND Active DM Chat (Messages + isChatOpen)
-  const shouldHideHeader = activeItem === 'TribeDetail' || (activeItem === 'Messages' && isChatOpen);
-  const shouldHideBottomNav = activeItem === 'TribeDetail' || (activeItem === 'Messages' && isChatOpen);
+  // Hidden on Tribe Chat (TribeDetail), Psyduck, AND Active DM Chat (Messages + isChatOpen)
+  const shouldHideHeader = activeItem === 'TribeDetail' || activeItem === 'Psyduck' || (activeItem === 'Messages' && isChatOpen);
+  const shouldHideBottomNav = activeItem === 'TribeDetail' || activeItem === 'Psyduck' || (activeItem === 'Messages' && isChatOpen);
 
   return (
     <>
