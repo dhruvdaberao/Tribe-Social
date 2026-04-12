@@ -150,7 +150,7 @@ const TribeMessageArea: React.FC<TribeMessageAreaProps> = ({
         onMessagesScroll={handleScroll}
         messagesClassName="mx-auto w-full max-w-3xl px-4 py-4 space-y-4"
         composer={(
-          <div className="mx-auto w-full max-w-3xl border-t border-border bg-background/95 px-4 pb-[max(12px,env(safe-area-inset-bottom,0px))] pt-3 backdrop-blur-sm">
+          <div className="mx-auto w-full max-w-3xl bg-background/95 px-4 pb-[max(12px,env(safe-area-inset-bottom,0px))] pt-3 backdrop-blur-sm">
             {replyToMessage && (
               <div className="mb-3 flex items-center justify-between rounded-2xl border border-border bg-surface px-4 py-2 text-xs text-secondary shadow-sm">
                 <div className="min-w-0 border-l-2 border-accent pl-2">
@@ -184,9 +184,9 @@ const TribeMessageArea: React.FC<TribeMessageAreaProps> = ({
         )}
       >
         {isLoading && messages.length === 0 && (
-          <div className="h-full flex flex-col items-center justify-center opacity-70">
-            <div className="w-10 h-10 border-2 border-accent border-t-transparent rounded-full animate-spin mb-3" />
-            <p className="text-sm text-secondary">Loading conversation…</p>
+          <div className="relative h-full opacity-70">
+            <div className="loader w-10 h-10 border-2 border-accent border-t-transparent rounded-full animate-spin" />
+            <p className="absolute left-1/2 top-[calc(50%+2.5rem)] -translate-x-1/2 text-sm text-secondary">Loading conversation…</p>
           </div>
         )}
         {isLoadingMore && (
