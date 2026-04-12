@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Conversation, User, Message, Post } from '../../types';
 import ConversationList from './ConversationList';
 import { MessageArea } from './MessageArea';
@@ -22,6 +23,8 @@ interface ChatPageProps {
 
 const ChatPage: React.FC<ChatPageProps> = ({ currentUser, allUsers, chukUser, initialTargetUser, onViewProfile, onSharePost, onConversationStateChange, onToggleBlock }) => {
   const MAX_ATTACHMENT_BYTES = 20 * 1024 * 1024;
+  const navigate = useNavigate();
+  const location = useLocation();
   const [conversations, setConversations] = useState<Conversation[]>(() => {
     try {
       const cached = localStorage.getItem('tribe_storage_conversations');
@@ -261,6 +264,11 @@ const ChatPage: React.FC<ChatPageProps> = ({ currentUser, allUsers, chukUser, in
     setActiveChatPartnerId(null);
     setActiveConversation(null);
     setMessageAreaVisible(false);
+
+    // If we're on /psyduck route, navigate back to /messages so nav bars reappear
+    if (location.pathname.startsWith('/psyduck')) {
+      navigate('/messages', { replace: true });
+    }
   };
 
   const handleLoadMoreMessages = useCallback(async () => {
