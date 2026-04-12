@@ -165,6 +165,7 @@ const NotificationsPage: React.FC<NotificationsPageProps> = ({ notifications, al
   const { setNotifications } = useSocket();
   const [cachedNotifications, setCachedNotifications] = useState<Notification[]>([]);
   const [isLoadingFromCache, setIsLoadingFromCache] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
 
   // Load from cache immediately on mount
   useEffect(() => {
@@ -210,11 +211,47 @@ const NotificationsPage: React.FC<NotificationsPageProps> = ({ notifications, al
   }, [notifications, markAsRead]);
 
   // Use cached notifications if available and real notifications haven't loaded yet
-  const displayNotifications = notifications.length > 0 ? notifications : cachedNotifications;
+  const displayNotifications = (notifications.length > 0 ? notifications : cachedNotifications).filter(notification => {
+    if (!searchQuery.trim()) return true;
+    const lowerQ = searchQuery.toLowerCase();
+    
+    // Extracted render logic to search by content
+    let text = '';
+    switch (notification.type) {
+      case 'follow': text = 'started following you.'; break;
+      case 'like': text = 'liked your post.'; break;
+      case 'comment': text = 'commented on your post.'; break;
+      case 'message': text = 'sent you a message.'; break;
+      case 'story_like': text = 'liked your story.'; break;
+      case 'tribe_join':
+        const tribe = allTribes.find(t => t.id === notification.tribeId);
+        text = `joined your tribe: ${tribe?.name || ''}`; break;
+      case 'tribe_message': text = notification.text || 'sent a message in your tribe.'; break;
+      case 'admin_action': text = notification.text || 'sent an admin update.'; break;
+    }
+    
+    return (notification.sender?.name?.toLowerCase() || '').includes(lowerQ) ||
+           (notification.sender?.username?.toLowerCase() || '').includes(lowerQ) ||
+           text.toLowerCase().includes(lowerQ);
+  });
 
   return (
     <div className="max-w-3xl mx-auto">
-      <h1 className="text-[28px] font-bold text-primary mb-6 font-display leading-[1.2]">Notifications</h1>
+      <h1 className="text-[28px] font-bold text-primary mb-4 font-display leading-[1.2]">Notifications</h1>
+      
+      <div className="relative mb-6">
+        <svg className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-secondary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+        </svg>
+        <input 
+          type="text" 
+          placeholder="Search notifications..." 
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="w-full bg-surface border border-border rounded-xl py-3 pl-11 pr-4 text-[15px] text-primary placeholder-secondary focus:outline-none focus:ring-1 focus:ring-accent transition-shadow shadow-sm"
+        />
+      </div>
+
       <div className="space-y-3">
         {displayNotifications.length > 0 ? (
           displayNotifications.map(notification => (
@@ -232,7 +269,7 @@ const NotificationsPage: React.FC<NotificationsPageProps> = ({ notifications, al
           ))
         ) : (
           <div className="bg-surface rounded-2xl border border-border shadow-md text-center text-secondary p-8">
-            <p>{isLoadingFromCache ? 'Loading notifications...' : 'You have no notifications yet.'}</p>
+            <p>{searchQuery.trim() ? "No notifications match your search." : (isLoadingFromCache ? 'Loading notifications...' : 'You have no notifications yet.')}</p>
           </div>
         )}
       </div>

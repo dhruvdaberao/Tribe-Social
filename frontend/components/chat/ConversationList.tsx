@@ -33,6 +33,8 @@ const ConversationList: React.FC<ConversationListProps> = ({
   onToggleAutoDelete,
   autoDeleteMap
 }) => {
+  const [searchQuery, setSearchQuery] = useState('');
+
   const chukConversation: Conversation = {
     id: chukUser.id,
     participants: [{ id: currentUser.id }, { id: chukUser.id }],
@@ -41,44 +43,78 @@ const ConversationList: React.FC<ConversationListProps> = ({
     messages: []
   };
 
+  const filteredConversations = conversations.filter(conv => {
+    if (!searchQuery.trim()) return true;
+    const otherParticipantId = conv.participants.find(p => p.id !== currentUser.id)?.id;
+    if (!otherParticipantId) return false;
+    const otherParticipant = userMap.get(otherParticipantId);
+    if (!otherParticipant) return false;
+    
+    const lowerQ = searchQuery.toLowerCase();
+    return otherParticipant.name.toLowerCase().includes(lowerQ) || 
+           otherParticipant.username.toLowerCase().includes(lowerQ);
+  });
+
+  const showChuk = !searchQuery.trim() || 
+                   chukUser.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                   chukUser.username.toLowerCase().includes(searchQuery.toLowerCase());
+
   return (
     <div className="flex h-full min-h-0 flex-col bg-background pt-16 md:pt-0">
-      <div className="messages-header flex flex-shrink-0 items-center justify-between border-b border-border bg-background px-4 py-4 md:px-5">
-        <h2 className="text-2xl font-bold font-display text-primary md:text-3xl">Messages</h2>
-        <button onClick={onNewMessage} className="rounded-full border border-border bg-surface p-2 text-primary transition-colors hover:bg-accent hover:text-accent-text shadow-sm" aria-label="New Message">
-          <PlusIcon />
-        </button>
+      <div className="messages-header flex flex-col flex-shrink-0 border-b border-border bg-background px-4 py-4 md:px-5 gap-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-2xl font-bold font-display text-primary md:text-3xl">Messages</h2>
+          <button onClick={onNewMessage} className="rounded-full border border-border bg-surface p-2 text-primary transition-colors hover:bg-accent hover:text-accent-text shadow-sm" aria-label="New Message">
+            <PlusIcon />
+          </button>
+        </div>
+        <div className="relative">
+          <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-secondary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          </svg>
+          <input 
+            type="text" 
+            placeholder="Search messages..." 
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full bg-surface border border-border rounded-xl py-2.5 pl-10 pr-4 text-sm text-primary placeholder-secondary focus:outline-none focus:ring-1 focus:ring-accent transition-shadow shadow-sm"
+          />
+        </div>
       </div>
 
       <div className="messages-container flex-1 overflow-y-auto pb-[80px]">
-        <ConversationItem
-          key={chukConversation.id}
-          conversation={chukConversation}
-          otherParticipant={chukUser}
-          isActive={chukConversation.id === activeConversationId}
-          onSelect={onSelectConversation}
-          unreadCount={0}
-          isBlocked={(currentUser.blockedUsers || []).includes(chukUser.id)}
-          isAutoDeleteEnabled={!!autoDeleteMap[chukUser.id]}
-          onClearConversation={onClearConversation}
-          onToggleBlock={onToggleBlock}
-          onToggleAutoDelete={onToggleAutoDelete}
-        />
+        {showChuk && (
+          <ConversationItem
+            key={chukConversation.id}
+            conversation={chukConversation}
+            otherParticipant={chukUser}
+            isActive={chukConversation.id === activeConversationId}
+            onSelect={onSelectConversation}
+            unreadCount={0}
+            isBlocked={(currentUser.blockedUsers || []).includes(chukUser.id)}
+            isAutoDeleteEnabled={!!autoDeleteMap[chukUser.id]}
+            onClearConversation={onClearConversation}
+            onToggleBlock={onToggleBlock}
+            onToggleAutoDelete={onToggleAutoDelete}
+          />
+        )}
 
         {isLoading ? (
           <div className="flex flex-col items-center p-8 text-center text-secondary">
             <div className="mb-3 h-10 w-10 animate-spin rounded-full border-2 border-accent border-t-transparent" />
             <p>Loading your chats...</p>
           </div>
-        ) : conversations.length === 0 ? (
+        ) : filteredConversations.length === 0 ? (
           <div className="p-8 text-center text-secondary">
-            <p>No user conversations yet.</p>
-            <button onClick={onNewMessage} className="mt-2 text-sm font-semibold text-accent hover:underline">
-              Start a new chat!
-            </button>
+            <p>{searchQuery.trim() ? 'No chats match your search.' : 'No user conversations yet.'}</p>
+            {!searchQuery.trim() && (
+              <button onClick={onNewMessage} className="mt-2 text-sm font-semibold text-accent hover:underline">
+                Start a new chat!
+              </button>
+            )}
           </div>
         ) : (
-          conversations.map(conv => {
+          filteredConversations.map(conv => {
             const otherParticipantId = conv.participants.find(p => p.id !== currentUser.id)?.id;
             if (!otherParticipantId) return null;
 
