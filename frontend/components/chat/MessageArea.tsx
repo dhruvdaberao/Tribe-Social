@@ -241,7 +241,7 @@ export const MessageArea: React.FC<MessageAreaProps> = ({
         onMessagesScroll={handleScroll}
         messagesClassName="mx-auto w-full max-w-3xl px-4 pt-4"
         composer={(
-          <div className="mx-auto w-full max-w-3xl border-t border-border bg-background/95 px-4 pb-[max(12px,env(safe-area-inset-bottom,0px))] pt-3 backdrop-blur-sm">
+          <div className="mx-auto w-full max-w-3xl border-t border-border bg-background/95 px-4 pb-[env(safe-area-inset-bottom,16px)] pt-3 backdrop-blur-sm">
             {replyToMessage && (
               <div className="mb-3 flex items-center justify-between rounded-2xl border border-border bg-surface px-4 py-2 text-xs text-secondary shadow-sm">
                 <div className="min-w-0 border-l-2 border-accent pl-2">
@@ -424,6 +424,11 @@ export const MessageArea: React.FC<MessageAreaProps> = ({
             {messages.length === 0 && (
               <div className="text-center text-secondary p-8">
                 <p>This is the beginning of your conversation with {otherParticipant.name}.</p>
+              </div>
+            )}
+            {messages.length > 0 && (
+              <div className="py-3 text-center text-xs text-secondary">
+                You're all caught up
               </div>
             )}
             <div ref={messagesEndRef} />

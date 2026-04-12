@@ -512,7 +512,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ currentUser, allUsers, chukUser, in
   }, [autoDeleteEnabled, messages]);
 
   return (
-    <div className="flex h-[100dvh] min-h-0 flex-col overflow-hidden bg-surface md:flex-row md:rounded-3xl md:border md:border-border md:shadow-lg">
+    <div className="flex h-[100dvh] min-h-0 w-full flex-col overflow-hidden bg-surface md:flex-row">
 
       {/* 
         CONVERSATION LIST (SIDEBAR)
