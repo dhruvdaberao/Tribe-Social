@@ -25,3 +25,66 @@ body {
   flex-direction: column;
   overflow: hidden;
 }
+
+.messages-page,
+.messages-list,
+.chat-page,
+.chat-body {
+  background: #1f1410 !important;
+}
+
+.messages-page {
+  display: flex;
+  flex-direction: column;
+  height: 100dvh;
+  width: 100%;
+  max-width: 100%;
+}
+
+.messages-header,
+.chat-header {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  width: 100%;
+  box-sizing: border-box;
+  background: #1f1410 !important;
+  border-top: none !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: none !important;
+}
+
+.messages-list,
+.chat-body {
+  flex: 1;
+  width: 100%;
+  max-width: 100%;
+  overflow-y: auto;
+  box-sizing: border-box;
+  padding: 12px 12px 90px 12px;
+}
+
+.chat-header-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.chat-header-right {
+  display: flex;
+  align-items: center;
+  margin-left: auto;
+}
+
+.loader {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.loader img {
+  width: 40px;
+  height: 40px;
+}

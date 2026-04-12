@@ -318,25 +318,28 @@ export const MessageArea: React.FC<MessageAreaProps> = ({ conversation, messages
     <>
       <ChatShell
         header={(
-          <div className="flex items-center">
-            <button onClick={onBack} className="md:hidden p-2 mr-2 text-primary">
-              <BackIcon />
-            </button>
-            <div
-              className="flex items-center cursor-pointer overflow-hidden"
-              onClick={() => onViewProfile(otherParticipant)}
-            >
-              <UserAvatar user={otherParticipant} className="w-10 h-10 rounded-full mr-3 flex-shrink-0" isOnline={isOtherUserOnline} />
-              <div className="min-w-0">
-                <h2 className="text-lg font-bold text-primary leading-tight hover:underline truncate">{otherParticipant.name || otherParticipant.username}</h2>
-                {isTyping ? (
-                  <p className="text-sm text-accent leading-tight truncate italic">typing...</p>
-                ) : (
-                  <p className="text-sm text-secondary leading-tight truncate">@{otherParticipant.username}</p>
-                )}
+          <>
+            <div className="chat-header-left flex min-w-0 items-center gap-2.5">
+              <button onClick={onBack} className="md:hidden p-2 text-primary">
+                <BackIcon />
+              </button>
+              <div
+                className="flex min-w-0 items-center cursor-pointer overflow-hidden"
+                onClick={() => onViewProfile(otherParticipant)}
+              >
+                <UserAvatar user={otherParticipant} className="w-10 h-10 rounded-full mr-3 flex-shrink-0" isOnline={isOtherUserOnline} />
+                <div className="min-w-0">
+                  <h2 className="text-lg font-bold text-primary leading-tight hover:underline truncate">{otherParticipant.name || otherParticipant.username}</h2>
+                  {isTyping ? (
+                    <p className="text-sm text-accent leading-tight truncate italic">typing...</p>
+                  ) : (
+                    <p className="text-sm text-secondary leading-tight truncate">@{otherParticipant.username}</p>
+                  )}
+                </div>
               </div>
             </div>
-          </div>
+            <div className="chat-header-right ml-auto flex items-center" />
+          </>
         )}
         composer={(
           <div>
@@ -427,7 +430,7 @@ export const MessageArea: React.FC<MessageAreaProps> = ({ conversation, messages
           </div>
           {isLoading && (
             <div className="loader pointer-events-none absolute left-1/2 top-1/2 z-20 -translate-x-1/2 -translate-y-1/2">
-              <img src="/duckload.gif" alt="Loading messages..." className="w-16 h-16" />
+              <img src="/duckload.gif" alt="loading" className="h-10 w-10" />
             </div>
           )}
         </div>
