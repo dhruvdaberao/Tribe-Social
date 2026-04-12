@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import styled, { useTheme } from 'styled-components';
-import { X, Camera } from 'lucide-react';
+import { X, Camera, Lock } from 'lucide-react';
 import * as api from '../../api';
 import { toast } from '../common/Toast';
 import MediaSelectionModal from '../common/MediaSelectionModal';
@@ -12,16 +12,16 @@ const Modal = styled.div`
   width: 100%;
   max-width: 500px;
   border-radius: 12px;
-  padding: 2rem;
+  padding: 1rem;
   position: relative;
-  box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+  box-shadow: 0 8px 20px rgba(0,0,0,0.24);
 `;
 
 const Header = styled.div`
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 24px;
+  margin-bottom: 12px;
   
   h2 { margin: 0; font-size: 1.5rem; color: ${({ theme }) => theme.text}; }
 `;
@@ -37,7 +37,7 @@ const CloseButton = styled.button`
 const Form = styled.form`
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 8px;
 `;
 
 const Label = styled.label`
@@ -49,7 +49,7 @@ const Label = styled.label`
 
 const Input = styled.input`
   width: 100%;
-  padding: 12px 16px;
+  padding: 10px 12px;
   border-radius: 8px;
   border: 1px solid ${({ theme }) => theme.border};
   background: ${({ theme }) => theme.background};
@@ -62,14 +62,17 @@ const Input = styled.input`
 
 const TextArea = styled.textarea`
   width: 100%;
-  padding: 12px 16px;
+  padding: 8px 10px;
   border-radius: 8px;
   border: 1px solid ${({ theme }) => theme.border};
   background: ${({ theme }) => theme.background};
   color: ${({ theme }) => theme.text};
-  min-height: 100px;
-  resize: vertical;
-  font-size: 1rem;
+  min-height: 78px;
+  max-height: 94px;
+  resize: none;
+  font-size: 0.95rem;
+  line-height: 1.35;
+  text-align-vertical: top;
   
   &:focus { outline: 2px solid ${({ theme }) => theme.primary}; border-color: transparent; }
   &::placeholder { color: ${({ theme }) => theme.textSecondary}; }
@@ -102,6 +105,7 @@ const CreateTribeModal: React.FC<CreateTribeModalProps> = ({ onClose, onSuccess 
   const [isPrivate, setIsPrivate] = useState(false);
   const [vibe, setVibe] = useState('General');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isReadingImage, setIsReadingImage] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const [isMediaModalOpen, setIsMediaModalOpen] = useState(false);
@@ -114,7 +118,14 @@ const CreateTribeModal: React.FC<CreateTribeModalProps> = ({ onClose, onSuccess 
     setIsSubmitting(true);
 
     try {
-      const { data } = await api.createTribe({ name, description, avatarUrl, memberLimit, isPrivate, vibe });
+      const { data } = await api.createTribe({
+        name: name.trim(),
+        description: description.trim(),
+        avatarUrl,
+        memberLimit,
+        isPrivate,
+        vibe
+      });
       toast.success("Tribe created successfully");
       onSuccess(data);
     } catch (err: any) {
@@ -131,9 +142,16 @@ const CreateTribeModal: React.FC<CreateTribeModalProps> = ({ onClose, onSuccess 
         toast.error("File too large. Max 5MB.");
         return;
       }
+      setIsReadingImage(true);
       const reader = new FileReader();
       reader.onloadend = () => {
         setAvatarUrl(reader.result as string);
+        setIsMediaModalOpen(false);
+        setIsReadingImage(false);
+      };
+      reader.onerror = () => {
+        setIsReadingImage(false);
+        toast.error('Unable to read selected image.');
       };
       reader.readAsDataURL(file);
       // Clear value to allow re-selecting same file
@@ -170,28 +188,28 @@ const CreateTribeModal: React.FC<CreateTribeModalProps> = ({ onClose, onSuccess 
           />
 
           {/* Visual Avatar Picker */}
-          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 20 }}>
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 8 }}>
             <div
               style={{ position: 'relative', cursor: 'pointer' }}
               onClick={() => setIsMediaModalOpen(true)}
             >
               <div style={{
-                width: 100, height: 100, borderRadius: '50%',
+                width: 68, height: 68, borderRadius: '50%',
                 background: avatarUrl ? `url(${avatarUrl}) center/cover` : theme.secondary,
                 border: `2px dashed ${theme.textSecondary}`,
                 display: 'flex', alignItems: 'center', justifyContent: 'center'
               }}>
-                {!avatarUrl && <Camera size={40} color={theme.cardBackground} strokeWidth={1.5} />}
+                {!avatarUrl && <Camera size={26} color={theme.cardBackground} strokeWidth={1.5} />}
               </div>
               <div style={{
                 position: 'absolute', bottom: 0, right: 0,
                 background: theme.primary, borderRadius: '50%',
-                width: 30, height: 30, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                color: 'white', fontSize: 18, border: `1px solid ${theme.primary}`
+                width: 20, height: 20, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                color: 'white', fontSize: 14, border: `1px solid ${theme.primary}`
               }}>+</div>
             </div>
           </div>
-          <div style={{ textAlign: 'center', marginBottom: 20, color: theme.textSecondary, fontSize: '0.9rem' }}>
+          <div style={{ textAlign: 'center', marginBottom: 8, color: theme.textSecondary, fontSize: '0.8rem' }}>
             Tap to upload image
           </div>
 
@@ -217,7 +235,7 @@ const CreateTribeModal: React.FC<CreateTribeModalProps> = ({ onClose, onSuccess 
 
           <div>
             <Label>Vibe of the Tribe</Label>
-            <Input as="select" value={vibe} onChange={(e: any) => setVibe(e.target.value)} style={{ cursor: 'pointer' }}>
+            <Input as="select" value={vibe} onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setVibe(e.target.value)} style={{ cursor: 'pointer' }}>
               {['General', 'Educational', 'Art', 'Music', 'Anime', 'Pop Culture', 'Tech', 'Gaming', 'Fitness', 'Sports', 'Travel', 'Food', 'Photography', 'Memes', 'Others'].map(v => (
                 <option key={v} value={v}>{v}</option>
               ))}
@@ -229,25 +247,28 @@ const CreateTribeModal: React.FC<CreateTribeModalProps> = ({ onClose, onSuccess 
               <div
                 onClick={() => setIsPrivate(!isPrivate)}
                 style={{
-                  width: 44, height: 24, borderRadius: 12,
+                  width: 48, height: 28, borderRadius: 999,
                   background: isPrivate ? theme.primary : theme.border,
                   position: 'relative', transition: 'background 0.2s', cursor: 'pointer',
+                  padding: 2,
                 }}
               >
                 <div style={{
-                  width: 20, height: 20, borderRadius: '50%',
+                  width: 24, height: 24, borderRadius: '50%',
                   background: 'white', position: 'absolute', top: 2,
-                  left: isPrivate ? 22 : 2, transition: 'left 0.2s',
-                  boxShadow: '0 1px 3px rgba(0,0,0,0.3)',
+                  left: isPrivate ? 22 : 2, transition: 'left 0.2s ease',
+                  boxShadow: '0 1px 2px rgba(0,0,0,0.22)',
                 }} />
               </div>
-              Private Tribe {isPrivate ? '🔒' : ''}
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                Private Tribe {isPrivate && <Lock size={14} color={theme.primary} />}
+              </span>
             </label>
             {isPrivate && <span style={{ fontSize: '0.75rem', color: theme.textSecondary }}>Members must request to join</span>}
           </div>
 
-          <Button type="submit" disabled={isSubmitting}>
-            {isSubmitting ? 'Creating...' : 'Create Tribe'}
+          <Button type="submit" disabled={isSubmitting || isReadingImage}>
+            {isReadingImage ? 'Processing image...' : isSubmitting ? 'Creating...' : 'Create Tribe'}
           </Button>
         </Form>
       </Modal>

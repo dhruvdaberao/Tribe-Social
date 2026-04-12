@@ -10,7 +10,7 @@ import TribeMessageArea from '../chat/TribeMessageArea';
 import ChatShell from '../chat/ChatShell'; // Added import
 import TribeMembersModal from './TribeMembersModal';
 import EditTribeModal from './EditTribeModal';
-import { Users, ArrowLeft, Edit2, LogIn, LogOut, Flame, X } from 'lucide-react';
+import { Users, ArrowLeft, Edit2, LogIn, LogOut, Flame, X, Lock } from 'lucide-react';
 import { toast } from '../common/Toast';
 import ConfirmationModal from '../common/ConfirmationModal';
 import { useVisualViewportHeight } from '../../hooks/useVisualViewportHeight';
@@ -747,7 +747,10 @@ const TribeDetailPage: React.FC<Props> = ({ currentUser, tribeId: propTribeId })
             <div className="w-24 h-24 bg-surface rounded-full flex items-center justify-center mb-2">
               <Users size={48} className="text-secondary opacity-50" />
             </div>
-            <h2 className="text-xl font-bold">{tribe?.isPrivate ? '🔒 ' : ''}Join {tribe?.name || 'Tribe'}</h2>
+            <h2 className="text-xl font-bold inline-flex items-center gap-2">
+              {tribe?.isPrivate && <Lock size={18} className="text-accent" />}
+              Join {tribe?.name || 'Tribe'}
+            </h2>
             <p className="text-secondary max-w-sm">
               {tribe?.isPrivate
                 ? 'This is a private tribe. Send a request and the Chief will review it.'
