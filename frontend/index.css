@@ -55,17 +55,31 @@ body {
 .messages-header {
   position: sticky;
   top: 0;
-  z-index: 10;
+  z-index: 20;
   background: inherit;
+  padding: 12px 16px;
+  font-weight: 600;
+}
+
+.messages-page {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
 }
 
 .messages-container {
+  flex: 1;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
+  padding-bottom: 80px;
 }
 
 .chat-item {
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  margin: 8px 12px;
+  padding: 12px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 .chat-input {
@@ -79,12 +93,16 @@ body {
 }
 
 .chat-input-container {
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow: none;
   position: sticky;
   bottom: 0;
-  z-index: 10;
+  z-index: 30;
   background: inherit;
+  padding: 10px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.messages-wrapper {
+  position: relative;
 }
 
 .loader {

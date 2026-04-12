@@ -550,9 +550,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ currentUser, allUsers, chukUser, in
   }, [autoDeleteEnabled, messages]);
 
   return (
-    <div
-      className="h-screen min-h-0 w-full bg-background md:bg-surface md:border md:border-border md:shadow-lg flex flex-col md:flex-row relative"
-    >
+    <div className="h-full min-h-0 w-full bg-background md:bg-surface md:border md:border-border md:shadow-lg flex flex-col md:flex-row relative">
       <div
         className={`w-full md:w-[320px] lg:w-[380px] flex-shrink-0 flex flex-col min-h-0 transition-transform duration-300 ease-in-out md:static absolute inset-0 z-10 md:border-r md:border-border bg-surface ${isMessageAreaVisible ? '-translate-x-full' : 'translate-x-0'
           } md:translate-x-0`}
@@ -580,7 +578,6 @@ const ChatPage: React.FC<ChatPageProps> = ({ currentUser, allUsers, chukUser, in
       >
         {activeConversation ? (
           <MessageArea
-            key={activeConversation.id}
             conversation={activeConversation}
             messages={filteredMessages}
             isLoading={isLoadingMessages}

@@ -368,11 +368,7 @@ export const MessageArea: React.FC<MessageAreaProps> = ({ conversation, messages
         )}
         messagesClassName="px-1"
       >
-        {isLoading ? (
-          <div className="w-full h-full flex items-center justify-center">
-            <img src="/duckload.gif" alt="Loading messages..." className="w-16 h-16" />
-          </div>
-        ) : (
+        <div className="messages-wrapper relative min-h-full">
           <div className="flex flex-col space-y-2">
             {messages.map(message => {
               const isCurrentUser = message.senderId === currentUser.id;
@@ -429,7 +425,12 @@ export const MessageArea: React.FC<MessageAreaProps> = ({ conversation, messages
             )}
             <div ref={messagesEndRef} />
           </div>
-        )}
+          {isLoading && (
+            <div className="loader pointer-events-none z-20">
+              <img src="/duckload.gif" alt="Loading messages..." className="w-16 h-16" />
+            </div>
+          )}
+        </div>
       </ChatShell>
       {actionMessage && (
         <div
