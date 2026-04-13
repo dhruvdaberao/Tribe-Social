@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import styled, { useTheme } from 'styled-components';
-import { X, Camera, Trash2, Lock } from 'lucide-react';
+import { X, Camera, Trash2, Lock, ChevronDown } from 'lucide-react';
 import * as api from '../../api';
 import { toast } from '../common/Toast';
 import MediaSelectionModal from '../common/MediaSelectionModal';
@@ -174,6 +174,74 @@ const Label = styled.label`
   margin-bottom: 2px;
 `;
 
+const VIBE_OPTIONS = ['General', 'Educational', 'Art', 'Music', 'Anime', 'Pop Culture', 'Tech', 'Gaming', 'Fitness', 'Sports', 'Travel', 'Food', 'Photography', 'Memes', 'Others'];
+
+const CustomSelectWrapper = styled.div`
+  position: relative;
+`;
+
+const CustomSelectTrigger = styled.button`
+  width: 100%;
+  padding: 0.625rem 0.75rem;
+  border-radius: 8px;
+  border: 1px solid ${props => props.theme.border};
+  background: ${props => props.theme.background};
+  color: ${props => props.theme.text};
+  font-family: 'Outfit', sans-serif;
+  font-size: 0.9rem;
+  text-align: left;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  &:focus {
+    outline: none;
+    border-color: ${props => props.theme.primary};
+  }
+`;
+
+const CustomSelectDropdown = styled.div`
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  max-height: 180px;
+  overflow-y: auto;
+  background: ${props => props.theme.cardBackground};
+  border: 1px solid ${props => props.theme.border};
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  z-index: 100;
+  padding: 4px 0;
+
+  &::-webkit-scrollbar {
+    width: 4px;
+  }
+  &::-webkit-scrollbar-thumb {
+    background: ${props => props.theme.border};
+    border-radius: 4px;
+  }
+`;
+
+const CustomSelectOption = styled.button<{ $selected?: boolean }>`
+  width: 100%;
+  padding: 8px 12px;
+  border: none;
+  background: ${({ $selected }) => $selected ? 'rgba(214, 185, 160, 0.18)' : 'transparent'};
+  color: ${({ $selected, theme }) => $selected ? theme.primary : theme.text};
+  font-family: 'Outfit', sans-serif;
+  font-size: 0.85rem;
+  font-weight: ${({ $selected }) => $selected ? 600 : 400};
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.15s;
+
+  &:hover {
+    background: ${props => props.theme.hover || 'rgba(214, 185, 160, 0.12)'};
+  }
+`;
+
 const EditTribeModal: React.FC<EditTribeModalProps> = ({ tribe, onClose, onSuccess, onDelete, allUsers, variant = 'modal', onManageMembers }) => {
   const [name, setName] = useState(tribe.name);
   const [description, setDescription] = useState(tribe.description);
@@ -187,6 +255,7 @@ const EditTribeModal: React.FC<EditTribeModalProps> = ({ tribe, onClose, onSucce
   const [error, setError] = useState('');
   const [isMediaModalOpen, setIsMediaModalOpen] = useState(false);
   const [confirmModal, setConfirmModal] = useState({ isOpen: false, type: 'delete' as 'delete' | 'transfer' });
+  const [isVibeDropdownOpen, setIsVibeDropdownOpen] = useState(false);
 
   const theme = useTheme();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -303,8 +372,10 @@ const EditTribeModal: React.FC<EditTribeModalProps> = ({ tribe, onClose, onSucce
               position: 'absolute', bottom: -2, right: -2,
               background: theme.primary, borderRadius: '50%',
               width: 24, height: 24, display: 'flex', alignItems: 'center', justifyContent: 'center',
-              color: 'white', fontSize: 16, border: `1px solid ${theme.primary}`
-            }}>+</div>
+              border: `2px solid ${theme.cardBackground}`,
+            }}>
+              <Camera size={12} color="white" strokeWidth={2.5} />
+            </div>
           </div>
         </div>
 
@@ -336,11 +407,32 @@ const EditTribeModal: React.FC<EditTribeModalProps> = ({ tribe, onClose, onSucce
 
         <div style={{ display: 'flex', flexDirection: 'column' }}>
           <Label>Vibe of the Tribe</Label>
-          <Select value={vibe} onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setVibe(e.target.value)}>
-            {['General', 'Educational', 'Art', 'Music', 'Anime', 'Pop Culture', 'Tech', 'Gaming', 'Fitness', 'Sports', 'Travel', 'Food', 'Photography', 'Memes', 'Others'].map(v => (
-              <option key={v} value={v}>{v}</option>
-            ))}
-          </Select>
+          <CustomSelectWrapper>
+            <CustomSelectTrigger type="button" onClick={() => setIsVibeDropdownOpen(prev => !prev)}>
+              <span>{vibe}</span>
+              <ChevronDown size={16} style={{ opacity: 0.6, transition: 'transform 0.2s', transform: isVibeDropdownOpen ? 'rotate(180deg)' : 'none' }} />
+            </CustomSelectTrigger>
+            {isVibeDropdownOpen && (
+              <>
+                <div style={{ position: 'fixed', inset: 0, zIndex: 99 }} onClick={() => setIsVibeDropdownOpen(false)} />
+                <CustomSelectDropdown>
+                  {VIBE_OPTIONS.map(v => (
+                    <CustomSelectOption
+                      key={v}
+                      type="button"
+                      $selected={vibe === v}
+                      onClick={() => {
+                        setVibe(v);
+                        setIsVibeDropdownOpen(false);
+                      }}
+                    >
+                      {v}
+                    </CustomSelectOption>
+                  ))}
+                </CustomSelectDropdown>
+              </>
+            )}
+          </CustomSelectWrapper>
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '4px 0' }}>

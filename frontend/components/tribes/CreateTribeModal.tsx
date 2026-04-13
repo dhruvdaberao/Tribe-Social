@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import styled, { useTheme } from 'styled-components';
-import { X, Camera, Lock } from 'lucide-react';
+import { X, Camera, Lock, ChevronDown } from 'lucide-react';
 import * as api from '../../api';
 import { toast } from '../common/Toast';
 import MediaSelectionModal from '../common/MediaSelectionModal';
@@ -92,6 +92,62 @@ const Button = styled.button`
   &:disabled { opacity: 0.7; cursor: not-allowed; }
 `;
 
+const VIBE_OPTIONS = ['General', 'Educational', 'Art', 'Music', 'Anime', 'Pop Culture', 'Tech', 'Gaming', 'Fitness', 'Sports', 'Travel', 'Food', 'Photography', 'Memes', 'Others'];
+
+const CustomSelectWrapper = styled.div`
+  position: relative;
+`;
+
+const CustomSelectTrigger = styled.button`
+  width: 100%;
+  padding: 9px 12px;
+  border-radius: 8px;
+  border: 1px solid ${({ theme }) => theme.border};
+  background: ${({ theme }) => theme.background};
+  color: ${({ theme }) => theme.text};
+  font-size: 0.875rem;
+  text-align: left;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  &:focus { outline: 2px solid ${({ theme }) => theme.primary}; border-color: transparent; }
+`;
+
+const CustomSelectDropdown = styled.div`
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  max-height: 180px;
+  overflow-y: auto;
+  background: ${({ theme }) => theme.cardBackground};
+  border: 1px solid ${({ theme }) => theme.border};
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  z-index: 100;
+  padding: 4px 0;
+
+  &::-webkit-scrollbar { width: 4px; }
+  &::-webkit-scrollbar-thumb { background: ${({ theme }) => theme.border}; border-radius: 4px; }
+`;
+
+const CustomSelectOption = styled.button<{ $selected?: boolean }>`
+  width: 100%;
+  padding: 8px 12px;
+  border: none;
+  background: ${({ $selected }) => $selected ? 'rgba(214, 185, 160, 0.18)' : 'transparent'};
+  color: ${({ $selected, theme }) => $selected ? theme.primary : theme.text};
+  font-size: 0.83rem;
+  font-weight: ${({ $selected }) => $selected ? 600 : 400};
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.15s;
+
+  &:hover { background: ${({ theme }) => theme.hover || 'rgba(214, 185, 160, 0.12)'}; }
+`;
+
 interface CreateTribeModalProps {
   onClose: () => void;
   onSuccess: (newTribe: any) => void;
@@ -110,6 +166,7 @@ const CreateTribeModal: React.FC<CreateTribeModalProps> = ({ onClose, onSuccess 
   const [error, setError] = useState<string | null>(null);
 
   const [isMediaModalOpen, setIsMediaModalOpen] = useState(false);
+  const [isVibeDropdownOpen, setIsVibeDropdownOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
 
@@ -236,11 +293,32 @@ const CreateTribeModal: React.FC<CreateTribeModalProps> = ({ onClose, onSuccess 
 
           <div>
             <Label>Vibe of the Tribe</Label>
-            <Input as="select" value={vibe} onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setVibe(e.target.value)} style={{ cursor: 'pointer' }}>
-              {['General', 'Educational', 'Art', 'Music', 'Anime', 'Pop Culture', 'Tech', 'Gaming', 'Fitness', 'Sports', 'Travel', 'Food', 'Photography', 'Memes', 'Others'].map(v => (
-                <option key={v} value={v}>{v}</option>
-              ))}
-            </Input>
+            <CustomSelectWrapper>
+              <CustomSelectTrigger type="button" onClick={() => setIsVibeDropdownOpen(prev => !prev)}>
+                <span>{vibe}</span>
+                <ChevronDown size={14} style={{ opacity: 0.6, transition: 'transform 0.2s', transform: isVibeDropdownOpen ? 'rotate(180deg)' : 'none' }} />
+              </CustomSelectTrigger>
+              {isVibeDropdownOpen && (
+                <>
+                  <div style={{ position: 'fixed', inset: 0, zIndex: 99 }} onClick={() => setIsVibeDropdownOpen(false)} />
+                  <CustomSelectDropdown>
+                    {VIBE_OPTIONS.map(v => (
+                      <CustomSelectOption
+                        key={v}
+                        type="button"
+                        $selected={vibe === v}
+                        onClick={() => {
+                          setVibe(v);
+                          setIsVibeDropdownOpen(false);
+                        }}
+                      >
+                        {v}
+                      </CustomSelectOption>
+                    ))}
+                  </CustomSelectDropdown>
+                </>
+              )}
+            </CustomSelectWrapper>
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '6px 0' }}>

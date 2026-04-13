@@ -1,12 +1,13 @@
 import React from 'react';
-import styled from 'styled-components';
+import styled, { useTheme } from 'styled-components';
 import { Tribe, User } from '../../types';
 import { useNavigate } from 'react-router-dom';
-import { Edit3, EyeOff, Flag, Lock, LogOut, MoreVertical, Trash2, Users } from 'lucide-react';
+import { Camera, ChevronDown, Edit3, EyeOff, Flag, Lock, LogOut, MoreVertical, Trash2, Users } from 'lucide-react';
 import { toast } from '../common/Toast';
 import TribeMembersModal from './TribeMembersModal';
 import ConfirmationModal from '../common/ConfirmationModal';
 import ReportModal from '../moderation/ReportModal';
+import MediaSelectionModal from '../common/MediaSelectionModal';
 import * as api from '../../api';
 
 const Card = styled.div`
@@ -209,12 +210,104 @@ const InlineTextArea = styled.textarea`
   font-size: 0.95rem;
   line-height: 1.4;
   min-height: 80px;
-  margin-bottom: 1rem;
+  margin-bottom: 0.5rem;
   resize: vertical;
   outline: none;
 
   &:focus {
     border-color: ${({ theme }) => theme.primary};
+  }
+`;
+
+const VIBE_OPTIONS = ['General', 'Educational', 'Art', 'Music', 'Anime', 'Pop Culture', 'Tech', 'Gaming', 'Fitness', 'Sports', 'Travel', 'Food', 'Photography', 'Memes', 'Others'];
+
+const VibeDropdownWrapper = styled.div`
+  position: relative;
+  display: inline-block;
+  margin-bottom: 0.5rem;
+`;
+
+const VibeChip = styled.button`
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 12px;
+  border-radius: 20px;
+  background: rgba(214, 185, 160, 0.18);
+  color: #D6B9A0;
+  font-size: 0.75rem;
+  font-weight: 600;
+  border: 1px solid rgba(214, 185, 160, 0.35);
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover {
+    background: rgba(214, 185, 160, 0.28);
+    border-color: rgba(214, 185, 160, 0.6);
+  }
+`;
+
+const VibeDropdownMenu = styled.div`
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 50%;
+  transform: translateX(-50%);
+  width: 160px;
+  max-height: 200px;
+  overflow-y: auto;
+  background: ${({ theme }) => theme.cardBackground};
+  border: 1px solid ${({ theme }) => theme.border};
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  z-index: 60;
+  padding: 4px 0;
+
+  &::-webkit-scrollbar {
+    width: 4px;
+  }
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  &::-webkit-scrollbar-thumb {
+    background: ${({ theme }) => theme.border};
+    border-radius: 4px;
+  }
+`;
+
+const VibeOption = styled.button<{ $selected?: boolean }>`
+  width: 100%;
+  padding: 7px 12px;
+  border: none;
+  background: ${({ $selected }) => $selected ? 'rgba(214, 185, 160, 0.18)' : 'transparent'};
+  color: ${({ $selected }) => $selected ? '#D6B9A0' : 'inherit'};
+  font-size: 0.8rem;
+  font-weight: ${({ $selected }) => $selected ? 600 : 400};
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.15s;
+
+  &:hover {
+    background: ${({ theme }) => theme.hover};
+  }
+`;
+
+const CameraOverlay = styled.div`
+  position: absolute;
+  bottom: -2px;
+  right: -2px;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: ${({ theme }) => theme.primary};
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  border: 2px solid ${({ theme }) => theme.cardBackground};
+  transition: transform 0.15s;
+
+  &:hover {
+    transform: scale(1.1);
   }
 `;
 
@@ -247,6 +340,7 @@ const TribeCard: React.FC<TribeCardProps> = ({
   unreadCount
 }) => {
   const navigate = useNavigate();
+  const theme = useTheme();
   const [localTribe, setLocalTribe] = React.useState(tribe);
   const isMember = !!currentUser && localTribe.members.includes(currentUser.id);
   const isOwner = !!currentUser && localTribe.owner === currentUser.id;
@@ -259,7 +353,16 @@ const TribeCard: React.FC<TribeCardProps> = ({
   const [isReportOpen, setIsReportOpen] = React.useState(false);
   const [moderationAction, setModerationAction] = React.useState<null | 'hide' | 'delete'>(null);
   const [isSaving, setIsSaving] = React.useState(false);
-  const [editDraft, setEditDraft] = React.useState({ name: tribe.name, description: tribe.description });
+  const [editDraft, setEditDraft] = React.useState({
+    name: tribe.name,
+    description: tribe.description,
+    avatarUrl: tribe.avatarUrl || '',
+    vibe: tribe.vibe || 'General',
+  });
+  const [isVibeDropdownOpen, setIsVibeDropdownOpen] = React.useState(false);
+  const [isMediaModalOpen, setIsMediaModalOpen] = React.useState(false);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const cameraInputRef = React.useRef<HTMLInputElement>(null);
 
   const handleKickMember = async (userId: string) => {
     if (!localTribe.id) return;
@@ -285,10 +388,32 @@ const TribeCard: React.FC<TribeCardProps> = ({
 
   React.useEffect(() => {
     if (isEditing) {
-      setEditDraft({ name: localTribe.name, description: localTribe.description });
+      setEditDraft({
+        name: localTribe.name,
+        description: localTribe.description,
+        avatarUrl: localTribe.avatarUrl || '',
+        vibe: localTribe.vibe || 'General',
+      });
       setIsMenuOpen(false);
+      setIsVibeDropdownOpen(false);
     }
   }, [isEditing, localTribe]);
+
+  const handleEditFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        toast.error('Image size must be less than 5MB');
+        return;
+      }
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setEditDraft(prev => ({ ...prev, avatarUrl: reader.result as string }));
+      };
+      reader.readAsDataURL(file);
+      e.target.value = '';
+    }
+  };
 
   // We need a userMap for the modal. Since we don't have it passed down from TribesPage yet,
   // we will accept it as a prop.
@@ -377,7 +502,13 @@ const TribeCard: React.FC<TribeCardProps> = ({
 
   const handleCancelEdit = (e?: React.MouseEvent) => {
     e?.stopPropagation();
-    setEditDraft({ name: localTribe.name, description: localTribe.description });
+    setEditDraft({
+      name: localTribe.name,
+      description: localTribe.description,
+      avatarUrl: localTribe.avatarUrl || '',
+      vibe: localTribe.vibe || 'General',
+    });
+    setIsVibeDropdownOpen(false);
     onCloseEdit?.();
   };
 
@@ -393,7 +524,9 @@ const TribeCard: React.FC<TribeCardProps> = ({
     try {
       const { data } = await api.updateTribe(localTribe.id, {
         name: trimmedName,
-        description: editDraft.description.trim()
+        description: editDraft.description.trim(),
+        avatarUrl: editDraft.avatarUrl,
+        vibe: editDraft.vibe,
       });
       setLocalTribe(data);
       onSaveEdit?.(data);
@@ -536,31 +669,49 @@ const TribeCard: React.FC<TribeCardProps> = ({
         )}
 
         <AvatarCircle>
-          {localTribe.avatarUrl ? (
-            <AvatarImage src={localTribe.avatarUrl} alt={localTribe.name} />
+          {isEditing ? (
+            <>
+              {editDraft.avatarUrl ? (
+                <AvatarImage src={editDraft.avatarUrl} alt={localTribe.name} />
+              ) : (
+                <Users size={32} color="#D6B9A0" />
+              )}
+              <CameraOverlay onClick={(e) => {
+                e.stopPropagation();
+                setIsMediaModalOpen(true);
+              }}>
+                <Camera size={13} color="white" strokeWidth={2.5} />
+              </CameraOverlay>
+            </>
           ) : (
-            <Users size={32} color="#D6B9A0" /> // Minimalistic group icon, light brown
-          )}
-          {unreadCount !== undefined && unreadCount > 0 && (
-            <div style={{
-              position: 'absolute',
-              top: 0,
-              right: 0,
-              backgroundColor: '#ef4444', // Red 500
-              color: 'white',
-              fontSize: '10px',
-              fontWeight: 'bold',
-              minWidth: '20px',
-              height: '20px',
-              borderRadius: '10px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              padding: '0 4px',
-              border: '2px solid white', // Contrast border
-            }}>
-              {unreadCount > 99 ? '99+' : unreadCount}
-            </div>
+            <>
+              {localTribe.avatarUrl ? (
+                <AvatarImage src={localTribe.avatarUrl} alt={localTribe.name} />
+              ) : (
+                <Users size={32} color="#D6B9A0" />
+              )}
+              {unreadCount !== undefined && unreadCount > 0 && (
+                <div style={{
+                  position: 'absolute',
+                  top: 0,
+                  right: 0,
+                  backgroundColor: '#ef4444',
+                  color: 'white',
+                  fontSize: '10px',
+                  fontWeight: 'bold',
+                  minWidth: '20px',
+                  height: '20px',
+                  borderRadius: '10px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  padding: '0 4px',
+                  border: '2px solid white',
+                }}>
+                  {unreadCount > 99 ? '99+' : unreadCount}
+                </div>
+              )}
+            </>
           )}
         </AvatarCircle>
 
@@ -577,17 +728,52 @@ const TribeCard: React.FC<TribeCardProps> = ({
         <MemberCount onClick={handleMembersClick} style={{ cursor: 'pointer', textDecoration: 'underline' }}>
           {localTribe.members.length} members {localTribe.isPrivate && <Lock size={12} style={{ display: 'inline', verticalAlign: 'middle', marginLeft: 4 }} />}
         </MemberCount>
-        {localTribe.vibe && localTribe.vibe !== 'General' && (
-          <div style={{
-            fontSize: '0.75rem', fontWeight: 600,
-            padding: '3px 10px', borderRadius: 20,
-            background: 'rgba(214, 185, 160, 0.15)',
-            color: '#D6B9A0',
-            marginBottom: 10,
-            display: 'inline-block',
-          }}>
-            {localTribe.vibe}
-          </div>
+
+        {/* Vibe badge / editor */}
+        {isEditing ? (
+          <VibeDropdownWrapper>
+            <VibeChip type="button" onClick={(e) => {
+              e.stopPropagation();
+              setIsVibeDropdownOpen(prev => !prev);
+            }}>
+              {editDraft.vibe || 'General'}
+              <ChevronDown size={12} style={{ opacity: 0.7, transition: 'transform 0.2s', transform: isVibeDropdownOpen ? 'rotate(180deg)' : 'none' }} />
+            </VibeChip>
+            {isVibeDropdownOpen && (
+              <>
+                <div style={{ position: 'fixed', inset: 0, zIndex: 55 }} onClick={(e) => { e.stopPropagation(); setIsVibeDropdownOpen(false); }} />
+                <VibeDropdownMenu>
+                  {VIBE_OPTIONS.map(v => (
+                    <VibeOption
+                      key={v}
+                      type="button"
+                      $selected={editDraft.vibe === v}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setEditDraft(prev => ({ ...prev, vibe: v }));
+                        setIsVibeDropdownOpen(false);
+                      }}
+                    >
+                      {v}
+                    </VibeOption>
+                  ))}
+                </VibeDropdownMenu>
+              </>
+            )}
+          </VibeDropdownWrapper>
+        ) : (
+          localTribe.vibe && localTribe.vibe !== 'General' && (
+            <div style={{
+              fontSize: '0.75rem', fontWeight: 600,
+              padding: '3px 10px', borderRadius: 20,
+              background: 'rgba(214, 185, 160, 0.15)',
+              color: '#D6B9A0',
+              marginBottom: 10,
+              display: 'inline-block',
+            }}>
+              {localTribe.vibe}
+            </div>
+          )
         )}
 
         {isEditing ? (
@@ -684,6 +870,17 @@ const TribeCard: React.FC<TribeCardProps> = ({
         variant="danger"
         onClose={() => setModerationAction(null)}
         onConfirm={handleModerationAction}
+      />
+
+      {/* Hidden file inputs for inline avatar editing */}
+      <input type="file" ref={fileInputRef} accept="image/*" style={{ display: 'none' }} onChange={handleEditFileChange} />
+      <input type="file" ref={cameraInputRef} accept="image/*" capture="environment" style={{ display: 'none' }} onChange={handleEditFileChange} />
+
+      <MediaSelectionModal
+        isOpen={isMediaModalOpen}
+        onClose={() => setIsMediaModalOpen(false)}
+        onSelectCamera={() => { cameraInputRef.current?.click(); }}
+        onSelectGallery={() => { fileInputRef.current?.click(); }}
       />
     </>
   );
