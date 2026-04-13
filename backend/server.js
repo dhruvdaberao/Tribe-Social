@@ -125,6 +125,12 @@ const startServer = async () => {
     app.post('/api/save-token', standardPayload, protect, async (req, res) => {
       try {
         const { token } = req.body;
+        console.info('[FCM] /api/save-token token received', {
+          userId: req.user.id,
+          hasToken: Boolean(token),
+          tokenPreview: typeof token === 'string' ? `${token.slice(0, 16)}...` : null,
+        });
+
         if (!token || typeof token !== 'string') {
           return res.status(400).json({ message: 'Valid FCM token is required' });
         }
@@ -137,7 +143,12 @@ const startServer = async () => {
         user.fcmToken = token;
         user.fcmTokenUpdatedAt = new Date();
         await user.save();
-        console.info('[FCM] /api/save-token success', { userId: req.user.id, tokenPreview: `${token.slice(0, 16)}...` });
+
+        console.info('[FCM] /api/save-token token saved', {
+          userId: req.user.id,
+          tokenUpdatedAt: user.fcmTokenUpdatedAt,
+        });
+
         return res.json({ success: true, tokenSaved: true });
       } catch (error) {
         console.error('[FCM] Error saving token from /api/save-token:', error);
@@ -147,13 +158,15 @@ const startServer = async () => {
 
     app.post('/api/test-push', standardPayload, protect, async (req, res) => {
       try {
-        const { userId } = req.body || {};
-        const targetUserId = userId || req.user.id;
-
-        const user = await User.findById(targetUserId).select('fcmToken');
+        const user = await User.findById(req.user.id).select('fcmToken');
         if (!user) {
           return res.status(404).json({ message: 'User not found' });
         }
+
+        console.info('[FCM] /api/test-push fetched user token', {
+          userId: req.user.id,
+          hasToken: Boolean(user.fcmToken),
+        });
 
         if (!user.fcmToken) {
           return res.status(400).json({ message: 'No FCM token found for user' });
@@ -165,9 +178,11 @@ const startServer = async () => {
         });
 
         if (!result.success) {
+          console.error('[FCM] /api/test-push push failed', { userId: req.user.id, reason: result.reason });
           return res.status(500).json({ message: 'Failed to send test push', reason: result.reason });
         }
 
+        console.info('[FCM] /api/test-push push sent', { userId: req.user.id, messageId: result.messageId });
         return res.json({ success: true, messageId: result.messageId });
       } catch (error) {
         console.error('[FCM] /api/test-push failed:', error);
