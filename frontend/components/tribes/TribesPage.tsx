@@ -83,16 +83,26 @@ const TribesPage: React.FC<TribesPageProps> = ({ currentUser, unreadTribeCount }
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [editingTribeId, setEditingTribeId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
 
   // Lazy Fetch on Mount
   useEffect(() => {
     fetchTribes().finally(() => setIsLoading(false));
   }, [fetchTribes]);
 
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery.trim());
+    }, 300);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [searchQuery]);
+
   // ───────────── FILTERING ─────────────
-  const lowerQuery = searchQuery.toLowerCase();
+  const lowerQuery = debouncedSearchQuery.toLowerCase();
   const searchFilter = (t: import('../../types').Tribe) => 
     t.name.toLowerCase().includes(lowerQuery) || 
+    (t.vibe?.toLowerCase().includes(lowerQuery) ?? false) ||
     (t.description?.toLowerCase().includes(lowerQuery) ?? false);
 
   const myTribes = tribes.filter(
@@ -121,7 +131,7 @@ const TribesPage: React.FC<TribesPageProps> = ({ currentUser, unreadTribeCount }
           </svg>
           <input
             type="text"
-            placeholder="Search tribes..."
+            placeholder="Search tribes or vibes..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full bg-surface border border-border rounded-xl py-2.5 pl-10 pr-4 text-[15px] text-primary placeholder-secondary focus:outline-none focus:ring-1 focus:ring-accent transition-shadow shadow-sm"
@@ -193,6 +203,13 @@ const TribesPage: React.FC<TribesPageProps> = ({ currentUser, unreadTribeCount }
             ))}
           </Grid>
         </>
+      )}
+
+      {!isLoading && tribes.length > 0 && myTribes.length === 0 && discoverTribes.length === 0 && (
+        <EmptyState>
+          <h3>No tribes found</h3>
+          <p>Try another name or vibe.</p>
+        </EmptyState>
       )}
 
       {isCreateModalOpen && (
