@@ -1,8 +1,18 @@
-import { getToken, onMessage } from 'firebase/messaging';
 import { getFirebaseMessaging } from './firebase';
 
 const FCM_SW_PATH = '/firebase-messaging-sw.js';
 const VAPID_KEY = import.meta.env.VITE_FIREBASE_VAPID_KEY || 'BAjpMhHkdyiTm9zd4pYcp8kOkth7FHcId9_swudAH6OSI4brChi_3P0EME_zgwDYc-bGr7ZvwMc4Tnuu8QVlWug';
+
+const loadMessagingHelpers = async () => {
+  const messagingModule = await import('https://www.gstatic.com/firebasejs/12.3.0/firebase-messaging.js');
+  return {
+    getToken: messagingModule.getToken as (messaging: unknown, options: Record<string, unknown>) => Promise<string>,
+    onMessage: messagingModule.onMessage as (
+      messaging: unknown,
+      listener: (payload: { notification?: { title?: string; body?: string; icon?: string } }) => void,
+    ) => () => void,
+  };
+};
 
 export const registerFcmServiceWorker = async (): Promise<ServiceWorkerRegistration | null> => {
   if (!('serviceWorker' in navigator)) {
@@ -11,7 +21,7 @@ export const registerFcmServiceWorker = async (): Promise<ServiceWorkerRegistrat
   }
 
   try {
-    const registration = await navigator.serviceWorker.register(FCM_SW_PATH);
+    const registration = await navigator.serviceWorker.register(FCM_SW_PATH, { type: 'module' });
     console.info('[FCM] Service worker registered:', registration.scope);
     return registration;
   } catch (error) {
@@ -46,6 +56,7 @@ export const requestNotificationPermission = async (): Promise<string | null> =>
     const registration = await registerFcmServiceWorker();
     if (!registration) return null;
 
+    const { getToken } = await loadMessagingHelpers();
     const token = await getToken(messaging, {
       vapidKey: VAPID_KEY,
       serviceWorkerRegistration: registration,
@@ -67,6 +78,8 @@ export const requestNotificationPermission = async (): Promise<string | null> =>
 export const setupForegroundNotifications = async (): Promise<(() => void) | undefined> => {
   const messaging = await getFirebaseMessaging();
   if (!messaging) return undefined;
+
+  const { onMessage } = await loadMessagingHelpers();
 
   return onMessage(messaging, (payload) => {
     console.info('[FCM] Foreground message received:', payload);
