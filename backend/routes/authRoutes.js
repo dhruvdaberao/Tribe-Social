@@ -88,7 +88,7 @@ const getClientIp = (req) => {
   }
   return req.ip || '';
 };
-import OTP from '../models/otpModel.js';
+import { storeOTP, getStoredOTP, deleteStoredOTP, incrementOtpAttempts, clearOtpAttempts } from '../services/redisService.js';
 import Follow from '../models/followModel.js';
 
 const router = express.Router();
@@ -236,20 +236,18 @@ router.post('/forgot-password', async (req, res) => {
     const otpValue = Math.floor(100000 + Math.random() * 900000).toString();
     const hashedOtp = await bcrypt.hash(otpValue, 10);
 
-    // Save to DB (expires in 5 mins)
-    await OTP.deleteMany({ email });
-    await OTP.create({
-      email,
-      otp: hashedOtp,
-      expiresAt: new Date(Date.now() + 5 * 60 * 1000)
-    });
+    // Save to Redis (expires in 300s/5 mins)
+    const stored = await storeOTP(email, hashedOtp);
+    if (!stored) {
+      console.error("[Redis Core] Failed to cache OTP, fallback omitted as per plan.");
+    }
 
     try {
       await sendOTPEmail(email, otpValue);
       return res.status(200).json({ message: 'If account exists, OTP sent' });
     } catch (emailError) {
       console.error("FORGOT PASSWORD ERROR (Email Send):", emailError);
-      await OTP.deleteMany({ email });
+      await deleteStoredOTP(email);
       // Return 400 instead of 500 for expected provider limitations like sandbox errors
       return res.status(400).json({ 
         message: "Failed to send email. Try a different email.",
@@ -270,18 +268,18 @@ router.post('/forgot-password', async (req, res) => {
 router.post('/verify-otp', async (req, res) => {
   const { email, otp } = req.body;
   try {
-    const otpDoc = await OTP.findOne({ email });
-    if (!otpDoc) return res.status(400).json({ message: 'OTP expired or not requested.' });
+    const cachedOtpHash = await getStoredOTP(email);
+    if (!cachedOtpHash) return res.status(400).json({ message: 'OTP expired or not requested.' });
 
-    if (otpDoc.attempts >= 3) {
-      await OTP.deleteOne({ email });
+    const attempts = await incrementOtpAttempts(email);
+    if (attempts >= 3) {
+      await deleteStoredOTP(email);
+      await clearOtpAttempts(email);
       return res.status(403).json({ message: 'Too many failed attempts. Request a new OTP.' });
     }
 
-    const isValid = await bcrypt.compare(otp, otpDoc.otp);
+    const isValid = await bcrypt.compare(otp, cachedOtpHash);
     if (!isValid) {
-      otpDoc.attempts += 1;
-      await otpDoc.save();
       return res.status(401).json({ message: 'Invalid OTP code.' });
     }
 
@@ -301,7 +299,7 @@ router.post('/verify-otp', async (req, res) => {
         await user.save();
       }
     }
-    await OTP.deleteOne({ email });
+    await deleteStoredOTP(email);
 
     res.json({
       token: generateToken(user._id),

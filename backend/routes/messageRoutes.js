@@ -142,6 +142,8 @@ import { sendPushToUser, sendPush, sendPushNotification } from '../services/push
 import { isPushEnabledFor } from '../utils/notificationPrefs.js';
 import cloudinary from '../config/cloudinary.js';
 import { sendEmailNotification } from '../services/emailNotificationService.js';
+import { getCachedMessages, cacheMessages, invalidateChatCache, incrementBadgeCount, getBadgeCount, checkIsUserOnline } from '../services/redisService.js';
+import { redisRateLimiter } from '../middleware/rateLimitRedis.js';
 
 const router = express.Router();
 
@@ -159,6 +161,12 @@ router.get('/unread-count', protect, async (req, res) => {
         unreadCounts.forEach(item => {
             countsMap[item._id.toString()] = item.count;
         });
+
+        // Fast Redis Fallback Sync
+        const totalRedisBadge = await getBadgeCount(userId.toString());
+        if (totalRedisBadge > 0 && Object.keys(countsMap).length === 0) {
+            countsMap['total_estimated'] = totalRedisBadge;
+        }
 
         res.status(200).json({ counts: countsMap });
     } catch (error) {
@@ -252,7 +260,7 @@ router.get('/conversations', protect, async (req, res) => {
 
 // @route   POST /api/messages/send/:receiverId
 // @desc    Send a message to a user
-router.post('/send/:receiverId', protect, async (req, res) => {
+router.post('/send/:receiverId', protect, redisRateLimiter(6, 10), async (req, res) => {
     try {
         const { message, imageUrl, attachment, replyTo } = req.body;
         const { receiverId } = req.params;
@@ -305,6 +313,10 @@ router.post('/send/:receiverId', protect, async (req, res) => {
             tempId: req.body.tempId // 🔥 Return tempId for optimistic UI deduplication
         };
 
+        // Cache Invalidation
+        await invalidateChatCache(senderId, receiverId);
+        await incrementBadgeCount(receiverId.toString());
+
         // Emit the message to the specific room for this DM
         // Room Name Convention: dm-{sorted(id1, id2)}
         const roomName = `dm-${[senderId.toString(), receiverId].sort().join('-')}`;
@@ -335,7 +347,7 @@ router.post('/send/:receiverId', protect, async (req, res) => {
                 req.io.to(recipientSocket).emit('newNotification', populatedNotification);
             }
 
-            const isReceiverOnline = req.onlineUsers?.get(receiverId.toString());
+            const isReceiverOnline = await checkIsUserOnline(receiverId.toString()) || req.onlineUsers?.get(receiverId.toString());
             if (!isReceiverOnline && isPushEnabledFor(receiver, 'dm')) {
                 await sendPushToUser(receiverId.toString(), {
                     title: sender?.name || 'New message',
@@ -405,11 +417,27 @@ router.get('/:userToChatId', protect, async (req, res) => {
             query.createdAt = { $lt: before };
         }
 
+        // 1. Try Redis Cache first if no pagination `before` cursor is set
+        if (!before) {
+            const cachedBody = await getCachedMessages(senderId, userToChatId);
+            if (cachedBody) {
+                return res.status(200).json(cachedBody);
+            }
+        }
+
+        // 2. Fallback to Mongo query
         const messages = await Message.find(query)
             .sort({ createdAt: -1 })
             .limit(limit);
 
-        res.status(200).json(messages.reverse().map(m => m.toJSON()));
+        const payload = messages.reverse().map(m => m.toJSON());
+
+        // 3. Save Cache in background
+        if (!before) {
+            cacheMessages(senderId, userToChatId, payload).catch(console.error);
+        }
+
+        res.status(200).json(payload);
 
     } catch (error) {
         console.error("Error in getMessages controller: ", error.message);

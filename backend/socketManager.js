@@ -3,6 +3,7 @@ import Message from './models/messageModel.js';
 import TribeMessage from './models/tribeMessageModel.js';
 import Tribe from './models/tribeModel.js';
 import User from './models/userModel.js';
+import { trackUserOnline, invalidateChatCache, queueLiveMessage, incrementBadgeCount } from './services/redisService.js';
 
 let onlineUsers = new Map(); // Map<userId, socketId>
 
@@ -18,6 +19,7 @@ export const initializeSocket = (io) => {
       onlineUsers.set(userId, socket.id);
       // Join a personal room for specific notifications (user-scoped events)
       socket.join(`user-${userId}`);
+      trackUserOnline(userId, true); // Push heartbeat to Redis
     }
 
     // Broadcast the updated list of online users to everyone
@@ -25,6 +27,7 @@ export const initializeSocket = (io) => {
 
     // Heartbeat to keep connection alive on services like Render
     socket.on('ping', (callback) => {
+      if (userId) trackUserOnline(userId, true);
       callback();
     });
 
@@ -116,6 +119,12 @@ export const initializeSocket = (io) => {
         };
 
         const roomName = `dm-${[userId.toString(), receiverId].sort().join('-')}`;
+        
+        // Push payload into queue & invalidate cache sync
+        await queueLiveMessage(userId, receiverId, responseMessage);
+        await invalidateChatCache(userId, receiverId);
+        await incrementBadgeCount(receiverId.toString());
+
         io.to(roomName).emit('newMessage', responseMessage);
         io.to(`user-${receiverId}`).emit('newMessage', responseMessage);
 
@@ -225,6 +234,7 @@ export const initializeSocket = (io) => {
       // (Handles case where user has multiple tabs and closes one)
       if (userId && onlineUsers.get(userId) === socket.id) {
         onlineUsers.delete(userId);
+        trackUserOnline(userId, false); // Kill Redis heartbeat
         io.emit("getOnlineUsers", Array.from(onlineUsers.keys()));
       }
     });
