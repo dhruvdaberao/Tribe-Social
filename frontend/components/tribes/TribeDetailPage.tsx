@@ -10,7 +10,7 @@ import TribeMessageArea from '../chat/TribeMessageArea';
 import ChatShell from '../chat/ChatShell'; // Added import
 import TribeMembersModal from './TribeMembersModal';
 import EditTribeModal from './EditTribeModal';
-import { Users, ArrowLeft, Edit2, LogIn, LogOut, Flame, X, Lock } from 'lucide-react';
+import { Users, ArrowLeft, Edit2, LogIn, LogOut, Flame, X, Lock, MoreVertical, Trash2 } from 'lucide-react';
 import { toast } from '../common/Toast';
 import ConfirmationModal from '../common/ConfirmationModal';
 import { useVisualViewportHeight } from '../../hooks/useVisualViewportHeight';
@@ -128,6 +128,41 @@ const ActionButton = styled.button`
   color: ${({ theme }) => theme.textSecondary};
 `;
 
+const MenuWrap = styled.div`
+  position: relative;
+`;
+
+const Menu = styled.div`
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  min-width: 170px;
+  border-radius: 12px;
+  border: 1px solid ${({ theme }) => theme.border};
+  background: ${({ theme }) => theme.cardBackground};
+  box-shadow: 0 10px 32px rgba(0, 0, 0, 0.24);
+  overflow: hidden;
+  z-index: 110;
+`;
+
+const MenuItem = styled.button<{ $danger?: boolean }>`
+  width: 100%;
+  border: none;
+  background: transparent;
+  padding: 10px 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  text-align: left;
+  font-size: 0.9rem;
+  color: ${({ theme, $danger }) => ($danger ? '#dc2626' : theme.text)};
+
+  &:hover {
+    background: ${({ theme }) => theme.hover};
+  }
+`;
+
 const CampfireOverlay = styled.div`
   position: fixed;
   inset: 0;
@@ -213,6 +248,8 @@ const TribeDetailPage: React.FC<Props> = ({ currentUser, tribeId: propTribeId })
   const [isMembersOpen, setIsMembersOpen] = useState(false);
   const [isLeaveConfirmOpen, setIsLeaveConfirmOpen] = useState(false);
   const [isCampfireOpen, setIsCampfireOpen] = useState(false);
+  const [isOwnerMenuOpen, setIsOwnerMenuOpen] = useState(false);
+  const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
   const [allUsers, setAllUsers] = useState<User[]>([]);
 
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -682,9 +719,34 @@ const TribeDetailPage: React.FC<Props> = ({ currentUser, tribeId: propTribeId })
           <Flame size={18} />
         </ActionButton>
         {currentUser && tribe?.owner === currentUser.id && (
-          <ActionButton onClick={() => setIsEditOpen(true)}>
-            <Edit2 size={18} />
-          </ActionButton>
+          <MenuWrap>
+            <ActionButton onClick={() => setIsOwnerMenuOpen(prev => !prev)} aria-label="Tribe options">
+              <MoreVertical size={18} />
+            </ActionButton>
+            {isOwnerMenuOpen && (
+              <Menu>
+                <MenuItem
+                  onClick={() => {
+                    setIsOwnerMenuOpen(false);
+                    setIsEditOpen(true);
+                  }}
+                >
+                  <Edit2 size={16} />
+                  Edit Tribe
+                </MenuItem>
+                <MenuItem
+                  $danger
+                  onClick={() => {
+                    setIsOwnerMenuOpen(false);
+                    setIsDeleteConfirmOpen(true);
+                  }}
+                >
+                  <Trash2 size={16} />
+                  Delete Tribe
+                </MenuItem>
+              </Menu>
+            )}
+          </MenuWrap>
         )}
 
         {currentUser && tribe && (
@@ -869,6 +931,20 @@ const TribeDetailPage: React.FC<Props> = ({ currentUser, tribeId: propTribeId })
           </CampfireModal>
         </CampfireOverlay>
       )}
+
+      <ConfirmationModal
+        isOpen={isDeleteConfirmOpen}
+        onClose={() => setIsDeleteConfirmOpen(false)}
+        onConfirm={() => {
+          if (!tribe?.id) return;
+          setIsDeleteConfirmOpen(false);
+          handleDeleteTribe(tribe.id);
+        }}
+        title="Delete Tribe?"
+        message="Are you sure you want to delete this tribe? This action cannot be undone."
+        confirmText="Delete"
+        variant="danger"
+      />
 
       <ConfirmationModal
         isOpen={isLeaveConfirmOpen}

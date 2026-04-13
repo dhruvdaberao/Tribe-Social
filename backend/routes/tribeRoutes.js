@@ -33,6 +33,14 @@ router.get('/', protect, async (req, res) => {
         if (!req.user?.isAdmin) {
             query.isHidden = { $ne: true };
         }
+        const rawSearch = (req.query.search || '').toString().trim();
+        if (rawSearch) {
+            const escapedSearch = rawSearch.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            query.$or = [
+                { name: { $regex: escapedSearch, $options: 'i' } },
+                { vibe: { $regex: escapedSearch, $options: 'i' } },
+            ];
+        }
         const tribes = await Tribe.find(query)
             .sort({ createdAt: -1 })
             .select('name description avatarUrl owner members memberLimit isPrivate vibe joinRequests createdAt')
@@ -187,6 +195,13 @@ router.delete('/:id', protect, async (req, res) => {
 
         await TribeMessage.deleteMany({ tribe: tribe._id });
         await Notification.deleteMany({ tribeId: tribe._id });
+        await Notification.deleteMany({
+            $or: [
+                { recipient: { $in: tribe.members } },
+                { sender: { $in: tribe.members } },
+            ],
+            tribeId: tribe._id,
+        });
         await tribe.deleteOne();
 
         if (req.io) {
