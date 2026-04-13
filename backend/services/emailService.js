@@ -1,7 +1,7 @@
 import { readFile } from 'fs/promises';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import nodemailer from "nodemailer";
+import axios from "axios";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -18,53 +18,66 @@ export const renderTemplate = async (templateName, replacements = {}) => {
   return html;
 };
 
-const transporter = nodemailer.createTransport({
-  host: "smtp-relay.brevo.com",
-  port: 587,
-  secure: false,
-  auth: {
-    user: process.env.BREVO_USER,
-    pass: process.env.BREVO_PASS,
-  },
-});
-
 export const sendOTPEmail = async (to, otp) => {
   try {
-    console.log("Sending OTP to:", to);
+    const response = await axios.post(
+      "https://api.brevo.com/v3/smtp/email",
+      {
+        sender: {
+          name: "Tribe Social",
+          email: "contact@brevo.com"
+        },
+        to: [{ email: to }],
+        subject: "Tribe OTP Code",
+        htmlContent: `
+          <div style="text-align:center;font-family:Arial;">
+            <h2>Password Reset</h2>
+            <h1>${otp}</h1>
+            <p>Valid for 5 minutes</p>
+          </div>
+        `
+      },
+      {
+        headers: {
+          "api-key": process.env.BREVO_API_KEY,
+          "Content-Type": "application/json"
+        }
+      }
+    );
 
-    const info = await transporter.sendMail({
-      from: `"Tribe Social" <${process.env.BREVO_USER}>`,
-      to: to,
-      subject: "Tribe OTP Code",
-      html: `
-        <div style="font-family: Arial; text-align: center;">
-          <h2>Password Reset</h2>
-          <p>Your OTP is:</p>
-          <h1 style="letter-spacing: 4px;">${otp}</h1>
-          <p>This OTP expires in 5 minutes.</p>
-        </div>
-      `,
-    });
-
-    console.log("✅ Email sent:", info.messageId);
+    console.log("✅ Email sent:", response.data);
   } catch (error) {
-    console.error("❌ Email error:", error);
+    console.error("❌ Email error:", error.response?.data || error.message);
     throw new Error("Email sending failed");
   }
 };
 
 export const sendEmail = async ({ to, subject, html, text }) => {
   try {
-    const mailOptions = {
-      from: `"Tribe Social" <${process.env.BREVO_USER}>`,
-      to: Array.isArray(to) ? to.join(', ') : to,
-      subject,
-      html,
-      text,
-    };
-    return await transporter.sendMail(mailOptions);
+    const toArray = Array.isArray(to) ? to.map(email => ({ email })) : [{ email: to }];
+    
+    const response = await axios.post(
+      "https://api.brevo.com/v3/smtp/email",
+      {
+        sender: {
+          name: "Tribe Social",
+          email: "contact@brevo.com" 
+        },
+        to: toArray,
+        subject: subject,
+        htmlContent: html || text,
+      },
+      {
+        headers: {
+          "api-key": process.env.BREVO_API_KEY,
+          "Content-Type": "application/json"
+        }
+      }
+    );
+    console.log("✅ Generic email sent:", response.data);
+    return response.data;
   } catch (error) {
-    console.error("❌ Generic email error:", error);
-    throw error;
+    console.error("❌ Generic email error:", error.response?.data || error.message);
+    throw new Error("Generic email sending failed");
   }
 };
