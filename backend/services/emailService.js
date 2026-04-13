@@ -1,10 +1,7 @@
-import { Resend } from 'resend';
 import { readFile } from 'fs/promises';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import nodemailer from 'nodemailer';
-
-const resend = new Resend(process.env.RESEND_API_KEY);
+import nodemailer from "nodemailer";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -21,52 +18,47 @@ export const renderTemplate = async (templateName, replacements = {}) => {
   return html;
 };
 
-export const sendEmail = async ({ to, subject, html, text }) => {
-  // Use Nodemailer if SMTP credentials are provided (Bypasses Resend Sandbox limitations)
-  if (process.env.SMTP_EMAIL && process.env.SMTP_PASSWORD) {
-    const transporter = nodemailer.createTransport({
-      service: 'gmail',
-      auth: {
-        user: process.env.SMTP_EMAIL,
-        pass: process.env.SMTP_PASSWORD,
-      },
+const transporter = nodemailer.createTransport({
+  service: "gmail",
+  auth: {
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS,
+  },
+});
+
+export const sendOTPEmail = async (to, otp) => {
+  try {
+    await transporter.sendMail({
+      from: `"Tribe" <${process.env.EMAIL_USER}>`,
+      to,
+      subject: "Tribe OTP Code",
+      html: `
+        <h2>Password Reset</h2>
+        <p>Your OTP is:</p>
+        <h1>${otp}</h1>
+        <p>This OTP expires in 5 minutes.</p>
+      `,
     });
 
+    console.log("✅ OTP sent to:", to);
+  } catch (error) {
+    console.error("❌ Email error:", error);
+    throw new Error("Email sending failed");
+  }
+};
+
+export const sendEmail = async ({ to, subject, html, text }) => {
+  try {
     const mailOptions = {
-      from: `Tribe Social <${process.env.SMTP_EMAIL}>`,
+      from: `"Tribe" <${process.env.EMAIL_USER}>`,
       to: Array.isArray(to) ? to.join(', ') : to,
       subject,
       html,
       text,
     };
-
     return await transporter.sendMail(mailOptions);
+  } catch (error) {
+    console.error("❌ Generic email error:", error);
+    throw error;
   }
-
-  if (!process.env.RESEND_API_KEY) {
-    throw new Error('Neither SMTP_EMAIL/SMTP_PASSWORD nor RESEND_API_KEY are configured');
-  }
-
-  const fromAddress =
-    process.env.EMAIL_FROM ||
-    process.env.RESEND_FROM_EMAIL ||
-    'Tribe Social <onboarding@resend.dev>';
-
-  const { data, error } = await resend.emails.send({
-    from: fromAddress,
-    to: Array.isArray(to) ? to : [to],
-    subject,
-    html,
-    text,
-  });
-
-  if (error) {
-    const message = error.message || 'Unknown Resend error';
-    const sendError = new Error(message);
-    sendError.name = 'EmailServiceError';
-    sendError.cause = error;
-    throw sendError;
-  }
-
-  return data;
 };

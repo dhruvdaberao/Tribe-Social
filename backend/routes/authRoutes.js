@@ -76,7 +76,7 @@ import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
 import User from '../models/userModel.js';
 import superAdmins from '../config/superAdmins.js';
-import { sendEmail, renderTemplate } from '../services/emailService.js';
+import { sendEmail, sendOTPEmail, renderTemplate } from '../services/emailService.js';
 import { isEmailEnabledFor } from '../utils/notificationPrefs.js';
 
 const DISABLED_MESSAGE = 'Your account has been disabled by the Admin';
@@ -245,34 +245,14 @@ router.post('/forgot-password', async (req, res) => {
     });
 
     try {
-      const sendResult = await sendEmail({
-        to: user.email,
-        subject: 'Your Login OTP',
-        html: `
-          <div style="font-family: sans-serif; padding: 20px; color: #3B302B;">
-            <h2 style="color: #B59477;">Tribe Social</h2>
-            <p>Hello,</p>
-            <p>You requested an OTP to access your account. Please use the following code:</p>
-            <div style="background: #FAF8F6; padding: 15px; border-radius: 8px; font-size: 24px; font-weight: bold; text-align: center; letter-spacing: 5px;">
-              ${otpValue}
-            </div>
-            <p style="font-size: 12px; color: #8A7B74; margin-top: 20px;">
-              This code will expire in 5 minutes. If you did not request this, please ignore this email.
-            </p>
-          </div>
-        `,
-        text: `Your Tribe Social OTP is ${otpValue}. It expires in 5 minutes.`,
-      });
-
-      console.log('[forgot-password] OTP email sent successfully. Result ID:', sendResult?.messageId || sendResult?.id);
+      await sendOTPEmail(email, otpValue);
       return res.status(200).json({ message: 'If account exists, OTP sent' });
     } catch (emailError) {
       console.error("FORGOT PASSWORD ERROR (Email Send):", emailError);
       await OTP.deleteMany({ email });
       // Return 400 instead of 500 for expected provider limitations like sandbox errors
-      // or return generic success if you don't want to leak send failures, but we'll return 400 per prompt suggestion
       return res.status(400).json({ 
-        message: "Failed to send email due to service configuration. Try a different email or update backend env variables.",
+        message: "Failed to send email. Try a different email.",
         error: emailError.message 
       });
     }
