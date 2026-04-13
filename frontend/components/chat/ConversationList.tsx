@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Conversation, User } from '../../types';
 import UserAvatar from '../common/UserAvatar';
+import MessageOptionsMenu from './MessageOptionsMenu';
 
 interface ConversationListProps {
   conversations: Conversation[];
@@ -10,10 +11,11 @@ interface ConversationListProps {
   userMap: Map<string, User>;
   activeConversationId?: string;
   onSelectConversation: (conversation: Conversation) => void;
+  onViewProfile: (user: User) => void;
   onNewMessage: () => void;
   unreadCounts: { [key: string]: number };
   onClearConversation: (otherUserId: string) => void;
-  onToggleBlock: (otherUserId: string) => void;
+  onBlockUser: (otherUser: User) => void;
   onToggleAutoDelete: (otherUserId: string) => void;
   autoDeleteMap: Record<string, boolean>;
 }
@@ -26,38 +28,41 @@ const ConversationList: React.FC<ConversationListProps> = ({
   userMap,
   activeConversationId,
   onSelectConversation,
+  onViewProfile,
   onNewMessage,
   unreadCounts,
   onClearConversation,
-  onToggleBlock,
+  onBlockUser,
   onToggleAutoDelete,
-  autoDeleteMap
+  autoDeleteMap,
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
+
+  const filteredConversations = conversations.filter((conv) => {
+    if (!searchQuery.trim()) return true;
+    const otherParticipantId = conv.participants.find((p) => p.id !== currentUser.id)?.id;
+    if (!otherParticipantId) return false;
+    const otherParticipant = userMap.get(otherParticipantId);
+    if (!otherParticipant) return false;
+    const lowerQ = searchQuery.toLowerCase();
+    return (
+      otherParticipant.name.toLowerCase().includes(lowerQ) ||
+      otherParticipant.username.toLowerCase().includes(lowerQ)
+    );
+  });
+
+  const showChuk =
+    !searchQuery.trim() ||
+    chukUser.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    chukUser.username.toLowerCase().includes(searchQuery.toLowerCase());
 
   const chukConversation: Conversation = {
     id: chukUser.id,
     participants: [{ id: currentUser.id }, { id: chukUser.id }],
     lastMessage: 'Your personal guide & friend',
     timestamp: new Date().toISOString(),
-    messages: []
+    messages: [],
   };
-
-  const filteredConversations = conversations.filter(conv => {
-    if (!searchQuery.trim()) return true;
-    const otherParticipantId = conv.participants.find(p => p.id !== currentUser.id)?.id;
-    if (!otherParticipantId) return false;
-    const otherParticipant = userMap.get(otherParticipantId);
-    if (!otherParticipant) return false;
-    
-    const lowerQ = searchQuery.toLowerCase();
-    return otherParticipant.name.toLowerCase().includes(lowerQ) || 
-           otherParticipant.username.toLowerCase().includes(lowerQ);
-  });
-
-  const showChuk = !searchQuery.trim() || 
-                   chukUser.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                   chukUser.username.toLowerCase().includes(searchQuery.toLowerCase());
 
   return (
     <div className="flex h-full min-h-0 flex-col bg-background pt-16 md:pt-0">
@@ -72,9 +77,9 @@ const ConversationList: React.FC<ConversationListProps> = ({
           <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-secondary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
           </svg>
-          <input 
-            type="text" 
-            placeholder="Search messages..." 
+          <input
+            type="text"
+            placeholder="Search messages..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full bg-surface border border-border rounded-xl py-2.5 pl-10 pr-4 text-sm text-primary placeholder-secondary focus:outline-none focus:ring-1 focus:ring-accent transition-shadow shadow-sm"
@@ -85,16 +90,15 @@ const ConversationList: React.FC<ConversationListProps> = ({
       <div className="messages-container flex-1 overflow-y-auto pb-[80px]">
         {showChuk && (
           <ConversationItem
-            key={chukConversation.id}
             conversation={chukConversation}
             otherParticipant={chukUser}
             isActive={chukConversation.id === activeConversationId}
             onSelect={onSelectConversation}
+            onViewProfile={onViewProfile}
             unreadCount={0}
-            isBlocked={(currentUser.blockedUsers || []).includes(chukUser.id)}
             isAutoDeleteEnabled={!!autoDeleteMap[chukUser.id]}
             onClearConversation={onClearConversation}
-            onToggleBlock={onToggleBlock}
+            onBlockUser={onBlockUser}
             onToggleAutoDelete={onToggleAutoDelete}
           />
         )}
@@ -107,17 +111,11 @@ const ConversationList: React.FC<ConversationListProps> = ({
         ) : filteredConversations.length === 0 ? (
           <div className="p-8 text-center text-secondary">
             <p>{searchQuery.trim() ? 'No chats match your search.' : 'No user conversations yet.'}</p>
-            {!searchQuery.trim() && (
-              <button onClick={onNewMessage} className="mt-2 text-sm font-semibold text-accent hover:underline">
-                Start a new chat!
-              </button>
-            )}
           </div>
         ) : (
-          filteredConversations.map(conv => {
-            const otherParticipantId = conv.participants.find(p => p.id !== currentUser.id)?.id;
+          filteredConversations.map((conv) => {
+            const otherParticipantId = conv.participants.find((p) => p.id !== currentUser.id)?.id;
             if (!otherParticipantId) return null;
-
             const otherParticipant = userMap.get(otherParticipantId);
             if (!otherParticipant) return null;
 
@@ -128,11 +126,11 @@ const ConversationList: React.FC<ConversationListProps> = ({
                 otherParticipant={otherParticipant}
                 isActive={conv.id === activeConversationId}
                 onSelect={onSelectConversation}
+                onViewProfile={onViewProfile}
                 unreadCount={unreadCounts[otherParticipantId] || 0}
-                isBlocked={(currentUser.blockedUsers || []).includes(otherParticipantId)}
                 isAutoDeleteEnabled={!!autoDeleteMap[otherParticipantId]}
                 onClearConversation={onClearConversation}
-                onToggleBlock={onToggleBlock}
+                onBlockUser={onBlockUser}
                 onToggleAutoDelete={onToggleAutoDelete}
               />
             );
@@ -148,11 +146,11 @@ interface ConversationItemProps {
   otherParticipant: User;
   isActive: boolean;
   onSelect: (conv: Conversation) => void;
+  onViewProfile: (user: User) => void;
   unreadCount: number;
-  isBlocked: boolean;
   isAutoDeleteEnabled: boolean;
   onClearConversation: (otherUserId: string) => void;
-  onToggleBlock: (otherUserId: string) => void;
+  onBlockUser: (otherUser: User) => void;
   onToggleAutoDelete: (otherUserId: string) => void;
 }
 
@@ -161,12 +159,12 @@ const ConversationItem: React.FC<ConversationItemProps> = ({
   otherParticipant,
   isActive,
   onSelect,
+  onViewProfile,
   unreadCount,
-  isBlocked,
   isAutoDeleteEnabled,
   onClearConversation,
-  onToggleBlock,
-  onToggleAutoDelete
+  onBlockUser,
+  onToggleAutoDelete,
 }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
@@ -175,33 +173,25 @@ const ConversationItem: React.FC<ConversationItemProps> = ({
       onClick={() => onSelect(conversation)}
       className={`chat-item relative mx-3 my-2 flex cursor-pointer items-center gap-3 rounded-xl p-3 transition-colors border border-border shadow-sm ${isActive ? 'bg-background ring-1 ring-accent' : 'bg-surface hover:bg-background'}`}
     >
-      <div className="relative flex-shrink-0">
-        {otherParticipant.id === 'chuk-ai' ? (
-          <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-transparent">
-            <img src="/chuk-ai.png" alt="Psyduck AI" className="h-full w-full object-contain" />
-          </div>
-        ) : (
-          <UserAvatar user={otherParticipant} className="h-12 w-12" />
-        )}
-      </div>
+      {otherParticipant.id === 'chuk-ai' ? (
+        <img src="/chuk-ai.png" alt="Psyduck AI" className="h-12 w-12 object-contain" />
+      ) : (
+        <UserAvatar user={otherParticipant} className="h-12 w-12" />
+      )}
 
       <div className="min-w-0 flex-1">
         <p className="truncate font-semibold text-primary">{otherParticipant.name}</p>
         <p className="truncate text-sm text-secondary">{conversation.lastMessage || 'Sent an attachment'}</p>
       </div>
 
-      {unreadCount > 0 && (
-        <div className="ml-1 flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-accent text-xs font-bold text-accent-text">
-          {unreadCount}
-        </div>
-      )}
+      {unreadCount > 0 && <div className="ml-1 flex h-6 w-6 items-center justify-center rounded-full bg-accent text-xs font-bold text-accent-text">{unreadCount}</div>}
 
       <button
         type="button"
         aria-label="Conversation actions"
         onClick={(event) => {
           event.stopPropagation();
-          setIsMenuOpen(prev => !prev);
+          setIsMenuOpen((prev) => !prev);
         }}
         className="ml-1 rounded-full p-2 text-secondary hover:bg-background hover:text-primary"
       >
@@ -209,40 +199,16 @@ const ConversationItem: React.FC<ConversationItemProps> = ({
       </button>
 
       {isMenuOpen && (
-        <div
-          className="absolute right-3 top-14 z-20 w-48 overflow-hidden rounded-lg border border-border bg-surface shadow-lg"
-          onClick={(event) => event.stopPropagation()}
-        >
-          <button
-            type="button"
-            className="w-full px-4 py-2 text-left text-sm text-primary hover:bg-background"
-            onClick={() => {
-              setIsMenuOpen(false);
-              onClearConversation(otherParticipant.id);
-            }}
-          >
-            Clear chat
-          </button>
-          <button
-            type="button"
-            className="w-full px-4 py-2 text-left text-sm text-primary hover:bg-background"
-            onClick={() => {
-              setIsMenuOpen(false);
-              onToggleAutoDelete(otherParticipant.id);
-            }}
-          >
-            {isAutoDeleteEnabled ? 'Disable 24h auto delete' : 'Enable 24h auto delete'}
-          </button>
-          <button
-            type="button"
-            className="w-full px-4 py-2 text-left text-sm text-red-500 hover:bg-red-500/10"
-            onClick={() => {
-              setIsMenuOpen(false);
-              onToggleBlock(otherParticipant.id);
-            }}
-          >
-            {isBlocked ? 'Unblock user' : 'Block user'}
-          </button>
+        <div onClick={(event) => event.stopPropagation()} className="absolute right-3 top-14 z-20">
+          <MessageOptionsMenu
+            user={otherParticipant}
+            isAutoDeleteEnabled={isAutoDeleteEnabled}
+            onViewProfile={onViewProfile}
+            onClearChat={onClearConversation}
+            onToggleAutoDelete={onToggleAutoDelete}
+            onBlockUser={onBlockUser}
+            onClose={() => setIsMenuOpen(false)}
+          />
         </div>
       )}
     </div>

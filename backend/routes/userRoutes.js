@@ -281,18 +281,16 @@ router.put('/:id/follow', protect, async (req, res) => {
     }
 });
 
-// @route   PUT /api/users/:id/block
-// @desc    Block / Unblock a user
-router.put('/:id/block', protect, async (req, res) => {
+const handleBlockUser = async (req, res, targetUserId) => {
     try {
-        const userToBlock = await User.findById(req.params.id);
+        const userToBlock = await User.findById(targetUserId);
         const currentUser = await User.findById(req.user.id);
 
         if (!userToBlock || !currentUser) {
             return res.status(404).json({ message: 'User not found' });
         }
 
-        if (req.params.id === req.user.id) {
+        if (targetUserId === req.user.id) {
             return res.status(400).json({ message: 'You cannot block yourself' });
         }
 
@@ -330,12 +328,28 @@ router.put('/:id/block', protect, async (req, res) => {
         const updatedUserToBlock = await User.findById(userToBlock._id);
         req.io.emit('userUpdated', updatedUserToBlock.toJSON());
 
-        res.json({ message: 'Block status updated' });
+        return res.json({ message: 'Block status updated' });
 
     } catch (error) {
         console.error('Block user error:', error);
-        res.status(500).json({ message: 'Server Error' });
+        return res.status(500).json({ message: 'Server Error' });
     }
+};
+
+// @route   PUT /api/users/:id/block
+// @desc    Block / Unblock a user
+router.put('/:id/block', protect, async (req, res) => {
+    return handleBlockUser(req, res, req.params.id);
+});
+
+// @route   POST /api/users/block-user
+// @desc    Explicit block endpoint for messaging flow
+router.post('/block-user', protect, async (req, res) => {
+    const blockedUserId = req.body?.blockedUserId;
+    if (!blockedUserId) {
+        return res.status(400).json({ message: 'blockedUserId is required' });
+    }
+    return handleBlockUser(req, res, blockedUserId);
 });
 
 

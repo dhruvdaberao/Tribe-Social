@@ -5,6 +5,7 @@ import { useSocket } from '../../contexts/SocketContext';
 import MarkdownRenderer from '../common/MarkdownRenderer';
 import ChatShell from './ChatShell';
 import ChatInput from './ChatInput';
+import MessageOptionsMenu from './MessageOptionsMenu';
 
 interface MessageAreaProps {
   conversation: Conversation;
@@ -23,6 +24,11 @@ interface MessageAreaProps {
   onDeleteMessageForMe: (messageId: string) => void;
   onBack: () => void;
   onViewProfile: (user: User) => void;
+  onClearConversation: (otherUserId: string) => void;
+  onToggleAutoDelete: (otherUserId: string) => void;
+  onBlockUser: (user: User) => void;
+  isAutoDeleteEnabled: boolean;
+  isBlockingUser?: boolean;
 }
 
 export const MessageArea: React.FC<MessageAreaProps> = ({
@@ -41,7 +47,12 @@ export const MessageArea: React.FC<MessageAreaProps> = ({
   onDeleteMessage,
   onDeleteMessageForMe,
   onBack,
-  onViewProfile
+  onViewProfile,
+  onClearConversation,
+  onToggleAutoDelete,
+  onBlockUser,
+  isAutoDeleteEnabled,
+  isBlockingUser = false
 }) => {
   const [inputText, setInputText] = useState('');
   const [isTyping, setIsTyping] = useState(false);
@@ -245,19 +256,16 @@ export const MessageArea: React.FC<MessageAreaProps> = ({
               </button>
               
               {isHeaderMenuOpen && (
-                <div 
-                  className="absolute right-0 top-12 z-50 w-48 rounded-xl border border-border bg-surface shadow-lg overflow-hidden flex flex-col"
-                >
-                  <button
-                    onClick={() => {
-                      setIsHeaderMenuOpen(false);
-                      onViewProfile(otherParticipant);
-                    }}
-                    className="px-4 py-3 text-left text-sm font-medium text-primary hover:bg-background transition-colors"
-                  >
-                    View Profile
-                  </button>
-                </div>
+                <MessageOptionsMenu
+                  user={otherParticipant}
+                  isAutoDeleteEnabled={isAutoDeleteEnabled}
+                  isBlocking={isBlockingUser}
+                  onViewProfile={onViewProfile}
+                  onClearChat={onClearConversation}
+                  onToggleAutoDelete={onToggleAutoDelete}
+                  onBlockUser={onBlockUser}
+                  onClose={() => setIsHeaderMenuOpen(false)}
+                />
               )}
             </div>
             

@@ -18,7 +18,7 @@ interface ChatPageProps {
   onViewProfile: (user: User) => void;
   onSharePost: (post: Post, destination: { type: 'tribe' | 'user', id: string }) => void;
   onConversationStateChange?: (isOpen: boolean) => void;
-  onToggleBlock: (userId: string) => void;
+  onToggleBlock: (userId: string) => Promise<boolean>;
 }
 
 const ChatPage: React.FC<ChatPageProps> = ({ currentUser, allUsers, chukUser, initialTargetUser, onViewProfile, onSharePost, onConversationStateChange, onToggleBlock }) => {
@@ -59,6 +59,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ currentUser, allUsers, chukUser, in
   const [isNewMessageModalOpen, setNewMessageModalOpen] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const [isInitializing, setIsInitializing] = useState(!!initialTargetUser);
+  const [blockingUserIds, setBlockingUserIds] = useState<Record<string, boolean>>({});
   const messageCache = React.useRef<Map<string, { messages: Message[]; hasMore: boolean; oldestTimestamp?: string }>>(new Map());
   const { socket, onlineUsers, clearUnreadMessages, unreadCounts, setActiveChatPartnerId } = useSocket();
 
@@ -271,6 +272,31 @@ const ChatPage: React.FC<ChatPageProps> = ({ currentUser, allUsers, chukUser, in
     }
   };
 
+  const handleBlockUser = useCallback(async (user: User) => {
+    if (!user?.id || blockingUserIds[user.id]) return;
+    const confirmed = window.confirm('Are you sure you want to block this user?');
+    if (!confirmed) return;
+
+    setBlockingUserIds(prev => ({ ...prev, [user.id]: true }));
+    try {
+      const success = await onToggleBlock(user.id);
+      if (!success) {
+        toast.error('Failed to block user');
+        return;
+      }
+      setConversations(prev => prev.filter(conv => conv.participants.find(p => p.id !== currentUser.id)?.id !== user.id));
+      if (activeConversation?.participants.some(p => p.id === user.id)) {
+        handleBackToList();
+        navigate('/messages', { replace: true });
+      }
+      toast.success('User blocked successfully');
+    } catch {
+      toast.error('Failed to block user');
+    } finally {
+      setBlockingUserIds(prev => ({ ...prev, [user.id]: false }));
+    }
+  }, [activeConversation, blockingUserIds, currentUser.id, navigate, onToggleBlock]);
+
   const handleLoadMoreMessages = useCallback(async () => {
     if (!activeConversation || isLoadingMore || !hasMoreMessages) return;
     const otherUserId = activeConversation.participants.find(p => p.id !== currentUser.id)?.id;
@@ -337,6 +363,11 @@ const ChatPage: React.FC<ChatPageProps> = ({ currentUser, allUsers, chukUser, in
     setIsSending(true);
     const otherUserId = activeConversation.participants.find(p => p.id !== currentUser.id)?.id;
     if (!otherUserId) {
+      setIsSending(false);
+      return;
+    }
+    if ((currentUser.blockedUsers || []).includes(otherUserId)) {
+      toast.error('You have blocked this user. Unblock to continue messaging.');
       setIsSending(false);
       return;
     }
@@ -513,6 +544,13 @@ const ChatPage: React.FC<ChatPageProps> = ({ currentUser, allUsers, chukUser, in
 
   const activeOtherUserId = activeConversation?.participants.find(p => p.id !== currentUser.id)?.id || null;
   const autoDeleteEnabled = activeOtherUserId ? !!autoDeleteMap[activeOtherUserId] : false;
+  const visibleConversations = useMemo(() => {
+    const blockedSet = new Set(currentUser.blockedUsers || []);
+    return conversations.filter(chat => {
+      const otherUserId = chat.participants.find(p => p.id !== currentUser.id)?.id;
+      return !!otherUserId && !blockedSet.has(otherUserId);
+    });
+  }, [conversations, currentUser.blockedUsers, currentUser.id]);
   const filteredMessages = useMemo(() => {
     if (!autoDeleteEnabled) return messages;
     const cutoff = Date.now() - 24 * 60 * 60 * 1000;
@@ -531,17 +569,18 @@ const ChatPage: React.FC<ChatPageProps> = ({ currentUser, allUsers, chukUser, in
         className={`min-h-0 w-full flex-1 flex-col bg-background ${isMessageAreaVisible ? 'hidden md:flex md:w-[320px] md:flex-shrink-0 lg:w-[380px]' : 'flex'} md:border-r md:border-border`}
       >
         <ConversationList
-          conversations={conversations}
+          conversations={visibleConversations}
           isLoading={isLoadingConversations}
           currentUser={currentUser}
           chukUser={chukUser}
           userMap={userMap}
           activeConversationId={activeConversation?.id}
           onSelectConversation={handleSelectConversation}
+          onViewProfile={onViewProfile}
           onNewMessage={() => setNewMessageModalOpen(true)}
           unreadCounts={unreadCounts.messages}
           onClearConversation={handleClearConversation}
-          onToggleBlock={onToggleBlock}
+          onBlockUser={handleBlockUser}
           onToggleAutoDelete={handleToggleAutoDelete}
           autoDeleteMap={autoDeleteMap}
         />
@@ -574,6 +613,11 @@ const ChatPage: React.FC<ChatPageProps> = ({ currentUser, allUsers, chukUser, in
             onDeleteMessageForMe={handleDeleteMessageForMe}
             onBack={handleBackToList}
             onViewProfile={onViewProfile}
+            onClearConversation={handleClearConversation}
+            onToggleAutoDelete={handleToggleAutoDelete}
+            onBlockUser={handleBlockUser}
+            isAutoDeleteEnabled={autoDeleteEnabled}
+            isBlockingUser={!!(activeOtherUserId && blockingUserIds[activeOtherUserId])}
           />
         ) : isInitializing ? (
           <ChatShell
