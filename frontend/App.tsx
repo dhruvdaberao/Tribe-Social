@@ -54,11 +54,26 @@ const MainLayout: React.FC = () => {
     useEffect(() => {
         if (!currentUser) return;
 
-        requestNotificationPermission();
-        const unsubscribe = setupForegroundNotifications();
+        let unsubscribe: (() => void) | undefined;
+
+        const setupPush = async () => {
+            const token = await requestNotificationPermission();
+            if (token) {
+                try {
+                    await api.saveFcmToken(token);
+                    console.info('[FCM] Token saved to backend from app bootstrap.');
+                } catch (error) {
+                    console.error('[FCM] Failed to save token from app bootstrap:', error);
+                }
+            }
+
+            unsubscribe = await setupForegroundNotifications();
+        };
+
+        setupPush();
 
         return () => {
-            unsubscribe();
+            if (unsubscribe) unsubscribe();
         };
     }, [currentUser]);
 

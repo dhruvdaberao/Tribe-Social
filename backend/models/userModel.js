@@ -78,7 +78,12 @@ const userSchema = mongoose.Schema(
     },
     fcmToken: {
       type: String,
-      default: null
+      default: null,
+      index: true,
+    },
+    fcmTokenUpdatedAt: {
+      type: Date,
+      default: null,
     },
     pushNotifications: {
       type: Boolean,

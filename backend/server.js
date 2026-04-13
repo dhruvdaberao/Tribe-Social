@@ -29,6 +29,7 @@ import cronRoutes from './routes/cronRoutes.js'; // Cron
 import { initializeSocket } from './socketManager.js';
 import protect from './middleware/authMiddleware.js';
 import User from './models/userModel.js';
+import { sendPush } from './services/pushService.js';
 
 dotenv.config();
 
@@ -134,12 +135,43 @@ const startServer = async () => {
         }
 
         user.fcmToken = token;
+        user.fcmTokenUpdatedAt = new Date();
         await user.save();
-        console.log('Saved token:', token);
-        return res.json({ success: true });
+        console.info('[FCM] /api/save-token success', { userId: req.user.id, tokenPreview: `${token.slice(0, 16)}...` });
+        return res.json({ success: true, tokenSaved: true });
       } catch (error) {
-        console.error('Error saving FCM token:', error);
+        console.error('[FCM] Error saving token from /api/save-token:', error);
         return res.status(500).json({ message: 'Failed to save token' });
+      }
+    });
+
+    app.post('/api/test-push', standardPayload, protect, async (req, res) => {
+      try {
+        const { userId } = req.body || {};
+        const targetUserId = userId || req.user.id;
+
+        const user = await User.findById(targetUserId).select('fcmToken');
+        if (!user) {
+          return res.status(404).json({ message: 'User not found' });
+        }
+
+        if (!user.fcmToken) {
+          return res.status(400).json({ message: 'No FCM token found for user' });
+        }
+
+        const result = await sendPush(user.fcmToken, 'Tribe Social test push', 'Push test from /api/test-push', {
+          url: '/notifications',
+          type: 'test',
+        });
+
+        if (!result.success) {
+          return res.status(500).json({ message: 'Failed to send test push', reason: result.reason });
+        }
+
+        return res.json({ success: true, messageId: result.messageId });
+      } catch (error) {
+        console.error('[FCM] /api/test-push failed:', error);
+        return res.status(500).json({ message: 'Failed to send test push' });
       }
     });
     app.use('/api/moderation', standardPayload, moderationRoutes); // 🔥 MODERATION ROUTES
