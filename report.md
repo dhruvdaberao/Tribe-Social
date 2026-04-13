@@ -283,10 +283,29 @@ importScripts('https://www.gstatic.com/firebasejs/10.1.0/firebase-messaging-comp
 1️⃣1️⃣ CURRENT DRAWBACKS & FUTURE ROADMAP (DEEP ANALYSIS)
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
+### 🛑 1. SCALABILITY BOTTLENECK: "The All Users Fetch"
+**The Issue**:
+Features like mentioning (`@user`) or admin tables fire `fetchUsers()` returning the *entire* user base. At 10,000 users, this payload will become a massive 4MB+ JSON bundle, stalling browser memory on page load.
+**The Fix (Roadmap)**:
+1.  **Backend**: Implement Pagination (`GET /users?page=1&limit=20`).
+2.  **Frontend**: Search-as-you-type (Server-side search) relying on `?query=` parameters fetching only explicitly requested users.
+
+### 🛑 2. PERFORMANCE: Lack of Virtualization
+**The Issue**:
+Scrolling up 500 messages in a Tribe simply appends 500 HTML DOM elements to the browser. Eventually, the phone runs out of RAM and crashes (Layout Thrashing).
+**The Fix**:
+Implement Windowing (Virtual Scrolling) via `react-virtuoso`. It only draws the 10 elements currently visible on the screen, tricking the browser into thinking the list is small.
+
+### 🛑 3. REAL-TIME LIMITS: Node-Bound Socket Memory
+**The Issue**:
+WebSockets are bound to whatever Node container started them. If traffic forces Render to spin up "Server B", Server B literally cannot see the WebSockets connected to "Server A", leading to dropped message broadcasts between servers.
+**The Fix**:
+Deploy the `@socket.io/redis-adapter` to construct a global Pub/Sub backplane.
+
 ### 🔮 FUTURE SCOPE (What to build next)
-1.  **Media Optimization**: Server-side image resizing (Sharp.js) to serve thumbnails instead of 4K originals.
-2.  **E2E Testing**: Add Cypress suite to guarantee Login/Post/Chat flows never break.
-3.  **Redis Socket.IO Adapter**: We built custom Redis wrappers. But hooking up `@socket.io/redis-adapter` natively handles scaling Room broadcasts across instances dynamically.
+1.  **Secure Token Lifecycle (Refresh Tokens)**: Split existing persistent JWTs into Short-lived Access Tokens (5-minute life) alongside strong, `httpOnly` Refresh Tokens embedded in cookies that JS cannot read.
+2.  **Media Compression Pipelines**: Directly uploading 10MB iOS photos to Cloudinary eats massive bandwidth. Future scope builds a pipeline hitting a `Sharp.js` microservice that converts imagery down to 300kb `.webp` files.
+3.  **E2E (End-to-End) Automation Testing**: Write Cypress or Playwright test suites executing headless logins and Tribe messaging to protect critical flows from regressions.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 1️⃣2️⃣ ENGINEERING RESILIENCY & OPERATIONS (SENIOR DEEP DIVE)
