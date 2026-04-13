@@ -19,28 +19,34 @@ export const renderTemplate = async (templateName, replacements = {}) => {
 };
 
 const transporter = nodemailer.createTransport({
-  service: "gmail",
+  host: "smtp-relay.brevo.com",
+  port: 587,
+  secure: false,
   auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
+    user: process.env.BREVO_USER,
+    pass: process.env.BREVO_PASS,
   },
 });
 
 export const sendOTPEmail = async (to, otp) => {
   try {
-    await transporter.sendMail({
-      from: `"Tribe Social" <${process.env.EMAIL_USER}>`,
-      to,
+    console.log("Sending OTP to:", to);
+
+    const info = await transporter.sendMail({
+      from: `"Tribe Social" <${process.env.BREVO_USER}>`,
+      to: to,
       subject: "Tribe OTP Code",
       html: `
-        <h2>Password Reset</h2>
-        <p>Your OTP is:</p>
-        <h1>${otp}</h1>
-        <p>This OTP expires in 5 minutes.</p>
+        <div style="font-family: Arial; text-align: center;">
+          <h2>Password Reset</h2>
+          <p>Your OTP is:</p>
+          <h1 style="letter-spacing: 4px;">${otp}</h1>
+          <p>This OTP expires in 5 minutes.</p>
+        </div>
       `,
     });
 
-    console.log("Sending email to:", to);
+    console.log("✅ Email sent:", info.messageId);
   } catch (error) {
     console.error("❌ Email error:", error);
     throw new Error("Email sending failed");
@@ -50,7 +56,7 @@ export const sendOTPEmail = async (to, otp) => {
 export const sendEmail = async ({ to, subject, html, text }) => {
   try {
     const mailOptions = {
-      from: `"Tribe Social" <${process.env.EMAIL_USER}>`,
+      from: `"Tribe Social" <${process.env.BREVO_USER}>`,
       to: Array.isArray(to) ? to.join(', ') : to,
       subject,
       html,
