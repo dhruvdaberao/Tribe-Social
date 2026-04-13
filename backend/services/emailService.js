@@ -2,6 +2,7 @@ import { Resend } from 'resend';
 import { readFile } from 'fs/promises';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import nodemailer from 'nodemailer';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
@@ -21,8 +22,29 @@ export const renderTemplate = async (templateName, replacements = {}) => {
 };
 
 export const sendEmail = async ({ to, subject, html, text }) => {
+  // Use Nodemailer if SMTP credentials are provided (Bypasses Resend Sandbox limitations)
+  if (process.env.SMTP_EMAIL && process.env.SMTP_PASSWORD) {
+    const transporter = nodemailer.createTransport({
+      service: 'gmail',
+      auth: {
+        user: process.env.SMTP_EMAIL,
+        pass: process.env.SMTP_PASSWORD,
+      },
+    });
+
+    const mailOptions = {
+      from: `Tribe Social <${process.env.SMTP_EMAIL}>`,
+      to: Array.isArray(to) ? to.join(', ') : to,
+      subject,
+      html,
+      text,
+    };
+
+    return await transporter.sendMail(mailOptions);
+  }
+
   if (!process.env.RESEND_API_KEY) {
-    throw new Error('RESEND_API_KEY is not configured');
+    throw new Error('Neither SMTP_EMAIL/SMTP_PASSWORD nor RESEND_API_KEY are configured');
   }
 
   const fromAddress =
