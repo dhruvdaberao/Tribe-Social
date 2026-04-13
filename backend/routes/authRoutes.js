@@ -74,7 +74,6 @@ import express from 'express';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
-import { Resend } from 'resend';
 import User from '../models/userModel.js';
 import superAdmins from '../config/superAdmins.js';
 import { sendEmail, renderTemplate } from '../services/emailService.js';
@@ -93,9 +92,6 @@ import OTP from '../models/otpModel.js';
 import Follow from '../models/followModel.js';
 
 const router = express.Router();
-
-// Initialize Resend with API Key from .env
-const resend = new Resend(process.env.RESEND_API_KEY);
 
 const normalizeUsername = (value = '') => value.trim().toLowerCase();
 const isValidUsername = (value = '') => /^[a-z0-9]+(?:\.[a-z0-9]+)*$/.test(value);
@@ -221,6 +217,10 @@ router.post('/login', async (req, res) => {
 router.post('/forgot-password', async (req, res) => {
   const { email } = req.body;
   try {
+    if (!email) {
+      return res.status(400).json({ message: 'Email is required.' });
+    }
+
     const user = await User.findOne({ email });
     if (!user) return res.status(404).json({ message: 'User not found with this email.' });
     if (user.isDisabled || user.isHidden) return res.status(403).json({ message: DISABLED_MESSAGE });
@@ -237,46 +237,52 @@ router.post('/forgot-password', async (req, res) => {
       expiresAt: new Date(Date.now() + 5 * 60 * 1000)
     });
 
-    // Send Email via Resend API (Uses Port 443 - Not blocked by Render)
-    if (process.env.RESEND_API_KEY) {
-      try {
-        const { data, error } = await resend.emails.send({
-          from: 'Tribe Social <onboarding@resend.dev>', // Use verified domain in production
-          to: [email],
-          subject: 'Your Login OTP',
-          html: `
-            <div style="font-family: sans-serif; padding: 20px; color: #3B302B;">
-              <h2 style="color: #B59477;">Tribe Social</h2>
-              <p>Hello,</p>
-              <p>You requested an OTP to access your account. Please use the following code:</p>
-              <div style="background: #FAF8F6; padding: 15px; border-radius: 8px; font-size: 24px; font-weight: bold; text-align: center; letter-spacing: 5px;">
-                ${otpValue}
-              </div>
-              <p style="font-size: 12px; color: #8A7B74; margin-top: 20px;">
-                This code will expire in 5 minutes. If you did not request this, please ignore this email.
-              </p>
-            </div>
-          `,
-        });
+    if (!process.env.RESEND_API_KEY) {
+      console.error('[forgot-password] Email provider misconfigured: missing RESEND_API_KEY');
+      return res.status(500).json({ message: 'Email service error. Try again later.' });
+    }
 
-        if (error) {
-          console.error("Resend Error:", error);
-          return res.status(500).json({ message: 'Email service error. Try again later.' });
-        }
-        res.json({ message: 'OTP sent to your email.' });
-      } catch (err) {
-        console.error("Mail send exception:", err);
-        res.status(500).json({ message: 'Failed to send OTP.' });
-      }
-    } else {
-      // DEBUG MODE: If no API Key is set, log it to console so dev can see it in Render Logs
-      console.warn("------------------------------------------");
-      console.warn(`⚠️ NO RESEND_API_KEY FOUND IN ENV`);
-      console.warn(`🔑 OTP FOR ${email}: ${otpValue}`);
-      console.warn("------------------------------------------");
-      res.json({ message: 'OTP generated (Check server logs in dev).' });
+    try {
+      const sendResult = await sendEmail({
+        to: user.email,
+        subject: 'Your Login OTP',
+        html: `
+          <div style="font-family: sans-serif; padding: 20px; color: #3B302B;">
+            <h2 style="color: #B59477;">Tribe Social</h2>
+            <p>Hello,</p>
+            <p>You requested an OTP to access your account. Please use the following code:</p>
+            <div style="background: #FAF8F6; padding: 15px; border-radius: 8px; font-size: 24px; font-weight: bold; text-align: center; letter-spacing: 5px;">
+              ${otpValue}
+            </div>
+            <p style="font-size: 12px; color: #8A7B74; margin-top: 20px;">
+              This code will expire in 5 minutes. If you did not request this, please ignore this email.
+            </p>
+          </div>
+        `,
+        text: `Your Tribe Social OTP is ${otpValue}. It expires in 5 minutes.`,
+      });
+
+      console.log('[forgot-password] OTP email sent', {
+        email: user.email,
+        emailId: sendResult?.id || null,
+      });
+      return res.json({ message: 'OTP sent to your email.' });
+    } catch (emailError) {
+      console.error('[forgot-password] Failed to send OTP email', {
+        email: user.email,
+        error: emailError?.message,
+        stack: emailError?.stack,
+        providerError: emailError?.cause || null,
+      });
+      await OTP.deleteMany({ email });
+      return res.status(500).json({ message: 'Email service error. Try again later.' });
     }
   } catch (error) {
+    console.error('[forgot-password] Unexpected server error', {
+      email,
+      error: error?.message,
+      stack: error?.stack,
+    });
     res.status(500).json({ message: 'Server error' });
   }
 });
