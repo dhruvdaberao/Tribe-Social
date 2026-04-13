@@ -190,6 +190,8 @@ const AdminLeadersPanel: React.FC = () => {
               onDelete={() => setActionTarget({ user: admin, action: 'delete' })}
               onRemoveAdmin={() => handleRoleUpdate(adminId, { isAdmin: false })}
               onPromoteSuperAdmin={() => handleRoleUpdate(adminId, { isSuperAdmin: true })}
+              onDemoteToAdmin={() => handleRoleUpdate(adminId, { isSuperAdmin: false, isAdmin: true })}
+              currentUserId={currentUser?.id}
             />
           );
         })}
@@ -231,8 +233,11 @@ const AdminLeaderRow: React.FC<{
   onDelete: () => void;
   onRemoveAdmin: () => void;
   onPromoteSuperAdmin: () => void;
-}> = ({ admin, canEditRoles, onDisable, onDelete, onRemoveAdmin, onPromoteSuperAdmin }) => {
+  onDemoteToAdmin: () => void;
+  currentUserId?: string;
+}> = ({ admin, canEditRoles, onDisable, onDelete, onRemoveAdmin, onPromoteSuperAdmin, onDemoteToAdmin, currentUserId }) => {
   const [menuOpen, setMenuOpen] = useState(false);
+  const isSelf = currentUserId === (admin.id || (admin as any)._id);
 
   return (
     <div className="rounded-2xl border border-border bg-surface p-6 shadow-sm">
@@ -260,50 +265,77 @@ const AdminLeaderRow: React.FC<{
             <MoreVertical size={18} />
           </button>
           {menuOpen && (
-            <div className="absolute right-0 z-10 mt-2 w-48 rounded-xl border border-border bg-surface shadow-lg">
-              {!admin.isSuperAdmin && (
-                <button
-                  onClick={() => {
-                    setMenuOpen(false);
-                    if (canEditRoles) onRemoveAdmin();
-                  }}
-                  className={`flex w-full items-center gap-2 px-4 py-2 text-sm ${canEditRoles ? 'text-primary hover:bg-background' : 'text-secondary cursor-not-allowed'}`}
-                  disabled={!canEditRoles}
-                >
-                  Remove Admin
-                </button>
+            <div className="absolute right-0 z-50 mt-2 w-60 rounded-xl border border-border bg-surface shadow-xl p-1.5 flex flex-col gap-1 overflow-hidden">
+              {isSelf ? (
+                 <div className="px-4 py-3 bg-background border-b border-border text-xs italic text-secondary text-center rounded-lg">
+                   This is your profile
+                 </div>
+              ) : admin.isSuperAdmin ? (
+                <>
+                  <button
+                    onClick={() => {
+                      setMenuOpen(false);
+                      if (canEditRoles) onDemoteToAdmin();
+                    }}
+                    className={`flex w-full items-center gap-3 px-3 py-2.5 text-sm transition-colors rounded-lg ${canEditRoles ? 'text-primary hover:bg-background' : 'text-secondary cursor-not-allowed'}`}
+                    disabled={!canEditRoles}
+                  >
+                    Demote to Admin
+                  </button>
+                  <button
+                    onClick={() => {
+                      setMenuOpen(false);
+                      toast.info("Feature coming soon");
+                    }}
+                    className="flex w-full items-center gap-3 px-3 py-2.5 text-sm text-primary hover:bg-background transition-colors rounded-lg"
+                  >
+                    View Profile
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button
+                    onClick={() => {
+                      setMenuOpen(false);
+                      if (canEditRoles) onRemoveAdmin();
+                    }}
+                    className={`flex w-full items-center gap-3 px-3 py-2.5 text-sm transition-colors rounded-lg ${canEditRoles ? 'text-primary hover:bg-background' : 'text-secondary cursor-not-allowed'}`}
+                    disabled={!canEditRoles}
+                  >
+                    Remove Admin
+                  </button>
+                  <button
+                    onClick={() => {
+                      setMenuOpen(false);
+                      if (canEditRoles) onPromoteSuperAdmin();
+                    }}
+                    className={`flex w-full items-center gap-3 px-3 py-2.5 text-sm transition-colors rounded-lg ${canEditRoles ? 'text-primary hover:bg-background' : 'text-secondary cursor-not-allowed'}`}
+                    disabled={!canEditRoles}
+                  >
+                    Promote to Super Admin
+                  </button>
+                  <div className="h-px w-full bg-border my-1" />
+                  <button
+                    onClick={() => {
+                      setMenuOpen(false);
+                      onDisable();
+                    }}
+                    className="flex w-full items-center gap-3 px-3 py-2.5 text-sm text-primary hover:bg-background transition-colors rounded-lg"
+                  >
+                    {admin.isDisabled ? 'Enable Admin' : 'Disable Admin'}
+                  </button>
+                  <button
+                    onClick={() => {
+                      setMenuOpen(false);
+                      onDelete();
+                    }}
+                    className="flex w-full items-center gap-3 px-3 py-2.5 text-sm text-red-500 hover:bg-red-500/10 font-medium transition-colors rounded-lg"
+                  >
+                    <Trash2 size={16} />
+                    Delete Admin
+                  </button>
+                </>
               )}
-              {!admin.isSuperAdmin && (
-                <button
-                  onClick={() => {
-                    setMenuOpen(false);
-                    if (canEditRoles) onPromoteSuperAdmin();
-                  }}
-                  className={`flex w-full items-center gap-2 px-4 py-2 text-sm ${canEditRoles ? 'text-primary hover:bg-background' : 'text-secondary cursor-not-allowed'}`}
-                  disabled={!canEditRoles}
-                >
-                  Promote to Super Admin
-                </button>
-              )}
-              <button
-                onClick={() => {
-                  setMenuOpen(false);
-                  onDisable();
-                }}
-                className="flex w-full items-center gap-2 px-4 py-2 text-sm text-primary hover:bg-background"
-              >
-                {admin.isDisabled ? 'Enable Admin' : 'Disable Admin'}
-              </button>
-              <button
-                onClick={() => {
-                  setMenuOpen(false);
-                  onDelete();
-                }}
-                className="flex w-full items-center gap-2 px-4 py-2 text-sm text-red-500 hover:bg-red-500/10"
-              >
-                <Trash2 size={16} />
-                Delete Admin
-              </button>
             </div>
           )}
         </div>

@@ -4,6 +4,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { toast } from '../common/Toast';
 import { subscribeToPush, unsubscribeFromPush, isSubscribedToPush } from '../../utils/pushNotifications';
 import * as api from '../../api';
+import { useNavigate } from 'react-router-dom';
 
 const defaultPrefs = {
   pushEnabled: true,
@@ -24,6 +25,7 @@ const defaultPrefs = {
 };
 
 const NotificationSettingsPage: React.FC = () => {
+  const navigate = useNavigate();
   const { currentUser, setCurrentUser } = useAuth();
   const [prefs, setPrefs] = useState(defaultPrefs);
   const [isSaving, setIsSaving] = useState(false);
@@ -112,11 +114,16 @@ const NotificationSettingsPage: React.FC = () => {
     <div className="h-[calc(var(--vvh,100dvh)-4rem)] md:h-auto min-h-0 overflow-hidden">
       <div className="mx-auto h-full max-w-2xl overflow-y-auto px-4 py-6 md:py-8 pb-[calc(6rem+env(safe-area-inset-bottom,0px))] md:pb-8">
       <div className="bg-surface rounded-2xl shadow-sm border border-border p-6 space-y-6">
-        <div>
-          <h1 className="text-2xl font-bold font-display text-primary">Notifications</h1>
-          <p className="text-sm text-secondary mt-1">
-            Control which alerts you receive on your devices and via email.
-          </p>
+        <div style={{ display: 'flex', alignItems: 'center' }}>
+          <button onClick={() => navigate(-1)} style={{ fontSize: '20px', marginRight: '10px', background: 'transparent', border: 'none', color: '#f5e6d8', cursor: 'pointer' }}>
+            ←
+          </button>
+          <div>
+            <h1 className="text-2xl font-bold font-display text-primary">Notifications</h1>
+            <p className="text-sm text-secondary mt-1">
+              Control which alerts you receive on your devices and via email.
+            </p>
+          </div>
         </div>
 
         <section className="space-y-4 rounded-2xl border border-border bg-background/60 p-4">

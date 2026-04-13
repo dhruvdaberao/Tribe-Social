@@ -239,12 +239,7 @@ const NotificationsPage: React.FC<NotificationsPageProps> = ({ notifications, al
 
   return (
     <div className="max-w-3xl mx-auto">
-      <div className="header mb-4" style={{ display: 'flex', alignItems: 'center' }}>
-        <button onClick={() => navigate(-1)} className="back-btn" style={{ fontSize: '20px', marginRight: '10px', background: 'transparent', border: 'none', color: '#f5e6d8', cursor: 'pointer' }}>
-          ←
-        </button>
-        <h1 className="text-[28px] font-bold text-primary font-display leading-[1.2]">Notifications</h1>
-      </div>
+      <h1 className="text-[28px] font-bold text-primary mb-6 font-display leading-[1.2]">Notifications</h1>
       
       <div className="relative mb-6">
         <svg className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-secondary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
