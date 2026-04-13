@@ -22,14 +22,29 @@ export const renderTemplate = async (templateName, replacements = {}) => {
 
 export const sendEmail = async ({ to, subject, html, text }) => {
   if (!process.env.RESEND_API_KEY) {
-    return { skipped: true };
+    throw new Error('RESEND_API_KEY is not configured');
   }
 
-  return resend.emails.send({
-    from: 'Tribe Social <onboarding@resend.dev>',
+  const fromAddress =
+    process.env.EMAIL_FROM ||
+    process.env.RESEND_FROM_EMAIL ||
+    'Tribe Social <onboarding@resend.dev>';
+
+  const { data, error } = await resend.emails.send({
+    from: fromAddress,
     to: Array.isArray(to) ? to : [to],
     subject,
     html,
     text,
   });
+
+  if (error) {
+    const message = error.message || 'Unknown Resend error';
+    const sendError = new Error(message);
+    sendError.name = 'EmailServiceError';
+    sendError.cause = error;
+    throw sendError;
+  }
+
+  return data;
 };
