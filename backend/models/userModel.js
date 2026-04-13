@@ -58,12 +58,6 @@ const userSchema = mongoose.Schema(
       default: true,
     },
     emailPrefs: {
-      directMessages: { type: Boolean, default: true },
-      tribeMessages: { type: Boolean, default: true },
-      likes: { type: Boolean, default: true },
-      comments: { type: Boolean, default: true },
-      follows: { type: Boolean, default: true },
-      tribeJoins: { type: Boolean, default: true },
       newDeviceLogin: { type: Boolean, default: true },
       dailyDigest: { type: Boolean, default: true },
       moderationAlerts: { type: Boolean, default: true },
