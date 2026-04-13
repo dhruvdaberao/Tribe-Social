@@ -31,7 +31,7 @@ root.render(
 // Register Service Worker for push notifications
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/service-worker.js')
+    navigator.serviceWorker.register('/firebase-messaging-sw.js')
       .then(() => {})
       .catch(error => {
         console.error('❌ Service Worker registration failed:', error);

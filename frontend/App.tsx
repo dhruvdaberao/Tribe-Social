@@ -41,6 +41,7 @@ import SuperAdminPage from './pages/admin/SuperAdminPage';
 import AdminReportsPage from './pages/admin/AdminReportsPage';
 import AIProfileScreen from './components/profile/AIProfileScreen';
 import { AI_USER_ID, PSYDUCK_PROFILE } from './constants/ai';
+import { requestNotificationPermission, setupForegroundNotifications } from './utils/notification';
 
 export type NavItem = 'Home' | 'Discover' | 'Messages' | 'Tribes' | 'Notifications' | 'Profile' | 'Psyduck' | 'TribeDetail' | 'Settings';
 
@@ -49,6 +50,17 @@ const MainLayout: React.FC = () => {
     const { unreadMessageCount, unreadTribeCount, unreadNotificationCount, clearUnreadTribe, notifications, unreadCounts } = useSocket();
     const location = useLocation();
     const navigate = useNavigate();
+
+    useEffect(() => {
+        if (!currentUser) return;
+
+        requestNotificationPermission();
+        const unsubscribe = setupForegroundNotifications();
+
+        return () => {
+            unsubscribe();
+        };
+    }, [currentUser]);
 
     // Global State
     const {
