@@ -1,7 +1,7 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import { useSocket } from '../../contexts/SocketContext';
-import { WifiOff } from 'lucide-react';
+import { useAuth } from '../../contexts/AuthContext';
 
 const StatusBanner = styled.div`
   position: fixed;
@@ -30,12 +30,31 @@ const StatusBanner = styled.div`
 
 const ConnectionStatus: React.FC = () => {
     const { isConnected } = useSocket();
+    const { currentUser } = useAuth();
+    const [showIndicator, setShowIndicator] = useState(false);
 
-    if (isConnected) return null; // Don't show anything if connected
+    useEffect(() => {
+        if (!currentUser) {
+            setShowIndicator(false);
+            return;
+        }
+
+        if (!isConnected) {
+            setShowIndicator(true);
+            const timer = setTimeout(() => {
+                setShowIndicator(false);
+            }, 3000);
+            return () => clearTimeout(timer);
+        } else {
+            setShowIndicator(false);
+        }
+    }, [isConnected, currentUser]);
+
+    if (!showIndicator) return null;
 
     return (
         <StatusBanner>
-            <WifiOff size={16} color="#e53e3e" />
+            <div className="w-3 h-3 border-2 border-[#e53e3e] border-t-transparent rounded-full animate-spin"></div>
             <span>Reconnecting...</span>
         </StatusBanner>
     );
