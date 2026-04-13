@@ -216,14 +216,21 @@ router.post('/login', async (req, res) => {
 // @route   POST /api/auth/forgot-password
 router.post('/forgot-password', async (req, res) => {
   const { email } = req.body;
+  console.log("Incoming email:", email);
+
   try {
     if (!email) {
       return res.status(400).json({ message: 'Email is required.' });
     }
 
     const user = await User.findOne({ email });
-    if (!user) return res.status(404).json({ message: 'User not found with this email.' });
-    if (user.isDisabled || user.isHidden) return res.status(403).json({ message: DISABLED_MESSAGE });
+    
+    // Security: Do not reveal if the user exists to prevent email enumeration
+    if (!user || user.isDisabled || user.isHidden) {
+      return res.status(200).json({
+        message: "If account exists, OTP sent"
+      });
+    }
 
     // Generate 6-digit OTP
     const otpValue = Math.floor(100000 + Math.random() * 900000).toString();
@@ -236,11 +243,6 @@ router.post('/forgot-password', async (req, res) => {
       otp: hashedOtp,
       expiresAt: new Date(Date.now() + 5 * 60 * 1000)
     });
-
-    if (!process.env.RESEND_API_KEY) {
-      console.error('[forgot-password] Email provider misconfigured: missing RESEND_API_KEY');
-      return res.status(500).json({ message: 'Email service error. Try again later.' });
-    }
 
     try {
       const sendResult = await sendEmail({
@@ -262,28 +264,25 @@ router.post('/forgot-password', async (req, res) => {
         text: `Your Tribe Social OTP is ${otpValue}. It expires in 5 minutes.`,
       });
 
-      console.log('[forgot-password] OTP email sent', {
-        email: user.email,
-        emailId: sendResult?.id || null,
-      });
-      return res.json({ message: 'OTP sent to your email.' });
+      console.log('[forgot-password] OTP email sent successfully. Result ID:', sendResult?.messageId || sendResult?.id);
+      return res.status(200).json({ message: 'If account exists, OTP sent' });
     } catch (emailError) {
-      console.error('[forgot-password] Failed to send OTP email', {
-        email: user.email,
-        error: emailError?.message,
-        stack: emailError?.stack,
-        providerError: emailError?.cause || null,
-      });
+      console.error("FORGOT PASSWORD ERROR (Email Send):", emailError);
       await OTP.deleteMany({ email });
-      return res.status(500).json({ message: 'Email service error. Try again later.' });
+      // Return 400 instead of 500 for expected provider limitations like sandbox errors
+      // or return generic success if you don't want to leak send failures, but we'll return 400 per prompt suggestion
+      return res.status(400).json({ 
+        message: "Failed to send email due to service configuration. Try a different email or update backend env variables.",
+        error: emailError.message 
+      });
     }
-  } catch (error) {
-    console.error('[forgot-password] Unexpected server error', {
-      email,
-      error: error?.message,
-      stack: error?.stack,
+  } catch (err) {
+    console.error("FORGOT PASSWORD ERROR:", err);
+    return res.status(500).json({
+      message: "Internal error",
+      error: err.message,
+      stack: err.stack
     });
-    res.status(500).json({ message: 'Server error' });
   }
 });
 
