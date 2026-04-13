@@ -415,12 +415,6 @@ router.patch('/notification-settings', protect, async (req, res) => {
         }
 
         const allowedPrefs = new Set([
-            'directMessages',
-            'tribeMessages',
-            'likes',
-            'comments',
-            'follows',
-            'tribeJoins',
             'newDeviceLogin',
             'dailyDigest',
             'moderationAlerts',
@@ -444,14 +438,11 @@ router.patch('/notification-settings', protect, async (req, res) => {
             user.emailNotifications = emailNotifications;
         }
 
-        const existingPrefs = user.emailPrefs?.toObject ? user.emailPrefs.toObject() : (user.emailPrefs || {});
+        const existingPrefsRaw = user.emailPrefs?.toObject ? user.emailPrefs.toObject() : (user.emailPrefs || {});
+        const existingPrefs = Object.fromEntries(
+            Object.entries(existingPrefsRaw).filter(([key]) => allowedPrefs.has(key))
+        );
         user.emailPrefs = {
-            directMessages: true,
-            tribeMessages: true,
-            likes: true,
-            comments: true,
-            follows: true,
-            tribeJoins: true,
             newDeviceLogin: true,
             dailyDigest: true,
             moderationAlerts: true,

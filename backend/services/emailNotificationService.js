@@ -4,9 +4,9 @@ export const sendEmailNotification = async ({ user, type, subject, htmlContent }
   if (!user || !user.email || !type || !subject) return;
 
   const emailEnabled = user.emailNotifications !== false;
-  const prefEnabled = !user.emailPrefs || user.emailPrefs[type] !== false;
+  if (!user.emailPrefs || !user.emailPrefs[type]) return;
 
-  if (!emailEnabled || !prefEnabled) return;
+  if (!emailEnabled) return;
 
   try {
     await sendEmail({
