@@ -7,6 +7,7 @@ import Follow from '../models/followModel.js';
 import protect from '../middleware/authMiddleware.js';
 import { sendPushToUser } from '../services/pushService.js';
 import { isPushEnabledFor } from '../utils/notificationPrefs.js';
+import { sendEmailNotification } from '../services/emailNotificationService.js';
 
 const router = express.Router();
 
@@ -258,6 +259,12 @@ router.put('/:id/follow', protect, async (req, res) => {
                         },
                     });
                 }
+                await sendEmailNotification({
+                    user: userToFollow,
+                    type: 'follows',
+                    subject: `${currentUser.name || 'Someone'} started following you`,
+                    htmlContent: `<p>${currentUser.name || 'Someone'} started following you on Tribe Social.</p>`,
+                });
             }
         }
 
@@ -389,6 +396,78 @@ router.put('/:id/remove-follower', protect, async (req, res) => {
     } catch (error) {
         console.error('Remove follower error:', error);
         res.status(500).json({ message: 'Server Error' });
+    }
+});
+
+// @route   PATCH /api/users/notification-settings
+// @desc    Update user email notification settings
+router.patch('/notification-settings', protect, async (req, res) => {
+    try {
+        const user = await User.findById(req.user.id);
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        const { emailNotifications, emailPrefs } = req.body || {};
+
+        if (emailNotifications !== undefined && typeof emailNotifications !== 'boolean') {
+            return res.status(400).json({ message: 'emailNotifications must be a boolean' });
+        }
+
+        const allowedPrefs = new Set([
+            'directMessages',
+            'tribeMessages',
+            'likes',
+            'comments',
+            'follows',
+            'tribeJoins',
+            'newDeviceLogin',
+            'dailyDigest',
+            'moderationAlerts',
+        ]);
+
+        if (emailPrefs !== undefined) {
+            if (!emailPrefs || typeof emailPrefs !== 'object' || Array.isArray(emailPrefs)) {
+                return res.status(400).json({ message: 'emailPrefs must be an object' });
+            }
+            for (const [key, value] of Object.entries(emailPrefs)) {
+                if (!allowedPrefs.has(key)) {
+                    return res.status(400).json({ message: `Unsupported email preference: ${key}` });
+                }
+                if (typeof value !== 'boolean') {
+                    return res.status(400).json({ message: `emailPrefs.${key} must be a boolean` });
+                }
+            }
+        }
+
+        if (typeof emailNotifications === 'boolean') {
+            user.emailNotifications = emailNotifications;
+        }
+
+        const existingPrefs = user.emailPrefs?.toObject ? user.emailPrefs.toObject() : (user.emailPrefs || {});
+        user.emailPrefs = {
+            directMessages: true,
+            tribeMessages: true,
+            likes: true,
+            comments: true,
+            follows: true,
+            tribeJoins: true,
+            newDeviceLogin: true,
+            dailyDigest: true,
+            moderationAlerts: true,
+            ...existingPrefs,
+            ...(emailPrefs || {}),
+        };
+
+        await user.save();
+
+        return res.json({
+            emailNotifications: user.emailNotifications !== false,
+            emailPrefs: user.emailPrefs,
+        });
+    } catch (error) {
+        console.error('Update email notification settings error:', error);
+        return res.status(500).json({ message: 'Server Error' });
     }
 });
 

@@ -7,6 +7,7 @@ import Notification from '../models/notificationModel.js';
 import cloudinary from '../config/cloudinary.js';
 import { sendPushToUser, sendPushToUsers } from '../services/pushService.js';
 import { isPushEnabledFor } from '../utils/notificationPrefs.js';
+import { sendEmailNotification } from '../services/emailNotificationService.js';
 
 const router = express.Router();
 
@@ -257,7 +258,7 @@ router.put('/:id/join', protect, async (req, res) => {
                     req.io.to(recipientSocketId).emit('newNotification', populatedNotification);
                 }
 
-                const owner = await User.findById(tribe.owner).select('notificationPrefs isDisabled');
+                const owner = await User.findById(tribe.owner).select('notificationPrefs isDisabled email name emailNotifications emailPrefs');
                 if (owner && !owner.isDisabled && isPushEnabledFor(owner, 'tribeJoins')) {
                     await sendPushToUser(tribe.owner.toString(), {
                         title: 'New tribe member',
@@ -272,6 +273,12 @@ router.put('/:id/join', protect, async (req, res) => {
                         },
                     });
                 }
+                await sendEmailNotification({
+                    user: owner,
+                    type: 'tribeJoins',
+                    subject: `New member joined ${tribe.name}`,
+                    htmlContent: `<p>${req.user?.name || 'Someone'} joined your tribe, ${tribe.name}.</p>`,
+                });
             }
         }
 
@@ -620,7 +627,7 @@ router.post('/:id/messages', protect, async (req, res) => {
 
         if (memberIds.length > 0) {
             const memberUsers = await User.find({ _id: { $in: memberIds }, isDisabled: { $ne: true } })
-                .select('notificationPrefs');
+                .select('notificationPrefs email name emailNotifications emailPrefs');
             const enabledMemberIds = memberUsers.map((member) => member._id.toString());
 
             if (enabledMemberIds.length > 0) {
@@ -652,6 +659,13 @@ router.post('/:id/messages', protect, async (req, res) => {
                         },
                     });
                 }
+
+                await Promise.all(memberUsers.map((member) => sendEmailNotification({
+                    user: member,
+                    type: 'tribeMessages',
+                    subject: `New message in ${tribe.name}`,
+                    htmlContent: `<p>${responseMessage.sender?.name || 'Someone'} sent a message in ${tribe.name}: ${messagePreview}</p>`,
+                })));
             }
         }
 

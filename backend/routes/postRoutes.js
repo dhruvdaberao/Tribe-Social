@@ -8,6 +8,7 @@ import Notification from '../models/notificationModel.js';
 import cloudinary from '../config/cloudinary.js';
 import { sendPushToUser } from '../services/pushService.js';
 import { isPushEnabledFor } from '../utils/notificationPrefs.js';
+import { sendEmailNotification } from '../services/emailNotificationService.js';
 
 const router = express.Router();
 
@@ -398,7 +399,7 @@ router.put('/:id/like', protect, async (req, res) => {
                     if (recipientSocket) {
                         req.io.to(recipientSocket).emit('newNotification', populatedNotification);
                     }
-                    const recipientUser = await User.findById(post.user).select('notificationPrefs isDisabled');
+                    const recipientUser = await User.findById(post.user).select('notificationPrefs isDisabled email name emailNotifications emailPrefs');
                     if (recipientUser && !recipientUser.isDisabled && isPushEnabledFor(recipientUser, 'likes')) {
                         await sendPushToUser(post.user.toString(), {
                             title: `${req.user?.name || 'Someone'} liked your post`,
@@ -413,6 +414,12 @@ router.put('/:id/like', protect, async (req, res) => {
                             },
                         });
                     }
+                    await sendEmailNotification({
+                        user: recipientUser,
+                        type: 'likes',
+                        subject: `${req.user?.name || 'Someone'} liked your post`,
+                        htmlContent: `<p>${req.user?.name || 'Someone'} liked your post on Tribe Social.</p>`,
+                    });
                 }
             }
         }
@@ -485,7 +492,7 @@ router.post('/:id/comments', protect, async (req, res) => {
                 if (recipientSocket) {
                     req.io.to(recipientSocket).emit('newNotification', populatedNotification);
                 }
-                const recipientUser = await User.findById(post.user).select('notificationPrefs isDisabled');
+                const recipientUser = await User.findById(post.user).select('notificationPrefs isDisabled email name emailNotifications emailPrefs');
                 if (recipientUser && !recipientUser.isDisabled && isPushEnabledFor(recipientUser, 'comments')) {
                     await sendPushToUser(post.user.toString(), {
                         title: `${req.user?.name || 'Someone'} commented on your post`,
@@ -500,6 +507,12 @@ router.post('/:id/comments', protect, async (req, res) => {
                         },
                     });
                 }
+                await sendEmailNotification({
+                    user: recipientUser,
+                    type: 'comments',
+                    subject: `${req.user?.name || 'Someone'} commented on your post`,
+                    htmlContent: `<p>${req.user?.name || 'Someone'} commented on your post: ${text.slice(0, 120)}</p>`,
+                });
             }
         }
 
