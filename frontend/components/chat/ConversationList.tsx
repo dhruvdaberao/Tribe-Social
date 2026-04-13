@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Conversation, User } from '../../types';
 import UserAvatar from '../common/UserAvatar';
 import MessageOptionsMenu from './MessageOptionsMenu';
+import { AI_USER_ID } from '../../constants/ai';
 
 interface ConversationListProps {
   conversations: Conversation[];
@@ -18,6 +19,8 @@ interface ConversationListProps {
   onBlockUser: (otherUser: User) => void;
   onToggleAutoDelete: (otherUserId: string) => void;
   autoDeleteMap: Record<string, boolean>;
+  actionLoadingByUserId?: Record<string, boolean>;
+  blockLoadingByUserId?: Record<string, boolean>;
 }
 
 const ConversationList: React.FC<ConversationListProps> = ({
@@ -35,6 +38,8 @@ const ConversationList: React.FC<ConversationListProps> = ({
   onBlockUser,
   onToggleAutoDelete,
   autoDeleteMap,
+  actionLoadingByUserId = {},
+  blockLoadingByUserId = {},
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -100,6 +105,8 @@ const ConversationList: React.FC<ConversationListProps> = ({
             onClearConversation={onClearConversation}
             onBlockUser={onBlockUser}
             onToggleAutoDelete={onToggleAutoDelete}
+            isActionLoading={!!actionLoadingByUserId[chukUser.id]}
+            isBlocking={!!blockLoadingByUserId[chukUser.id]}
           />
         )}
 
@@ -132,6 +139,8 @@ const ConversationList: React.FC<ConversationListProps> = ({
                 onClearConversation={onClearConversation}
                 onBlockUser={onBlockUser}
                 onToggleAutoDelete={onToggleAutoDelete}
+                isActionLoading={!!actionLoadingByUserId[otherParticipantId]}
+                isBlocking={!!blockLoadingByUserId[otherParticipantId]}
               />
             );
           })
@@ -152,6 +161,8 @@ interface ConversationItemProps {
   onClearConversation: (otherUserId: string) => void;
   onBlockUser: (otherUser: User) => void;
   onToggleAutoDelete: (otherUserId: string) => void;
+  isActionLoading?: boolean;
+  isBlocking?: boolean;
 }
 
 const ConversationItem: React.FC<ConversationItemProps> = ({
@@ -165,6 +176,8 @@ const ConversationItem: React.FC<ConversationItemProps> = ({
   onClearConversation,
   onBlockUser,
   onToggleAutoDelete,
+  isActionLoading = false,
+  isBlocking = false,
 }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
@@ -173,7 +186,7 @@ const ConversationItem: React.FC<ConversationItemProps> = ({
       onClick={() => onSelect(conversation)}
       className={`chat-item relative mx-3 my-2 flex cursor-pointer items-center gap-3 rounded-xl p-3 transition-colors border border-border shadow-sm ${isActive ? 'bg-background ring-1 ring-accent' : 'bg-surface hover:bg-background'}`}
     >
-      {otherParticipant.id === 'chuk-ai' ? (
+      {otherParticipant.id === AI_USER_ID ? (
         <img src="/chuk-ai.png" alt="Psyduck AI" className="h-12 w-12 object-contain" />
       ) : (
         <UserAvatar user={otherParticipant} className="h-12 w-12" />
@@ -207,6 +220,8 @@ const ConversationItem: React.FC<ConversationItemProps> = ({
             onClearChat={onClearConversation}
             onToggleAutoDelete={onToggleAutoDelete}
             onBlockUser={onBlockUser}
+            isActionLoading={isActionLoading}
+            isBlocking={isBlocking}
             onClose={() => setIsMenuOpen(false)}
           />
         </div>

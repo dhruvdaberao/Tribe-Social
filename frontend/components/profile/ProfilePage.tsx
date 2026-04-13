@@ -517,7 +517,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = (props) => {
         <div>
             <div className="bg-surface rounded-2xl shadow-sm border border-border mb-6">
                 <div className="h-48 md:h-64 bg-background rounded-t-2xl overflow-hidden relative">
-                    {safeUser.id === 'chuk-ai' ? (
+                    {safeUser.id === 'psyduck_bot' ? (
                         <img src="/psy-banner.gif" alt="Psyduck Banner" className="w-full h-full object-cover" />
                     ) : displayedBanner ? (
                         <img src={displayedBanner} alt={`${safeUser.name || "User"}'s banner`} className="w-full h-full object-cover" />
@@ -605,7 +605,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = (props) => {
                             ) : (
                                 <>
                                     <button type="button" onClick={() => handleMessageClick()} className="flex-1 min-w-0 sm:flex-none font-semibold px-6 py-2 rounded-lg transition-colors bg-surface text-primary border border-border hover:bg-background">Message</button>
-                                    {safeUser.id !== 'chuk-ai' && (
+                                    {safeUser.id !== 'psyduck_bot' && (
                                         <button
                                             type="button"
                                             onClick={(e) => {
@@ -686,7 +686,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = (props) => {
                                 <p className="text-md text-secondary">@{safeUser.username || "user"}</p>
                             </>
                         )}
-                        {safeUser.id === 'chuk-ai' ? (
+                        {safeUser.id === 'psyduck_bot' ? (
                             <div className="mt-2 p-3 bg-accent/10 rounded-lg border border-accent/20">
                                 <p className="text-sm text-primary italic">
                                     "Psy... Psyduck has hidden his followers & following list with his Psychic ability! (But he might secretly follow you... Psy!)" 🦆🌀
