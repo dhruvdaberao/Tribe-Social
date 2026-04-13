@@ -313,7 +313,11 @@ router.post('/send/:receiverId', protect, async (req, res) => {
                     user: receiver,
                     type: "directMessages",
                     title: sender?.name || "New message",
-                    body: messagePreview || "Sent an attachment"
+                    body: messagePreview || "Sent an attachment",
+                    data: {
+                        url: `/messages/${senderId}`,
+                        type: 'message',
+                    },
                 });
             }
 

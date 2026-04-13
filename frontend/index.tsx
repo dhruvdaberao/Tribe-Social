@@ -6,6 +6,7 @@ import { ThemeProvider } from './contexts/ThemeContext';
 import { AuthProvider } from './contexts/AuthContext';
 import { SocketProvider } from './contexts/SocketContext';
 import ConnectionStatus from './components/layout/ConnectionStatus';
+import { registerFcmServiceWorker } from './utils/notification';
 
 const rootElement = document.getElementById('root');
 if (!rootElement) {
@@ -31,10 +32,6 @@ root.render(
 // Register Service Worker for push notifications
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/firebase-messaging-sw.js')
-      .then(() => {})
-      .catch(error => {
-        console.error('❌ Service Worker registration failed:', error);
-      });
+    registerFcmServiceWorker();
   });
 }
