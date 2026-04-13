@@ -716,12 +716,12 @@ const TribeDetailPage: React.FC<Props> = ({ currentUser, tribeId: propTribeId })
 
       <HeaderActions>
         <ActionButton onClick={() => setIsCampfireOpen(true)} aria-label="Open Campfire">
-          <Flame size={18} />
+          <Flame size={22} />
         </ActionButton>
         {currentUser && tribe?.owner === currentUser.id && (
           <MenuWrap>
             <ActionButton onClick={() => setIsOwnerMenuOpen(prev => !prev)} aria-label="Tribe options">
-              <MoreVertical size={18} />
+              <MoreVertical size={22} />
             </ActionButton>
             {isOwnerMenuOpen && (
               <Menu>
@@ -751,7 +751,7 @@ const TribeDetailPage: React.FC<Props> = ({ currentUser, tribeId: propTribeId })
 
         {currentUser && tribe && (
           <ActionButton onClick={handleJoinToggle}>
-            {isMember ? <LogOut size={18} /> : <LogIn size={18} />}
+            {isMember ? <LogOut size={22} /> : <LogIn size={22} />}
           </ActionButton>
         )}
       </HeaderActions>

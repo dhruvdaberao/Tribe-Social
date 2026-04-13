@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { MoreVertical, ArrowLeft } from 'lucide-react';
 import { Conversation, User, Message } from '../../types';
 import UserAvatar from '../common/UserAvatar';
 import { useSocket } from '../../contexts/SocketContext';
@@ -168,7 +169,7 @@ export const MessageArea: React.FC<MessageAreaProps> = ({
       <div className="flex flex-col h-full bg-surface">
         <div className="flex items-center p-3 border-b border-border flex-shrink-0">
           <button onClick={onBack} className="md:hidden p-2 mr-2 text-primary">
-            <BackIcon />
+            <ArrowLeft size={24} />
           </button>
           <h2 className="text-lg font-bold text-primary">Error</h2>
         </div>
@@ -226,7 +227,7 @@ export const MessageArea: React.FC<MessageAreaProps> = ({
           <div className="border-b border-border bg-surface/95 px-4 pb-3 pt-[max(env(safe-area-inset-top,0px),0.75rem)] shadow-sm backdrop-blur-md">
             <div className="mx-auto flex w-full max-w-3xl items-center">
             <button onClick={onBack} className="md:hidden p-2 -ml-2 mr-2 text-primary hover:bg-background rounded-full transition-colors">
-              <BackIcon />
+              <ArrowLeft size={24} />
             </button>
             <div
               className="flex items-center cursor-pointer overflow-hidden group flex-1"
@@ -255,7 +256,7 @@ export const MessageArea: React.FC<MessageAreaProps> = ({
                 onClick={() => setIsHeaderMenuOpen(!isHeaderMenuOpen)} 
                 className="p-2 ml-2 text-primary hover:bg-background rounded-full transition-colors flex-shrink-0"
               >
-                <MoreOptionsIcon />
+                <MoreVertical size={24} />
               </button>
               
               {isHeaderMenuOpen && (
@@ -518,8 +519,8 @@ export const MessageArea: React.FC<MessageAreaProps> = ({
   );
 };
 
-const BackIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>;
-const MoreOptionsIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" /></svg>;
 const TinyLoader = () => (
   <div className="ml-3 h-2 w-12 rounded-full bg-border opacity-70 animate-pulse" aria-hidden="true" />
 );
+
+export default MessageArea;

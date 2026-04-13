@@ -3,6 +3,7 @@ import { Conversation, User } from '../../types';
 import UserAvatar from '../common/UserAvatar';
 import MessageOptionsMenu from './MessageOptionsMenu';
 import { AI_USER_ID } from '../../constants/ai';
+import { MoreVertical, Plus } from 'lucide-react';
 
 interface ConversationListProps {
   conversations: Conversation[];
@@ -75,7 +76,7 @@ const ConversationList: React.FC<ConversationListProps> = ({
         <div className="flex items-center justify-between">
           <h2 className="text-2xl font-bold font-display text-primary md:text-3xl">Messages</h2>
           <button onClick={onNewMessage} className="rounded-full border border-border bg-surface p-2 text-primary transition-colors hover:bg-accent hover:text-accent-text shadow-sm" aria-label="New Message">
-            <PlusIcon />
+            <Plus size={20} />
           </button>
         </div>
         <div className="relative">
@@ -207,9 +208,9 @@ const ConversationItem: React.FC<ConversationItemProps> = ({
           setIsMenuOpen((prev) => !prev);
         }}
         className="ml-1 rounded-full text-secondary hover:bg-background hover:text-primary menu-button"
-        style={{ padding: '8px', minWidth: '36px', minHeight: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+        style={{ padding: '8px', minWidth: '40px', minHeight: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
       >
-        <MoreIcon />
+        <MoreVertical size={22} className="opacity-80" />
       </button>
 
       {isMenuOpen && (
@@ -230,8 +231,5 @@ const ConversationItem: React.FC<ConversationItemProps> = ({
     </div>
   );
 };
-
-const PlusIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>;
-const MoreIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="menu-icon" style={{ fontSize: '20px', width: '20px', height: '20px' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 6h.01M12 12h.01M12 18h.01" /></svg>;
 
 export default ConversationList;
