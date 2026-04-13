@@ -30,7 +30,8 @@ const UserAvatar: React.FC<UserAvatarProps> = ({ user, className = 'w-10 h-10', 
           <img
             src={user.avatarUrl}
             alt={user.name}
-            className="w-full h-full object-cover"
+            className="w-full h-full"
+            style={{ objectFit: 'cover', aspectRatio: '1/1', borderRadius: '50%' }}
             onError={() => setImgError(true)}
             loading="lazy"
             decoding="async"

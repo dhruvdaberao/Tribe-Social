@@ -354,7 +354,7 @@ export const MessageArea: React.FC<MessageAreaProps> = ({
                   )}
                   <div className={`flex flex-col max-w-[85%] md:max-w-sm lg:max-w-md ${isCurrentUser ? 'items-end' : 'items-start'}`}>
                     {/* Modified rounded classes for proper chat bubble look */}
-                    <div className={`px-4 py-2.5 break-words overflow-hidden w-full ${isCurrentUser ? 'bg-accent text-accent-text rounded-2xl rounded-tr-none' : 'bg-surface text-primary shadow-sm rounded-2xl rounded-tl-none'}`}>
+                    <div className={`px-4 py-2.5 overflow-hidden w-full ${isCurrentUser ? 'bg-accent text-accent-text rounded-2xl rounded-tr-none' : 'bg-surface text-primary shadow-sm rounded-2xl rounded-tl-none'}`} style={{ wordBreak: 'break-word', overflowWrap: 'break-word', whiteSpace: 'normal' }}>
                       {replyMessage && (
                         <div className={`mb-2 rounded-lg px-3 py-2 text-xs ${isCurrentUser ? 'bg-accent-text/20 text-accent-text' : 'bg-background text-secondary'}`}>
                           <p className="font-semibold">{replySender}</p>
@@ -447,7 +447,7 @@ export const MessageArea: React.FC<MessageAreaProps> = ({
                             {sender?.id === AI_USER_ID ? (
                               <MarkdownRenderer text={message.text} />
                             ) : (
-                              <p className="whitespace-pre-wrap break-words">{message.text}</p>
+                              <p className="whitespace-pre-wrap" style={{ wordBreak: 'break-word', overflowWrap: 'break-word', whiteSpace: 'normal' }}>{message.text}</p>
                             )}
                           </div>
                         </>

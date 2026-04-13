@@ -169,9 +169,22 @@ router.post('/action', protect, requireAdmin, async (req, res) => {
     if (targetType === 'user') {
       targetDoc = await User.findById(targetId);
       if (!targetDoc) return res.status(404).json({ message: 'User not found.' });
-      if ((targetDoc.isAdmin || targetDoc.isSuperAdmin) && !isSuperAdminUser(req.user)) {
-        return res.status(403).json({ message: 'Super admin access required to moderate admins.' });
+
+      const isSelf = targetDoc._id.toString() === req.user.id.toString();
+      const isTargetSuperAdmin = !!targetDoc.isSuperAdmin;
+      const isTargetAdmin = !!targetDoc.isAdmin && !targetDoc.isSuperAdmin;
+      const isActorSuperAdmin = isSuperAdminUser(req.user);
+
+      if (isSelf) {
+        return res.status(403).json({ message: 'Action not allowed' });
       }
+      if (isTargetSuperAdmin) {
+        return res.status(403).json({ message: 'Action not allowed' });
+      }
+      if (isTargetAdmin && !isActorSuperAdmin) {
+        return res.status(403).json({ message: 'Action not allowed' });
+      }
+
       await applyUserAction({ user: targetDoc, actionType, adminId: req.user.id, reason });
     }
 

@@ -225,6 +225,7 @@ const ManageUsersPanel: React.FC<{ currentUser: User | null }> = ({ currentUser 
             onViewReports={() => setReportsModalTarget(user._id || user.id)}
             onReportToSuperAdmin={() => setReportToSuperAdminTarget(user)}
             currentUserIsSuperAdmin={isSuperAdmin}
+            currentUserId={currentUser?.id}
           />
         ))}
       </div>
@@ -306,8 +307,18 @@ const ReportedUsersPanel: React.FC<{ currentUser: User | null }> = ({ currentUse
           return acc;
         }, {});
         const reasons = Object.keys(reasonCounts);
-        const isAdminTarget = user?.isAdmin || user?.isSuperAdmin;
-        const canTakeAction = isSuperAdmin || !isAdminTarget;
+        const isSelf = currentUser?.id === (user?.id || user?._id);
+        const isTargetSuperAdmin = !!user?.isSuperAdmin;
+        const isTargetAdmin = !!user?.isAdmin && !user?.isSuperAdmin;
+
+        let disabledMessage = "";
+        if (isSelf) disabledMessage = "This is your profile";
+        else if (isTargetSuperAdmin && !isSuperAdmin) disabledMessage = "You cannot manage a Super Admin";
+        else if (isTargetSuperAdmin && isSuperAdmin) disabledMessage = "Super Admins cannot manage each other";
+        else if (isTargetAdmin && !isSuperAdmin) disabledMessage = "Admins cannot manage other Admins";
+
+        const canTakeAction = !disabledMessage;
+
         return (
           <div key={user?.id || user?._id} className="rounded-2xl border border-border bg-surface p-6 shadow-sm">
             <div className="flex items-start justify-between gap-4">
@@ -321,9 +332,9 @@ const ReportedUsersPanel: React.FC<{ currentUser: User | null }> = ({ currentUse
                 <p className="mt-2 text-primary text-sm line-clamp-2">
                   {user?.bio || 'No bio provided.'}
                 </p>
-                {isAdminTarget && (
+                {(isTargetSuperAdmin || isTargetAdmin) && (
                   <div className="mt-3 flex flex-wrap gap-2">
-                    {user?.isSuperAdmin ? (
+                    {isTargetSuperAdmin ? (
                       <Badge label="Super Admin" tone="warning" />
                     ) : (
                       <Badge label="Admin" />
@@ -349,6 +360,11 @@ const ReportedUsersPanel: React.FC<{ currentUser: User | null }> = ({ currentUse
                       Take Action
                     </button>
                   ) : (
+                    <div className="mb-2 text-xs italic text-secondary text-right px-1">
+                      {disabledMessage}
+                    </div>
+                  )}
+                  {(!canTakeAction && !isSelf && !isSuperAdmin) && (
                     <button
                       onClick={() => setReportToSuperAdminTarget(user)}
                       className="rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-accent-text hover:bg-accent/90"
@@ -483,6 +499,7 @@ const HiddenUsersPanel: React.FC<{ currentUser: User | null }> = ({ currentUser 
           onViewReports={() => setReportsModalTarget(user._id || user.id)}
           onReportToSuperAdmin={() => setReportToSuperAdminTarget(user)}
           currentUserIsSuperAdmin={isSuperAdmin}
+          currentUserId={currentUser?.id}
         />
       ))}
 
@@ -537,7 +554,7 @@ const SearchInput: React.FC<{ value: string; onChange: (value: string) => void }
 const UserAvatar: React.FC<{ user: any; size?: 'sm' | 'md' }> = ({ user, size = 'md' }) => {
   const dimension = size === 'sm' ? 'h-8 w-8' : 'h-10 w-10';
   if (user?.avatarUrl) {
-    return <img src={user.avatarUrl} alt={user?.username || 'User'} className={`${dimension} rounded-full object-cover`} />;
+    return <img src={user.avatarUrl} alt={user?.username || 'User'} className={`${dimension} rounded-full`} style={{ objectFit: 'cover', aspectRatio: '1/1', borderRadius: '50%' }} />;
   }
   return (
     <div className={`${dimension} rounded-full bg-border flex items-center justify-center text-xs font-semibold text-secondary`}>
@@ -568,11 +585,22 @@ const UserAdminRow: React.FC<{
   onViewReports: () => void;
   onReportToSuperAdmin?: () => void;
   currentUserIsSuperAdmin?: boolean;
-}> = ({ user, subtitle, onView, onAction, onViewReports, onReportToSuperAdmin, currentUserIsSuperAdmin }) => {
+  currentUserId?: string;
+}> = ({ user, subtitle, onView, onAction, onViewReports, onReportToSuperAdmin, currentUserIsSuperAdmin, currentUserId }) => {
   const [menuOpen, setMenuOpen] = useState(false);
   const isHidden = !!user.isHidden;
-  const isAdminAccount = !!user.isAdmin || !!user.isSuperAdmin;
-  const canModerateAdmin = !!currentUserIsSuperAdmin || !isAdminAccount;
+
+  const isSelf = currentUserId === (user.id || user._id);
+  const isTargetSuperAdmin = !!user.isSuperAdmin;
+  const isTargetAdmin = !!user.isAdmin && !user.isSuperAdmin;
+
+  let disabledMessage = "";
+  if (isSelf) disabledMessage = "This is your profile";
+  else if (isTargetSuperAdmin && !currentUserIsSuperAdmin) disabledMessage = "You cannot manage a Super Admin";
+  else if (isTargetSuperAdmin && currentUserIsSuperAdmin) disabledMessage = "Super Admins cannot manage each other";
+  else if (isTargetAdmin && !currentUserIsSuperAdmin) disabledMessage = "Admins cannot manage other Admins";
+
+  const canModerateAdmin = !disabledMessage;
 
   return (
     <div className="rounded-2xl border border-border bg-surface p-6 shadow-sm">
@@ -603,7 +631,12 @@ const UserAdminRow: React.FC<{
             <MoreVertical size={18} />
           </button>
           {menuOpen && (
-            <div className="absolute right-0 z-10 mt-2 w-44 rounded-xl border border-border bg-surface shadow-lg">
+            <div className="absolute right-0 z-10 mt-2 w-56 rounded-xl border border-border bg-surface shadow-lg">
+              {disabledMessage && (
+                <div className="px-4 py-3 bg-background border-b border-border text-xs italic text-secondary text-center">
+                  {disabledMessage}
+                </div>
+              )}
               <button
                 onClick={() => {
                   setMenuOpen(false);
@@ -614,33 +647,33 @@ const UserAdminRow: React.FC<{
                 <UserIcon size={16} />
                 View Profile
               </button>
-              <button
-                onClick={() => {
-                  setMenuOpen(false);
-                  if (canModerateAdmin) {
-                    onAction(isHidden ? 'unhide' : 'hide');
-                  }
-                }}
-                className={`flex w-full items-center gap-2 px-4 py-2 text-sm ${canModerateAdmin ? 'text-primary hover:bg-background' : 'cursor-not-allowed text-secondary'}`}
-                disabled={!canModerateAdmin}
-              >
-                {isHidden ? <Eye size={16} /> : <EyeOff size={16} />}
-                {isHidden ? 'Unhide' : 'Hide'}
-              </button>
-              <button
-                onClick={() => {
-                  setMenuOpen(false);
-                  if (canModerateAdmin) {
-                    onAction('delete');
-                  }
-                }}
-                className={`flex w-full items-center gap-2 px-4 py-2 text-sm ${canModerateAdmin ? 'text-red-500 hover:bg-red-500/10' : 'cursor-not-allowed text-red-300'}`}
-                disabled={!canModerateAdmin}
-              >
-                <Trash2 size={16} />
-                Delete
-              </button>
-              {isAdminAccount && !currentUserIsSuperAdmin && onReportToSuperAdmin && (
+              
+              {canModerateAdmin && (
+                <>
+                  <button
+                    onClick={() => {
+                      setMenuOpen(false);
+                      onAction(isHidden ? 'unhide' : 'hide');
+                    }}
+                    className="flex w-full items-center gap-2 px-4 py-2 text-sm text-primary hover:bg-background"
+                  >
+                    {isHidden ? <Eye size={16} /> : <EyeOff size={16} />}
+                    {isHidden ? 'Unhide' : 'Hide'}
+                  </button>
+                  <button
+                    onClick={() => {
+                      setMenuOpen(false);
+                      onAction('delete');
+                    }}
+                    className="flex w-full items-center gap-2 px-4 py-2 text-sm text-red-500 hover:bg-red-500/10"
+                  >
+                    <Trash2 size={16} />
+                    Delete
+                  </button>
+                </>
+              )}
+
+              {!canModerateAdmin && !isSelf && !currentUserIsSuperAdmin && onReportToSuperAdmin && (
                 <button
                   onClick={() => {
                     setMenuOpen(false);
@@ -652,6 +685,7 @@ const UserAdminRow: React.FC<{
                   Report to Super Admin
                 </button>
               )}
+
               <button
                 onClick={() => {
                   setMenuOpen(false);

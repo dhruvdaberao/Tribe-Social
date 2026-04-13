@@ -387,7 +387,7 @@ const TribeMessageArea: React.FC<TribeMessageAreaProps> = ({
                       /* NORMAL MESSAGE (Text + Optional Image) */
                       <>
                         {renderAttachment(message)}
-                        <p className="text-sm whitespace-pre-wrap break-words">
+                        <p className="text-sm whitespace-pre-wrap" style={{ wordBreak: 'break-word', overflowWrap: 'break-word', whiteSpace: 'normal' }}>
                           {message.text}
                           {/* Simple URL Link detection */}
                           {message.text.match(/https?:\/\/[^\s]+/) && (
