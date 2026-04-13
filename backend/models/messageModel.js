@@ -10,6 +10,7 @@ const messageSchema = mongoose.Schema({
   attachmentName: { type: String, default: null },
   attachmentSize: { type: Number, default: null },
   replyTo: { type: mongoose.Schema.Types.ObjectId, ref: 'Message', default: null },
+  isRead: { type: Boolean, default: false },
   deletedFor: { type: [mongoose.Schema.Types.ObjectId], ref: 'User', default: [] },
 }, {
   timestamps: true,

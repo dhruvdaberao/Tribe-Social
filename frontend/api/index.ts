@@ -245,6 +245,16 @@ export const deleteMessageForMe = (messageId: string) =>
 export const clearConversation = (otherUserId: string) =>
   API.put(`/messages/clear/${otherUserId}`);
 
+export const fetchUnreadMessageCounts = async () => {
+  const res = await API.get('/messages/unread-count');
+  return res;
+};
+
+export const markMessagesAsRead = async (senderId: string) => {
+  const res = await API.put(`/messages/${senderId}/read`);
+  return res;
+};
+
 /* ───────────── TRIBES ───────────── */
 export const fetchTribes = async () => {
   const res = await API.get('/tribes');

@@ -145,6 +145,46 @@ import { sendEmailNotification } from '../services/emailNotificationService.js';
 
 const router = express.Router();
 
+// @route   GET /api/messages/unread-count
+// @desc    Get unread message counts grouped by sender
+router.get('/unread-count', protect, async (req, res) => {
+    try {
+        const userId = new mongoose.Types.ObjectId(req.user.id);
+        const unreadCounts = await Message.aggregate([
+            { $match: { receiver: userId, isRead: false, deletedFor: { $ne: userId } } },
+            { $group: { _id: "$sender", count: { $sum: 1 } } }
+        ]);
+
+        const countsMap = {};
+        unreadCounts.forEach(item => {
+            countsMap[item._id.toString()] = item.count;
+        });
+
+        res.status(200).json({ counts: countsMap });
+    } catch (error) {
+        console.error('Error fetching unread counts:', error);
+        res.status(500).json({ error: "Internal server error" });
+    }
+});
+
+// @route   PUT /api/messages/:senderId/read
+// @desc    Mark all messages from a specific sender as read
+router.put('/:senderId/read', protect, async (req, res) => {
+    try {
+        const senderId = req.params.senderId;
+        const receiverId = req.user.id;
+        
+        await Message.updateMany(
+            { sender: senderId, receiver: receiverId, isRead: false },
+            { $set: { isRead: true } }
+        );
+        res.status(200).json({ message: "Messages marked as read" });
+    } catch (error) {
+        console.error('Error marking messages as read:', error);
+        res.status(500).json({ error: "Internal server error" });
+    }
+});
+
 // @route   GET /api/messages/conversations
 // @desc    Get all conversations for the current user
 router.get('/conversations', protect, async (req, res) => {

@@ -11,6 +11,7 @@ import { io, Socket } from 'socket.io-client';
 import { useAuth } from './AuthContext';
 import { Notification, Message, TribeMessage, User } from '../types';
 import { toast } from '../components/common/Toast';
+import * as api from '../api';
 
 const SOCKET_URL = (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'))
   ? 'http://localhost:5001'
@@ -131,6 +132,15 @@ export const SocketProvider: React.FC<{ children: ReactNode }> = ({ children }) 
   useEffect(() => {
     if (!currentUser) return;
 
+    // Fetch initial unread counts
+    api.fetchUnreadMessageCounts()
+      .then((res) => {
+        if (res.data && res.data.counts) {
+          setUnreadCounts(prev => ({ ...prev, messages: res.data.counts }));
+        }
+      })
+      .catch(console.error);
+
     if (!socketRef.current) {
       socketRef.current = io(SOCKET_URL, {
         auth: { userId: currentUser.id },
@@ -176,7 +186,11 @@ export const SocketProvider: React.FC<{ children: ReactNode }> = ({ children }) 
 
         // Use functional state update or ref to check current active partner
         setActiveChatPartnerId(current => {
-          if (current === message.senderId) return current; // Don't increment if open
+          if (current === message.senderId) {
+             // Already in the chat, mark this new message as read in the backend implicitly
+             api.markMessagesAsRead(message.senderId).catch(console.error);
+             return current; 
+          }
 
           setUnreadCounts(prev => ({
             ...prev,
@@ -239,8 +253,13 @@ export const SocketProvider: React.FC<{ children: ReactNode }> = ({ children }) 
 
   const clearUnreadMessages = useCallback((partnerId: string) => {
     setUnreadCounts(prev => {
+      if (!prev.messages[partnerId]) return prev;
       const next = { ...prev.messages };
       delete next[partnerId];
+      // Mark as read in backend
+      import('../api').then(api => {
+        api.markMessagesAsRead(partnerId).catch(console.error);
+      });
       return { ...prev, messages: next };
     });
   }, []);
