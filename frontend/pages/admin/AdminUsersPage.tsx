@@ -110,9 +110,8 @@ const TopActionCard: React.FC<{ title: string; description: string; icon: React.
 }) => (
   <button
     onClick={onClick}
-    className={`flex items-center justify-between rounded-2xl border px-4 py-4 text-left transition-colors ${
-      active ? 'border-accent bg-accent/10' : 'border-border bg-surface hover:bg-background'
-    }`}
+    className={`flex items-center justify-between rounded-2xl border px-4 py-4 text-left transition-colors ${active ? 'border-accent bg-accent/10' : 'border-border bg-surface hover:bg-background'
+      }`}
   >
     <div>
       <p className="text-sm font-semibold text-primary">{title}</p>
@@ -647,7 +646,7 @@ const UserAdminRow: React.FC<{
                 <UserIcon size={16} />
                 View Profile
               </button>
-              
+
               {canModerateAdmin && (
                 <>
                   {isTargetAdmin ? (
@@ -891,11 +890,10 @@ const ReportToSuperAdminModal: React.FC<{
                   key={option}
                   type="button"
                   onClick={() => setReason(option)}
-                  className={`w-full rounded-xl border px-3 py-2 text-left text-sm transition-colors ${
-                    reason === option
+                  className={`w-full rounded-xl border px-3 py-2 text-left text-sm transition-colors ${reason === option
                       ? 'border-accent bg-accent/10 text-primary'
                       : 'border-border bg-background text-secondary hover:bg-surface'
-                  }`}
+                    }`}
                 >
                   <span className="flex items-center gap-2">
                     <span className={`h-3 w-3 rounded-full border ${reason === option ? 'border-accent bg-accent' : 'border-border'}`} />
@@ -987,11 +985,10 @@ const ModerationActionModal: React.FC<{
                   key={option}
                   type="button"
                   onClick={() => setActionType(option)}
-                  className={`w-full rounded-xl border px-3 py-2 text-left text-sm transition-colors ${
-                    actionType === option
+                  className={`w-full rounded-xl border px-3 py-2 text-left text-sm transition-colors ${actionType === option
                       ? 'border-accent bg-accent/10 text-primary'
                       : 'border-border bg-background text-secondary hover:bg-surface'
-                  }`}
+                    }`}
                 >
                   <span className="flex items-center gap-2">
                     <span className={`h-3 w-3 rounded-full border ${actionType === option ? 'border-accent bg-accent' : 'border-border'}`} />
@@ -1009,11 +1006,10 @@ const ModerationActionModal: React.FC<{
                   key={option}
                   type="button"
                   onClick={() => setReason(option)}
-                  className={`w-full rounded-xl border px-3 py-2 text-left text-sm transition-colors ${
-                    reason === option
+                  className={`w-full rounded-xl border px-3 py-2 text-left text-sm transition-colors ${reason === option
                       ? 'border-accent bg-accent/10 text-primary'
                       : 'border-border bg-background text-secondary hover:bg-surface'
-                  }`}
+                    }`}
                 >
                   <span className="flex items-center gap-2">
                     <span className={`h-3 w-3 rounded-full border ${reason === option ? 'border-accent bg-accent' : 'border-border'}`} />
