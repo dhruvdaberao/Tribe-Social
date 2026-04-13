@@ -76,6 +76,22 @@ const userSchema = mongoose.Schema(
       lastLoginAt: { type: Date },
       lastDeviceHash: { type: String, default: '' },
     },
+    fcmToken: {
+      type: String,
+      default: null
+    },
+    pushNotifications: {
+      type: Boolean,
+      default: true
+    },
+    pushPrefs: {
+      directMessages: { type: Boolean, default: true },
+      tribeMessages: { type: Boolean, default: true },
+      likes: { type: Boolean, default: true },
+      comments: { type: Boolean, default: true },
+      follows: { type: Boolean, default: true },
+      tribeJoins: { type: Boolean, default: true }
+    },
   },
   {
     timestamps: true,

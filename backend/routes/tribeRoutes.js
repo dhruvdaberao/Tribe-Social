@@ -5,7 +5,7 @@ import User from '../models/userModel.js';
 import TribeMessage from '../models/tribeMessageModel.js';
 import Notification from '../models/notificationModel.js';
 import cloudinary from '../config/cloudinary.js';
-import { sendPushToUser, sendPushToUsers } from '../services/pushService.js';
+import { sendPushToUser, sendPushToUsers, sendPushNotification } from '../services/pushService.js';
 import { isPushEnabledFor } from '../utils/notificationPrefs.js';
 import { sendEmailNotification } from '../services/emailNotificationService.js';
 
@@ -258,19 +258,13 @@ router.put('/:id/join', protect, async (req, res) => {
                     req.io.to(recipientSocketId).emit('newNotification', populatedNotification);
                 }
 
-                const owner = await User.findById(tribe.owner).select('notificationPrefs isDisabled email name emailNotifications emailPrefs');
-                if (owner && !owner.isDisabled && isPushEnabledFor(owner, 'tribeJoins')) {
-                    await sendPushToUser(tribe.owner.toString(), {
-                        title: 'New tribe member',
-                        body: `${req.user?.name || 'Someone'} joined ${tribe.name}`,
-                        url: `/tribes/${tribe._id}`,
-                        icon: '/icons/icon-192.png',
-                        tag: `tribe-join-${tribe._id}`,
-                        data: {
-                            type: 'tribe_join',
-                            tribeId: tribe._id.toString(),
-                            url: `/tribes/${tribe._id}`,
-                        },
+                const owner = await User.findById(tribe.owner).select('notificationPrefs isDisabled email name emailNotifications emailPrefs fcmToken pushNotifications pushPrefs');
+                if (owner && !owner.isDisabled) {
+                    await sendPushNotification({
+                        user: owner,
+                        type: 'tribeJoins',
+                        title: 'New Member',
+                        body: `${req.user?.name || 'Someone'} joined your tribe ${tribe.name}`
                     });
                 }
                 await sendEmailNotification({
@@ -488,13 +482,23 @@ router.post('/:id/accept/:userId', protect, async (req, res) => {
         }
 
         // Notify the accepted user
-        await Notification.create({
+        const notification = await Notification.create({
             recipient: targetUserId,
             sender: req.user.id,
             type: 'tribe_join',
             tribeId: tribe._id,
             text: `Your request to join ${tribe.name} was accepted!`,
         });
+
+        const recipientUser = await User.findById(targetUserId).select('fcmToken pushNotifications pushPrefs isDisabled');
+        if (recipientUser && !recipientUser.isDisabled) {
+            await sendPushNotification({
+                user: recipientUser,
+                type: 'tribeJoins',
+                title: 'Request Accepted',
+                body: `Your request to join ${tribe.name} was accepted!`
+            });
+        }
 
         res.status(200).json(tribe);
     } catch (error) {
@@ -642,21 +646,14 @@ router.post('/:id/messages', protect, async (req, res) => {
                 await Notification.insertMany(notifications);
 
                 const pushRecipients = memberUsers
-                    .filter((member) => isPushEnabledFor(member, 'tribe'))
-                    .map((member) => member._id.toString());
+                    .filter((member) => member.fcmToken && member.pushNotifications !== false && (member.pushPrefs?.tribeMessages !== false));
 
-                if (pushRecipients.length > 0) {
-                    await sendPushToUsers(pushRecipients, {
+                for (const member of pushRecipients) {
+                    await sendPushNotification({
+                        user: member,
+                        type: 'tribeMessages',
                         title: tribe.name,
-                        body: `${responseMessage.sender?.name || 'Someone'}: ${messagePreview}`,
-                        url: `/tribes/${tribe._id}`,
-                        icon: '/icons/icon-192.png',
-                        tag: `tribe-${tribe._id}`,
-                        data: {
-                            type: 'tribe_message',
-                            tribeId: tribe._id.toString(),
-                            url: `/tribes/${tribe._id}`,
-                        },
+                        body: `${responseMessage.sender?.name || 'Someone'}: ${messagePreview}`
                     });
                 }
 

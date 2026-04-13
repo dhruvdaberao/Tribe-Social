@@ -138,7 +138,7 @@ import User from '../models/userModel.js';
 import protect from '../middleware/authMiddleware.js';
 import mongoose from 'mongoose';
 import Notification from '../models/notificationModel.js';
-import { sendPushToUser } from '../services/pushService.js';
+import { sendPushToUser, sendPush, sendPushNotification } from '../services/pushService.js';
 import { isPushEnabledFor } from '../utils/notificationPrefs.js';
 import cloudinary from '../config/cloudinary.js';
 import { sendEmailNotification } from '../services/emailNotificationService.js';
@@ -218,7 +218,7 @@ router.post('/send/:receiverId', protect, async (req, res) => {
         const { receiverId } = req.params;
         const senderId = req.user._id;
 
-        const receiver = await User.findById(receiverId).select('isDisabled notificationPrefs name email emailNotifications emailPrefs');
+        const receiver = await User.findById(receiverId).select('isDisabled notificationPrefs name email emailNotifications emailPrefs fcmToken pushNotifications pushPrefs');
         if (!receiver) {
             return res.status(404).json({ message: 'User not found' });
         }
@@ -308,6 +308,12 @@ router.post('/send/:receiverId', protect, async (req, res) => {
                         senderId: senderId.toString(),
                         url: `/messages/${senderId}`,
                     },
+                });
+                await sendPushNotification({
+                    user: receiver,
+                    type: "directMessages",
+                    title: sender?.name || "New message",
+                    body: messagePreview || "Sent an attachment"
                 });
             }
 

@@ -347,6 +347,9 @@ export const generateAiChat = (promptData: { prompt: string }) =>
   API.post('/ai/chat', promptData);
 
 /* ───────────── NOTIFICATIONS ───────────── */
+export const saveFcmToken = (token: string) =>
+  API.post('/notifications/save-token', { token });
+
 export const fetchNotifications = async () => {
   const res = await API.get('/notifications');
   return { data: normalizeArray(res.data) };
@@ -359,6 +362,10 @@ export const updateNotificationPrefs = async (notificationPrefs: any) => {
   const res = await API.post('/notifications/preferences', { notificationPrefs });
   return { data: res.data };
 };
+
+export const updatePushSettings = (settings: { pushNotifications?: boolean; pushPrefs?: any }) =>
+  API.patch('/users/notification-settings', settings);
+
 
 /* ───────────── MODERATION ───────────── */
 export const createReport = (payload: {

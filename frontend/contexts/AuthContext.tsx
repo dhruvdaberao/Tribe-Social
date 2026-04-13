@@ -37,6 +37,15 @@ const normalizeUser = (user: any): User | null => {
         moderation: true,
       },
     },
+    pushNotifications: typeof user.pushNotifications === 'boolean' ? user.pushNotifications : true,
+    pushPrefs: user.pushPrefs || {
+      directMessages: true,
+      tribeMessages: true,
+      likes: true,
+      comments: true,
+      follows: true,
+      tribeJoins: true,
+    },
   };
 };
 

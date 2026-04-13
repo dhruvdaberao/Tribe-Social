@@ -5,7 +5,7 @@ import Post from '../models/postModel.js';
 import Notification from '../models/notificationModel.js';
 import Follow from '../models/followModel.js';
 import protect from '../middleware/authMiddleware.js';
-import { sendPushToUser } from '../services/pushService.js';
+import { sendPushToUser, sendPushNotification } from '../services/pushService.js';
 import { isPushEnabledFor } from '../utils/notificationPrefs.js';
 import { sendEmailNotification } from '../services/emailNotificationService.js';
 
@@ -152,6 +152,33 @@ router.put('/profile', protect, async (req, res) => {
     }
 });
 
+// @route   PATCH /api/users/notification-settings
+// @desc    Update push notification preferences
+router.patch('/notification-settings', protect, async (req, res) => {
+    try {
+        const { pushNotifications, pushPrefs } = req.body;
+        const user = await User.findById(req.user.id);
+        if (!user) return res.status(404).json({ message: 'User not found' });
+
+        if (typeof pushNotifications === 'boolean') {
+            user.pushNotifications = pushNotifications;
+        }
+
+        if (pushPrefs && typeof pushPrefs === 'object') {
+            user.pushPrefs = {
+                ...user.pushPrefs,
+                ...pushPrefs
+            };
+        }
+
+        await user.save();
+        res.json({ pushNotifications: user.pushNotifications, pushPrefs: user.pushPrefs });
+    } catch (error) {
+        console.error('Update notification settings error:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+});
+
 // @route   DELETE /api/users/profile
 // @desc    Delete user account
 router.delete('/profile', protect, async (req, res) => {
@@ -245,20 +272,13 @@ router.put('/:id/follow', protect, async (req, res) => {
                 if (recipientSocketId) {
                     req.io.to(recipientSocketId).emit('newNotification', populatedNotification);
                 }
-                if (isPushEnabledFor(userToFollow, 'follows')) {
-                    await sendPushToUser(userToFollow._id.toString(), {
-                        title: `${currentUser.name || 'Someone'} followed you`,
-                        body: 'Tap to view their profile',
-                        url: `/profile/${currentUser._id.toString()}`,
-                        icon: '/icons/icon-192.png',
-                        tag: `follow-${currentUser._id.toString()}`,
-                        data: {
-                            type: 'follow',
-                            senderId: currentUser._id.toString(),
-                            url: `/profile/${currentUser._id.toString()}`,
-                        },
-                    });
-                }
+
+                await sendPushNotification({
+                    user: userToFollow,
+                    type: "follows",
+                    title: "New Follower",
+                    body: "You have a new follower"
+                });
                 await sendEmailNotification({
                     user: userToFollow,
                     type: 'follows',

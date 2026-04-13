@@ -6,7 +6,7 @@ import Post from '../models/postModel.js';
 import User from '../models/userModel.js';
 import Notification from '../models/notificationModel.js';
 import cloudinary from '../config/cloudinary.js';
-import { sendPushToUser } from '../services/pushService.js';
+import { sendPushToUser, sendPushNotification } from '../services/pushService.js';
 import { isPushEnabledFor } from '../utils/notificationPrefs.js';
 import { sendEmailNotification } from '../services/emailNotificationService.js';
 
@@ -399,19 +399,13 @@ router.put('/:id/like', protect, async (req, res) => {
                     if (recipientSocket) {
                         req.io.to(recipientSocket).emit('newNotification', populatedNotification);
                     }
-                    const recipientUser = await User.findById(post.user).select('notificationPrefs isDisabled email name emailNotifications emailPrefs');
-                    if (recipientUser && !recipientUser.isDisabled && isPushEnabledFor(recipientUser, 'likes')) {
-                        await sendPushToUser(post.user.toString(), {
-                            title: `${req.user?.name || 'Someone'} liked your post`,
-                            body: post.content?.slice(0, 80) || 'Tap to view your post',
-                            url: `/post/${post._id}`,
-                            icon: '/icons/icon-192.png',
-                            tag: `post-like-${post._id}`,
-                            data: {
-                                type: 'like',
-                                postId: post._id.toString(),
-                                url: `/post/${post._id}`,
-                            },
+                    const recipientUser = await User.findById(post.user).select('notificationPrefs isDisabled email name emailNotifications emailPrefs fcmToken pushNotifications pushPrefs');
+                    if (recipientUser && !recipientUser.isDisabled) {
+                        await sendPushNotification({
+                            user: recipientUser,
+                            type: 'likes',
+                            title: 'New Like',
+                            body: `${req.user?.name || 'Someone'} liked your post`
                         });
                     }
                     await sendEmailNotification({
@@ -492,19 +486,13 @@ router.post('/:id/comments', protect, async (req, res) => {
                 if (recipientSocket) {
                     req.io.to(recipientSocket).emit('newNotification', populatedNotification);
                 }
-                const recipientUser = await User.findById(post.user).select('notificationPrefs isDisabled email name emailNotifications emailPrefs');
-                if (recipientUser && !recipientUser.isDisabled && isPushEnabledFor(recipientUser, 'comments')) {
-                    await sendPushToUser(post.user.toString(), {
-                        title: `${req.user?.name || 'Someone'} commented on your post`,
-                        body: text.slice(0, 80),
-                        url: `/post/${post._id}`,
-                        icon: '/icons/icon-192.png',
-                        tag: `post-comment-${post._id}`,
-                        data: {
-                            type: 'comment',
-                            postId: post._id.toString(),
-                            url: `/post/${post._id}`,
-                        },
+                const recipientUser = await User.findById(post.user).select('notificationPrefs isDisabled email name emailNotifications emailPrefs fcmToken pushNotifications pushPrefs');
+                if (recipientUser && !recipientUser.isDisabled) {
+                    await sendPushNotification({
+                        user: recipientUser,
+                        type: 'comments',
+                        title: 'New Comment',
+                        body: `${req.user?.name || 'Someone'} commented on your post: ${text.slice(0, 50)}`
                     });
                 }
                 await sendEmailNotification({

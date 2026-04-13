@@ -56,3 +56,38 @@ export const sendPushToUsers = async (userIds, payload) => {
   const subscriptions = await PushSubscription.find({ user: { $in: userIds } });
   await sendToSubscriptions(subscriptions, payload);
 };
+
+import admin from "../firebaseAdmin.js";
+
+export const sendPush = async (token, title, body) => {
+  if (!token) return;
+
+  try {
+    await admin.messaging().send({
+      token,
+      notification: {
+        title,
+        body
+      }
+    });
+
+    console.log("Push sent");
+  } catch (err) {
+    console.error("Push error:", err.message);
+  }
+};
+
+export const sendPushNotification = async ({
+  user,
+  type,
+  title,
+  body
+}) => {
+  if (!user || !user.fcmToken) return;
+
+  if (user.pushNotifications === false) return;
+
+  if (user.pushPrefs && user.pushPrefs[type] === false) return;
+
+  await sendPush(user.fcmToken, title, body);
+};

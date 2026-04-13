@@ -26,6 +26,15 @@ export interface User {
   isDeleted?: boolean;
   deletedAt?: string | null;
   lastModerationAt?: string | null;
+  pushNotifications?: boolean;
+  pushPrefs?: {
+    directMessages: boolean;
+    tribeMessages: boolean;
+    likes: boolean;
+    comments: boolean;
+    follows: boolean;
+    tribeJoins: boolean;
+  };
   notificationPrefs?: {
     pushEnabled: boolean;
     emailEnabled: boolean;

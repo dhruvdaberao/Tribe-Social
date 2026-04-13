@@ -27,18 +27,30 @@ const defaultPrefs = {
 const NotificationSettingsPage: React.FC = () => {
   const navigate = useNavigate();
   const { currentUser, setCurrentUser } = useAuth();
-  const [prefs, setPrefs] = useState(defaultPrefs);
+  const [pushEnabled, setPushEnabled] = useState(true);
+  const [pushPrefs, setPushPrefs] = useState({
+    directMessages: true,
+    tribeMessages: true,
+    likes: true,
+    comments: true,
+    follows: true,
+    tribeJoins: true,
+  });
+  const [emailPrefs, setEmailPrefs] = useState(defaultPrefs.emailTypes); // Keep email as is or normalize
   const [isSaving, setIsSaving] = useState(false);
   const [isPushReady, setIsPushReady] = useState(false);
 
   useEffect(() => {
-    if (currentUser?.notificationPrefs) {
-      setPrefs({
-        ...defaultPrefs,
-        ...currentUser.notificationPrefs,
-        pushTypes: { ...defaultPrefs.pushTypes, ...currentUser.notificationPrefs.pushTypes },
-        emailTypes: { ...defaultPrefs.emailTypes, ...currentUser.notificationPrefs.emailTypes },
-      });
+    if (currentUser) {
+      if (typeof currentUser.pushNotifications === 'boolean') {
+        setPushEnabled(currentUser.pushNotifications);
+      }
+      if (currentUser.pushPrefs) {
+        setPushPrefs(prev => ({ ...prev, ...currentUser.pushPrefs }));
+      }
+      if (currentUser.notificationPrefs?.emailTypes) {
+        setEmailPrefs(currentUser.notificationPrefs.emailTypes);
+      }
     }
   }, [currentUser]);
 
@@ -46,13 +58,16 @@ const NotificationSettingsPage: React.FC = () => {
     isSubscribedToPush().then(setIsPushReady).catch(() => setIsPushReady(false));
   }, []);
 
-  const persistPrefs = async (nextPrefs: typeof prefs) => {
+  const persistPushSettings = async (settings: { pushNotifications?: boolean; pushPrefs?: any }) => {
     setIsSaving(true);
     try {
-      const { data } = await api.updateNotificationPrefs(nextPrefs);
-      setPrefs(data.notificationPrefs);
-      setCurrentUser((prev) => (prev ? { ...prev, notificationPrefs: data.notificationPrefs } : prev));
-      toast.success('Notification preferences updated.');
+      const { data } = await api.updatePushSettings(settings);
+      setCurrentUser((prev) => (prev ? { 
+        ...prev, 
+        pushNotifications: data.pushNotifications,
+        pushPrefs: data.pushPrefs 
+      } : prev));
+      toast.success('Push preferences updated.');
     } catch (error: any) {
       toast.error(error?.response?.data?.message || 'Failed to update preferences.');
     } finally {
@@ -60,14 +75,24 @@ const NotificationSettingsPage: React.FC = () => {
     }
   };
 
-  const handleToggle = (key: keyof typeof prefs, value: boolean) => {
-    const nextPrefs = { ...prefs, [key]: value };
-    setPrefs(nextPrefs);
-    persistPrefs(nextPrefs);
+  const persistEmailSettings = async (emailTypes: any) => {
+    setIsSaving(true);
+    try {
+      const { data } = await api.updateNotificationPrefs({ emailTypes });
+      setCurrentUser((prev) => (prev ? { 
+        ...prev, 
+        notificationPrefs: { ...prev.notificationPrefs!, emailTypes: data.notificationPrefs.emailTypes } 
+      } : prev));
+      toast.success('Email preferences updated.');
+    } catch (error: any) {
+      toast.error('Failed to update email preferences.');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handlePushToggle = async () => {
-    const nextEnabled = !prefs.pushEnabled;
+    const nextEnabled = !pushEnabled;
     if (nextEnabled) {
       const subscribed = await subscribeToPush();
       if (!subscribed) {
@@ -79,35 +104,26 @@ const NotificationSettingsPage: React.FC = () => {
       await unsubscribeFromPush();
       setIsPushReady(false);
     }
-    handleToggle('pushEnabled', nextEnabled);
+    setPushEnabled(nextEnabled);
+    persistPushSettings({ pushNotifications: nextEnabled });
   };
 
-  const handleEmailToggle = async () => {
-    handleToggle('emailEnabled', !prefs.emailEnabled);
-  };
-
-  const handlePushTypeToggle = (type: keyof typeof prefs.pushTypes) => {
+  const handlePushTypeToggle = (type: keyof typeof pushPrefs) => {
     const nextPrefs = {
-      ...prefs,
-      pushTypes: {
-        ...prefs.pushTypes,
-        [type]: !prefs.pushTypes[type],
-      },
+      ...pushPrefs,
+      [type]: !pushPrefs[type],
     };
-    setPrefs(nextPrefs);
-    persistPrefs(nextPrefs);
+    setPushPrefs(nextPrefs);
+    persistPushSettings({ pushPrefs: nextPrefs });
   };
 
-  const handleEmailTypeToggle = (type: keyof typeof prefs.emailTypes) => {
+  const handleEmailTypeToggle = (type: keyof typeof emailPrefs) => {
     const nextPrefs = {
-      ...prefs,
-      emailTypes: {
-        ...prefs.emailTypes,
-        [type]: !prefs.emailTypes[type],
-      },
+      ...emailPrefs,
+      [type]: !emailPrefs[type],
     };
-    setPrefs(nextPrefs);
-    persistPrefs(nextPrefs);
+    setEmailPrefs(nextPrefs);
+    persistEmailSettings(nextPrefs);
   };
 
   return (
@@ -139,16 +155,16 @@ const NotificationSettingsPage: React.FC = () => {
                 </p>
               </div>
             </div>
-            <ToggleButton isOn={prefs.pushEnabled} onClick={handlePushToggle} disabled={isSaving} />
+            <ToggleButton isOn={pushEnabled} onClick={handlePushToggle} disabled={isSaving} />
           </div>
-
-          <div className={`space-y-3 ${prefs.pushEnabled ? '' : 'opacity-50 pointer-events-none'}`}>
-            <ToggleRow label="Direct messages" isOn={prefs.pushTypes.dm} onClick={() => handlePushTypeToggle('dm')} />
-            <ToggleRow label="Tribe messages" isOn={prefs.pushTypes.tribe} onClick={() => handlePushTypeToggle('tribe')} />
-            <ToggleRow label="Likes" isOn={prefs.pushTypes.likes} onClick={() => handlePushTypeToggle('likes')} />
-            <ToggleRow label="Comments" isOn={prefs.pushTypes.comments} onClick={() => handlePushTypeToggle('comments')} />
-            <ToggleRow label="Follows" isOn={prefs.pushTypes.follows} onClick={() => handlePushTypeToggle('follows')} />
-            <ToggleRow label="Tribe joins" isOn={prefs.pushTypes.tribeJoins} onClick={() => handlePushTypeToggle('tribeJoins')} />
+          
+          <div className={`space-y-3 ${pushEnabled ? '' : 'opacity-50 pointer-events-none'}`}>
+            <ToggleRow label="Direct messages" isOn={pushPrefs.directMessages} onClick={() => handlePushTypeToggle('directMessages')} />
+            <ToggleRow label="Tribe messages" isOn={pushPrefs.tribeMessages} onClick={() => handlePushTypeToggle('tribeMessages')} />
+            <ToggleRow label="Likes" isOn={pushPrefs.likes} onClick={() => handlePushTypeToggle('likes')} />
+            <ToggleRow label="Comments" isOn={pushPrefs.comments} onClick={() => handlePushTypeToggle('comments')} />
+            <ToggleRow label="Follows" isOn={pushPrefs.follows} onClick={() => handlePushTypeToggle('follows')} />
+            <ToggleRow label="Tribe joins" isOn={pushPrefs.tribeJoins} onClick={() => handlePushTypeToggle('tribeJoins')} />
           </div>
         </section>
 
@@ -163,13 +179,12 @@ const NotificationSettingsPage: React.FC = () => {
                 <p className="text-sm text-secondary">Security and digest updates</p>
               </div>
             </div>
-            <ToggleButton isOn={prefs.emailEnabled} onClick={handleEmailToggle} disabled={isSaving} />
           </div>
 
-          <div className={`space-y-3 ${prefs.emailEnabled ? '' : 'opacity-50 pointer-events-none'}`}>
-            <ToggleRow label="New device login" isOn={prefs.emailTypes.newDevice} onClick={() => handleEmailTypeToggle('newDevice')} />
-            <ToggleRow label="Daily digest" isOn={prefs.emailTypes.digest} onClick={() => handleEmailTypeToggle('digest')} />
-            <ToggleRow label="Moderation alerts" isOn={prefs.emailTypes.moderation} onClick={() => handleEmailTypeToggle('moderation')} />
+          <div className="space-y-3">
+            <ToggleRow label="New device login" isOn={emailPrefs.newDevice} onClick={() => handleEmailTypeToggle('newDevice')} />
+            <ToggleRow label="Daily digest" isOn={emailPrefs.digest} onClick={() => handleEmailTypeToggle('digest')} />
+            <ToggleRow label="Moderation alerts" isOn={emailPrefs.moderation} onClick={() => handleEmailTypeToggle('moderation')} />
           </div>
         </section>
 

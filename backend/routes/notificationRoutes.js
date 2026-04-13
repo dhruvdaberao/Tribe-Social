@@ -6,6 +6,21 @@ import { normalizeNotificationPrefs } from '../utils/notificationPrefs.js';
 
 const router = express.Router();
 
+// @route   POST /api/notifications/save-token
+// @desc    Save FCM push notification token
+router.post('/save-token', protect, async (req, res) => {
+    try {
+        const { token } = req.body;
+        await User.findByIdAndUpdate(req.user.id, {
+            fcmToken: token
+        });
+        res.json({ success: true });
+    } catch (error) {
+        console.error('Error saving FCM token:', error);
+        res.status(500).json({ message: 'Failed to save token' });
+    }
+});
+
 // @route   GET /api/notifications
 // @desc    Get all notifications for the current user
 router.get('/', protect, async (req, res) => {

@@ -5,6 +5,7 @@ import axios from 'axios';
 import * as api from '../../api';
 import { toast } from '../common/Toast';
 import PasswordInput from '../common/PasswordInput';
+import { requestNotificationPermission } from '../../utils/notification';
 
 interface AuthContextType {
   login: (email: string, password: string) => Promise<void>;
@@ -57,6 +58,12 @@ const LoginPage: React.FC = () => {
       if (mode === 'login') {
         if (!email || !password) throw new Error('Fill all fields.');
         await auth.login(email, password);
+        try {
+          const token = await requestNotificationPermission();
+          if (token) await api.saveFcmToken(token);
+        } catch (err) {
+          console.error("FCM Token fetch failed:", err);
+        }
       } else if (mode === 'register') {
         if (!name || !username || !email || !password) throw new Error('Fill all fields.');
         if (!isValidUsername(username)) {
@@ -76,10 +83,15 @@ const LoginPage: React.FC = () => {
         localStorage.setItem('token', data.token);
         auth.setCurrentUser(data.user);
         toast.success("Welcome back!");
-        // Persistent reminder via success toast
         setTimeout(() => {
           toast.info("Security Tip: Please update your password from Settings soon.");
         }, 1500);
+        try {
+          const token = await requestNotificationPermission();
+          if (token) await api.saveFcmToken(token);
+        } catch (err) {
+          console.error("FCM Token fetch failed:", err);
+        }
       }
     } catch (err: any) {
       if (axios.isAxiosError(err)) {
