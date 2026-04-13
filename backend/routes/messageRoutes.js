@@ -141,6 +141,7 @@ import Notification from '../models/notificationModel.js';
 import { sendPushToUser } from '../services/pushService.js';
 import { isPushEnabledFor } from '../utils/notificationPrefs.js';
 import cloudinary from '../config/cloudinary.js';
+import { sendEmailNotification } from '../services/emailNotificationService.js';
 
 const router = express.Router();
 
@@ -217,7 +218,7 @@ router.post('/send/:receiverId', protect, async (req, res) => {
         const { receiverId } = req.params;
         const senderId = req.user._id;
 
-        const receiver = await User.findById(receiverId).select('isDisabled notificationPrefs name');
+        const receiver = await User.findById(receiverId).select('isDisabled notificationPrefs name email emailNotifications emailPrefs');
         if (!receiver) {
             return res.status(404).json({ message: 'User not found' });
         }
@@ -309,6 +310,13 @@ router.post('/send/:receiverId', protect, async (req, res) => {
                     },
                 });
             }
+
+            await sendEmailNotification({
+                user: receiver,
+                type: 'directMessages',
+                subject: `${sender?.name || 'Someone'} sent you a new message`,
+                htmlContent: `<p>${sender?.name || 'Someone'} sent you a new message on Tribe Social.</p>`,
+            });
         }
 
         res.status(201).json(responseMessage);

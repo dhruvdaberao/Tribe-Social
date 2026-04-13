@@ -73,9 +73,11 @@ export const sendOTPEmail = async (to, otp) => {
   }
 };
 
-export const sendEmail = async ({ to, subject, html, text }) => {
+export const sendEmail = async ({ to, subject, html, text, htmlContent, textContent }) => {
   try {
     const toArray = Array.isArray(to) ? to.map(email => ({ email })) : [{ email: to }];
+    const finalHtmlContent = htmlContent ?? html ?? textContent ?? text ?? '';
+    const finalTextContent = textContent ?? text ?? '';
     
     const response = await axios.post(
       "https://api.brevo.com/v3/smtp/email",
@@ -86,8 +88,8 @@ export const sendEmail = async ({ to, subject, html, text }) => {
         },
         to: toArray,
         subject: subject,
-        htmlContent: html || text,
-        textContent: text || '',
+        htmlContent: finalHtmlContent,
+        textContent: finalTextContent,
         replyTo: {
           email: "contact.tribesocial@gmail.com",
           name: "Tribe Social"
