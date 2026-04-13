@@ -29,7 +29,7 @@ const transporter = nodemailer.createTransport({
 export const sendOTPEmail = async (to, otp) => {
   try {
     await transporter.sendMail({
-      from: `"Tribe" <${process.env.EMAIL_USER}>`,
+      from: `"Tribe Social" <${process.env.EMAIL_USER}>`,
       to,
       subject: "Tribe OTP Code",
       html: `
@@ -40,7 +40,7 @@ export const sendOTPEmail = async (to, otp) => {
       `,
     });
 
-    console.log("✅ OTP sent to:", to);
+    console.log("Sending email to:", to);
   } catch (error) {
     console.error("❌ Email error:", error);
     throw new Error("Email sending failed");
@@ -50,7 +50,7 @@ export const sendOTPEmail = async (to, otp) => {
 export const sendEmail = async ({ to, subject, html, text }) => {
   try {
     const mailOptions = {
-      from: `"Tribe" <${process.env.EMAIL_USER}>`,
+      from: `"Tribe Social" <${process.env.EMAIL_USER}>`,
       to: Array.isArray(to) ? to.join(', ') : to,
       subject,
       html,
