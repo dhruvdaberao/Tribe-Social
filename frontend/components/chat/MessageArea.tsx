@@ -6,6 +6,7 @@ import MarkdownRenderer from '../common/MarkdownRenderer';
 import ChatShell from './ChatShell';
 import ChatInput from './ChatInput';
 import MessageOptionsMenu from './MessageOptionsMenu';
+import { AI_USER_ID } from '../../constants/ai';
 
 interface MessageAreaProps {
   conversation: Conversation;
@@ -29,6 +30,7 @@ interface MessageAreaProps {
   onBlockUser: (user: User) => void;
   isAutoDeleteEnabled: boolean;
   isBlockingUser?: boolean;
+  isActionLoading?: boolean;
 }
 
 export const MessageArea: React.FC<MessageAreaProps> = ({
@@ -52,7 +54,8 @@ export const MessageArea: React.FC<MessageAreaProps> = ({
   onToggleAutoDelete,
   onBlockUser,
   isAutoDeleteEnabled,
-  isBlockingUser = false
+  isBlockingUser = false,
+  isActionLoading = false
 }) => {
   const [inputText, setInputText] = useState('');
   const [isTyping, setIsTyping] = useState(false);
@@ -229,7 +232,7 @@ export const MessageArea: React.FC<MessageAreaProps> = ({
               className="flex items-center cursor-pointer overflow-hidden group flex-1"
               onClick={() => onViewProfile(otherParticipant)}
             >
-              {otherParticipant.id === 'chuk-ai' ? (
+              {otherParticipant.id === AI_USER_ID ? (
                 <img src="/chuk-ai.png" alt="Chuk AI" className="h-10 w-auto mr-3 flex-shrink-0 object-contain drop-shadow-sm" />
               ) : (
                 <UserAvatar user={otherParticipant} className="w-10 h-10 rounded-full mr-3 flex-shrink-0 ring-2 ring-transparent group-hover:ring-accent/20 transition-all duration-300" isOnline={isOtherUserOnline} />
@@ -264,6 +267,7 @@ export const MessageArea: React.FC<MessageAreaProps> = ({
                   onClearChat={onClearConversation}
                   onToggleAutoDelete={onToggleAutoDelete}
                   onBlockUser={onBlockUser}
+                  isActionLoading={isActionLoading}
                   onClose={() => setIsHeaderMenuOpen(false)}
                 />
               )}
@@ -341,7 +345,7 @@ export const MessageArea: React.FC<MessageAreaProps> = ({
                 >
                   {!isCurrentUser && (
                     <div className="w-8 h-8 flex-shrink-0 self-start">
-                      {sender?.id === 'chuk-ai' ? (
+                      {sender?.id === AI_USER_ID ? (
                         <img src="/chuk-ai.png" alt="Chuk AI" className="h-8 w-auto object-contain" />
                       ) : (
                         <UserAvatar user={sender || null} className="w-full h-full rounded-full" />
@@ -440,7 +444,7 @@ export const MessageArea: React.FC<MessageAreaProps> = ({
                         <>
                           {renderAttachment(message)}
                           <div className="text-sm leading-relaxed">
-                            {sender?.id === 'chuk-ai' ? (
+                            {sender?.id === AI_USER_ID ? (
                               <MarkdownRenderer text={message.text} />
                             ) : (
                               <p className="whitespace-pre-wrap break-words">{message.text}</p>

@@ -9,6 +9,8 @@ import * as api from '../../api';
 import { useSocket } from '../../contexts/SocketContext';
 import { toast } from '../common/Toast';
 import { safeSetItem } from '../../utils/safeLocalStorage';
+import ConfirmModal from '../common/ConfirmModal';
+import { AI_USER_ID } from '../../constants/ai';
 
 interface ChatPageProps {
   currentUser: User;
@@ -60,6 +62,15 @@ const ChatPage: React.FC<ChatPageProps> = ({ currentUser, allUsers, chukUser, in
   const [isSending, setIsSending] = useState(false);
   const [isInitializing, setIsInitializing] = useState(!!initialTargetUser);
   const [blockingUserIds, setBlockingUserIds] = useState<Record<string, boolean>>({});
+  const [actionLoadingByUserId, setActionLoadingByUserId] = useState<Record<string, boolean>>({});
+  const [confirmState, setConfirmState] = useState<{
+    visible: boolean;
+    title: string;
+    message: string;
+    confirmText?: string;
+    danger?: boolean;
+    onConfirm?: () => Promise<void> | void;
+  }>({ visible: false, title: '', message: '' });
   const messageCache = React.useRef<Map<string, { messages: Message[]; hasMore: boolean; oldestTimestamp?: string }>>(new Map());
   const { socket, onlineUsers, clearUnreadMessages, unreadCounts, setActiveChatPartnerId } = useSocket();
 
@@ -197,7 +208,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ currentUser, allUsers, chukUser, in
       socket.emit('joinRoom', `dm-${[currentUser.id, otherUserId].sort().join('-')}`);
     }
 
-    if (otherUserId === chukUser.id) {
+    if (otherUserId === AI_USER_ID) {
       setMessages([{ id: 'chuk-intro', senderId: chukUser.id, receiverId: currentUser.id, text: `Psy... Hi ${currentUser.name.split(' ')[0]}! I'm Psyduck! What's on your mind? ...Psy? 🦆`, timestamp: new Date().toISOString() }]);
       setMessageAreaVisible(true);
       setIsInitializing(false);
@@ -231,7 +242,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ currentUser, allUsers, chukUser, in
   }, [currentUser.id, currentUser.name, chukUser.id, socket, clearUnreadMessages, setActiveChatPartnerId]);
 
   const handleStartNewConversation = useCallback((targetUser: User) => {
-    if (targetUser.id === chukUser.id) {
+    if (targetUser.id === AI_USER_ID) {
       handleSelectConversation({ id: chukUser.id, participants: [{ id: currentUser.id }, { id: chukUser.id }], lastMessage: "AI Assistant", timestamp: new Date().toISOString(), messages: [] });
       return;
     }
@@ -272,30 +283,46 @@ const ChatPage: React.FC<ChatPageProps> = ({ currentUser, allUsers, chukUser, in
     }
   };
 
-  const handleBlockUser = useCallback(async (user: User) => {
-    if (!user?.id || blockingUserIds[user.id]) return;
-    const confirmed = window.confirm('Are you sure you want to block this user?');
-    if (!confirmed) return;
-
-    setBlockingUserIds(prev => ({ ...prev, [user.id]: true }));
+  const executeActionForUser = useCallback(async (userId: string, action: () => Promise<void>) => {
+    if (actionLoadingByUserId[userId]) return;
+    setActionLoadingByUserId(prev => ({ ...prev, [userId]: true }));
     try {
-      const success = await onToggleBlock(user.id);
-      if (!success) {
-        toast.error('Failed to block user');
-        return;
-      }
-      setConversations(prev => prev.filter(conv => conv.participants.find(p => p.id !== currentUser.id)?.id !== user.id));
-      if (activeConversation?.participants.some(p => p.id === user.id)) {
-        handleBackToList();
-        navigate('/messages', { replace: true });
-      }
-      toast.success('User blocked successfully');
-    } catch {
-      toast.error('Failed to block user');
+      await action();
     } finally {
-      setBlockingUserIds(prev => ({ ...prev, [user.id]: false }));
+      setActionLoadingByUserId(prev => ({ ...prev, [userId]: false }));
     }
-  }, [activeConversation, blockingUserIds, currentUser.id, navigate, onToggleBlock]);
+  }, [actionLoadingByUserId]);
+
+  const requestBlockUser = useCallback((user: User) => {
+    if (!user?.id || blockingUserIds[user.id] || actionLoadingByUserId[user.id]) return;
+    setConfirmState({
+      visible: true,
+      title: 'Confirm Action',
+      message: 'Are you sure you want to block this user?',
+      confirmText: 'Block User',
+      danger: true,
+      onConfirm: async () => {
+        setBlockingUserIds(prev => ({ ...prev, [user.id]: true }));
+        try {
+          const success = await onToggleBlock(user.id);
+          if (!success) {
+            toast.error('Failed to block user');
+            return;
+          }
+          setConversations(prev => prev.filter(conv => conv.participants.find(p => p.id !== currentUser.id)?.id !== user.id));
+          if (activeConversation?.participants.some(p => p.id === user.id)) {
+            handleBackToList();
+            navigate('/messages', { replace: true });
+          }
+          toast.success('User blocked');
+        } catch {
+          toast.error('Failed to block user');
+        } finally {
+          setBlockingUserIds(prev => ({ ...prev, [user.id]: false }));
+        }
+      }
+    });
+  }, [activeConversation, actionLoadingByUserId, blockingUserIds, currentUser.id, navigate, onToggleBlock]);
 
   const handleLoadMoreMessages = useCallback(async () => {
     if (!activeConversation || isLoadingMore || !hasMoreMessages) return;
@@ -371,7 +398,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ currentUser, allUsers, chukUser, in
       setIsSending(false);
       return;
     }
-    if (otherUserId === chukUser.id && attachmentFile) {
+    if (otherUserId === AI_USER_ID && attachmentFile) {
       toast.error('Attachments are not supported in Psyduck chat.');
       setIsSending(false);
       return;
@@ -395,7 +422,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ currentUser, allUsers, chukUser, in
     setMessages(prev => sortMessages([...prev, tempMessage]));
     updateCachedMessages(otherUserId, cachedMessages => sortMessages([...cachedMessages, tempMessage]));
 
-    if (otherUserId === chukUser.id) {
+    if (otherUserId === AI_USER_ID) {
       try {
         const { data } = await api.generateAiChat({ prompt: text });
         const chukResponse: Message = { id: `chuk-${Date.now()}`, senderId: chukUser.id, receiverId: currentUser.id, text: data.text, timestamp: new Date().toISOString() };
@@ -521,26 +548,54 @@ const ChatPage: React.FC<ChatPageProps> = ({ currentUser, allUsers, chukUser, in
     }
   };
 
-  const handleClearConversation = async (otherUserId: string) => {
-    if (activeConversation && activeConversation.participants.some(p => p.id === otherUserId)) {
-      setMessages([]);
-    }
-    messageCache.current.set(otherUserId, { messages: [], hasMore: false });
-    setConversations(prev => prev.map(conv => {
-      const convoOtherId = conv.participants.find(p => p.id !== currentUser.id)?.id;
-      if (convoOtherId !== otherUserId) return conv;
-      return { ...conv, lastMessage: '', timestamp: new Date().toISOString() };
-    }));
-    try {
-      await api.clearConversation(otherUserId);
-    } catch (error) {
-      console.error("Failed to clear conversation", error);
-    }
-  };
+  const handleClearConversation = useCallback((otherUserId: string) => {
+    if (actionLoadingByUserId[otherUserId]) return;
+    setConfirmState({
+      visible: true,
+      title: 'Confirm Action',
+      message: 'Are you sure you want to clear this chat?',
+      confirmText: 'Clear Chat',
+      danger: true,
+      onConfirm: async () => {
+        await executeActionForUser(otherUserId, async () => {
+          if (activeConversation && activeConversation.participants.some(p => p.id === otherUserId)) {
+            setMessages([]);
+          }
+          messageCache.current.set(otherUserId, { messages: [], hasMore: false });
+          setConversations(prev => prev.map(conv => {
+            const convoOtherId = conv.participants.find(p => p.id !== currentUser.id)?.id;
+            if (convoOtherId !== otherUserId) return conv;
+            return { ...conv, lastMessage: '', timestamp: new Date().toISOString() };
+          }));
+          try {
+            await api.clearConversation(otherUserId);
+            toast.success('Chat cleared successfully');
+          } catch (error) {
+            console.error('Failed to clear conversation', error);
+            toast.error('Failed to clear chat');
+          }
+        });
+      },
+    });
+  }, [actionLoadingByUserId, activeConversation, currentUser.id, executeActionForUser]);
 
-  const handleToggleAutoDelete = (otherUserId: string) => {
-    setAutoDeleteMap(prev => ({ ...prev, [otherUserId]: !prev[otherUserId] }));
-  };
+  const handleToggleAutoDelete = useCallback((otherUserId: string) => {
+    if (actionLoadingByUserId[otherUserId]) return;
+    const nextEnabled = !autoDeleteMap[otherUserId];
+    setConfirmState({
+      visible: true,
+      title: 'Confirm Action',
+      message: nextEnabled ? 'Enable 24-hour auto delete for this chat?' : 'Disable auto delete timer?',
+      confirmText: nextEnabled ? 'Enable' : 'Disable',
+      danger: false,
+      onConfirm: async () => {
+        await executeActionForUser(otherUserId, async () => {
+          setAutoDeleteMap(prev => ({ ...prev, [otherUserId]: nextEnabled }));
+          toast.success(nextEnabled ? '24h auto delete enabled' : '24h auto delete disabled');
+        });
+      },
+    });
+  }, [actionLoadingByUserId, autoDeleteMap, executeActionForUser]);
 
   const activeOtherUserId = activeConversation?.participants.find(p => p.id !== currentUser.id)?.id || null;
   const autoDeleteEnabled = activeOtherUserId ? !!autoDeleteMap[activeOtherUserId] : false;
@@ -580,9 +635,11 @@ const ChatPage: React.FC<ChatPageProps> = ({ currentUser, allUsers, chukUser, in
           onNewMessage={() => setNewMessageModalOpen(true)}
           unreadCounts={unreadCounts.messages}
           onClearConversation={handleClearConversation}
-          onBlockUser={handleBlockUser}
+          onBlockUser={requestBlockUser}
           onToggleAutoDelete={handleToggleAutoDelete}
           autoDeleteMap={autoDeleteMap}
+          actionLoadingByUserId={actionLoadingByUserId}
+          blockLoadingByUserId={blockingUserIds}
         />
       </div>
 
@@ -615,9 +672,10 @@ const ChatPage: React.FC<ChatPageProps> = ({ currentUser, allUsers, chukUser, in
             onViewProfile={onViewProfile}
             onClearConversation={handleClearConversation}
             onToggleAutoDelete={handleToggleAutoDelete}
-            onBlockUser={handleBlockUser}
+            onBlockUser={requestBlockUser}
             isAutoDeleteEnabled={autoDeleteEnabled}
             isBlockingUser={!!(activeOtherUserId && blockingUserIds[activeOtherUserId])}
+            isActionLoading={!!(activeOtherUserId && actionLoadingByUserId[activeOtherUserId])}
           />
         ) : isInitializing ? (
           <ChatShell
@@ -653,6 +711,20 @@ const ChatPage: React.FC<ChatPageProps> = ({ currentUser, allUsers, chukUser, in
       {isNewMessageModalOpen && (
         <NewMessageModal allUsers={allUsers.filter(u => u.id !== currentUser.id)} onClose={() => setNewMessageModalOpen(false)} onUserSelect={(user) => { setNewMessageModalOpen(false); handleStartNewConversation(user); }} />
       )}
+      <ConfirmModal
+        visible={confirmState.visible}
+        title={confirmState.title}
+        message={confirmState.message}
+        confirmText={confirmState.confirmText}
+        danger={confirmState.danger}
+        loading={false}
+        onCancel={() => setConfirmState(prev => ({ ...prev, visible: false }))}
+        onConfirm={async () => {
+          const action = confirmState.onConfirm;
+          setConfirmState(prev => ({ ...prev, visible: false }));
+          if (action) await action();
+        }}
+      />
     </div>
   );
 };

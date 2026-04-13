@@ -39,20 +39,10 @@ import AdminUsersPage from './pages/admin/AdminUsersPage';
 import AdminTribesPage from './pages/admin/AdminTribesPage';
 import SuperAdminPage from './pages/admin/SuperAdminPage';
 import AdminReportsPage from './pages/admin/AdminReportsPage';
+import AIProfileScreen from './components/profile/AIProfileScreen';
+import { AI_USER_ID, PSYDUCK_PROFILE } from './constants/ai';
 
 export type NavItem = 'Home' | 'Discover' | 'Messages' | 'Tribes' | 'Notifications' | 'Profile' | 'Psyduck' | 'TribeDetail' | 'Settings';
-
-const PSYDUCK_USER: User = {
-    id: 'chuk-ai',
-    name: 'Psyduck',
-    username: 'psyduck',
-    avatarUrl: '/chuk-ai.png',
-    bannerUrl: null,
-    bio: 'Psy... yi... yi... (Your goofy Tribe assistant) 🦆✨',
-    followers: [],
-    following: [],
-    blockedUsers: [],
-};
 
 const MainLayout: React.FC = () => {
     const { currentUser, logout } = useAuth();
@@ -236,6 +226,10 @@ const MainLayout: React.FC = () => {
 
     // View Profile Wrapper
     const handleViewProfile = (user: User) => {
+        if (user.id === AI_USER_ID) {
+            navigate('/ai-profile', { state: { user: PSYDUCK_PROFILE } });
+            return;
+        }
         navigate(`/profile/${user.id}`);
     };
 
@@ -373,7 +367,7 @@ const MainLayout: React.FC = () => {
                                 <ChatWrapper
                                     currentUser={currentUser}
                                     allUsers={visibleUsers}
-                                    psyduck={PSYDUCK_USER}
+                                    psyduck={PSYDUCK_PROFILE}
                                     onViewProfile={handleViewProfile}
                                     onSharePost={handleSharePost}
                                     setIsChatOpen={setIsChatOpen}
@@ -384,7 +378,7 @@ const MainLayout: React.FC = () => {
                                 <ChatWrapper
                                     currentUser={currentUser}
                                     allUsers={visibleUsers}
-                                    psyduck={PSYDUCK_USER}
+                                    psyduck={PSYDUCK_PROFILE}
                                     onViewProfile={handleViewProfile}
                                     onSharePost={handleSharePost}
                                     setIsChatOpen={setIsChatOpen}
@@ -396,8 +390,8 @@ const MainLayout: React.FC = () => {
                                 <ChatPage
                                     currentUser={currentUser}
                                     allUsers={visibleUsers}
-                                    chukUser={PSYDUCK_USER}
-                                    initialTargetUser={PSYDUCK_USER}
+                                    chukUser={PSYDUCK_PROFILE}
+                                    initialTargetUser={PSYDUCK_PROFILE}
                                     onViewProfile={handleViewProfile}
                                     onSharePost={handleSharePost}
                                     onConversationStateChange={setIsChatOpen}
@@ -429,6 +423,8 @@ const MainLayout: React.FC = () => {
                                     onViewStory={handleViewUserStories}
                                 />
                             } />
+
+                            <Route path="/ai-profile" element={<AIProfileScreen user={PSYDUCK_PROFILE} />} />
 
                             <Route path="/profile/:userId" element={
                                 <ProfileWrapper
@@ -602,10 +598,12 @@ const ProfilePageContent = ({ userId, users, visibleUsers, tribes, posts, curren
 
     if (!targetId) return <div className="text-center p-8">User not found</div>;
 
-    const viewedUser = users.find((u: User) => u.id === targetId) || (targetId === currentUser?.id ? currentUser : null) || fetchedUser;
+    const viewedUser = targetId === AI_USER_ID
+        ? PSYDUCK_PROFILE
+        : users.find((u: User) => u.id === targetId) || (targetId === currentUser?.id ? currentUser : null) || fetchedUser;
 
     useEffect(() => {
-        if (!viewedUser && targetId) {
+        if (!viewedUser && targetId && targetId !== AI_USER_ID) {
             setIsLoading(true);
             api.fetchUser(targetId)
                 .then(({ data }) => setFetchedUser(data))
@@ -644,6 +642,10 @@ const ChatWrapper = ({ currentUser, allUsers, psyduck, onViewProfile, onSharePos
     useEffect(() => {
         const targetId = params?.userId;
         if (!targetId) return;
+        if (targetId === AI_USER_ID) {
+            setInitialTargetUser(psyduck);
+            return;
+        }
         const existing = allUsers.find((user: User) => user.id === targetId);
         if (existing) {
             setInitialTargetUser(existing);
