@@ -2,6 +2,8 @@ import webpush from 'web-push';
 import PushSubscription from '../models/pushSubscriptionModel.js';
 import User from '../models/userModel.js';
 import admin, { isFirebaseAdminReady } from '../firebaseAdmin.js';
+import Notification from '../models/notificationModel.js';
+import Message from '../models/messageModel.js';
 
 const vapidPublicKey = process.env.VAPID_PUBLIC_KEY;
 const vapidPrivateKey = process.env.VAPID_PRIVATE_KEY;
@@ -109,7 +111,16 @@ export const sendPushNotification = async ({ user, type, title, body, data = {} 
     return;
   }
 
-  const result = await sendPush(user.fcmToken, title, body, data);
+  const unreadNotificationCount = await Notification.countDocuments({ recipient: user._id, read: false });
+  const unreadMessageCount = await Message.countDocuments({ receiver: user._id, isRead: false });
+
+  const payloadData = {
+    ...data,
+    unreadNotificationCount: String(unreadNotificationCount),
+    unreadMessageCount: String(unreadMessageCount),
+  };
+
+  const result = await sendPush(user.fcmToken, title, body, payloadData);
 
   if (!result.success && ['messaging/registration-token-not-registered', 'messaging/invalid-registration-token'].includes(result.reason)) {
     await User.findByIdAndUpdate(user._id, { $set: { fcmToken: null, fcmTokenUpdatedAt: new Date() } });

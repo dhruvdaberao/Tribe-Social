@@ -358,10 +358,10 @@ export const generateAiChat = (promptData: { prompt: string }) =>
 
 /* ───────────── NOTIFICATIONS ───────────── */
 export const saveFcmToken = (token: string) =>
-  API.post('/save-token', { token });
+  API.post('/notifications/save-token', { token });
 
 export const sendTestPush = () =>
-  API.post('/test-push');
+  API.post('/notifications/test-push');
 
 export const fetchNotifications = async () => {
   const res = await API.get('/notifications');

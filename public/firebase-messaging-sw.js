@@ -1,5 +1,5 @@
-import { initializeApp } from 'https://www.gstatic.com/firebasejs/12.3.0/firebase-app.js';
-import { getMessaging, onBackgroundMessage } from 'https://www.gstatic.com/firebasejs/12.3.0/firebase-messaging-sw.js';
+importScripts('https://www.gstatic.com/firebasejs/10.10.0/firebase-app-compat.js');
+importScripts('https://www.gstatic.com/firebasejs/10.10.0/firebase-messaging-compat.js');
 
 const firebaseConfig = {
   apiKey: 'AIzaSyCsKTEcvgHTq9xh-r-j8WHtZEARc-i4_9M',
@@ -10,14 +10,16 @@ const firebaseConfig = {
   appId: '1:593523133674:web:7d1b275930e5d531441b93',
 };
 
-const app = initializeApp(firebaseConfig);
-const messaging = getMessaging(app);
+firebase.initializeApp(firebaseConfig);
+const messaging = firebase.messaging();
 
-onBackgroundMessage(messaging, (payload) => {
-  const title = payload.notification?.title || 'Tribe Social';
+messaging.onBackgroundMessage((payload) => {
+  console.log('[FCM] Received background message:', payload);
+  
+  const title = payload.data?.title || payload.notification?.title || 'Tribe Social';
   const options = {
-    body: payload.notification?.body || '',
-    icon: payload.notification?.icon || '/icons/icon-192-dark.png',
+    body: payload.data?.body || payload.notification?.body || '',
+    icon: payload.data?.icon || payload.notification?.icon || '/icons/icon-192-dark.png',
     data: payload.data || {},
   };
 

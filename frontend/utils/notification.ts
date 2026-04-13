@@ -1,18 +1,8 @@
 import { getFirebaseMessaging } from './firebase';
+import { getToken as fcmGetToken, onMessage as fcmOnMessage } from 'firebase/messaging';
 
 const FCM_SW_PATH = '/firebase-messaging-sw.js';
 const VAPID_KEY = import.meta.env.VITE_FIREBASE_VAPID_KEY || 'BAjpMhHkdyiTm9zd4pYcp8kOkth7FHcId9_swudAH6OSI4brChi_3P0EME_zgwDYc-bGr7ZvwMc4Tnuu8QVlWug';
-
-const loadMessagingHelpers = async () => {
-  const messagingModule = await import('https://www.gstatic.com/firebasejs/12.3.0/firebase-messaging.js');
-  return {
-    getToken: messagingModule.getToken as (messaging: unknown, options: Record<string, unknown>) => Promise<string>,
-    onMessage: messagingModule.onMessage as (
-      messaging: unknown,
-      listener: (payload: { notification?: { title?: string; body?: string; icon?: string } }) => void,
-    ) => () => void,
-  };
-};
 
 export const registerFcmServiceWorker = async (): Promise<ServiceWorkerRegistration | null> => {
   if (!('serviceWorker' in navigator)) {
@@ -21,7 +11,7 @@ export const registerFcmServiceWorker = async (): Promise<ServiceWorkerRegistrat
   }
 
   try {
-    const registration = await navigator.serviceWorker.register(FCM_SW_PATH, { type: 'module' });
+    const registration = await navigator.serviceWorker.register(FCM_SW_PATH);
     console.info('[FCM] Service worker registered:', registration.scope);
     return registration;
   } catch (error) {
@@ -56,8 +46,7 @@ export const requestNotificationPermission = async (): Promise<string | null> =>
     const registration = await registerFcmServiceWorker();
     if (!registration) return null;
 
-    const { getToken } = await loadMessagingHelpers();
-    const token = await getToken(messaging, {
+    const token = await fcmGetToken(messaging, {
       vapidKey: VAPID_KEY,
       serviceWorkerRegistration: registration,
     });
@@ -79,15 +68,17 @@ export const setupForegroundNotifications = async (): Promise<(() => void) | und
   const messaging = await getFirebaseMessaging();
   if (!messaging) return undefined;
 
-  const { onMessage } = await loadMessagingHelpers();
-
-  return onMessage(messaging, (payload) => {
+  return fcmOnMessage(messaging, (payload) => {
     console.info('[FCM] Foreground message received:', payload);
 
-    if (Notification.permission === 'granted' && payload.notification?.title) {
-      new Notification(payload.notification.title, {
-        body: payload.notification.body,
-        icon: payload.notification.icon || '/icons/icon-192-dark.png',
+    const title = payload.data?.title || payload.notification?.title || 'Tribe Social';
+    const body = payload.data?.body || payload.notification?.body || '';
+    const icon = payload.data?.icon || payload.notification?.icon || '/icons/icon-192-dark.png';
+
+    if (Notification.permission === 'granted' && title) {
+      new Notification(title, {
+        body,
+        icon,
       });
     }
   });
