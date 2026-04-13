@@ -452,7 +452,7 @@ export const GlobalContentProvider: React.FC<{ children: React.ReactNode }> = ({
         setPosts(prev => prev.filter(p => p.id !== postId));
         try {
             await api.deletePost(postId);
-            toast.success("Post deleted.");
+            toast.success("Post deleted successfully");
         } catch (error) {
             const message = (error as any)?.response?.data?.message || 'Failed to delete post';
             console.error("Failed to delete post:", message, error);
@@ -561,7 +561,11 @@ export const GlobalContentProvider: React.FC<{ children: React.ReactNode }> = ({
         const isBlocked = (currentUser.blockedUsers || []).includes(targetUserId);
         setCurrentUser(prev => prev ? { ...prev, blockedUsers: isBlocked ? (prev.blockedUsers || []).filter(id => id !== targetUserId) : [...(prev.blockedUsers || []), targetUserId] } : null);
         try {
-            await api.toggleBlock(targetUserId);
+            if (isBlocked) {
+                await api.toggleBlock(targetUserId);
+            } else {
+                await api.blockUser(targetUserId);
+            }
             toast.success(isBlocked ? "User unblocked." : "User blocked successfully");
             return true;
         } catch (error) {
@@ -614,6 +618,9 @@ export const GlobalContentProvider: React.FC<{ children: React.ReactNode }> = ({
                 if (viewedTribe && setViewedTribe && viewedTribe.id === tribeId) {
                     setViewedTribe(prev => prev ? { ...prev, members: updatedTribe.members } : null);
                 }
+                if (currentUser && updatedTribe.members.includes(currentUser.id)) {
+                    toast.success('Joined tribe successfully');
+                }
             }
         } catch (error: any) {
             console.error("Failed to join/leave tribe:", error);
@@ -651,7 +658,7 @@ export const GlobalContentProvider: React.FC<{ children: React.ReactNode }> = ({
             await api.deleteTribe(tribeId);
             setTribes(prev => prev.filter(t => t.id !== tribeId));
             if (editingTribe?.id === tribeId) setEditingTribe(null);
-            toast.success("Tribe deleted.");
+            toast.success("Tribe deleted successfully");
         } catch (error) {
             console.error("Failed to delete tribe", error);
             toast.error("Could not delete tribe.");

@@ -32,6 +32,18 @@ const toast = {
   },
 };
 
+export const showToast = (message: string, type: ToastType = 'success') => {
+  if (type === 'error') {
+    toast.error(message);
+    return;
+  }
+  if (type === 'info') {
+    toast.info(message);
+    return;
+  }
+  toast.success(message);
+};
+
 const Toast: React.FC<ToastMessage> = ({ message, type, id }) => {
   const [visible, setVisible] = useState(false);
 

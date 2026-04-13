@@ -600,6 +600,8 @@ const ProfilePageContent = ({ userId, users, visibleUsers, tribes, posts, curren
     const [fetchedUser, setFetchedUser] = useState<User | null>(null);
     const [isLoading, setIsLoading] = useState(false);
 
+    if (!targetId) return <div className="text-center p-8">User not found</div>;
+
     const viewedUser = users.find((u: User) => u.id === targetId) || (targetId === currentUser?.id ? currentUser : null) || fetchedUser;
 
     useEffect(() => {

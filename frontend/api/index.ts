@@ -153,6 +153,9 @@ export const removeFollower = (id: string) =>
 export const toggleBlock = (id: string) =>
   API.put(`/users/${id}/block`);
 
+export const blockUser = (blockedUserId: string) =>
+  API.post('/users/block-user', { blockedUserId });
+
 export const deleteAccount = () =>
   API.delete('/users/profile');
 
