@@ -27,6 +27,8 @@ import moderationRoutes from './routes/moderationRoutes.js';
 import reportRoutes from './routes/reportRoutes.js';
 import cronRoutes from './routes/cronRoutes.js'; // Cron
 import { initializeSocket } from './socketManager.js';
+import protect from './middleware/authMiddleware.js';
+import User from './models/userModel.js';
 
 dotenv.config();
 
@@ -48,6 +50,7 @@ const startServer = async () => {
 
     const app = express();
     const httpServer = createServer(app);
+    app.set('trust proxy', 1);
 
     // Dynamic CORS configuration to allow multiple origins easily
     // Dynamic CORS configuration to allow multiple origins easily
@@ -118,6 +121,27 @@ const startServer = async () => {
     // ...
 
     app.use('/api/notifications', standardPayload, notificationRoutes);
+    app.post('/api/save-token', standardPayload, protect, async (req, res) => {
+      try {
+        const { token } = req.body;
+        if (!token || typeof token !== 'string') {
+          return res.status(400).json({ message: 'Valid FCM token is required' });
+        }
+
+        const user = await User.findById(req.user.id);
+        if (!user) {
+          return res.status(404).json({ message: 'User not found' });
+        }
+
+        user.fcmToken = token;
+        await user.save();
+        console.log('Saved token:', token);
+        return res.json({ success: true });
+      } catch (error) {
+        console.error('Error saving FCM token:', error);
+        return res.status(500).json({ message: 'Failed to save token' });
+      }
+    });
     app.use('/api/moderation', standardPayload, moderationRoutes); // 🔥 MODERATION ROUTES
     app.use('/api/reports', standardPayload, reportRoutes);
     app.use('/api/ai', standardPayload, aiRoutes);

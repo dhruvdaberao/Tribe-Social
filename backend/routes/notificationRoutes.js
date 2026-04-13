@@ -3,6 +3,7 @@ import protect from '../middleware/authMiddleware.js';
 import Notification from '../models/notificationModel.js';
 import User from '../models/userModel.js';
 import { normalizeNotificationPrefs } from '../utils/notificationPrefs.js';
+import admin from '../firebaseAdmin.js';
 
 const router = express.Router();
 
@@ -11,13 +12,58 @@ const router = express.Router();
 router.post('/save-token', protect, async (req, res) => {
     try {
         const { token } = req.body;
-        await User.findByIdAndUpdate(req.user.id, {
-            fcmToken: token
-        });
+
+        if (!token || typeof token !== 'string') {
+            return res.status(400).json({ message: 'Valid FCM token is required' });
+        }
+
+        const user = await User.findById(req.user.id);
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        user.fcmToken = token;
+        await user.save();
+
+        console.log('Saved token:', token);
         res.json({ success: true });
     } catch (error) {
         console.error('Error saving FCM token:', error);
         res.status(500).json({ message: 'Failed to save token' });
+    }
+});
+
+// @route   GET /api/notifications/test-push
+// @desc    Test push notification delivery for current user
+router.get('/test-push', protect, async (req, res) => {
+    try {
+        const user = await User.findById(req.user.id);
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        if (!user.fcmToken) {
+            return res.status(400).json({ message: 'No FCM token found for user' });
+        }
+
+        console.log('Sending push to:', user.fcmToken);
+
+        const messageId = await admin.messaging().send({
+            token: user.fcmToken,
+            notification: {
+                title: 'TEST',
+                body: 'Push is working',
+            },
+        });
+
+        res.send(`Push sent: ${messageId}`);
+    } catch (error) {
+        console.error('Error sending test push:', error);
+        res.status(500).json({
+            message: 'Failed to send test push',
+            error: error?.message || error,
+            details: error,
+        });
     }
 });
 

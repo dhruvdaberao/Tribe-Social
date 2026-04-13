@@ -49,6 +49,18 @@ const LoginPage: React.FC = () => {
 
   const isValidUsername = (value: string) => /^[a-z0-9]+(?:\.[a-z0-9]+)*$/.test(value);
 
+  const setupPushNotificationsAfterAuth = async () => {
+    try {
+      console.log('Starting push notification setup after successful auth...');
+      const token = await requestNotificationPermission();
+      if (token) {
+        await api.saveFcmToken(token);
+      }
+    } catch (err) {
+      console.error("FCM Token fetch failed:", err);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -58,12 +70,7 @@ const LoginPage: React.FC = () => {
       if (mode === 'login') {
         if (!email || !password) throw new Error('Fill all fields.');
         await auth.login(email, password);
-        try {
-          const token = await requestNotificationPermission();
-          if (token) await api.saveFcmToken(token);
-        } catch (err) {
-          console.error("FCM Token fetch failed:", err);
-        }
+        await setupPushNotificationsAfterAuth();
       } else if (mode === 'register') {
         if (!name || !username || !email || !password) throw new Error('Fill all fields.');
         if (!isValidUsername(username)) {
@@ -86,12 +93,7 @@ const LoginPage: React.FC = () => {
         setTimeout(() => {
           toast.info("Security Tip: Please update your password from Settings soon.");
         }, 1500);
-        try {
-          const token = await requestNotificationPermission();
-          if (token) await api.saveFcmToken(token);
-        } catch (err) {
-          console.error("FCM Token fetch failed:", err);
-        }
+        await setupPushNotificationsAfterAuth();
       }
     } catch (err: any) {
       if (axios.isAxiosError(err)) {
