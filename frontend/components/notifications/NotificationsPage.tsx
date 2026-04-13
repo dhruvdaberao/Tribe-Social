@@ -1,6 +1,7 @@
 
 
 import React, { useEffect, useCallback, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Notification, User, Tribe } from '../../types';
 import UserAvatar from '../common/UserAvatar';
 import * as api from '../../api';
@@ -162,6 +163,7 @@ const NotificationItem: React.FC<{ notification: Notification; allTribes: Tribe[
 };
 
 const NotificationsPage: React.FC<NotificationsPageProps> = ({ notifications, allTribes, currentUser, onViewProfile, onViewMessage, onViewPost, onViewTribe, onViewStory }) => {
+  const navigate = useNavigate();
   const { setNotifications } = useSocket();
   const [cachedNotifications, setCachedNotifications] = useState<Notification[]>([]);
   const [isLoadingFromCache, setIsLoadingFromCache] = useState(true);
@@ -237,7 +239,12 @@ const NotificationsPage: React.FC<NotificationsPageProps> = ({ notifications, al
 
   return (
     <div className="max-w-3xl mx-auto">
-      <h1 className="text-[28px] font-bold text-primary mb-4 font-display leading-[1.2]">Notifications</h1>
+      <div className="header mb-4" style={{ display: 'flex', alignItems: 'center' }}>
+        <button onClick={() => navigate(-1)} className="back-btn" style={{ fontSize: '20px', marginRight: '10px', background: 'transparent', border: 'none', color: '#f5e6d8', cursor: 'pointer' }}>
+          ←
+        </button>
+        <h1 className="text-[28px] font-bold text-primary font-display leading-[1.2]">Notifications</h1>
+      </div>
       
       <div className="relative mb-6">
         <svg className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-secondary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">

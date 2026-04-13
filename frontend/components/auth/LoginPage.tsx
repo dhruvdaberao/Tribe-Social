@@ -25,6 +25,7 @@ const LoginPage: React.FC = () => {
   const [username, setUsername] = useState('');
   const [usernameError, setUsernameError] = useState('');
   const [otp, setOtp] = useState('');
+  const [otpStatus, setOtpStatus] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [resendTimer, setResendTimer] = useState(0);
@@ -67,6 +68,7 @@ const LoginPage: React.FC = () => {
         await api.forgotPassword(email);
         setMode('otp');
         toast.info("OTP sent to your email!");
+        setOtpStatus("OTP sent! It may take up to 1–2 minutes to arrive.");
         setResendTimer(60);
       } else if (mode === 'otp') {
         if (!otp || otp.length !== 6) throw new Error('Enter 6-digit OTP.');
@@ -99,6 +101,7 @@ const LoginPage: React.FC = () => {
     try {
       await api.forgotPassword(email);
       setResendTimer(60);
+      setOtpStatus("OTP sent! It may take up to 1–2 minutes to arrive.");
       toast.success("New OTP sent!");
     } catch (err) {
       handleError(err);
@@ -188,6 +191,7 @@ const LoginPage: React.FC = () => {
               <div className="mb-6 text-center">
                 <p className="text-secondary text-sm mb-4">We've sent a 6-digit code to <strong>{email}</strong></p>
                 <input type="text" maxLength={6} value={otp} onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))} className="w-full text-center text-3xl tracking-[1rem] font-bold p-3 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-accent text-primary" placeholder="000000" disabled={isLoading} />
+                {otpStatus && <p className="otp-info" style={{ color: '#c9b6a3', fontSize: '13px', marginTop: '8px' }}>{otpStatus}</p>}
                 <div className="mt-4">
                   <button type="button" onClick={handleResendOtp} disabled={isLoading || resendTimer > 0} className={`text-sm font-semibold ${resendTimer > 0 ? 'text-secondary' : 'text-accent hover:underline'}`}>
                     {resendTimer > 0 ? `Resend OTP in ${resendTimer}s` : 'Resend OTP'}

@@ -206,7 +206,8 @@ const ConversationItem: React.FC<ConversationItemProps> = ({
           event.stopPropagation();
           setIsMenuOpen((prev) => !prev);
         }}
-        className="ml-1 rounded-full p-2 text-secondary hover:bg-background hover:text-primary"
+        className="ml-1 rounded-full text-secondary hover:bg-background hover:text-primary menu-button"
+        style={{ padding: '8px', minWidth: '36px', minHeight: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
       >
         <MoreIcon />
       </button>
@@ -231,6 +232,6 @@ const ConversationItem: React.FC<ConversationItemProps> = ({
 };
 
 const PlusIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>;
-const MoreIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 6h.01M12 12h.01M12 18h.01" /></svg>;
+const MoreIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="menu-icon" style={{ fontSize: '20px', width: '20px', height: '20px' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 6h.01M12 12h.01M12 18h.01" /></svg>;
 
 export default ConversationList;
