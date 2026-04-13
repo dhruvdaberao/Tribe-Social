@@ -286,9 +286,6 @@ const EditTribeModal: React.FC<EditTribeModalProps> = ({ tribe, onClose, onSucce
       <Form onSubmit={handleSaveClick}>
         {error && <div style={{ color: 'red', fontSize: '0.9rem' }}>{error}</div>}
 
-        <input type="file" ref={fileInputRef} accept="image/*" style={{ display: 'none' }} onChange={handleFileChange} />
-        <input type="file" ref={cameraInputRef} accept="image/*" capture="environment" style={{ display: 'none' }} onChange={handleFileChange} />
-
         <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 8 }}>
           <div
             style={{ position: 'relative', cursor: 'pointer' }}
@@ -353,21 +350,22 @@ const EditTribeModal: React.FC<EditTribeModalProps> = ({ tribe, onClose, onSucce
               role="switch"
               aria-checked={isPrivate}
               style={{
-                width: 48, height: 28, borderRadius: 999,
+                width: 44, height: 24, borderRadius: 999,
                 background: isPrivate ? theme.primary : theme.border,
                 position: 'relative', transition: 'background 0.2s', cursor: 'pointer',
-                padding: 2,
+                flexShrink: 0,
+                overflow: 'hidden',
               }}
             >
               <div style={{
-                width: 24, height: 24, borderRadius: '50%',
-                background: 'white', position: 'absolute', top: 2,
-                left: isPrivate ? 22 : 2, transition: 'left 0.2s ease',
-                boxShadow: '0 1px 2px rgba(0,0,0,0.22)',
+                width: 18, height: 18, borderRadius: '50%',
+                background: 'white', position: 'absolute', top: 3,
+                left: isPrivate ? 23 : 3, transition: 'left 0.2s ease',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.3)',
               }} />
             </div>
             <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-              Private Tribe {isPrivate && <Lock size={14} color={theme.primary} />}
+              Private Tribe {isPrivate && <Lock size={13} color={theme.primary} />}
             </span>
           </label>
         </div>
@@ -387,6 +385,10 @@ const EditTribeModal: React.FC<EditTribeModalProps> = ({ tribe, onClose, onSucce
 
   return (
     <>
+      {/* Hidden file inputs live outside any portal so refs are always accessible */}
+      <input type="file" ref={fileInputRef} accept="image/*" style={{ display: 'none' }} onChange={handleFileChange} />
+      <input type="file" ref={cameraInputRef} accept="image/*" capture="environment" style={{ display: 'none' }} onChange={handleFileChange} />
+
       {variant === 'inline' ? (
         <InlineWrapper>
           {modalContent}
@@ -400,8 +402,8 @@ const EditTribeModal: React.FC<EditTribeModalProps> = ({ tribe, onClose, onSucce
       <MediaSelectionModal
         isOpen={isMediaModalOpen}
         onClose={() => setIsMediaModalOpen(false)}
-        onSelectCamera={() => cameraInputRef.current?.click()}
-        onSelectGallery={() => fileInputRef.current?.click()}
+        onSelectCamera={() => { cameraInputRef.current?.click(); }}
+        onSelectGallery={() => { fileInputRef.current?.click(); }}
       />
 
       <ConfirmationModal

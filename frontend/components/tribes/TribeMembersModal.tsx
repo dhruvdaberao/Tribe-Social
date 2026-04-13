@@ -87,7 +87,7 @@ const TribeMembersModal: React.FC<TribeMembersModalProps> = ({ isOpen, onClose, 
                       }}
                       className="ml-3 rounded-lg border border-red-500/40 px-3 py-1 text-xs font-semibold text-red-300 hover:bg-red-500/10"
                     >
-                      Kick
+                      Remove
                     </button>
                   )}
                 </div>
@@ -101,9 +101,9 @@ const TribeMembersModal: React.FC<TribeMembersModalProps> = ({ isOpen, onClose, 
 
       <ConfirmationModal
         isOpen={Boolean(kickTargetId)}
-        title="Kick Member"
-        message="Remove this member from the tribe?"
-        confirmText="Kick"
+        title="Remove Member"
+        message="Remove this member from the tribe? They can rejoin unless the tribe is private."
+        confirmText="Remove"
         cancelText="Cancel"
         variant="danger"
         onClose={() => setKickTargetId(null)}

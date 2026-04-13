@@ -114,18 +114,19 @@ const AvatarImage = styled.img`
 `;
 // ... (skip lines)
 
-const Button = styled.button<{ $variant?: 'primary' | 'secondary' }>`
+const Button = styled.button<{ $variant?: 'primary' | 'secondary'; $faint?: boolean }>`
   flex: 1;
   height: 2.5rem; // 40px (Spec)
   padding: 0 1rem; // Vertical center, horizontal 1rem
   border-radius: 0.75rem; // 12px (Spec Inner Component)
   font-weight: 600;
   font-size: 0.95rem;
-  cursor: pointer;
+  cursor: ${({ $faint }) => $faint ? 'default' : 'pointer'};
   transition: opacity 0.2s;
   display: flex;
   align-items: center;
   justify-content: center;
+  opacity: ${({ $faint }) => $faint ? 0.45 : 1};
 
   ${({ $variant, theme }) => $variant === 'primary' ? `
     background: ${theme.primary};
@@ -138,8 +139,12 @@ const Button = styled.button<{ $variant?: 'primary' | 'secondary' }>`
   `}
 
   &:hover {
-    opacity: 0.9;
-    background: ${({ $variant, theme }) => $variant === 'primary' ? theme.hover : 'transparent'};
+    opacity: ${({ $faint }: any) => $faint ? 0.45 : 0.9};
+    background: ${({ $variant, theme, $faint }: any) => (!$faint && $variant === 'primary') ? theme.hover : 'transparent'};
+  }
+
+  &:disabled {
+    cursor: default;
   }
 `;
 
@@ -255,6 +260,20 @@ const TribeCard: React.FC<TribeCardProps> = ({
   const [moderationAction, setModerationAction] = React.useState<null | 'hide' | 'delete'>(null);
   const [isSaving, setIsSaving] = React.useState(false);
   const [editDraft, setEditDraft] = React.useState({ name: tribe.name, description: tribe.description });
+
+  const handleKickMember = async (userId: string) => {
+    if (!localTribe.id) return;
+    const previousMembers = localTribe.members;
+    setLocalTribe(prev => ({ ...prev, members: prev.members.filter(m => m !== userId) }));
+    try {
+      const { data } = await api.kickTribeMember(localTribe.id, userId);
+      setLocalTribe(data);
+      toast.success('Member removed.');
+    } catch (error: any) {
+      setLocalTribe(prev => ({ ...prev, members: previousMembers }));
+      toast.error(error?.response?.data?.message || 'Failed to remove member.');
+    }
+  };
 
   const userMap = React.useMemo(() => {
     return new Map(allUsers.map(u => [u.id, u]));
@@ -612,7 +631,8 @@ const TribeCard: React.FC<TribeCardProps> = ({
             return (
               <Button
                 $variant="primary"
-                onClick={handleJoin}
+                $faint={hasPendingRequest}
+                onClick={hasPendingRequest ? undefined : handleJoin}
                 disabled={isJoining || hasPendingRequest}
               >
                 {hasPendingRequest ? 'Requested' : isJoining ? 'Joining...' : localTribe.isPrivate ? 'Request to Join' : 'Join'}
@@ -628,6 +648,9 @@ const TribeCard: React.FC<TribeCardProps> = ({
         memberIds={localTribe.members}
         userMap={userMap}
         ownerId={typeof localTribe.owner === 'string' ? localTribe.owner : (localTribe.owner as any)?.id}
+        currentUserId={currentUser?.id}
+        canKick={isOwner}
+        onKick={handleKickMember}
         onViewProfile={(user) => {
           setIsMembersModalOpen(false);
           if (onViewProfile) onViewProfile(user);

@@ -10,9 +10,9 @@ import ModalPortal from '../common/ModalPortal';
 const Modal = styled.div`
   background: ${({ theme }) => theme.cardBackground};
   width: 100%;
-  max-width: 500px;
+  max-width: 420px;
   border-radius: 12px;
-  padding: 1rem;
+  padding: 0.875rem;
   position: relative;
   box-shadow: 0 8px 20px rgba(0,0,0,0.24);
 `;
@@ -21,9 +21,9 @@ const Header = styled.div`
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 12px;
+  margin-bottom: 10px;
   
-  h2 { margin: 0; font-size: 1.5rem; color: ${({ theme }) => theme.text}; }
+  h2 { margin: 0; font-size: 1.15rem; font-weight: 700; color: ${({ theme }) => theme.text}; }
 `;
 
 const CloseButton = styled.button`
@@ -62,15 +62,15 @@ const Input = styled.input`
 
 const TextArea = styled.textarea`
   width: 100%;
-  padding: 8px 10px;
+  padding: 7px 10px;
   border-radius: 8px;
   border: 1px solid ${({ theme }) => theme.border};
   background: ${({ theme }) => theme.background};
   color: ${({ theme }) => theme.text};
-  min-height: 78px;
-  max-height: 94px;
+  min-height: 62px;
+  max-height: 80px;
   resize: none;
-  font-size: 0.95rem;
+  font-size: 0.875rem;
   line-height: 1.35;
   text-align-vertical: top;
   
@@ -81,12 +81,13 @@ const TextArea = styled.textarea`
 const Button = styled.button`
   background: ${({ theme }) => theme.primary};
   color: white;
-  padding: 14px;
+  padding: 11px;
   border-radius: 8px;
   border: none;
   font-weight: 600;
+  font-size: 0.9rem;
   cursor: pointer;
-  margin-top: 8px;
+  margin-top: 6px;
   
   &:disabled { opacity: 0.7; cursor: not-allowed; }
 `;
@@ -188,28 +189,28 @@ const CreateTribeModal: React.FC<CreateTribeModalProps> = ({ onClose, onSuccess 
           />
 
           {/* Visual Avatar Picker */}
-          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 8 }}>
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 6 }}>
             <div
               style={{ position: 'relative', cursor: 'pointer' }}
               onClick={() => setIsMediaModalOpen(true)}
             >
               <div style={{
-                width: 68, height: 68, borderRadius: '50%',
+                width: 52, height: 52, borderRadius: '50%',
                 background: avatarUrl ? `url(${avatarUrl}) center/cover` : theme.secondary,
                 border: `2px dashed ${theme.textSecondary}`,
                 display: 'flex', alignItems: 'center', justifyContent: 'center'
               }}>
-                {!avatarUrl && <Camera size={26} color={theme.cardBackground} strokeWidth={1.5} />}
+                {!avatarUrl && <Camera size={20} color={theme.cardBackground} strokeWidth={1.5} />}
               </div>
               <div style={{
                 position: 'absolute', bottom: 0, right: 0,
                 background: theme.primary, borderRadius: '50%',
-                width: 20, height: 20, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                color: 'white', fontSize: 14, border: `1px solid ${theme.primary}`
+                width: 16, height: 16, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                color: 'white', fontSize: 12, border: `1px solid ${theme.primary}`
               }}>+</div>
             </div>
           </div>
-          <div style={{ textAlign: 'center', marginBottom: 8, color: theme.textSecondary, fontSize: '0.8rem' }}>
+          <div style={{ textAlign: 'center', marginBottom: 6, color: theme.textSecondary, fontSize: '0.75rem' }}>
             Tap to upload image
           </div>
 
@@ -242,29 +243,30 @@ const CreateTribeModal: React.FC<CreateTribeModalProps> = ({ onClose, onSuccess 
             </Input>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '8px 0' }}>
-            <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', color: theme.text, fontSize: '0.95rem', fontWeight: 500 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '6px 0' }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', color: theme.text, fontSize: '0.875rem', fontWeight: 500 }}>
               <div
                 onClick={() => setIsPrivate(!isPrivate)}
                 style={{
-                  width: 48, height: 28, borderRadius: 999,
+                  width: 44, height: 24, borderRadius: 999,
                   background: isPrivate ? theme.primary : theme.border,
                   position: 'relative', transition: 'background 0.2s', cursor: 'pointer',
-                  padding: 2,
+                  flexShrink: 0,
+                  overflow: 'hidden',
                 }}
               >
                 <div style={{
-                  width: 24, height: 24, borderRadius: '50%',
-                  background: 'white', position: 'absolute', top: 2,
-                  left: isPrivate ? 22 : 2, transition: 'left 0.2s ease',
-                  boxShadow: '0 1px 2px rgba(0,0,0,0.22)',
+                  width: 18, height: 18, borderRadius: '50%',
+                  background: 'white', position: 'absolute', top: 3,
+                  left: isPrivate ? 23 : 3, transition: 'left 0.2s ease',
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.3)',
                 }} />
               </div>
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                Private Tribe {isPrivate && <Lock size={14} color={theme.primary} />}
+                Private Tribe {isPrivate && <Lock size={13} color={theme.primary} />}
               </span>
             </label>
-            {isPrivate && <span style={{ fontSize: '0.75rem', color: theme.textSecondary }}>Members must request to join</span>}
+            {isPrivate && <span style={{ fontSize: '0.72rem', color: theme.textSecondary }}>Members must request to join</span>}
           </div>
 
           <Button type="submit" disabled={isSubmitting || isReadingImage}>
