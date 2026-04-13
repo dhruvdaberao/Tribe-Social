@@ -62,35 +62,43 @@ const Menu = styled.div`
   position: absolute;
   top: 3rem;
   right: 1rem;
-  width: 200px;
+  width: 220px;
   background: ${({ theme }) => theme.cardBackground};
   border: 1px solid ${({ theme }) => theme.border};
-  border-radius: 12px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+  border-radius: 16px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
   overflow: hidden;
   z-index: 50;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px;
 `;
 
 const MenuItem = styled.button<{ $tone?: 'default' | 'danger' | 'warning' }>`
   width: 100%;
-  padding: 10px 12px;
+  padding: 12px 14px;
   border: none;
   background: transparent;
   color: ${({ theme, $tone }) => ($tone === 'danger' ? '#ef4444' : $tone === 'warning' ? '#f59e0b' : theme.text)};
   display: flex;
   align-items: center;
-  gap: 10px;
-  font-size: 0.9rem;
+  gap: 12px;
+  font-size: 0.95rem;
+  font-weight: 500;
   cursor: pointer;
+  border-radius: 10px;
+  transition: all 0.2s;
 
   &:hover {
-    background: ${({ theme }) => theme.hover};
+    background: ${({ theme, $tone }) => ($tone === 'danger' ? 'rgba(239, 68, 68, 0.1)' : theme.hover)};
   }
 `;
 
 const MenuDivider = styled.div`
   height: 1px;
   background: ${({ theme }) => theme.border};
+  margin: 4px 0;
 `;
 
 const AvatarCircle = styled.div`

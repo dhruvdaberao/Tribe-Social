@@ -631,9 +631,9 @@ const UserAdminRow: React.FC<{
             <MoreVertical size={18} />
           </button>
           {menuOpen && (
-            <div className="absolute right-0 z-10 mt-2 w-56 rounded-xl border border-border bg-surface shadow-lg">
+            <div className="absolute right-0 z-50 mt-2 w-64 rounded-xl border border-border bg-surface shadow-xl p-1.5 flex flex-col gap-1 overflow-hidden">
               {disabledMessage && (
-                <div className="px-4 py-3 bg-background border-b border-border text-xs italic text-secondary text-center">
+                <div className="px-4 py-3 bg-background border-b border-border text-xs italic text-secondary text-center rounded-lg">
                   {disabledMessage}
                 </div>
               )}
@@ -642,7 +642,7 @@ const UserAdminRow: React.FC<{
                   setMenuOpen(false);
                   onView();
                 }}
-                className="flex w-full items-center gap-2 px-4 py-2 text-sm text-primary hover:bg-background"
+                className="flex w-full items-center gap-3 px-3 py-2.5 text-sm text-primary hover:bg-background transition-colors rounded-lg"
               >
                 <UserIcon size={16} />
                 View Profile
@@ -650,26 +650,74 @@ const UserAdminRow: React.FC<{
               
               {canModerateAdmin && (
                 <>
-                  <button
-                    onClick={() => {
-                      setMenuOpen(false);
-                      onAction(isHidden ? 'unhide' : 'hide');
-                    }}
-                    className="flex w-full items-center gap-2 px-4 py-2 text-sm text-primary hover:bg-background"
-                  >
-                    {isHidden ? <Eye size={16} /> : <EyeOff size={16} />}
-                    {isHidden ? 'Unhide' : 'Hide'}
-                  </button>
-                  <button
-                    onClick={() => {
-                      setMenuOpen(false);
-                      onAction('delete');
-                    }}
-                    className="flex w-full items-center gap-2 px-4 py-2 text-sm text-red-500 hover:bg-red-500/10"
-                  >
-                    <Trash2 size={16} />
-                    Delete
-                  </button>
+                  {isTargetAdmin ? (
+                    <>
+                      <button
+                        onClick={() => {
+                          setMenuOpen(false);
+                          toast.info('Feature coming soon');
+                        }}
+                        className="flex w-full items-center gap-3 px-3 py-2.5 text-sm text-primary hover:bg-background transition-colors rounded-lg"
+                      >
+                        <UserIcon size={16} />
+                        Remove Admin
+                      </button>
+                      <button
+                        onClick={() => {
+                          setMenuOpen(false);
+                          toast.info('Feature coming soon');
+                        }}
+                        className="flex w-full items-center gap-3 px-3 py-2.5 text-sm text-primary hover:bg-background transition-colors rounded-lg"
+                      >
+                        <AlertTriangle size={16} />
+                        Promote to Super Admin
+                      </button>
+                      <div className="h-px w-full bg-border my-1" />
+                      <button
+                        onClick={() => {
+                          setMenuOpen(false);
+                          onAction(isHidden ? 'unhide' : 'hide');
+                        }}
+                        className="flex w-full items-center gap-3 px-3 py-2.5 text-sm text-primary hover:bg-background transition-colors rounded-lg"
+                      >
+                        {isHidden ? <Eye size={16} /> : <EyeOff size={16} />}
+                        {isHidden ? 'Enable Admin' : 'Disable Admin'}
+                      </button>
+                      <button
+                        onClick={() => {
+                          setMenuOpen(false);
+                          onAction('delete');
+                        }}
+                        className="flex w-full items-center gap-3 px-3 py-2.5 text-sm text-red-500 hover:bg-red-500/10 transition-colors rounded-lg font-medium"
+                      >
+                        <Trash2 size={16} />
+                        Delete Admin
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <button
+                        onClick={() => {
+                          setMenuOpen(false);
+                          onAction(isHidden ? 'unhide' : 'hide');
+                        }}
+                        className="flex w-full items-center gap-3 px-3 py-2.5 text-sm text-primary hover:bg-background transition-colors rounded-lg"
+                      >
+                        {isHidden ? <Eye size={16} /> : <EyeOff size={16} />}
+                        {isHidden ? 'Unhide User' : 'Disable User'}
+                      </button>
+                      <button
+                        onClick={() => {
+                          setMenuOpen(false);
+                          onAction('delete');
+                        }}
+                        className="flex w-full items-center gap-3 px-3 py-2.5 text-sm text-red-500 hover:bg-red-500/10 transition-colors rounded-lg font-medium"
+                      >
+                        <Trash2 size={16} />
+                        Delete User
+                      </button>
+                    </>
+                  )}
                 </>
               )}
 
@@ -679,7 +727,7 @@ const UserAdminRow: React.FC<{
                     setMenuOpen(false);
                     onReportToSuperAdmin();
                   }}
-                  className="flex w-full items-center gap-2 px-4 py-2 text-sm text-primary hover:bg-background"
+                  className="flex w-full items-center gap-3 px-3 py-2.5 text-sm text-primary hover:bg-background transition-colors rounded-lg"
                 >
                   <AlertTriangle size={16} />
                   Report to Super Admin
@@ -691,7 +739,7 @@ const UserAdminRow: React.FC<{
                   setMenuOpen(false);
                   onViewReports();
                 }}
-                className="flex w-full items-center gap-2 px-4 py-2 text-sm text-primary hover:bg-background"
+                className="flex w-full items-center gap-3 px-3 py-2.5 text-sm text-primary hover:bg-background transition-colors rounded-lg"
               >
                 <AlertTriangle size={16} />
                 View Reports
