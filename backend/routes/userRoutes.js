@@ -107,14 +107,16 @@ router.get('/:id', protect, async (req, res) => {
             if ((user.isDisabled || user.isHidden || user.isDeleted) && !req.user.isAdmin) {
                 return res.status(404).json({ message: 'User not found' });
             }
-            // Count stats from Follow collection
+            // Count stats from Follow collection - OPTIMIZED with Redis
+            const cachedFollows = await getCachedFollowingIds(req.user.id);
+            const isFollowing = cachedFollows ? cachedFollows.includes(req.params.id) : await Follow.exists({ follower: req.user.id, following: req.params.id });
+
             const stats = await Promise.all([
                 Follow.countDocuments({ following: req.params.id }),
                 Follow.countDocuments({ follower: req.params.id }),
-                Follow.exists({ follower: req.user.id, following: req.params.id })
             ]);
 
-            const [followersCount, followingCount, isFollowing] = stats;
+            const [followersCount, followingCount] = stats;
 
             const userObj = user.toObject();
             userObj.id = user._id.toString();
