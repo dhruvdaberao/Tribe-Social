@@ -72,13 +72,18 @@ const ChatPage: React.FC<ChatPageProps> = ({ currentUser, allUsers, chukUser, in
     onConfirm?: () => Promise<void> | void;
   }>({ visible: false, title: '', message: '' });
   const messageCache = React.useRef<Map<string, { messages: Message[]; hasMore: boolean; oldestTimestamp?: string }>>(new Map());
-  const { socket, onlineUsers, clearUnreadMessages, unreadCounts, setActiveChatPartnerId } = useSocket();
+  const { socket, onlineUsers, clearUnreadMessages, clearAllUnreadMessages, unreadCounts, setActiveChatPartnerId, setMessagesPageOpen } = useSocket();
 
   useEffect(() => {
+    // Signal to socket context that Messages page is open
+    setMessagesPageOpen(true);
+    // When messages page mounts, clear all unread badge counts since the user can see all conversations
+    clearAllUnreadMessages();
     return () => {
+      setMessagesPageOpen(false);
       setActiveChatPartnerId(null);
     };
-  }, [setActiveChatPartnerId]);
+  }, [setActiveChatPartnerId, clearAllUnreadMessages, setMessagesPageOpen]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;

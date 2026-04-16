@@ -95,11 +95,13 @@ interface SocketContextType {
   unreadNotificationCount: number;
 
   clearUnreadMessages: (partnerId: string) => void;
+  clearAllUnreadMessages: () => void;
   clearUnreadTribe: (tribeId: string) => void;
 
   joinRoom: (roomId: string) => void;
   leaveRoom: (roomId: string) => void;
   setActiveChatPartnerId: (partnerId: string | null) => void;
+  setMessagesPageOpen: (open: boolean) => void;
 }
 
 const SocketContext = createContext<SocketContextType | undefined>(undefined);
@@ -122,6 +124,11 @@ export const SocketProvider: React.FC<{ children: ReactNode }> = ({ children }) 
   const [onlineUsers, setOnlineUsers] = useState<string[]>([]);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [activeChatPartnerId, setActiveChatPartnerId] = useState<string | null>(null);
+  // Tracks if the Messages page is currently open (conversation list visible)
+  const messagesPageOpenRef = useRef(false);
+  const setMessagesPageOpen = useCallback((open: boolean) => {
+    messagesPageOpenRef.current = open;
+  }, []);
 
   const [unreadCounts, setUnreadCounts] = useState({
     messages: {} as Record<string, number>,
@@ -136,7 +143,10 @@ export const SocketProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     api.fetchUnreadMessageCounts()
       .then((res) => {
         if (res.data && res.data.counts) {
-          setUnreadCounts(prev => ({ ...prev, messages: res.data.counts }));
+          // Filter out the Redis fallback 'total_estimated' key — it's not a real sender ID
+          const counts = { ...res.data.counts };
+          delete counts['total_estimated'];
+          setUnreadCounts(prev => ({ ...prev, messages: counts }));
         }
       })
       .catch(console.error);
@@ -187,9 +197,16 @@ export const SocketProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         // Use functional state update or ref to check current active partner
         setActiveChatPartnerId(current => {
           if (current === message.senderId) {
-             // Already in the chat, mark this new message as read in the backend implicitly
+             // Already in this specific chat, mark as read immediately
              api.markMessagesAsRead(message.senderId).catch(console.error);
              return current; 
+          }
+
+          // If the messages page (conversation list) is open, don't increment badge —
+          // user can already see the conversation update in the list
+          if (messagesPageOpenRef.current) {
+            api.markMessagesAsRead(message.senderId).catch(console.error);
+            return current;
           }
 
           setUnreadCounts(prev => ({
@@ -257,10 +274,21 @@ export const SocketProvider: React.FC<{ children: ReactNode }> = ({ children }) 
       const next = { ...prev.messages };
       delete next[partnerId];
       // Mark as read in backend
-      import('../api').then(api => {
+      api.markMessagesAsRead(partnerId).catch(console.error);
+      return { ...prev, messages: next };
+    });
+  }, []);
+
+  // Clears ALL unread message counts (used when navigating to the Messages page)
+  const clearAllUnreadMessages = useCallback(() => {
+    setUnreadCounts(prev => {
+      const partnerIds = Object.keys(prev.messages);
+      if (partnerIds.length === 0) return prev;
+      // Mark all as read in backend
+      partnerIds.forEach(partnerId => {
         api.markMessagesAsRead(partnerId).catch(console.error);
       });
-      return { ...prev, messages: next };
+      return { ...prev, messages: {} };
     });
   }, []);
 
@@ -295,10 +323,12 @@ export const SocketProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         unreadTribeCount,
         unreadNotificationCount,
         clearUnreadMessages,
+        clearAllUnreadMessages,
         clearUnreadTribe,
         joinRoom,
         leaveRoom,
-        setActiveChatPartnerId
+        setActiveChatPartnerId,
+        setMessagesPageOpen
       }}
     >
       {children}
