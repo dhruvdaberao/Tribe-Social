@@ -342,20 +342,47 @@ export const GlobalContentProvider: React.FC<{ children: React.ReactNode }> = ({
 
         const handlePostUpdated = (updatedPost: any) => {
             const populated = populatePost(updatedPost, userMap);
-            if (populated) setPosts(prev => prev.map(p => p.id === populated.id ? populated : p));
+            if (!populated) return;
+
+            setPosts(prev => prev.map(p => {
+                if (p.id !== populated.id) return p;
+                
+                // ✅ CRITICAL PERSISTENCE FIX:
+                // Socket updates (from others) arrive with an empty/generic `likes` array.
+                // We MUST preserve our own isLiked status to prevent hearts from disappearing.
+                const wasLikedByMe = currentUser && p.likes.includes(currentUser.id);
+                return {
+                    ...populated,
+                    likes: wasLikedByMe ? [currentUser.id] : populated.likes,
+                    // Ensure counts are taken from the server update (which are accurate)
+                    likesCount: populated.likesCount ?? p.likesCount,
+                    commentsCount: populated.commentsCount ?? p.commentsCount
+                };
+            }));
         };
 
         const handlePostDeleted = (postId: string) => setPosts(prev => prev.filter(p => p.id !== postId));
 
         const handleUserUpdated = (updatedUser: User) => {
-            setUsers(prev => prev.map(u => u.id === updatedUser.id ? updatedUser : u));
+            setUsers(prev => prev.map(u => u.id === updatedUser.id ? { ...u, ...updatedUser } : u));
             if (currentUser?.id === updatedUser.id) {
-                // ✅ FIX: Merge updates but preserve following/followers to keep optimistic updates
-                setCurrentUser(prev => ({
-                    ...updatedUser,
-                    following: prev.following,  // Preserve optimistic follow updates
-                    followers: prev.followers,  // Preserve optimistic follower updates
-                }));
+                // Preserve the `following` array hydrated from the server (in AuthContext).
+                // The socket event only carries count fields and profile fields, NOT the
+                // full following ID list, so we must not overwrite it.
+                setCurrentUser(prev => {
+                    if (!prev) return updatedUser as any;
+                    return {
+                        ...prev,
+                        // Accept all non-array profile updates from the socket
+                        ...updatedUser,
+                        // Keep the accurately-hydrated arrays — do NOT overwrite with socket data
+                        following: prev.following,
+                        followers: prev.followers,
+                        blockedUsers: prev.blockedUsers?.length
+                            ? prev.blockedUsers
+                            : (updatedUser as any).blockedUsers || [],
+                    };
+                });
             }
         };
 

@@ -9,8 +9,29 @@ import cloudinary from '../config/cloudinary.js';
 import { sendPushToUser, sendPushNotification } from '../services/pushService.js';
 import { isPushEnabledFor } from '../utils/notificationPrefs.js';
 import { sendEmailNotification } from '../services/emailNotificationService.js';
+import { getCachedLikedPostIds, cacheLikedPostIds, invalidateLikedPostsCache } from '../services/redisService.js';
 
 const router = express.Router();
+
+// @route   GET /api/posts/me/liked-ids
+// @desc    Get IDs of all posts the current user has liked
+router.get('/me/liked-ids', protect, async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const cached = await getCachedLikedPostIds(userId);
+        if (cached) return res.json({ likedPostIds: cached });
+
+        const { default: Like } = await import('../models/likeModel.js');
+        const likes = await Like.find({ user: userId }).select('post').lean();
+        const likedPostIds = likes.map(l => l.post.toString());
+
+        cacheLikedPostIds(userId, likedPostIds).catch(console.error);
+        res.json({ likedPostIds });
+    } catch (error) {
+        console.error('Error fetching liked post IDs:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+});
 
 const fullyPopulatePost = async (post) => {
     await post.populate('user', 'name username avatarUrl');
@@ -63,21 +84,27 @@ router.get('/feed', protect, async (req, res) => {
                 .populate('user', 'name username avatarUrl');
         }
 
-        // Hydrate Posts with Likes (Is Liked?) and Comments (Recent)
         const { default: Like } = await import('../models/likeModel.js');
         const { default: Comment } = await import('../models/commentModel.js');
 
-        // 1. Bulk check "Is Liked"
+        // 1. Bulk check "Is Liked" using Redis if possible
         const postIds = posts.map(p => p._id);
-        const myLikes = await Like.find({ user: req.user.id, post: { $in: postIds } });
-        const myLikedPostIds = new Set(myLikes.map(l => l.post.toString()));
+        let myLikedPostIdsInternal = await getCachedLikedPostIds(req.user.id);
+        
+        if (!myLikedPostIdsInternal) {
+            const myLikes = await Like.find({ user: req.user.id, post: { $in: postIds } });
+            myLikedPostIdsInternal = myLikes.map(l => l.post.toString());
+            // We don't cache the whole list here because it's only a subset, 
+            // but we can use the Set for lookups.
+        }
+        const myLikedSet = new Set(myLikedPostIdsInternal);
 
         // 2. Fetch Recent Comments (Parallel)
         const postsWithData = await Promise.all(posts.map(async (post) => {
             const postObj = post.toJSON();
 
             // Reconstruct lightweight 'likes' array for frontend compatibility check (includes(me))
-            postObj.likes = myLikedPostIds.has(post._id.toString()) ? [req.user.id] : [];
+            postObj.likes = myLikedSet.has(post._id.toString()) ? [req.user.id] : [];
 
             // Counts (Should be on model, fallback to 0)
             postObj.likesCount = post.likesCount || 0;
@@ -128,12 +155,16 @@ router.get('/', protect, async (req, res) => {
         const { default: Comment } = await import('../models/commentModel.js');
 
         const postIds = posts.map(p => p._id);
-        const myLikes = await Like.find({ user: req.user.id, post: { $in: postIds } });
-        const myLikedPostIds = new Set(myLikes.map(l => l.post.toString()));
+        let myLikedPostIdsInternal = await getCachedLikedPostIds(req.user.id);
+        if (!myLikedPostIdsInternal) {
+            const myLikes = await Like.find({ user: req.user.id, post: { $in: postIds } });
+            myLikedPostIdsInternal = myLikes.map(l => l.post.toString());
+        }
+        const myLikedSet = new Set(myLikedPostIdsInternal);
 
         const postsWithData = await Promise.all(posts.map(async (post) => {
             const postObj = post.toJSON();
-            postObj.likes = myLikedPostIds.has(post._id.toString()) ? [req.user.id] : [];
+            postObj.likes = myLikedSet.has(post._id.toString()) ? [req.user.id] : [];
             postObj.likesCount = post.likesCount || 0;
             postObj.commentsCount = post.commentsCount || 0;
 
@@ -175,12 +206,16 @@ router.get('/user/:id', protect, async (req, res) => {
         const { default: Comment } = await import('../models/commentModel.js');
 
         const postIds = posts.map(p => p._id);
-        const myLikes = await Like.find({ user: req.user.id, post: { $in: postIds } });
-        const myLikedPostIds = new Set(myLikes.map(l => l.post.toString()));
+        let myLikedPostIdsInternal = await getCachedLikedPostIds(req.user.id);
+        if (!myLikedPostIdsInternal) {
+            const myLikes = await Like.find({ user: req.user.id, post: { $in: postIds } });
+            myLikedPostIdsInternal = myLikes.map(l => l.post.toString());
+        }
+        const myLikedSet = new Set(myLikedPostIdsInternal);
 
         const postsWithData = await Promise.all(posts.map(async (post) => {
             const postObj = post.toJSON();
-            postObj.likes = myLikedPostIds.has(post._id.toString()) ? [req.user.id] : [];
+            postObj.likes = myLikedSet.has(post._id.toString()) ? [req.user.id] : [];
             postObj.likesCount = post.likesCount || 0;
             postObj.commentsCount = post.commentsCount || 0;
 
@@ -220,14 +255,18 @@ router.get('/:id', protect, async (req, res) => {
         const { default: Like } = await import('../models/likeModel.js');
         const { default: Comment } = await import('../models/commentModel.js');
 
-        const isLiked = await Like.findOne({ user: req.user.id, post: post._id });
-        const comments = await Comment.find({ post: post._id })
-            .sort({ createdAt: -1 })
-            .limit(20)
-            .populate('user', 'name username avatarUrl');
-
         const postObj = post.toJSON();
-        postObj.likes = isLiked ? [req.user.id] : [];
+        
+        let isLikedByUser = false;
+        const cachedLikes = await getCachedLikedPostIds(req.user.id);
+        if (cachedLikes) {
+            isLikedByUser = cachedLikes.includes(post._id.toString());
+        } else {
+            const isLiked = await Like.findOne({ user: req.user.id, post: post._id });
+            isLikedByUser = !!isLiked;
+        }
+
+        postObj.likes = isLikedByUser ? [req.user.id] : [];
         postObj.likesCount = post.likesCount || 0;
         postObj.commentsCount = post.commentsCount || 0;
         postObj.comments = comments;
@@ -418,7 +457,11 @@ router.put('/:id/like', protect, async (req, res) => {
             }
         }
 
+
         await post.save();
+        
+        // Invalidate Redis cache for likes
+        await invalidateLikedPostsCache(req.user.id);
 
         // Construct full post object for socket emit and response
         const { default: Comment } = await import('../models/commentModel.js');
@@ -428,17 +471,19 @@ router.put('/:id/like', protect, async (req, res) => {
             .populate('user', 'name username avatarUrl');
 
         const postObj = post.toJSON();
-        postObj.likes = userLiked ? [req.user.id] : [];
+        // IMPORTANT: In the socket emit, we do NOT send personalized 'likes' array.
+        // This prevents overwriting other users' local 'isLiked' state.
+        postObj.likes = []; // Reset for socket wide broadcast
         postObj.likesCount = post.likesCount;
         postObj.comments = recentComments;
         postObj.commentsCount = post.commentsCount || 0;
 
-        // Emit to everyone for real-time count updates
-        // Note: The 'likes' array in this emit is personalized for the REQUESTER.
-        // The frontend knows to ignore the 'likes' array from sockets for 'isLiked' status.
         req.io.emit('postUpdated', postObj);
 
-        res.json(postObj);
+        // For the direct response, we DO include the personalized likes status
+        const responseObj = { ...postObj, likes: userLiked ? [req.user.id] : [] };
+        res.json(responseObj);
+
 
     } catch (error) {
         console.error(error);

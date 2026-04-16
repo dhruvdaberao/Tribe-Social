@@ -68,7 +68,7 @@ export const cacheMessages = async (userId1, userId2, messages) => {
   if (!redis) return;
   try {
     const key = generateChatKey(userId1, userId2);
-    await redis.set(key, JSON.stringify(messages), { ex: 60 }); // Cache for 60 seconds
+    await redis.set(key, JSON.stringify(messages), { ex: 300 }); // Cache for 5 minutes
     console.info(`[Redis] SECURED CACHE: Saved messages for ${key}`);
   } catch (err) {
     console.error('[Redis Core] Chat Set Failed:', err);
@@ -150,5 +150,72 @@ export const clearBadgeCount = async (userId) => {
     await redis.set(`notif:${userId}`, 0);
   } catch (err) {
     console.error('[Redis Core] Notification Reset Failed:', err);
+  }
+};
+
+/* ──────────────────── FOLLOW IDS CACHE ──────────────────── */
+// Caches the set of user IDs that a given user is following.
+// Invalidated immediately on every follow/unfollow action.
+export const getCachedFollowingIds = async (userId) => {
+  if (!redis || !userId) return null;
+  try {
+    const data = await redis.get(`following_ids:${userId}`);
+    return data ? (typeof data === 'string' ? JSON.parse(data) : data) : null;
+  } catch (err) {
+    console.error('[Redis Core] FollowingIds Get Failed:', err);
+    return null;
+  }
+};
+
+export const cacheFollowingIds = async (userId, ids) => {
+  if (!redis || !userId) return;
+  try {
+    await redis.set(`following_ids:${userId}`, JSON.stringify(ids), { ex: 600 }); // 10 minutes
+    console.info(`[Redis] CACHE SET: following_ids for user ${userId}`);
+  } catch (err) {
+    console.error('[Redis Core] FollowingIds Set Failed:', err);
+  }
+};
+
+export const invalidateFollowingCache = async (userId) => {
+  if (!redis || !userId) return;
+  try {
+    await redis.del(`following_ids:${userId}`);
+    console.info(`[Redis] CACHE INVALIDATED: following_ids for user ${userId}`);
+  } catch (err) {
+    console.error('[Redis Core] FollowingIds Invalidation Failed:', err);
+  }
+};
+
+/* ──────────────────── LIKED POSTS CACHE ──────────────────── */
+// Caches the set of post IDs that a given user has liked.
+export const getCachedLikedPostIds = async (userId) => {
+  if (!redis || !userId) return null;
+  try {
+    const data = await redis.get(`liked_posts:${userId}`);
+    return data ? (typeof data === 'string' ? JSON.parse(data) : data) : null;
+  } catch (err) {
+    console.error('[Redis Core] LikedPosts Get Failed:', err);
+    return null;
+  }
+};
+
+export const cacheLikedPostIds = async (userId, ids) => {
+  if (!redis || !userId) return;
+  try {
+    await redis.set(`liked_posts:${userId}`, JSON.stringify(ids), { ex: 600 }); // 10 minutes
+    console.info(`[Redis] CACHE SET: liked_posts for user ${userId}`);
+  } catch (err) {
+    console.error('[Redis Core] LikedPosts Set Failed:', err);
+  }
+};
+
+export const invalidateLikedPostsCache = async (userId) => {
+  if (!redis || !userId) return;
+  try {
+    await redis.del(`liked_posts:${userId}`);
+    console.info(`[Redis] CACHE INVALIDATED: liked_posts for user ${userId}`);
+  } catch (err) {
+    console.error('[Redis Core] LikedPosts Invalidation Failed:', err);
   }
 };

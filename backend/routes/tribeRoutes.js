@@ -277,6 +277,11 @@ router.put('/:id/join', protect, async (req, res) => {
         }
 
         await tribe.save();
+        
+        if (req.io) {
+            req.io.emit('tribeUpdated', tribe);
+        }
+
         res.status(200).json(tribe);
     } catch (error) {
         console.error('❌ PUT /api/tribes/:id/join ERROR:', error);
@@ -307,6 +312,10 @@ router.put('/:id/kick/:userId', protect, async (req, res) => {
         // Remove member
         tribe.members = tribe.members.filter(id => id.toString() !== targetUserId);
         await tribe.save();
+
+        if (req.io) {
+            req.io.emit('tribeUpdated', tribe);
+        }
 
         // Notifications
         if (req.io) {

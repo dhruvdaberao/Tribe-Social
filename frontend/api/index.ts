@@ -131,6 +131,31 @@ export const fetchUser = async (id: string) => {
   return { data: normalizeId(res.data) };
 };
 
+/**
+ * Fetches the IDs of all users the current user follows.
+ * Backed by a Redis cache (10-min TTL) on the server — very fast.
+ * Called once on app init to hydrate currentUser.following accurately.
+ */
+export const fetchMyFollowingIds = async (): Promise<string[]> => {
+  try {
+    const res = await API.get('/users/me/following-ids');
+    return res.data.followingIds || [];
+  } catch (err) {
+    console.error('[API] fetchMyFollowingIds failed:', err);
+    return [];
+  }
+};
+
+export const fetchMyLikedIds = async (): Promise<string[]> => {
+  try {
+    const res = await API.get('/posts/me/liked-ids');
+    return res.data.likedPostIds || [];
+  } catch (err) {
+    console.error('[API] fetchMyLikedIds failed:', err);
+    return [];
+  }
+};
+
 export const fetchUserFollowers = async (id: string) => {
   const res = await API.get(`/users/${id}/followers`);
   return { data: normalizeArray(res.data) };

@@ -8,8 +8,37 @@ import protect from '../middleware/authMiddleware.js';
 import { sendPushToUser, sendPushNotification } from '../services/pushService.js';
 import { isPushEnabledFor } from '../utils/notificationPrefs.js';
 import { sendEmailNotification } from '../services/emailNotificationService.js';
+import { getCachedFollowingIds, cacheFollowingIds, invalidateFollowingCache } from '../services/redisService.js';
 
 const router = express.Router();
+
+// @route   GET /api/users/me/following-ids
+// @desc    Get IDs of all users the current user is following (used for frontend hydration)
+// Uses Redis cache with 10-min TTL; invalidated on every follow/unfollow.
+router.get('/me/following-ids', protect, async (req, res) => {
+    try {
+        const userId = req.user.id;
+
+        // 1. Try Redis cache first
+        const cached = await getCachedFollowingIds(userId);
+        if (cached) {
+            console.info(`[Redis] HIT: following_ids for user ${userId}`);
+            return res.json({ followingIds: cached });
+        }
+
+        // 2. Fetch from MongoDB Follow collection (source of truth)
+        const followDocs = await Follow.find({ follower: userId }).select('following').lean();
+        const followingIds = followDocs.map(doc => doc.following.toString());
+
+        // 3. Cache for next request (fire-and-forget)
+        cacheFollowingIds(userId, followingIds).catch(console.error);
+
+        res.json({ followingIds });
+    } catch (error) {
+        console.error('Error fetching following IDs:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+});
 
 // @route   GET /api/users
 // @desc    Get all users (Limit 20 for free tier stability)
@@ -288,14 +317,12 @@ router.put('/:id/follow', protect, async (req, res) => {
             }
         }
 
-        // Return updated User objects (with new counts)
-        // We need to re-fetch to get new counts or just increment locally.
-        // Re-fetching is safer.
+        // Invalidate Redis following-IDs cache so next hydration is fresh
+        await invalidateFollowingCache(currentUser._id.toString());
+
+        // Re-fetch updated docs for socket broadcasts
         const updatedCurrentUser = await User.findById(currentUser._id);
         const updatedUserToFollow = await User.findById(userToFollow._id);
-
-        // We should enrich with counts from Collection if we want to be 100% accurate,
-        // but Since we just did $inc, value on doc should be correct.
 
         req.io.emit('userUpdated', updatedCurrentUser.toJSON());
         req.io.emit('userUpdated', updatedUserToFollow.toJSON());

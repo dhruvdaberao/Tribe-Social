@@ -49,21 +49,44 @@ const normalizeUser = (user: any): User | null => {
   };
 };
 
+/**
+ * Hydrates the `following` array on a user object by fetching the real list
+ * from the server (cached in Redis). Called after every login, register, and
+ * app-resume so the follow-button state is always accurate.
+ */
+const hydrateFollowingIds = async (user: User): Promise<User> => {
+  try {
+    const followingIds = await api.fetchMyFollowingIds();
+    return { ...user, following: followingIds };
+  } catch (err) {
+    console.error('[Auth] Failed to hydrate following IDs:', err);
+    return user; // Non-fatal — fall back to whatever we have
+  }
+};
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Check for user session on initial load
+  // Restore user from localStorage on app start, then immediately sync following IDs
   useEffect(() => {
-    const initializeAuth = () => {
+    const initializeAuth = async () => {
       const token = localStorage.getItem('token');
       const userJson = localStorage.getItem('currentUser');
       if (token && userJson) {
         try {
-          const user = JSON.parse(userJson);
-          setCurrentUser(normalizeUser(user));
+          const user = normalizeUser(JSON.parse(userJson));
+          if (user) {
+            // Set the user immediately so the UI can render
+            setCurrentUser(user);
+            // Then hydrate the following list from the server in the background.
+            // This overwrites the potentially stale localStorage following array.
+            hydrateFollowingIds(user).then(hydratedUser => {
+              setCurrentUser(hydratedUser);
+            });
+          }
         } catch (error) {
-          console.error("Failed to parse stored user:", error);
+          console.error('Failed to parse stored user:', error);
           localStorage.removeItem('token');
           localStorage.removeItem('currentUser');
         }
@@ -86,13 +109,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = useCallback(async (email: string, password: string) => {
     const { data } = await api.login({ email, password });
     localStorage.setItem('token', data.token);
-    setCurrentUser(normalizeUser(data.user));
+    // Normalize the user, then immediately hydrate the real following list
+    const baseUser = normalizeUser(data.user);
+    if (baseUser) {
+      setCurrentUser(baseUser);
+      const hydratedUser = await hydrateFollowingIds(baseUser);
+      setCurrentUser(hydratedUser);
+    }
   }, []);
 
   const register = useCallback(async (name: string, username: string, email: string, password: string) => {
     const { data } = await api.register({ name, username, email, password });
     localStorage.setItem('token', data.token);
-    setCurrentUser(normalizeUser(data.user));
+    // New users have no follows yet, but still hydrate for consistency
+    const baseUser = normalizeUser(data.user);
+    if (baseUser) {
+      setCurrentUser(baseUser);
+      const hydratedUser = await hydrateFollowingIds(baseUser);
+      setCurrentUser(hydratedUser);
+    }
   }, []);
 
   const logout = useCallback(() => {

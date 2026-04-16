@@ -486,6 +486,9 @@ router.delete('/:messageId', protect, async (req, res) => {
         const receiverId = message.receiver.toString();
         await message.deleteOne();
 
+        // Invalidate Redis cache so deleted message doesn't reappear
+        await invalidateChatCache(senderId, receiverId);
+
         if (req.io) {
             const roomName = `dm-${[senderId, receiverId].sort().join('-')}`;
             req.io.to(roomName).emit('messageDeleted', {
